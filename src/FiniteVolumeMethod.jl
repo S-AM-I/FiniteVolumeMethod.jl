@@ -1,7 +1,7 @@
 module FiniteVolumeMethod
 
 using ChunkSplitters: ChunkSplitters, chunks
-using CommonSolve: CommonSolve
+using CommonSolve: CommonSolve, solve
 using DelaunayTriangulation: DelaunayTriangulation, Triangulation,
     add_ghost_triangles!,
     convert_boundary_points_to_indices,
@@ -38,6 +38,11 @@ include("utils.jl")
 include("schemes/limiters.jl")
 include("schemes/gradients.jl")
 include("schemes/muscl.jl")
+
+# Advanced boundary conditions
+include("conditions/nonlinear.jl")
+include("conditions/periodic.jl")
+include("conditions/coupled.jl")
 
 include("specific_problems/abstract_templates.jl")
 include("specific_problems/advection_diffusion_equation.jl")
@@ -92,7 +97,32 @@ export FVMGeometry,
     MUSCLFluxFunction,
     create_muscl_problem,
     # Advection-diffusion
-    AdvectionDiffusionEquation
+    AdvectionDiffusionEquation,
+    # Nonlinear BCs
+    NonlinearDirichlet,
+    NonlinearNeumann,
+    NonlinearRobin,
+    linearize_bc,
+    compute_boundary_gradient,
+    evaluate_nonlinear_bc,
+    # Periodic BCs
+    PeriodicBC,
+    PeriodicNodeMapping,
+    PeriodicConditions,
+    compute_periodic_mapping,
+    apply_periodic_constraints!,
+    has_periodic_conditions,
+    # Coupled multi-field BCs
+    CoupledBC,
+    CoupledDirichlet,
+    CoupledNeumann,
+    CoupledRobin,
+    CoupledBoundaryConditions,
+    evaluate_coupled_bc,
+    add_coupled_bc!,
+    get_coupled_bc,
+    has_coupled_bc,
+    get_target_field
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin

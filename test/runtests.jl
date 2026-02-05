@@ -31,6 +31,9 @@ end
     @testset verbose = true "Schemes" begin
         safe_include("schemes.jl")
     end
+    @testset verbose = true "Advanced BCs" begin
+        safe_include("advanced_bcs.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
