@@ -46,6 +46,10 @@ include("conditions/coupled.jl")
 
 include("specific_problems/abstract_templates.jl")
 include("specific_problems/advection_diffusion_equation.jl")
+include("specific_problems/anisotropic_diffusion.jl")
+
+# Physics models
+include("physics/turbulence/k_epsilon.jl")
 
 export FVMGeometry,
     FVMProblem,
@@ -122,7 +126,21 @@ export FVMGeometry,
     add_coupled_bc!,
     get_coupled_bc,
     has_coupled_bc,
-    get_target_field
+    get_target_field,
+    # Anisotropic diffusion
+    AnisotropicDiffusionEquation,
+    make_rotation_tensor,
+    make_spatially_varying_tensor,
+    # Turbulence models
+    StandardKEpsilon,
+    KappaOmegaSST,
+    compute_turbulent_viscosity,
+    compute_strain_rate_magnitude,
+    compute_production,
+    compute_friction_velocity,
+    k_wall_value,
+    epsilon_wall_value,
+    TurbulentWallBC
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin
