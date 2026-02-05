@@ -1,6 +1,7 @@
 abstract type AbstractFVMProblem end
 @inline get_dudt_fidx(prob::AbstractFVMProblem, i) = get_dudt_fidx(prob.conditions, i)
 @inline get_neumann_fidx(prob::AbstractFVMProblem, i, j) = get_neumann_fidx(prob.conditions, i, j)
+@inline get_robin_fidx(prob::AbstractFVMProblem, i, j) = get_robin_fidx(prob.conditions, i, j)
 @inline get_dirichlet_fidx(prob::AbstractFVMProblem, i) = get_dirichlet_fidx(prob.conditions, i)
 @inline get_constrained_fidx(prob::AbstractFVMProblem, i, j) = get_constrained_fidx(prob.conditions, i, j)
 @inline eval_condition_fnc(
@@ -13,6 +14,7 @@ abstract type AbstractFVMProblem end
 ) = prob.source_function(x, y, t, u, prob.source_parameters)
 @inline is_dudt_node(prob::AbstractFVMProblem, node) = is_dudt_node(prob.conditions, node)
 @inline is_neumann_edge(prob::AbstractFVMProblem, i, j) = is_neumann_edge(prob.conditions, i, j)
+@inline is_robin_edge(prob::AbstractFVMProblem, i, j) = is_robin_edge(prob.conditions, i, j)
 @inline is_dirichlet_node(prob::AbstractFVMProblem, node) = is_dirichlet_node(prob.conditions, node)
 @inline is_constrained_edge(prob::AbstractFVMProblem, i, j) = is_constrained_edge(prob.conditions, i, j)
 @inline has_condition(prob::AbstractFVMProblem, node) = has_condition(prob.conditions, node)
