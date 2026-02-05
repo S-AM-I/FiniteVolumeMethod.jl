@@ -261,6 +261,10 @@ struct FVMSystem{N, FG, P, IC, FT, F, S, FF} <: AbstractFVMProblem
             1:length(problems)
         ) "The constrained edges in the `i`th `SimpleConditions` must match those from the `i`th problem."
         @assert all(
+            i -> problems[i].conditions.robin_edges == conditions[i].robin_edges,
+            1:length(problems)
+        ) "The Robin edges in the `i`th `SimpleConditions` must match those from the `i`th problem."
+        @assert all(
             i -> problems[i].conditions.dirichlet_nodes == conditions[i].dirichlet_nodes,
             1:length(problems)
         ) "The Dirichlet nodes in the `i`th `SimpleConditions` must match those from the `i`th problem."
@@ -335,6 +339,11 @@ end
         i, j,
     ),
 ]
+@inline get_robin_fidx(prob::FVMSystem, i, j, var) = get_robin_edges(get_conditions(prob, var))[
+    (
+        i, j,
+    ),
+]
 @inline eval_condition_fnc(
     prob::FVMSystem, fidx, var, x, y, t,
     u
@@ -345,6 +354,7 @@ end
 ) = eval_fnc_in_het_tuple(prob.source_functions, var, x, y, t, u)
 @inline is_dudt_node(prob::FVMSystem, node, var) = is_dudt_node(get_conditions(prob, var), node)
 @inline is_neumann_edge(prob::FVMSystem, i, j, var) = is_neumann_edge(get_conditions(prob, var), i, j)
+@inline is_robin_edge(prob::FVMSystem, i, j, var) = is_robin_edge(get_conditions(prob, var), i, j)
 @inline is_dirichlet_node(prob::FVMSystem, node, var) = is_dirichlet_node(get_conditions(prob, var), node)
 @inline is_constrained_edge(prob::FVMSystem, i, j, var) = is_constrained_edge(get_conditions(prob, var), i, j)
 @inline has_condition(prob::FVMSystem, node, var) = has_condition(get_conditions(prob, var), node)
@@ -389,9 +399,10 @@ function merge_problem_conditions(probs)
         conds = prob.conditions
         neumann_edges = get_neumann_edges(conds)
         constrained_edges = get_constrained_edges(conds)
+        robin_edges = get_robin_edges(conds)
         dirichlet_nodes = get_dirichlet_nodes(conds)
         dudt_nodes = get_dudt_nodes(conds)
-        return SimpleConditions(neumann_edges, constrained_edges, dirichlet_nodes, dudt_nodes)
+        return SimpleConditions(neumann_edges, constrained_edges, robin_edges, dirichlet_nodes, dudt_nodes)
     end
     source_functions = ntuple(N) do i
         probs[i].source_function

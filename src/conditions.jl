@@ -22,12 +22,13 @@ end
 """
     ConditionType 
 
-This is an `Enum`-type, with four instances:
+This is an `Enum`-type, with five instances:
 
   - [`Neumann`](@ref)
   - [`Dudt`](@ref)
   - [`Dirichlet`](@ref)
   - [`Constrained`](@ref)
+  - [`Robin`](@ref)
 
 This is used for declaring conditions in the PDEs. See
 the associated docstrings, and also [`BoundaryConditions`](@ref)
@@ -38,6 +39,7 @@ and [`InternalConditions`](@ref).
     Dudt
     Dirichlet
     Constrained
+    Robin
 end
 
 @doc raw"""
@@ -117,12 +119,49 @@ With this condition, it is assumed that you will later setup your problem as a
 differential-algebraic equation (DAE) and provide the appropriate constraints.
 See the docs for some examples.
 
-When you provide a `Constrained` condition, for certain technical reasons 
-you do still need to provide a function that corresponds to it in the function list 
-provided to [`BoundaryConditions`](@ref). For this function, any function will work, 
-e.g. `sin` - it will not be called. The proper constraint function is to be provided after-the-fact, 
+When you provide a `Constrained` condition, for certain technical reasons
+you do still need to provide a function that corresponds to it in the function list
+provided to [`BoundaryConditions`](@ref). For this function, any function will work,
+e.g. `sin` - it will not be called. The proper constraint function is to be provided after-the-fact,
 as explained in the docs.
 """ Constrained
+
+@doc raw"""
+    Robin
+
+Instance of a [`ConditionType`](@ref) used for declaring that an edge
+has a `Robin` (or mixed) boundary condition. `Robin` conditions
+take the form
+
+```math
+a(x, y, t, u) \cdot u + b(x, y, t, u) \cdot \vb q(x, y, t) \vdot \vu n_\sigma = c(x, y, t, u)
+```
+
+where $u$ is the solution, $\vb q$ is the flux function, and $\vu n_\sigma$ is the
+outward unit normal vector field on the associated edge. The coefficients $a$, $b$, and $c$
+can be constants or functions of position, time, and the solution.
+
+Robin boundary conditions are a generalization that includes both Dirichlet ($b = 0$)
+and Neumann ($a = 0$) as special cases. They are commonly used to model:
+- Convective heat transfer: $h(T - T_\infty) + k \nabla T \cdot \vu n = 0$
+- Mass transfer with surface reaction
+- Impedance boundary conditions in wave problems
+
+When providing a `Robin` condition, the function you provide
+takes the form
+
+    f(x, y, t, u, p) -> (a, b, c)
+
+where `(x, y)` is the point, `t` is the current time, `u` is the
+solution at the point `(x, y)` at time `t`, and `p` contains additional
+parameters. The function must return a tuple `(a, b, c)` of the three
+Robin coefficients.
+
+!!! note "Sign Convention"
+    The Robin condition is expressed as `a*u + b*(q·n) = c`. For a diffusion
+    problem where `q = -D∇u`, this becomes `a*u - b*D*(∇u·n) = c`. To specify
+    a condition like `∂u/∂n + h*u = g` (convective BC), use `a = h`, `b = -1`, `c = -g`.
+""" Robin
 
 @inline function wrap_functions(functions::Tuple, parameters)
     wrapped_functions = ntuple(i -> ParametrisedFunction(functions[i], parameters[i]), Val(length(parameters)))
@@ -281,22 +320,27 @@ The fields are:
 
 # Fields
 
-  - `neumann_conditions::Dict{NTuple{2,Int},Int}`
+  - `neumann_edges::Dict{NTuple{2,Int},Int}`
 
 A `Dict` that stores all [`Neumann`](@ref) edges `(u, v)` as keys, with keys mapping to indices
 `idx` that refer to the corresponding condition function and parameters in `functions`.
 
-  - `constrained_conditions::Dict{NTuple{2,Int},Int}`
+  - `constrained_edges::Dict{NTuple{2,Int},Int}`
 
 A `Dict` that stores all [`Constrained`](@ref) edges `(u, v)` as keys, with keys mapping to indices
 `idx` that refer to the corresponding condition function and parameters in `functions`.
 
-  - `dirichlet_conditions::Dict{Int,Int}`
+  - `robin_edges::Dict{NTuple{2,Int},Int}`
+
+A `Dict` that stores all [`Robin`](@ref) edges `(u, v)` as keys, with keys mapping to indices
+`idx` that refer to the corresponding condition function and parameters in `functions`.
+
+  - `dirichlet_nodes::Dict{Int,Int}`
 
 A `Dict` that stores all [`Dirichlet`](@ref) points `u` as keys, with keys mapping to indices
 `idx` that refer to the corresponding condition function and parameters in `functions`.
 
-  - `dudt_conditions::Dict{Int,Int}`
+  - `dudt_nodes::Dict{Int,Int}`
 
 A `Dict` that stores all [`Dudt`](@ref) points `u` as keys, with keys mapping to indices
 `idx` that refer to the corresponding condition function and parameters in `functions`.
@@ -310,26 +354,29 @@ as a [`ParametrisedFunction`](@ref).
 struct Conditions{F <: Tuple} <: AbstractConditions
     neumann_edges::Dict{NTuple{2, Int}, Int}
     constrained_edges::Dict{NTuple{2, Int}, Int}
+    robin_edges::Dict{NTuple{2, Int}, Int}
     dirichlet_nodes::Dict{Int, Int}
     dudt_nodes::Dict{Int, Int}
     functions::F
     @inline function Conditions(
-            neumann_edges, constrained_edges, dirichlet_nodes,
+            neumann_edges, constrained_edges, robin_edges, dirichlet_nodes,
             dudt_nodes, functions::F
         ) where {F}
         return new{F}(
-            neumann_edges, constrained_edges, dirichlet_nodes, dudt_nodes, functions
+            neumann_edges, constrained_edges, robin_edges, dirichlet_nodes, dudt_nodes, functions
         )
     end
 end
 function Base.show(io::IO, ::MIME"text/plain", conds::AbstractConditions)
     nn = length(conds.neumann_edges)
     nc = length(conds.constrained_edges)
+    nr = length(conds.robin_edges)
     nd = length(conds.dirichlet_nodes)
     ndt = length(conds.dudt_nodes)
     println(io, "Conditions with")
     println(io, "   $(nn) Neumann edges")
     println(io, "   $(nc) Constrained edges")
+    println(io, "   $(nr) Robin edges")
     println(io, "   $(nd) Dirichlet nodes")
     return print(io, "   $(ndt) Dudt nodes")
 end
@@ -365,6 +412,17 @@ Get the index of the function that corresponds to the [`Dirichlet`](@ref) condit
 Get the index of the function that corresponds to the [`Constrained`](@ref) condition at the edge `(i, j)`.
 """
 @inline get_constrained_fidx(conds::AbstractConditions, i, j) = conds.constrained_edges[
+    (
+        i, j,
+    ),
+]
+
+"""
+    get_robin_fidx(conds, i, j)
+
+Get the index of the function that corresponds to the [`Robin`](@ref) condition at the edge `(i, j)`.
+"""
+@inline get_robin_fidx(conds::AbstractConditions, i, j) = conds.robin_edges[
     (
         i, j,
     ),
@@ -418,11 +476,29 @@ Check if the edge `(i, j)` has a [`Constrained`](@ref) condition.
 )
 
 """
+    is_robin_edge(conds, i, j)
+
+Check if the edge `(i, j)` has a [`Robin`](@ref) condition.
+"""
+@inline is_robin_edge(conds::AbstractConditions, i, j) = haskey(
+    conds.robin_edges, (
+        i, j,
+    )
+)
+
+"""
     has_constrained_edges(conds)
 
 Check if any edge has a [`Constrained`](@ref) condition.
 """
 @inline has_constrained_edges(conds::AbstractConditions) = !isempty(conds.constrained_edges)
+
+"""
+    has_robin_edges(conds)
+
+Check if any edge has a [`Robin`](@ref) condition.
+"""
+@inline has_robin_edges(conds::AbstractConditions) = !isempty(conds.robin_edges)
 
 """
     has_neumann_edges(conds)
@@ -483,22 +559,31 @@ Get all edges that have a [`Constrained`](@ref) condition.
 """
 @inline get_constrained_edges(conds::AbstractConditions) = conds.constrained_edges
 
+"""
+    get_robin_edges(conds)
+
+Get all edges that have a [`Robin`](@ref) condition.
+"""
+@inline get_robin_edges(conds::AbstractConditions) = conds.robin_edges
+
 @inline function prepare_conditions(mesh::FVMGeometry, bc::BoundaryConditions, ic::InternalConditions)
     bc_functions = bc.functions
     ic_functions = ic.functions
     neumann_edges = Dict{NTuple{2, Int}, Int}()
     constrained_edges = Dict{NTuple{2, Int}, Int}()
+    robin_edges = Dict{NTuple{2, Int}, Int}()
     dirichlet_nodes = copy(ic.dirichlet_nodes)
     dudt_nodes = copy(ic.dudt_nodes)
     ne = DelaunayTriangulation.num_segments(mesh.triangulation_statistics)
     nv = DelaunayTriangulation.num_solid_vertices(mesh.triangulation_statistics)
     sizehint!(neumann_edges, ne)
     sizehint!(constrained_edges, ne)
+    sizehint!(robin_edges, ne)
     sizehint!(dirichlet_nodes, nv)
     sizehint!(dudt_nodes, nv)
     functions = (ic_functions..., bc_functions...)
     conditions = Conditions(
-        neumann_edges, constrained_edges, dirichlet_nodes, dudt_nodes, functions
+        neumann_edges, constrained_edges, robin_edges, dirichlet_nodes, dudt_nodes, functions
     )
     return conditions
 end
@@ -523,6 +608,8 @@ function merge_conditions!(conditions::Conditions, mesh::FVMGeometry, bc_conditi
                 conditions.neumann_edges[(u, v)] = updated_bc_number
             elseif condition == Constrained
                 conditions.constrained_edges[(u, v)] = updated_bc_number
+            elseif condition == Robin
+                conditions.robin_edges[(u, v)] = updated_bc_number
             elseif condition == Dirichlet
                 conditions.dirichlet_nodes[u] = updated_bc_number
                 conditions.dirichlet_nodes[v] = updated_bc_number
@@ -554,6 +641,7 @@ end
 struct SimpleConditions <: AbstractConditions # in 2.0, this needs to be part of Conditions. need this for type stability in FVMSystems
     neumann_edges::Dict{NTuple{2, Int}, Int}
     constrained_edges::Dict{NTuple{2, Int}, Int}
+    robin_edges::Dict{NTuple{2, Int}, Int}
     dirichlet_nodes::Dict{Int, Int}
     dudt_nodes::Dict{Int, Int}
 end

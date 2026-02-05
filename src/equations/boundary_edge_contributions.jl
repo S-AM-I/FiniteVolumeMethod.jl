@@ -1,38 +1,44 @@
-# primitive: get flux contribution across a boundary edge (i, j), taking care for a Neumann boundary condition
+# primitive: get flux contribution across a boundary edge (i, j), taking care for Neumann and Robin boundary conditions
 @inline function _get_boundary_flux(
         prob::AbstractFVMProblem, x, y, t, α, β, γ, nx, ny, i, j, u::T
     ) where {T}
-    # For checking if an edge is Neumann, we need only check e.g. (i, j) and not (j, i), since we do not allow for internal Neumann edges.
+    # For checking if an edge is Neumann/Robin, we need only check e.g. (i, j) and not (j, i), since we do not allow for internal Neumann/Robin edges.
     ij_is_neumann = is_neumann_edge(prob, i, j)
-    qn = if !ij_is_neumann
-        _non_neumann_get_flux(prob, x, y, t, α, β, γ, nx, ny)
-    else
+    ij_is_robin = is_robin_edge(prob, i, j)
+    qn = if ij_is_neumann
         _neumann_get_flux(prob, x, y, t, u, i, j)
+    elseif ij_is_robin
+        _robin_get_flux(prob, x, y, t, α, β, γ, nx, ny, u, i, j)
+    else
+        _non_neumann_get_flux(prob, x, y, t, α, β, γ, nx, ny)
     end
     return qn
 end
 
-# primitive: get flux contribution across a boundary edge (i, j) in a system, taking care for a Neumann boundary condition for a single variable. This is used as a function barrier
+# primitive: get flux contribution across a boundary edge (i, j) in a system, taking care for Neumann and Robin boundary conditions for a single variable. This is used as a function barrier
 @inline function _get_boundary_flux(
-        prob::FVMSystem, x, y, t, nx, ny, i, j, ℓ, u::T, var, flux
+        prob::FVMSystem, x, y, t, α, β, γ, nx, ny, i, j, ℓ, u::T, var, flux
     ) where {T}
     ij_is_neumann = is_neumann_edge(prob, i, j, var)
-    if !ij_is_neumann
+    ij_is_robin = is_robin_edge(prob, i, j, var)
+    if ij_is_neumann
+        qn = _neumann_get_flux(prob, x, y, t, u, i, j, var) * ℓ
+    elseif ij_is_robin
+        qn = _robin_get_flux(prob, x, y, t, α, β, γ, nx, ny, u, i, j, var) * ℓ
+    else
         _qx, _qy = flux[var]
         qn = (_qx * nx + _qy * ny) * ℓ
-    else
-        qn = _neumann_get_flux(prob, x, y, t, u, i, j, var) * ℓ
     end
     return qn
 end
 
-# get flux contribution across a boundary edge (i, j), taking care for a Neumann boundary condition for all variables in a system
+# get flux contribution across a boundary edge (i, j), taking care for Neumann and Robin boundary conditions for all variables in a system
 @inline function _get_boundary_fluxes(
         prob::FVMSystem, x, y, t, α, β, γ, nx, ny, i, j, u::T, ℓ
     ) where {T}
     all_flux = eval_flux_function(prob, x, y, t, α, β, γ) # if we use the primitive, then we need to recursively evaluate the flux over and over
     normal_flux = ntuple(_neqs(prob)) do var
-        _get_boundary_flux(prob, x, y, t, nx, ny, i, j, ℓ, u, var, all_flux)
+        _get_boundary_flux(prob, x, y, t, α, β, γ, nx, ny, i, j, ℓ, u, var, all_flux)
     end
     return normal_flux
 end

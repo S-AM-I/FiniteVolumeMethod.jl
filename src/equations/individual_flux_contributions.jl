@@ -17,6 +17,36 @@ end
     return qn
 end
 
+# primitive: flux contribution with a Robin boundary condition
+# Robin BC: a*u + b*(q·n) = c  =>  q·n = (c - a*u)/b
+@inline function _robin_get_flux(prob, x, y, t, α::A, β, γ, nx, ny, u::T, i, j) where {A, T}
+    function_index = get_robin_fidx(prob, i, j)
+    a, b, c = eval_condition_fnc(prob, function_index, x, y, t, u)
+    if iszero(b)
+        # Degenerate case: pure Dirichlet-like constraint (a*u = c)
+        # Fall back to computing flux from interior
+        qx, qy = eval_flux_function(prob, x, y, t, α, β, γ)
+        qn = qx * nx + qy * ny
+    else
+        qn = (c - a * u) / b
+    end
+    return qn
+end
+@inline function _robin_get_flux(prob::FVMSystem, x, y, t, α::A, β, γ, nx, ny, u::T, i, j, var) where {A, T}
+    function_index = get_robin_fidx(prob, i, j, var)
+    a, b, c = eval_condition_fnc(prob, function_index, var, x, y, t, u)
+    if iszero(b)
+        # Degenerate case: pure Dirichlet-like constraint (a*u = c)
+        # Fall back to computing flux from interior
+        q = eval_flux_function(prob, x, y, t, α, β, γ)
+        qx, qy = q[var]
+        qn = qx * nx + qy * ny
+    else
+        qn = (c - a * u) / b
+    end
+    return qn
+end
+
 # primitive: get flux contribution without a boundary condition. This is used as a function barrier
 @inline function _get_flux(prob::AbstractFVMProblem, x, y, t, α::A, β, γ, nx, ny) where {A}
     qn = _non_neumann_get_flux(prob, x, y, t, α, β, γ, nx, ny)
