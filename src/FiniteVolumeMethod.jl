@@ -34,7 +34,13 @@ include("equations/triangle_contributions.jl")
 include("solve.jl")
 include("utils.jl")
 
+# Schemes for higher-order methods
+include("schemes/limiters.jl")
+include("schemes/gradients.jl")
+include("schemes/muscl.jl")
+
 include("specific_problems/abstract_templates.jl")
+include("specific_problems/advection_diffusion_equation.jl")
 
 export FVMGeometry,
     FVMProblem,
@@ -47,9 +53,46 @@ export FVMGeometry,
     Dudt,
     Dirichlet,
     Constrained,
+    Robin,
     solve,
     compute_flux,
-    pl_interpolate
+    pl_interpolate,
+    # Flux limiters
+    AbstractLimiter,
+    MinmodLimiter,
+    SuperbeeLimiter,
+    VanLeerLimiter,
+    VenkatakrishnanLimiter,
+    BarthJespersenLimiter,
+    KorenLimiter,
+    OspreLimiter,
+    minmod,
+    superbee,
+    van_leer,
+    venkatakrishnan,
+    barth_jespersen,
+    koren,
+    ospre,
+    apply_limiter,
+    select_limiter,
+    # Gradient reconstruction
+    AbstractGradientMethod,
+    GreenGaussGradient,
+    LeastSquaresGradient,
+    reconstruct_gradient,
+    reconstruct_gradient_at_edge,
+    reconstruct_gradient_at_point,
+    reconstruct_all_gradients,
+    # MUSCL scheme
+    MUSCLScheme,
+    muscl_reconstruct_face_value,
+    muscl_reconstruct_edge_values,
+    muscl_advective_flux,
+    muscl_diffusive_flux,
+    MUSCLFluxFunction,
+    create_muscl_problem,
+    # Advection-diffusion
+    AdvectionDiffusionEquation
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin

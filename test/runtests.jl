@@ -19,11 +19,17 @@ end
     @testset verbose = true "Conditions" begin
         safe_include("conditions.jl")
     end
+    @testset verbose = true "Robin BCs" begin
+        safe_include("robin.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end
     @testset verbose = true "Equations" begin
         safe_include("equations.jl")
+    end
+    @testset verbose = true "Schemes" begin
+        safe_include("schemes.jl")
     end
     @testset verbose = true "README" begin
         safe_include("README.jl")

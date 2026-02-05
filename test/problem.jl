@@ -208,10 +208,12 @@ end
     @test prob.final_time == 5.0
     cond1 = FVM.SimpleConditions(
         Φ_prob.conditions.neumann_edges, Φ_prob.conditions.constrained_edges,
+        Φ_prob.conditions.robin_edges,
         Φ_prob.conditions.dirichlet_nodes, Φ_prob.conditions.dudt_nodes
     )
     cond2 = FVM.SimpleConditions(
         Ψ_prob.conditions.neumann_edges, Ψ_prob.conditions.constrained_edges,
+        Ψ_prob.conditions.robin_edges,
         Ψ_prob.conditions.dirichlet_nodes, Ψ_prob.conditions.dudt_nodes
     )
     syscond = (cond1, cond2)
