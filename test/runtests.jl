@@ -37,6 +37,12 @@ end
     @testset verbose = true "Physics Models" begin
         safe_include("physics.jl")
     end
+    @testset verbose = true "Hyperbolic Solver" begin
+        safe_include("hyperbolic.jl")
+    end
+    @testset verbose = true "Hyperbolic 2D + HLLC" begin
+        safe_include("hyperbolic_2d.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

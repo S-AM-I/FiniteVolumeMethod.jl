@@ -18,6 +18,7 @@ using PreallocationTools: PreallocationTools, DiffCache, get_tmp
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, LinearProblem,
     MatrixOperator, ODEFunction, ODEProblem, SteadyStateProblem
 using SparseArrays: SparseArrays, sparse
+using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
 include("geometry.jl")
@@ -50,6 +51,23 @@ include("specific_problems/anisotropic_diffusion.jl")
 
 # Physics models
 include("physics/turbulence/k_epsilon.jl")
+
+# Hyperbolic solver framework (cell-centered FVM)
+include("mesh/abstract_mesh.jl")
+include("mesh/structured_mesh.jl")
+include("eos/eos_interface.jl")
+include("eos/ideal_gas.jl")
+include("hyperbolic/conservation_laws.jl")
+include("hyperbolic/euler.jl")
+include("hyperbolic/riemann_solvers.jl")
+include("hyperbolic/reconstruction.jl")
+include("hyperbolic/boundary_conditions_hyp.jl")
+include("hyperbolic/hllc_solver.jl")
+include("hyperbolic/hyperbolic_problem.jl")
+include("hyperbolic/hyperbolic_solve.jl")
+include("hyperbolic/hyperbolic_problem_2d.jl")
+include("hyperbolic/boundary_conditions_2d.jl")
+include("hyperbolic/hyperbolic_solve_2d.jl")
 
 export FVMGeometry,
     FVMProblem,
@@ -140,7 +158,64 @@ export FVMGeometry,
     compute_friction_velocity,
     k_wall_value,
     epsilon_wall_value,
-    TurbulentWallBC
+    TurbulentWallBC,
+    # Mesh abstractions
+    AbstractMesh,
+    StructuredMesh1D,
+    StructuredMesh2D,
+    ncells,
+    nfaces,
+    cell_center,
+    cell_volume,
+    face_area,
+    face_owner,
+    face_neighbor,
+    ndims_mesh,
+    # Equations of state
+    AbstractEOS,
+    IdealGasEOS,
+    pressure,
+    sound_speed,
+    internal_energy,
+    total_energy,
+    # Conservation laws
+    AbstractConservationLaw,
+    EulerEquations,
+    nvariables,
+    physical_flux,
+    max_wave_speed,
+    wave_speeds,
+    conserved_to_primitive,
+    primitive_to_conserved,
+    # Riemann solvers
+    AbstractRiemannSolver,
+    LaxFriedrichsSolver,
+    HLLSolver,
+    HLLCSolver,
+    solve_riemann,
+    # Reconstruction
+    CellCenteredMUSCL,
+    NoReconstruction,
+    reconstruct_interface,
+    # Hyperbolic boundary conditions
+    AbstractHyperbolicBC,
+    TransmissiveBC,
+    ReflectiveBC,
+    InflowBC,
+    PeriodicHyperbolicBC,
+    DirichletHyperbolicBC,
+    # Hyperbolic problem and solver
+    HyperbolicProblem,
+    HyperbolicProblem2D,
+    solve_hyperbolic,
+    compute_dt,
+    compute_dt_2d,
+    hyperbolic_rhs!,
+    hyperbolic_rhs_2d!,
+    to_primitive,
+    # 2D mesh helpers
+    cell_ij,
+    cell_idx
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin
