@@ -57,6 +57,7 @@ include("mesh/abstract_mesh.jl")
 include("mesh/structured_mesh.jl")
 include("eos/eos_interface.jl")
 include("eos/ideal_gas.jl")
+include("eos/stiffened_gas.jl")
 include("hyperbolic/conservation_laws.jl")
 include("hyperbolic/euler.jl")
 include("hyperbolic/riemann_solvers.jl")
@@ -79,6 +80,13 @@ include("constrained_transport/divb.jl")
 
 # 2D MHD solver with constrained transport
 include("hyperbolic/mhd_solve_2d.jl")
+
+# Navier-Stokes (viscous terms)
+include("hyperbolic/navier_stokes.jl")
+include("hyperbolic/viscous_flux.jl")
+include("hyperbolic/noslip_bc.jl")
+include("hyperbolic/navier_stokes_solve.jl")
+include("hyperbolic/navier_stokes_solve_2d.jl")
 
 export FVMGeometry,
     FVMProblem,
@@ -185,6 +193,7 @@ export FVMGeometry,
     # Equations of state
     AbstractEOS,
     IdealGasEOS,
+    StiffenedGasEOS,
     pressure,
     sound_speed,
     internal_energy,
@@ -192,6 +201,7 @@ export FVMGeometry,
     # Conservation laws
     AbstractConservationLaw,
     EulerEquations,
+    NavierStokesEquations,
     IdealMHDEquations,
     fast_magnetosonic_speed,
     slow_magnetosonic_speed,
@@ -219,6 +229,7 @@ export FVMGeometry,
     InflowBC,
     PeriodicHyperbolicBC,
     DirichletHyperbolicBC,
+    NoSlipBC,
     # Hyperbolic problem and solver
     HyperbolicProblem,
     HyperbolicProblem2D,
@@ -228,6 +239,11 @@ export FVMGeometry,
     hyperbolic_rhs!,
     hyperbolic_rhs_2d!,
     to_primitive,
+    # Navier-Stokes
+    thermal_conductivity,
+    viscous_flux_1d,
+    viscous_flux_x_2d,
+    viscous_flux_y_2d,
     # 2D mesh helpers
     cell_ij,
     cell_idx,

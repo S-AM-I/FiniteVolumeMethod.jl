@@ -49,6 +49,9 @@ end
     @testset verbose = true "MHD 2D + CT" begin
         safe_include("mhd_2d.jl")
     end
+    @testset verbose = true "Navier-Stokes" begin
+        safe_include("navier_stokes.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
