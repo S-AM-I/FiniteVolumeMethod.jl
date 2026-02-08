@@ -84,6 +84,43 @@ src/
 
 Multi-threading via `Threads.nthreads()` with ChunkSplitters. Thread-safe temporaries use PreallocationTools.DiffCache.
 
+### Hyperbolic Solver Framework (Cell-Centered FVM)
+
+A separate cell-centered finite volume solver for hyperbolic conservation laws on structured Cartesian meshes. Uses explicit time integration (forward Euler, SSP-RK3) with Godunov-type Riemann solvers.
+
+**Mesh** (in `src/mesh/`):
+- `AbstractMesh{Dim}` with `StructuredMesh1D`, `StructuredMesh2D`, `StructuredMesh3D`
+
+**EOS** (in `src/eos/`):
+- `AbstractEOS` → `IdealGasEOS`, `StiffenedGasEOS`
+
+**Conservation Laws** (in `src/hyperbolic/`):
+- `AbstractConservationLaw{Dim}` interface: `nvariables`, `physical_flux`, `max_wave_speed`, `wave_speeds`, `conserved_to_primitive`, `primitive_to_conserved`
+- `EulerEquations{Dim,EOS}` — 3/4/5 variables (1D/2D/3D)
+- `IdealMHDEquations{Dim,EOS}` — 8 variables [ρ,ρv,E,B]
+- `NavierStokesEquations{Dim,EOS}` — wraps Euler + viscosity
+- `SRMHDEquations{Dim,EOS}` — 8 variables, relativistic con2prim
+- `GRMHDEquations{Dim,EOS,Metric}` — Valencia formulation + geometric source terms
+
+**Riemann Solvers**: `LaxFriedrichsSolver`, `HLLSolver`, `HLLCSolver`, `HLLDSolver`
+
+**Reconstruction**: `NoReconstruction`, `CellCenteredMUSCL`, `WENO3`, `WENO5`, `CharacteristicWENO`
+
+**Time Integration**: Forward Euler, SSP-RK3, IMEX-RK (`IMEX_SSP3_433`, `IMEX_ARS222`, `IMEX_Midpoint`)
+
+**Constrained Transport** (in `src/constrained_transport/`):
+- `CTData2D`/`CTData3D` — face-centered B, edge-centered EMF
+- Guarantees div(B) = 0 to machine precision for MHD
+
+**Spacetime Metrics** (in `src/metric/`):
+- `AbstractMetric{Dim}` → `MinkowskiMetric`, `SchwarzschildMetric`, `KerrMetric`
+
+**AMR** (in `src/amr/`):
+- Block-structured AMR with Berger-Colella flux correction
+- `AMRBlock`, `AMRGrid`, `GradientRefinement`, `CurrentSheetRefinement`
+
+**Ghost-cell padding**: 2 cells per side (or `nghost(recon)` for WENO5 = 3). Interior cell `(ix,iy)` maps to `U[ix+2, iy+2]` in the padded array.
+
 ## Key Integration Points
 
 - **DelaunayTriangulation.jl** - Mesh representation

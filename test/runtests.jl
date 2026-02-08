@@ -52,6 +52,33 @@ end
     @testset verbose = true "Navier-Stokes" begin
         safe_include("navier_stokes.jl")
     end
+    @testset verbose = true "SRMHD" begin
+        safe_include("srmhd.jl")
+    end
+    @testset verbose = true "SRMHD 2D" begin
+        safe_include("srmhd_2d.jl")
+    end
+    @testset verbose = true "GRMHD" begin
+        safe_include("grmhd.jl")
+    end
+    @testset verbose = true "GRMHD 2D" begin
+        safe_include("grmhd_2d.jl")
+    end
+    @testset verbose = true "Hyperbolic 3D" begin
+        safe_include("hyperbolic_3d.jl")
+    end
+    @testset verbose = true "MHD 3D" begin
+        safe_include("mhd_3d.jl")
+    end
+    @testset verbose = true "AMR" begin
+        safe_include("amr.jl")
+    end
+    @testset verbose = true "WENO" begin
+        safe_include("weno.jl")
+    end
+    @testset verbose = true "IMEX" begin
+        safe_include("imex.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

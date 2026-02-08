@@ -18,7 +18,7 @@ using PreallocationTools: PreallocationTools, DiffCache, get_tmp
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, LinearProblem,
     MatrixOperator, ODEFunction, ODEProblem, SteadyStateProblem
 using SparseArrays: SparseArrays, sparse
-using StaticArrays: StaticArrays, SVector
+using StaticArrays: StaticArrays, SVector, SMatrix
 using Base.Threads
 
 include("geometry.jl")
@@ -87,6 +87,59 @@ include("hyperbolic/viscous_flux.jl")
 include("hyperbolic/noslip_bc.jl")
 include("hyperbolic/navier_stokes_solve.jl")
 include("hyperbolic/navier_stokes_solve_2d.jl")
+
+# SRMHD (Special Relativistic MHD)
+include("hyperbolic/con2prim.jl")
+include("hyperbolic/srmhd.jl")
+include("hyperbolic/srmhd_solve.jl")
+include("hyperbolic/srmhd_solve_2d.jl")
+
+# Spacetime metrics for GRMHD
+include("metric/abstract_metric.jl")
+include("metric/minkowski.jl")
+include("metric/schwarzschild.jl")
+include("metric/kerr.jl")
+include("metric/metric_data.jl")
+
+# GRMHD (General Relativistic MHD)
+include("hyperbolic/grmhd.jl")
+include("hyperbolic/grmhd_con2prim.jl")
+include("hyperbolic/grmhd_solve_2d.jl")
+
+# 3D mesh and Euler/MHD extensions
+include("mesh/structured_mesh_3d.jl")
+include("hyperbolic/euler_3d.jl")
+include("hyperbolic/mhd_3d.jl")
+
+# 3D Hyperbolic solver
+include("hyperbolic/hyperbolic_problem_3d.jl")
+include("hyperbolic/boundary_conditions_3d.jl")
+include("hyperbolic/hyperbolic_solve_3d.jl")
+
+# 3D Constrained transport for MHD
+include("constrained_transport/ct_data_3d.jl")
+include("constrained_transport/emf_3d.jl")
+include("constrained_transport/ct_update_3d.jl")
+include("constrained_transport/divb_3d.jl")
+
+# 3D MHD solver with constrained transport
+include("hyperbolic/mhd_solve_3d.jl")
+
+# Block-structured AMR
+include("amr/amr_grid.jl")
+include("amr/refinement.jl")
+include("amr/prolongation.jl")
+include("amr/restriction.jl")
+include("amr/flux_correction.jl")
+include("amr/amr_solve.jl")
+
+# WENO reconstruction and IMEX time integration (Phase 8)
+include("hyperbolic/weno3.jl")
+include("hyperbolic/weno.jl")
+include("hyperbolic/characteristic_projection.jl")
+include("hyperbolic/stiff_sources.jl")
+include("hyperbolic/imex.jl")
+include("hyperbolic/imex_solve.jl")
 
 export FVMGeometry,
     FVMProblem,
@@ -182,6 +235,7 @@ export FVMGeometry,
     AbstractMesh,
     StructuredMesh1D,
     StructuredMesh2D,
+    StructuredMesh3D,
     ncells,
     nfaces,
     cell_center,
@@ -190,6 +244,8 @@ export FVMGeometry,
     face_owner,
     face_neighbor,
     ndims_mesh,
+    cell_ijk,
+    cell_idx_3d,
     # Equations of state
     AbstractEOS,
     IdealGasEOS,
@@ -222,6 +278,14 @@ export FVMGeometry,
     CellCenteredMUSCL,
     NoReconstruction,
     reconstruct_interface,
+    # WENO reconstruction
+    WENO3,
+    WENO5,
+    nghost,
+    reconstruct_interface_weno5,
+    CharacteristicWENO,
+    left_eigenvectors,
+    right_eigenvectors,
     # Hyperbolic boundary conditions
     AbstractHyperbolicBC,
     TransmissiveBC,
@@ -233,11 +297,14 @@ export FVMGeometry,
     # Hyperbolic problem and solver
     HyperbolicProblem,
     HyperbolicProblem2D,
+    HyperbolicProblem3D,
     solve_hyperbolic,
     compute_dt,
     compute_dt_2d,
+    compute_dt_3d,
     hyperbolic_rhs!,
     hyperbolic_rhs_2d!,
+    hyperbolic_rhs_3d!,
     to_primitive,
     # Navier-Stokes
     thermal_conductivity,
@@ -247,7 +314,21 @@ export FVMGeometry,
     # 2D mesh helpers
     cell_ij,
     cell_idx,
-    # Constrained transport
+    # Stiff sources and IMEX
+    AbstractStiffSource,
+    ResistiveSource,
+    CoolingSource,
+    NullSource,
+    evaluate_stiff_source,
+    stiff_source_jacobian,
+    AbstractIMEXScheme,
+    IMEX_SSP3_433,
+    IMEX_ARS222,
+    IMEX_Midpoint,
+    imex_tableau,
+    imex_nstages,
+    solve_hyperbolic_imex,
+    # Constrained transport (2D)
     CTData2D,
     initialize_ct!,
     initialize_ct_from_potential!,
@@ -258,7 +339,75 @@ export FVMGeometry,
     ct_update!,
     compute_divB,
     max_divB,
-    l2_divB
+    l2_divB,
+    # Constrained transport (3D)
+    CTData3D,
+    initialize_ct_3d!,
+    initialize_ct_3d_from_potential!,
+    face_to_cell_B_3d!,
+    ct_update_3d!,
+    ct_weighted_update_3d!,
+    compute_divB_3d,
+    max_divB_3d,
+    l2_divB_3d,
+    # AMR
+    AMRBlock,
+    AMRGrid,
+    AbstractRefinementCriterion,
+    GradientRefinement,
+    CurrentSheetRefinement,
+    is_leaf,
+    active_blocks,
+    blocks_at_level,
+    max_active_level,
+    block_cell_center,
+    needs_refinement,
+    needs_coarsening,
+    refine_block!,
+    coarsen_block!,
+    regrid!,
+    prolongate!,
+    prolongate_B_divergence_preserving_2d!,
+    restrict!,
+    restrict_B_face_2d!,
+    restrict_B_face_3d!,
+    FluxRegister,
+    reset_flux_register!,
+    accumulate_fine_flux!,
+    store_coarse_flux!,
+    apply_flux_correction_2d!,
+    apply_flux_correction_3d!,
+    AMRProblem,
+    solve_amr,
+    compute_dt_amr,
+    advance_level!,
+    # SRMHD
+    SRMHDEquations,
+    lorentz_factor,
+    srmhd_b_quantities,
+    srmhd_con2prim,
+    Con2PrimResult,
+    # Spacetime metrics
+    AbstractMetric,
+    MinkowskiMetric,
+    SchwarzschildMetric,
+    KerrMetric,
+    lapse,
+    shift,
+    spatial_metric,
+    sqrt_gamma,
+    inv_spatial_metric,
+    MetricData2D,
+    precompute_metric,
+    precompute_metric_at_faces,
+    # GRMHD
+    GRMHDEquations,
+    grmhd_con2prim,
+    grmhd_con2prim_cached,
+    grmhd_primitive_to_conserved_densitized,
+    grmhd_prim2con_densitized_cached,
+    grmhd_max_wave_speed_coord,
+    grmhd_source_terms
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin

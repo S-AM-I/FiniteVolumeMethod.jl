@@ -78,7 +78,9 @@ If P_star > P_K (shock), q > 1; if P_star ≤ P_K (rarefaction), q = 1.
     if P_star <= P_K
         return one(P_star)
     else
-        return sqrt(one(P_star) + (γ + 1) / (2γ) * (P_star / P_K - 1))
+        P_K_safe = max(P_K, 1e-30)
+        arg = one(P_star) + (γ + 1) / (2γ) * (P_star / P_K_safe - 1)
+        return sqrt(max(arg, one(P_star)))
     end
 end
 
