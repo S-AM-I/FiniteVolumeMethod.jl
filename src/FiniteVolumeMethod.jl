@@ -63,11 +63,22 @@ include("hyperbolic/riemann_solvers.jl")
 include("hyperbolic/reconstruction.jl")
 include("hyperbolic/boundary_conditions_hyp.jl")
 include("hyperbolic/hllc_solver.jl")
+include("hyperbolic/mhd.jl")
+include("hyperbolic/hlld_solver.jl")
 include("hyperbolic/hyperbolic_problem.jl")
 include("hyperbolic/hyperbolic_solve.jl")
 include("hyperbolic/hyperbolic_problem_2d.jl")
 include("hyperbolic/boundary_conditions_2d.jl")
 include("hyperbolic/hyperbolic_solve_2d.jl")
+
+# Constrained transport for MHD
+include("constrained_transport/ct_data.jl")
+include("constrained_transport/emf.jl")
+include("constrained_transport/ct_update.jl")
+include("constrained_transport/divb.jl")
+
+# 2D MHD solver with constrained transport
+include("hyperbolic/mhd_solve_2d.jl")
 
 export FVMGeometry,
     FVMProblem,
@@ -181,6 +192,9 @@ export FVMGeometry,
     # Conservation laws
     AbstractConservationLaw,
     EulerEquations,
+    IdealMHDEquations,
+    fast_magnetosonic_speed,
+    slow_magnetosonic_speed,
     nvariables,
     physical_flux,
     max_wave_speed,
@@ -192,6 +206,7 @@ export FVMGeometry,
     LaxFriedrichsSolver,
     HLLSolver,
     HLLCSolver,
+    HLLDSolver,
     solve_riemann,
     # Reconstruction
     CellCenteredMUSCL,
@@ -215,7 +230,19 @@ export FVMGeometry,
     to_primitive,
     # 2D mesh helpers
     cell_ij,
-    cell_idx
+    cell_idx,
+    # Constrained transport
+    CTData2D,
+    initialize_ct!,
+    initialize_ct_from_potential!,
+    face_to_cell_B!,
+    copy_ct,
+    copyto_ct!,
+    compute_emf_2d!,
+    ct_update!,
+    compute_divB,
+    max_divB,
+    l2_divB
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin

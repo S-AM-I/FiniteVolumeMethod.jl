@@ -43,6 +43,12 @@ end
     @testset verbose = true "Hyperbolic 2D + HLLC" begin
         safe_include("hyperbolic_2d.jl")
     end
+    @testset verbose = true "MHD + HLLD" begin
+        safe_include("mhd.jl")
+    end
+    @testset verbose = true "MHD 2D + CT" begin
+        safe_include("mhd_2d.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
