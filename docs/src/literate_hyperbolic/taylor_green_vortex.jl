@@ -23,7 +23,7 @@ gamma = 1.4
 eos = IdealGasEOS(gamma)
 mu = 0.01
 Pr = 0.72
-ns = NavierStokesEquations{2}(eos, mu=mu, Pr=Pr)
+ns = NavierStokesEquations{2}(eos, mu = mu, Pr = Pr)
 
 # Physical parameters (low Mach number: $U_0 \ll c_s$):
 rho0 = 1.0
@@ -49,7 +49,7 @@ prob = HyperbolicProblem2D(
     ns, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-    ic_tgv; final_time=t_final, cfl=0.3
+    ic_tgv; final_time = t_final, cfl = 0.3
 )
 coords, U, t_end = solve_hyperbolic(prob)
 coords |> tc #hide
@@ -81,15 +81,19 @@ vx_num = [conserved_to_primitive(ns, U[i, j])[2] for i in 1:nx, j in 1:ny]
 vy_num = [conserved_to_primitive(ns, U[i, j])[3] for i in 1:nx, j in 1:ny]
 vx_ex = [-U0 * cos(k * xc[i]) * sin(k * yc[j]) * decay for i in 1:nx, j in 1:ny]
 
-fig = Figure(fontsize=24, size=(1200, 500))
-ax1 = Axis(fig[1, 1], xlabel="x", ylabel="y",
-           title=L"v_x \text{ (numerical)}", aspect=DataAspect())
-hm1 = heatmap!(ax1, xc, yc, vx_num, colormap=:RdBu)
+fig = Figure(fontsize = 24, size = (1200, 500))
+ax1 = Axis(
+    fig[1, 1], xlabel = "x", ylabel = "y",
+    title = L"v_x \text{ (numerical)}", aspect = DataAspect()
+)
+hm1 = heatmap!(ax1, xc, yc, vx_num, colormap = :RdBu)
 Colorbar(fig[1, 2], hm1)
 
-ax2 = Axis(fig[1, 3], xlabel="x", ylabel="y",
-           title=L"v_x \text{ (exact)}", aspect=DataAspect())
-hm2 = heatmap!(ax2, xc, yc, vx_ex, colormap=:RdBu)
+ax2 = Axis(
+    fig[1, 3], xlabel = "x", ylabel = "y",
+    title = L"v_x \text{ (exact)}", aspect = DataAspect()
+)
+hm2 = heatmap!(ax2, xc, yc, vx_ex, colormap = :RdBu)
 Colorbar(fig[1, 4], hm2)
 resize_to_layout!(fig)
 fig

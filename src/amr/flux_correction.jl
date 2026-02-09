@@ -72,8 +72,10 @@ end
 
 Add a fine flux contribution at a coarse face location.
 """
-function accumulate_fine_flux!(reg::FluxRegister, face::Symbol,
-        coarse_face_idx::Int, flux::SVector)
+function accumulate_fine_flux!(
+        reg::FluxRegister, face::Symbol,
+        coarse_face_idx::Int, flux::SVector
+    )
     reg.fine_flux_sum[face][coarse_face_idx] = reg.fine_flux_sum[face][coarse_face_idx] + flux
     return nothing
 end
@@ -83,8 +85,10 @@ end
 
 Store the coarse flux at a face location.
 """
-function store_coarse_flux!(reg::FluxRegister, face::Symbol,
-        coarse_face_idx::Int, flux::SVector)
+function store_coarse_flux!(
+        reg::FluxRegister, face::Symbol,
+        coarse_face_idx::Int, flux::SVector
+    )
     reg.coarse_flux[face][coarse_face_idx] = flux
     return nothing
 end
@@ -102,7 +106,8 @@ This is added to the coarse cells adjacent to the interface.
 """
 function apply_flux_correction_2d!(
         U::AbstractMatrix, reg::FluxRegister{N, FT},
-        dt, dx, dy, nx::Int, ny::Int, face::Symbol) where {N, FT}
+        dt, dx, dy, nx::Int, ny::Int, face::Symbol
+    ) where {N, FT}
     n_inv = FT(1) / FT(reg.n_fine)
 
     if face == :left
@@ -142,7 +147,8 @@ end
 
 function apply_flux_correction_3d!(
         U::AbstractArray{T, 3}, reg::FluxRegister{N, FT},
-        dt, dx, dy, dz, nx::Int, ny::Int, nz::Int, face::Symbol) where {T, N, FT}
+        dt, dx, dy, dz, nx::Int, ny::Int, nz::Int, face::Symbol
+    ) where {T, N, FT}
     n_inv = FT(1) / FT(reg.n_fine)
 
     if face == :left

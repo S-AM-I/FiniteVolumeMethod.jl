@@ -13,21 +13,21 @@ using Test
     end
 
     @testset "BoundaryConditions with Robin" begin
-        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=true)
+        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = true)
         mesh = FVMGeometry(tri)
 
         # Robin BC function returns (a, b, c) tuple
         robin_fn = (x, y, t, u, p) -> (p.a, p.b, p.c)
-        params = (a=1.0, b=2.0, c=3.0)
+        params = (a = 1.0, b = 2.0, c = 3.0)
 
-        BCs = BoundaryConditions(mesh, robin_fn, Robin; parameters=params)
+        BCs = BoundaryConditions(mesh, robin_fn, Robin; parameters = params)
 
         @test BCs.condition_types == (Robin,)
         @test length(BCs.functions) == 1
     end
 
     @testset "Conditions with Robin edges" begin
-        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=true)
+        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = true)
         mesh = FVMGeometry(tri)
 
         robin_fn = (x, y, t, u, p) -> (1.0, 2.0, 3.0)
@@ -47,7 +47,7 @@ using Test
 
     @testset "Mixed boundary conditions with Robin" begin
         # Create a mesh with multiple boundary segments
-        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=false)
+        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = false)
         mesh = FVMGeometry(tri)
 
         # Different BC types on different segments
@@ -59,9 +59,11 @@ using Test
         neumann_fn = (x, y, t, u, p) -> 0.0
         robin_fn = (x, y, t, u, p) -> (1.0, 1.0, 0.0)  # (a, b, c)
 
-        BCs = BoundaryConditions(mesh,
+        BCs = BoundaryConditions(
+            mesh,
             (dirichlet_fn, neumann_fn, robin_fn, dirichlet_fn),
-            (Dirichlet, Neumann, Robin, Dirichlet))
+            (Dirichlet, Neumann, Robin, Dirichlet)
+        )
 
         conditions = Conditions(mesh, BCs)
 
@@ -75,7 +77,7 @@ using Test
     end
 
     @testset "Robin BC evaluation" begin
-        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=true)
+        tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = true)
         mesh = FVMGeometry(tri)
 
         # Robin BC that returns position-dependent coefficients

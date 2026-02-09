@@ -49,8 +49,10 @@ cross-derivatives `∂vx/∂y` and `∂vy/∂y` must be provided (4-cell average
 
 Returns `SVector(0, τ_xx, τ_xy, vx*τ_xx + vy*τ_xy - q_x)`.
 """
-@inline function viscous_flux_x_2d(ns::NavierStokesEquations{2}, wL::SVector{4}, wR::SVector{4},
-        dvx_dy, dvy_dy, dx)
+@inline function viscous_flux_x_2d(
+        ns::NavierStokesEquations{2}, wL::SVector{4}, wR::SVector{4},
+        dvx_dy, dvy_dy, dx
+    )
     ρL, vxL, vyL, PL = wL
     ρR, vxR, vyR, PR = wR
     μ = ns.mu
@@ -90,8 +92,10 @@ cross-derivatives `∂vx/∂x` and `∂vy/∂x` must be provided (4-cell average
 
 Returns `SVector(0, τ_yx, τ_yy, vx*τ_yx + vy*τ_yy - q_y)`.
 """
-@inline function viscous_flux_y_2d(ns::NavierStokesEquations{2}, wB::SVector{4}, wT::SVector{4},
-        dvx_dx, dvy_dx, dy)
+@inline function viscous_flux_y_2d(
+        ns::NavierStokesEquations{2}, wB::SVector{4}, wT::SVector{4},
+        dvx_dx, dvy_dx, dy
+    )
     ρB, vxB, vyB, PB = wB
     ρT, vxT, vyT, PT = wT
     μ = ns.mu

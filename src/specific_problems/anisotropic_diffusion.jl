@@ -201,10 +201,10 @@ function anisotropic_neumann_boundary_edge_contributions!(
         D_eff_j = sqrt(Dxx_j * Dyy_j - Dxy_j^2)
 
         # Fallback to average of diagonal if det is small
-        if D_eff_i < 1e-10
+        if D_eff_i < 1.0e-10
             D_eff_i = (Dxx_i + Dyy_i) / 2
         end
-        if D_eff_j < 1e-10
+        if D_eff_j < 1.0e-10
             D_eff_j = (Dxx_j + Dyy_j) / 2
         end
 

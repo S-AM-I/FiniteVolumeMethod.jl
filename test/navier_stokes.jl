@@ -64,11 +64,11 @@ end
         for (ρ, P) in [(1000.0, 1.0e9), (800.0, 5.0e8), (1200.0, 2.0e9)]
             ε = internal_energy(eos, ρ, P)
             P_back = pressure(eos, ρ, ε)
-            @test P_back ≈ P rtol = 1e-12
+            @test P_back ≈ P rtol = 1.0e-12
 
             c = sound_speed(eos, ρ, P)
             @test c > 0
-            @test c^2 ≈ eos.gamma * (P + eos.P_inf) / ρ rtol = 1e-12
+            @test c^2 ≈ eos.gamma * (P + eos.P_inf) / ρ rtol = 1.0e-12
         end
     end
 
@@ -79,11 +79,11 @@ end
 
         ρ = 1.0
         P = 1.0
-        @test pressure(eos_stiff, ρ, internal_energy(eos_ideal, ρ, P)) ≈ P rtol = 1e-12
-        @test sound_speed(eos_stiff, ρ, P) ≈ sound_speed(eos_ideal, ρ, P) rtol = 1e-12
-        @test internal_energy(eos_stiff, ρ, P) ≈ internal_energy(eos_ideal, ρ, P) rtol = 1e-12
-        @test total_energy(eos_stiff, ρ, 0.5, P) ≈ total_energy(eos_ideal, ρ, 0.5, P) rtol = 1e-12
-        @test total_energy(eos_stiff, ρ, 0.5, 0.3, P) ≈ total_energy(eos_ideal, ρ, 0.5, 0.3, P) rtol = 1e-12
+        @test pressure(eos_stiff, ρ, internal_energy(eos_ideal, ρ, P)) ≈ P rtol = 1.0e-12
+        @test sound_speed(eos_stiff, ρ, P) ≈ sound_speed(eos_ideal, ρ, P) rtol = 1.0e-12
+        @test internal_energy(eos_stiff, ρ, P) ≈ internal_energy(eos_ideal, ρ, P) rtol = 1.0e-12
+        @test total_energy(eos_stiff, ρ, 0.5, P) ≈ total_energy(eos_ideal, ρ, 0.5, P) rtol = 1.0e-12
+        @test total_energy(eos_stiff, ρ, 0.5, 0.3, P) ≈ total_energy(eos_ideal, ρ, 0.5, 0.3, P) rtol = 1.0e-12
     end
 
     @testset "Total energy formulas" begin
@@ -95,12 +95,12 @@ end
         v = 10.0
         E_1d = total_energy(eos, ρ, v, P)
         ε = internal_energy(eos, ρ, P)
-        @test E_1d ≈ ρ * ε + 0.5 * ρ * v^2 rtol = 1e-12
+        @test E_1d ≈ ρ * ε + 0.5 * ρ * v^2 rtol = 1.0e-12
 
         # 2D
         vx, vy = 10.0, 5.0
         E_2d = total_energy(eos, ρ, vx, vy, P)
-        @test E_2d ≈ ρ * ε + 0.5 * ρ * (vx^2 + vy^2) rtol = 1e-12
+        @test E_2d ≈ ρ * ε + 0.5 * ρ * (vx^2 + vy^2) rtol = 1.0e-12
     end
 
     @testset "Euler solver with StiffenedGasEOS (shock tube)" begin
@@ -179,7 +179,7 @@ end
         eos = IdealGasEOS(gamma = 1.4)
         ns = NavierStokesEquations{1}(eos, mu = 0.01, Pr = 0.72)
         κ = thermal_conductivity(ns)
-        @test κ ≈ 0.01 * 1.4 / (0.72 * 0.4) rtol = 1e-12
+        @test κ ≈ 0.01 * 1.4 / (0.72 * 0.4) rtol = 1.0e-12
     end
 
     @testset "HLLC forwarding" begin
@@ -216,7 +216,7 @@ end
         # Uniform state → zero viscous flux
         w_uniform = SVector(1.0, 1.0, 1.0)
         Fv = viscous_flux_1d(ns, w_uniform, w_uniform, 0.1)
-        @test Fv ≈ SVector(0.0, 0.0, 0.0) atol = 1e-15
+        @test Fv ≈ SVector(0.0, 0.0, 0.0) atol = 1.0e-15
 
         # Linear velocity gradient
         wL = SVector(1.0, 0.0, 1.0)
@@ -226,7 +226,7 @@ end
         # τ_xx = (4/3) * μ * dv/dx = (4/3) * 0.01 * (1-0)/0.1
         τ_xx_expected = (4.0 / 3.0) * 0.01 * 10.0
         @test Fv[1] == 0.0
-        @test Fv[2] ≈ τ_xx_expected rtol = 1e-12
+        @test Fv[2] ≈ τ_xx_expected rtol = 1.0e-12
     end
 
     @testset "2D viscous flux x-direction" begin
@@ -236,7 +236,7 @@ end
         # Uniform state
         w_uniform = SVector(1.0, 1.0, 0.5, 1.0)
         Fv = viscous_flux_x_2d(ns, w_uniform, w_uniform, 0.0, 0.0, 0.1)
-        @test Fv ≈ SVector(0.0, 0.0, 0.0, 0.0) atol = 1e-15
+        @test Fv ≈ SVector(0.0, 0.0, 0.0, 0.0) atol = 1.0e-15
     end
 
     @testset "2D viscous flux y-direction" begin
@@ -246,7 +246,7 @@ end
         # Uniform state
         w_uniform = SVector(1.0, 1.0, 0.5, 1.0)
         Fv = viscous_flux_y_2d(ns, w_uniform, w_uniform, 0.0, 0.0, 0.1)
-        @test Fv ≈ SVector(0.0, 0.0, 0.0, 0.0) atol = 1e-15
+        @test Fv ≈ SVector(0.0, 0.0, 0.0, 0.0) atol = 1.0e-15
     end
 end
 
@@ -282,7 +282,7 @@ end
 
         @test t_e ≈ t_ns
         for i in eachindex(U_e)
-            @test U_e[i] ≈ U_ns[i] rtol = 1e-12
+            @test U_e[i] ≈ U_ns[i] rtol = 1.0e-12
         end
     end
 end
@@ -544,8 +544,8 @@ end
         mass_f = sum(u[1] for u in U) * dx
         mom_f = sum(u[2] for u in U) * dx
 
-        @test mass_f ≈ mass_0 rtol = 1e-10
-        @test abs(mom_f - mom_0) < 1e-12  # momentum near zero, use atol
+        @test mass_f ≈ mass_0 rtol = 1.0e-10
+        @test abs(mom_f - mom_0) < 1.0e-12  # momentum near zero, use atol
     end
 
     @testset "2D mass conservation" begin
@@ -590,7 +590,7 @@ end
         # Final mass
         mass_f = sum(U[ix, iy][1] for iy in 1:N, ix in 1:N) * dx * dy
 
-        @test mass_f ≈ mass_0 rtol = 1e-10
+        @test mass_f ≈ mass_0 rtol = 1.0e-10
     end
 end
 

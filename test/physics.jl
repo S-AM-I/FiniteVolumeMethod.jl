@@ -7,7 +7,7 @@ using Test
     @testset "Anisotropic Diffusion" begin
         @testset "AnisotropicDiffusionEquation construction" begin
             # Create mesh
-            tri = triangulate_rectangle(0, 1, 0, 1, 10, 10, single_boundary=true)
+            tri = triangulate_rectangle(0, 1, 0, 1, 10, 10, single_boundary = true)
             mesh = FVMGeometry(tri)
 
             # Dirichlet boundary conditions
@@ -18,7 +18,7 @@ using Test
             diffusion_tensor = (x, y, p) -> (1.0, 0.0, 1.0)  # D = I
 
             # Initial condition
-            u0 = [exp(-((x-0.5)^2 + (y-0.5)^2)/0.01) for (x, y) in DelaunayTriangulation.each_point(tri)]
+            u0 = [exp(-((x - 0.5)^2 + (y - 0.5)^2) / 0.01) for (x, y) in DelaunayTriangulation.each_point(tri)]
 
             prob = AnisotropicDiffusionEquation(
                 mesh, BCs;
@@ -37,22 +37,22 @@ using Test
             D_func = make_rotation_tensor(0.0, 2.0, 0.5)
             Dxx, Dxy, Dyy = D_func(0.0, 0.0, nothing)
             @test Dxx ≈ 2.0
-            @test Dxy ≈ 0.0 atol=1e-10
+            @test Dxy ≈ 0.0 atol = 1.0e-10
             @test Dyy ≈ 0.5
 
             # 90 degree rotation - should swap coefficients
-            D_func_90 = make_rotation_tensor(π/2, 2.0, 0.5)
+            D_func_90 = make_rotation_tensor(π / 2, 2.0, 0.5)
             Dxx, Dxy, Dyy = D_func_90(0.0, 0.0, nothing)
-            @test Dxx ≈ 0.5 atol=1e-10
-            @test Dxy ≈ 0.0 atol=1e-10
-            @test Dyy ≈ 2.0 atol=1e-10
+            @test Dxx ≈ 0.5 atol = 1.0e-10
+            @test Dxy ≈ 0.0 atol = 1.0e-10
+            @test Dyy ≈ 2.0 atol = 1.0e-10
 
             # 45 degree rotation - should give mixed terms
-            D_func_45 = make_rotation_tensor(π/4, 2.0, 0.5)
+            D_func_45 = make_rotation_tensor(π / 4, 2.0, 0.5)
             Dxx, Dxy, Dyy = D_func_45(0.0, 0.0, nothing)
             # Average of 2 and 0.5 for diagonal
-            @test Dxx ≈ 1.25 atol=1e-10
-            @test Dyy ≈ 1.25 atol=1e-10
+            @test Dxx ≈ 1.25 atol = 1.0e-10
+            @test Dyy ≈ 1.25 atol = 1.0e-10
             # Off-diagonal should be non-zero
             @test abs(Dxy) > 0.5
         end
@@ -83,7 +83,7 @@ using Test
             @test model.kappa ≈ 0.41
 
             # Custom model
-            model_custom = StandardKEpsilon(C_mu=0.1, C1_epsilon=1.5)
+            model_custom = StandardKEpsilon(C_mu = 0.1, C1_epsilon = 1.5)
             @test model_custom.C_mu ≈ 0.1
             @test model_custom.C1_epsilon ≈ 1.5
         end
@@ -99,7 +99,7 @@ using Test
 
             # With density
             rho = 1000.0
-            mu_t = compute_turbulent_viscosity(model, k, epsilon; rho=rho)
+            mu_t = compute_turbulent_viscosity(model, k, epsilon; rho = rho)
             @test mu_t ≈ rho * 0.09 * 1.0^2 / 0.1
 
             # Vector inputs
@@ -148,12 +148,12 @@ using Test
 
         @testset "compute_friction_velocity" begin
             # Viscous sublayer (low u_tan, small y)
-            u_tau = compute_friction_velocity(0.1, 0.001, 1e-6)
+            u_tau = compute_friction_velocity(0.1, 0.001, 1.0e-6)
             @test isfinite(u_tau)
             @test u_tau > 0
 
             # Log layer (higher Reynolds number)
-            u_tau_log = compute_friction_velocity(10.0, 0.01, 1e-6)
+            u_tau_log = compute_friction_velocity(10.0, 0.01, 1.0e-6)
             @test isfinite(u_tau_log)
             @test u_tau_log > 0
             @test u_tau_log < 10.0  # Must be less than bulk velocity
@@ -171,7 +171,7 @@ using Test
             @test eps_w > 0
 
             # Epsilon should increase as y decreases
-            eps_w_closer = epsilon_wall_value(u_tau, y/2)
+            eps_w_closer = epsilon_wall_value(u_tau, y / 2)
             @test eps_w_closer > eps_w
         end
 
@@ -181,7 +181,7 @@ using Test
             @test bc.C_mu ≈ 0.09
             @test bc.kappa ≈ 0.41
 
-            bc_rough = TurbulentWallBC(roughness=0.001)
+            bc_rough = TurbulentWallBC(roughness = 0.001)
             @test bc_rough.roughness ≈ 0.001
         end
 

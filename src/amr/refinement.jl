@@ -24,8 +24,10 @@ struct GradientRefinement{FT} <: AbstractRefinementCriterion
     coarsen_threshold::FT
 end
 
-function GradientRefinement(; variable_index::Int = 1,
-        refine_threshold = 0.1, coarsen_threshold = 0.01)
+function GradientRefinement(;
+        variable_index::Int = 1,
+        refine_threshold = 0.1, coarsen_threshold = 0.01
+    )
     return GradientRefinement(variable_index, refine_threshold, coarsen_threshold)
 end
 

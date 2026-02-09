@@ -54,7 +54,7 @@ periodic_bc = PeriodicBC(1, 3; direction=:x)
 periodic_bc_shifted = PeriodicBC(1, 3; shift=1.0, direction=:x)
 ```
 """
-struct PeriodicBC{T<:Real, F}
+struct PeriodicBC{T <: Real, F}
     segment_pair::Tuple{Int, Int}
     shift::T
     direction::Symbol
@@ -62,7 +62,7 @@ struct PeriodicBC{T<:Real, F}
 end
 
 # Default constructors
-function PeriodicBC(seg1::Int, seg2::Int; shift::Real=0.0, direction::Symbol=:x, transform=nothing)
+function PeriodicBC(seg1::Int, seg2::Int; shift::Real = 0.0, direction::Symbol = :x, transform = nothing)
     T = typeof(float(shift))
     if transform === nothing
         transform = identity_transform
@@ -87,7 +87,7 @@ Stores the mapping between nodes on paired periodic boundaries.
 - `segment_pair`: The boundary segment indices
 - `shift`: The constant shift value
 """
-struct PeriodicNodeMapping{T<:Real}
+struct PeriodicNodeMapping{T <: Real}
     node_pairs::Vector{Tuple{Int, Int}}
     segment_pair::Tuple{Int, Int}
     shift::T
@@ -115,7 +115,7 @@ A `PeriodicNodeMapping` containing the paired nodes.
    coordinates (after projecting out the periodic direction)
 3. Return the list of matched pairs
 """
-function compute_periodic_mapping(mesh::FVMGeometry, bc::PeriodicBC; tol=1e-10)
+function compute_periodic_mapping(mesh::FVMGeometry, bc::PeriodicBC; tol = 1.0e-10)
     tri = mesh.triangulation
     seg1, seg2 = bc.segment_pair
 
@@ -286,7 +286,7 @@ Container for multiple periodic boundary condition specifications.
 # Fields
 - `mappings`: Vector of `PeriodicNodeMapping` for each periodic BC pair
 """
-struct PeriodicConditions{T<:Real}
+struct PeriodicConditions{T <: Real}
     mappings::Vector{PeriodicNodeMapping{T}}
 end
 
@@ -295,8 +295,8 @@ end
 
 Construct periodic conditions from a list of periodic BC specifications.
 """
-function PeriodicConditions(mesh::FVMGeometry, bcs::Vector{<:PeriodicBC}; tol=1e-10)
-    mappings = [compute_periodic_mapping(mesh, bc; tol=tol) for bc in bcs]
+function PeriodicConditions(mesh::FVMGeometry, bcs::Vector{<:PeriodicBC}; tol = 1.0e-10)
+    mappings = [compute_periodic_mapping(mesh, bc; tol = tol) for bc in bcs]
     T = isempty(mappings) ? Float64 : typeof(first(mappings).shift)
     return PeriodicConditions{T}(mappings)
 end

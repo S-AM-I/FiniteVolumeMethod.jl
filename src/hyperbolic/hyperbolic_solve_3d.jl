@@ -186,8 +186,10 @@ dimension-by-dimension flux differencing:
                   -1/dy * (Fy_{i,j+1/2,k} - Fy_{i,j-1/2,k})
                   -1/dz * (Fz_{i,j,k+1/2} - Fz_{i,j,k-1/2})`
 """
-function hyperbolic_rhs_3d!(dU::AbstractArray{T, 3}, U::AbstractArray{T, 3},
-        prob::HyperbolicProblem3D, t) where {T}
+function hyperbolic_rhs_3d!(
+        dU::AbstractArray{T, 3}, U::AbstractArray{T, 3},
+        prob::HyperbolicProblem3D, t
+    ) where {T}
     law = prob.law
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz

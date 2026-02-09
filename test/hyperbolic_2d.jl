@@ -56,7 +56,7 @@ end
             w = SVector(1.0, 0.5, 1.0)
             f_exact = physical_flux(law, w, 1)
             f_hllc = solve_riemann(HLLCSolver(), law, w, w, 1)
-            @test f_hllc ≈ f_exact atol = 1e-13
+            @test f_hllc ≈ f_exact atol = 1.0e-13
         end
 
         @testset "Sod shock tube" begin
@@ -73,7 +73,7 @@ end
             x, U, t = solve_hyperbolic(prob)
             W = to_primitive(law, U)
 
-            @test t ≈ 0.2 atol = 1e-10
+            @test t ≈ 0.2 atol = 1.0e-10
 
             dx = 1.0 / 200
             ρ_err = sum(abs(W[i][1] - sod_exact(x[i], 0.2)[1]) * dx for i in 1:200)
@@ -134,7 +134,7 @@ end
             for dir in (1, 2)
                 f_exact = physical_flux(law, w, dir)
                 f_hllc = solve_riemann(HLLCSolver(), law, w, w, dir)
-                @test f_hllc ≈ f_exact atol = 1e-13
+                @test f_hllc ≈ f_exact atol = 1.0e-13
             end
         end
 
@@ -150,9 +150,9 @@ end
             f2d = solve_riemann(HLLCSolver(), law, wL_2d, wR_2d, 1)
 
             # Mass flux should match
-            @test f2d[1] ≈ f1d[1] atol = 1e-12
+            @test f2d[1] ≈ f1d[1] atol = 1.0e-12
             # x-momentum flux should match
-            @test f2d[2] ≈ f1d[2] atol = 1e-12
+            @test f2d[2] ≈ f1d[2] atol = 1.0e-12
         end
     end
 end
@@ -183,14 +183,14 @@ end
         coords, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.2 atol = 1e-10
+        @test t ≈ 0.2 atol = 1.0e-10
 
         # Check that solution is uniform in y-direction
         for ix in 1:N
             for iy in 2:4
-                @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1e-12
-                @test W[ix, iy][2] ≈ W[ix, 1][2] atol = 1e-12
-                @test W[ix, iy][4] ≈ W[ix, 1][4] atol = 1e-12
+                @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1.0e-12
+                @test W[ix, iy][2] ≈ W[ix, 1][2] atol = 1.0e-12
+                @test W[ix, iy][4] ≈ W[ix, 1][4] atol = 1.0e-12
             end
         end
 
@@ -219,12 +219,12 @@ end
         coords, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.2 atol = 1e-10
+        @test t ≈ 0.2 atol = 1.0e-10
 
         # Check uniform in x
         for iy in 1:N
             for ix in 2:4
-                @test W[ix, iy][1] ≈ W[1, iy][1] atol = 1e-12
+                @test W[ix, iy][1] ≈ W[1, iy][1] atol = 1.0e-12
             end
         end
 
@@ -268,10 +268,10 @@ end
         mom_yf = sum(U_final[ix, iy][3] for ix in 1:50, iy in 1:50) * dx * dy
         energy_f = sum(U_final[ix, iy][4] for ix in 1:50, iy in 1:50) * dx * dy
 
-        @test mass_f ≈ mass0 rtol = 1e-12
-        @test mom_xf ≈ mom_x0 rtol = 1e-12
-        @test mom_yf ≈ mom_y0 rtol = 1e-12
-        @test energy_f ≈ energy0 rtol = 1e-12
+        @test mass_f ≈ mass0 rtol = 1.0e-12
+        @test mom_xf ≈ mom_x0 rtol = 1.0e-12
+        @test mom_yf ≈ mom_y0 rtol = 1.0e-12
+        @test energy_f ≈ energy0 rtol = 1.0e-12
     end
 
     @testset "2D Sedov blast (qualitative)" begin
@@ -281,7 +281,7 @@ end
         mesh = StructuredMesh2D(-1.0, 1.0, -1.0, 1.0, N, N)
 
         # Background state + small region of high pressure at center
-        P_bg = 1e-5
+        P_bg = 1.0e-5
         P_blast = 1.0
         r_blast = 3.0 * mesh.dx  # few cells
 
@@ -348,10 +348,10 @@ end
 
         # Uniform state with zero velocity + reflective walls should stay uniform
         for iy in 1:N, ix in 1:N
-            @test W[ix, iy][1] ≈ 1.0 atol = 1e-10
-            @test W[ix, iy][2] ≈ 0.0 atol = 1e-10
-            @test W[ix, iy][3] ≈ 0.0 atol = 1e-10
-            @test W[ix, iy][4] ≈ 1.0 atol = 1e-10
+            @test W[ix, iy][1] ≈ 1.0 atol = 1.0e-10
+            @test W[ix, iy][2] ≈ 0.0 atol = 1.0e-10
+            @test W[ix, iy][3] ≈ 0.0 atol = 1.0e-10
+            @test W[ix, iy][4] ≈ 1.0 atol = 1.0e-10
         end
     end
 
@@ -377,7 +377,7 @@ end
         # CFL: dt ≤ cfl / (c/dx + c/dy) where c = sound speed
         c = sound_speed(eos, 1.0, 1.0)
         dt_max = 0.5 / (c / mesh.dx + c / mesh.dy)
-        @test dt <= dt_max + 1e-14
+        @test dt <= dt_max + 1.0e-14
     end
 
     @testset "2D All solvers produce valid results" begin
@@ -398,7 +398,7 @@ end
                 coords, U, t = solve_hyperbolic(prob)
                 W = to_primitive(law, U)
 
-                @test t ≈ 0.2 atol = 1e-10
+                @test t ≈ 0.2 atol = 1.0e-10
                 for iy in 1:4, ix in 1:50
                     @test W[ix, iy][1] > 0  # ρ > 0
                     @test W[ix, iy][4] > 0  # P > 0

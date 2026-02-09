@@ -23,7 +23,7 @@ gamma = 1.4
 eos = IdealGasEOS(gamma)
 mu = 0.01
 Pr = 0.72
-ns = NavierStokesEquations{2}(eos, mu=mu, Pr=Pr)
+ns = NavierStokesEquations{2}(eos, mu = mu, Pr = Pr)
 
 ## Physical parameters (low Mach number)
 rho0 = 1.0
@@ -51,7 +51,7 @@ prob = HyperbolicProblem2D(
     ns, mesh, HLLCSolver(), NoReconstruction(),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     NoSlipBC(), DirichletHyperbolicBC(w_top),
-    ic_couette; final_time=0.5, cfl=0.3
+    ic_couette; final_time = 0.5, cfl = 0.3
 )
 coords, U, t_final = solve_hyperbolic(prob)
 coords |> tc #hide
@@ -69,12 +69,14 @@ max_err = maximum(abs.(vx_num .- vx_exact))
 # ## Visualisation
 using CairoMakie
 
-fig = Figure(fontsize=24, size=(600, 500))
-ax = Axis(fig[1, 1], xlabel=L"v_x", ylabel="y",
-          title="Couette Flow: velocity profile")
-lines!(ax, vx_exact, yc, color=:black, linewidth=2, label="Exact")
-scatter!(ax, vx_num, yc, color=:blue, markersize=10, label="Numerical")
-axislegend(ax, position=:lt)
+fig = Figure(fontsize = 24, size = (600, 500))
+ax = Axis(
+    fig[1, 1], xlabel = L"v_x", ylabel = "y",
+    title = "Couette Flow: velocity profile"
+)
+lines!(ax, vx_exact, yc, color = :black, linewidth = 2, label = "Exact")
+scatter!(ax, vx_num, yc, color = :blue, markersize = 10, label = "Numerical")
+axislegend(ax, position = :lt)
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "couette_flow.png") fig #src

@@ -47,7 +47,7 @@ function solve_riemann(::HLLCSolver, law::EulerEquations{1}, wL::SVector{3}, wR:
 
     # Contact wave speed
     S_star = (PR - PL + ρL * vL * (SL - vL) - ρR * vR * (SR - vR)) /
-             (ρL * (SL - vL) - ρR * (SR - vR))
+        (ρL * (SL - vL) - ρR * (SR - vR))
 
     if SL >= zero(SL)
         # Left of all waves
@@ -78,7 +78,7 @@ If P_star > P_K (shock), q > 1; if P_star ≤ P_K (rarefaction), q = 1.
     if P_star <= P_K
         return one(P_star)
     else
-        P_K_safe = max(P_K, 1e-30)
+        P_K_safe = max(P_K, 1.0e-30)
         arg = one(P_star) + (γ + 1) / (2γ) * (P_star / P_K_safe - 1)
         return sqrt(max(arg, one(P_star)))
     end
@@ -140,7 +140,7 @@ function solve_riemann(::HLLCSolver, law::EulerEquations{2}, wL::SVector{4}, wR:
 
     # Contact wave speed
     S_star = (PR - PL + ρL * vnL * (SL - vnL) - ρR * vnR * (SR - vnR)) /
-             (ρL * (SL - vnL) - ρR * (SR - vnR))
+        (ρL * (SL - vnL) - ρR * (SR - vnR))
 
     if SL >= zero(SL)
         return physical_flux(law, wL, dir)

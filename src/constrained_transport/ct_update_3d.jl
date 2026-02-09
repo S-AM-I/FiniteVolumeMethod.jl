@@ -61,8 +61,10 @@ Perform a weighted CT update for SSP-RK stages:
 
 where `dB` is the CT update computed from `ct_stage`'s EMFs.
 """
-function ct_weighted_update_3d!(ct_out::CTData3D, ct_old::CTData3D, ct_stage::CTData3D,
-        a_old, a_stage, dt, dx, dy, dz, nx::Int, ny::Int, nz::Int)
+function ct_weighted_update_3d!(
+        ct_out::CTData3D, ct_old::CTData3D, ct_stage::CTData3D,
+        a_old, a_stage, dt, dx, dy, dz, nx::Int, ny::Int, nz::Int
+    )
     Bx_out = ct_out.Bx_face
     By_out = ct_out.By_face
     Bz_out = ct_out.Bz_face

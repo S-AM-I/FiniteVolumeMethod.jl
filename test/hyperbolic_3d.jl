@@ -20,13 +20,13 @@ using LinearAlgebra
         w = SVector(1.0, 0.5, -0.3, 0.2, 1.0)  # ρ, vx, vy, vz, P
         u = primitive_to_conserved(law, w)
         w2 = conserved_to_primitive(law, u)
-        @test w2 ≈ w atol = 1e-14
+        @test w2 ≈ w atol = 1.0e-14
 
         # Another state
         w3 = SVector(0.125, -1.0, 0.7, 0.4, 0.1)
         u3 = primitive_to_conserved(law, w3)
         w4 = conserved_to_primitive(law, u3)
-        @test w4 ≈ w3 atol = 1e-14
+        @test w4 ≈ w3 atol = 1.0e-14
     end
 
     @testset "physical_flux dir=$dir" for dir in 1:3
@@ -152,7 +152,7 @@ end
         coords, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.05 atol = 1e-10
+        @test t ≈ 0.05 atol = 1.0e-10
 
         # Density should vary along x: left side > right side
         jmid, kmid = 2, 2
@@ -166,7 +166,7 @@ end
         # Solution should be uniform in y and z
         for ix in 1:nx
             for iy in 2:ny, iz in 1:nz
-                @test W[ix, iy, iz][1] ≈ W[ix, 1, 1][1] atol = 1e-10
+                @test W[ix, iy, iz][1] ≈ W[ix, 1, 1][1] atol = 1.0e-10
             end
         end
 
@@ -196,7 +196,7 @@ end
         coords, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.05 atol = 1e-10
+        @test t ≈ 0.05 atol = 1.0e-10
 
         imid, kmid = 2, 2
         # Bottom state has higher density than top
@@ -210,7 +210,7 @@ end
         # Uniform in x and z
         for iy in 1:ny
             for ix in 2:nx, iz in 1:nz
-                @test W[ix, iy, iz][1] ≈ W[1, iy, 1][1] atol = 1e-10
+                @test W[ix, iy, iz][1] ≈ W[1, iy, 1][1] atol = 1.0e-10
             end
         end
 
@@ -240,7 +240,7 @@ end
         coords, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.05 atol = 1e-10
+        @test t ≈ 0.05 atol = 1.0e-10
 
         imid, jmid = 2, 2
         # Front (low z) has higher density than back (high z)
@@ -254,7 +254,7 @@ end
         # Uniform in x and y
         for iz in 1:nz
             for ix in 2:nx, iy in 1:ny
-                @test W[ix, iy, iz][1] ≈ W[1, 1, iz][1] atol = 1e-10
+                @test W[ix, iy, iz][1] ≈ W[1, 1, iz][1] atol = 1.0e-10
             end
         end
 
@@ -314,11 +314,11 @@ end
     mom_zf = sum(U_final[ix, iy, iz][4] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
     energy_f = sum(U_final[ix, iy, iz][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
 
-    @test mass_f ≈ mass0 rtol = 1e-10
-    @test mom_xf ≈ mom_x0 rtol = 1e-10
-    @test mom_yf ≈ mom_y0 rtol = 1e-10
-    @test mom_zf ≈ mom_z0 rtol = 1e-10
-    @test energy_f ≈ energy0 rtol = 1e-10
+    @test mass_f ≈ mass0 rtol = 1.0e-10
+    @test mom_xf ≈ mom_x0 rtol = 1.0e-10
+    @test mom_yf ≈ mom_y0 rtol = 1.0e-10
+    @test mom_zf ≈ mom_z0 rtol = 1.0e-10
+    @test energy_f ≈ energy0 rtol = 1.0e-10
 end
 
 # ============================================================
@@ -334,7 +334,7 @@ end
     dx, dy, dz = mesh.dx, mesh.dy, mesh.dz
     vol = dx * dy * dz
 
-    P_bg = 1e-5
+    P_bg = 1.0e-5
     P_blast = 1.0
     r_blast = 3.0 * dx  # a few cells
 
@@ -392,6 +392,6 @@ end
         energy0 = sum(U0[ix + 2, iy + 2, iz + 2][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
         energy_f = sum(U[ix, iy, iz][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
 
-        @test energy_f ≈ energy0 rtol = 1e-8
+        @test energy_f ≈ energy0 rtol = 1.0e-8
     end
 end

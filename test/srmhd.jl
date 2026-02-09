@@ -12,7 +12,7 @@ using StaticArrays
         law = SRMHDEquations{1}(eos)
         @test nvariables(law) == 8
         @test law.eos === eos
-        @test law.con2prim_tol == 1e-12
+        @test law.con2prim_tol == 1.0e-12
         @test law.con2prim_maxiter == 50
     end
 
@@ -22,8 +22,8 @@ using StaticArrays
     end
 
     @testset "Custom con2prim params" begin
-        law = SRMHDEquations{1}(eos; con2prim_tol = 1e-10, con2prim_maxiter = 100)
-        @test law.con2prim_tol == 1e-10
+        law = SRMHDEquations{1}(eos; con2prim_tol = 1.0e-10, con2prim_maxiter = 100)
+        @test law.con2prim_tol == 1.0e-10
         @test law.con2prim_maxiter == 100
     end
 end
@@ -44,7 +44,7 @@ end
         for w in states
             u = primitive_to_conserved(law, w)
             w2 = conserved_to_primitive(law, u)
-            @test w2 ≈ w atol = 1e-10
+            @test w2 ≈ w atol = 1.0e-10
         end
     end
 
@@ -58,7 +58,7 @@ end
         for w in states
             u = primitive_to_conserved(law, w)
             w2 = conserved_to_primitive(law, u)
-            @test w2 ≈ w atol = 1e-9
+            @test w2 ≈ w atol = 1.0e-9
         end
     end
 
@@ -71,7 +71,7 @@ end
         for w in states
             u = primitive_to_conserved(law, w)
             w2 = conserved_to_primitive(law, u)
-            @test w2 ≈ w atol = 1e-8
+            @test w2 ≈ w atol = 1.0e-8
         end
     end
 
@@ -81,16 +81,16 @@ end
         w = SVector(1.0, v, 0.0, 0.0, 10.0, 0.5, 0.0, 0.0)
         u = primitive_to_conserved(law, w)
         w2 = conserved_to_primitive(law, u)
-        @test w2[1] ≈ w[1] rtol = 1e-6   # density
-        @test w2[2] ≈ w[2] rtol = 1e-6   # velocity
-        @test w2[5] ≈ w[5] rtol = 1e-6   # pressure
+        @test w2[1] ≈ w[1] rtol = 1.0e-6   # density
+        @test w2[2] ≈ w[2] rtol = 1.0e-6   # velocity
+        @test w2[5] ≈ w[5] rtol = 1.0e-6   # pressure
     end
 
     @testset "B=0 (SR hydro limit)" begin
         w = SVector(1.0, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
         u = primitive_to_conserved(law, w)
         w2 = conserved_to_primitive(law, u)
-        @test w2 ≈ w atol = 1e-10
+        @test w2 ≈ w atol = 1.0e-10
     end
 
     @testset "Random valid states" begin
@@ -109,11 +109,11 @@ end
             w = SVector(ρ, vx, vy, vz, P, Bx, By, Bz)
             u = primitive_to_conserved(law, w)
             w2 = conserved_to_primitive(law, u)
-            @test w2[1] ≈ w[1] rtol = 1e-8
-            @test w2[2] ≈ w[2] atol = 1e-8
-            @test w2[3] ≈ w[3] atol = 1e-8
-            @test w2[4] ≈ w[4] atol = 1e-8
-            @test w2[5] ≈ w[5] rtol = 1e-8
+            @test w2[1] ≈ w[1] rtol = 1.0e-8
+            @test w2[2] ≈ w[2] atol = 1.0e-8
+            @test w2[3] ≈ w[3] atol = 1.0e-8
+            @test w2[4] ≈ w[4] atol = 1.0e-8
+            @test w2[5] ≈ w[5] rtol = 1.0e-8
         end
     end
 end
@@ -127,10 +127,10 @@ end
     w = SVector(1.0, 0.5, 0.3, 0.0, 2.0, 0.5, 0.8, 0.3)
     u = FiniteVolumeMethod.primitive_to_conserved(SRMHDEquations{1}(eos), w)
 
-    w_rec, result = FiniteVolumeMethod.srmhd_con2prim(eos, u, 1e-12, 50)
+    w_rec, result = FiniteVolumeMethod.srmhd_con2prim(eos, u, 1.0e-12, 50)
     @test result.converged == true
     @test result.iterations < 50
-    @test result.residual < 1e-10
+    @test result.residual < 1.0e-10
 end
 
 # ============================================================
@@ -153,12 +153,12 @@ end
         Sx = ρ * h * W^2 * vx
         tau = ρ * h * W^2 - P - D
 
-        @test f[1] ≈ D * vx atol = 1e-14           # D*vx
-        @test f[5] ≈ Sx - D * vx atol = 1e-12       # τ flux = Sx - D*vx
+        @test f[1] ≈ D * vx atol = 1.0e-14           # D*vx
+        @test f[5] ≈ Sx - D * vx atol = 1.0e-12       # τ flux = Sx - D*vx
     end
 
     @testset "v≪1 approaches Newtonian MHD flux" begin
-        v_small = 1e-4
+        v_small = 1.0e-4
         w = SVector(1.0, v_small, 0.0, 0.0, 1.0, 0.5, 1.0, 0.0)
         f_sr = physical_flux(law, w, 1)
 
@@ -168,23 +168,23 @@ end
 
         # At low v, SRMHD flux ≈ Newtonian MHD flux (to leading order in v)
         # D flux ≈ ρv (since W ≈ 1)
-        @test f_sr[1] ≈ f_mhd[1] rtol = 1e-3
+        @test f_sr[1] ≈ f_mhd[1] rtol = 1.0e-3
         # Bx flux = 0 in both
-        @test f_sr[6] ≈ 0.0 atol = 1e-14
+        @test f_sr[6] ≈ 0.0 atol = 1.0e-14
         # Induction fluxes should be similar
-        @test f_sr[7] ≈ f_mhd[7] rtol = 1e-3
-        @test f_sr[8] ≈ f_mhd[8] atol = 1e-3
+        @test f_sr[7] ≈ f_mhd[7] rtol = 1.0e-3
+        @test f_sr[8] ≈ f_mhd[8] atol = 1.0e-3
     end
 
     @testset "Flux consistency (F·n = 0 for Bn)" begin
         # The normal B flux should be zero (Bx flux for dir=1, By flux for dir=2)
         w = SVector(1.0, 0.5, 0.3, 0.0, 2.0, 0.5, 0.8, 0.3)
         f1 = physical_flux(law, w, 1)
-        @test f1[6] ≈ 0.0 atol = 1e-14  # Bx flux = 0 for x-direction
+        @test f1[6] ≈ 0.0 atol = 1.0e-14  # Bx flux = 0 for x-direction
 
         law2d = SRMHDEquations{2}(eos)
         f2 = physical_flux(law2d, w, 2)
-        @test f2[7] ≈ 0.0 atol = 1e-14  # By flux = 0 for y-direction
+        @test f2[7] ≈ 0.0 atol = 1.0e-14  # By flux = 0 for y-direction
     end
 end
 
@@ -199,13 +199,13 @@ end
         # Use a genuinely non-relativistic state (P << ρ, B² << ρ)
         # so the classical fast magnetosonic speed is a good approximation
         ρ = 1.0
-        P = 1e-4
+        P = 1.0e-4
         Bx = 0.01
         w = SVector(ρ, 0.0, 0.0, 0.0, P, Bx, 0.0, 0.0)
         λm, λp = wave_speeds(law, w, 1)
         @test λp > 0
         @test λm < 0
-        @test λp ≈ -λm atol = 1e-14  # symmetric when v=0
+        @test λp ≈ -λm atol = 1.0e-14  # symmetric when v=0
 
         # In the non-relativistic limit (h ≈ 1), should match classical fast speed
         γ = eos.gamma
@@ -222,8 +222,8 @@ end
         ε = 1.0 / ((γ - 1) * 1.0)
         h = 1 + ε + 1.0
         cs = sqrt(γ * 1.0 / (1.0 * h))
-        @test λp ≈ cs atol = 1e-12
-        @test λm ≈ -cs atol = 1e-12
+        @test λp ≈ cs atol = 1.0e-12
+        @test λm ≈ -cs atol = 1.0e-12
     end
 
     @testset "Wave speeds bounded by speed of light" begin
@@ -363,9 +363,9 @@ end
     Sx_total_0 = sum(u[2] for u in U0) * dx
     tau_total_0 = sum(u[5] for u in U0) * dx
 
-    @test D_total ≈ D_total_0 rtol = 1e-10
-    @test Sx_total ≈ Sx_total_0 atol = 1e-12
-    @test tau_total ≈ tau_total_0 rtol = 1e-10
+    @test D_total ≈ D_total_0 rtol = 1.0e-10
+    @test Sx_total ≈ Sx_total_0 atol = 1.0e-12
+    @test tau_total ≈ tau_total_0 rtol = 1.0e-10
 end
 
 # ============================================================
@@ -382,8 +382,10 @@ end
     A = 0.01  # small amplitude
     γ_eos = eos.gamma
 
-    ic(x) = SVector(ρ0, 0.0, A * sin(2π * x), A * cos(2π * x),
-        P0, Bx0, A * sin(2π * x), A * cos(2π * x))
+    ic(x) = SVector(
+        ρ0, 0.0, A * sin(2π * x), A * cos(2π * x),
+        P0, Bx0, A * sin(2π * x), A * cos(2π * x)
+    )
 
     for N in [100, 200]
         mesh = StructuredMesh1D(0.0, 1.0, N)
@@ -423,7 +425,7 @@ end
     x, U, t = solve_hyperbolic(prob)
     W = to_primitive(law, U)
 
-    @test t ≈ 0.1 atol = 1e-10
+    @test t ≈ 0.1 atol = 1.0e-10
     @test all(isfinite.(w[1]) for w in W)
     @test all(w[1] > 0 for w in W)
 end
@@ -440,8 +442,10 @@ end
     wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, 0.5, -1.0, 0.0)
     ic(x) = x < 0.5 ? wL : wR
 
-    limiters = [MinmodLimiter(), SuperbeeLimiter(), VanLeerLimiter(),
-        KorenLimiter(), OspreLimiter()]
+    limiters = [
+        MinmodLimiter(), SuperbeeLimiter(), VanLeerLimiter(),
+        KorenLimiter(), OspreLimiter(),
+    ]
 
     for lim in limiters
         prob = HyperbolicProblem(

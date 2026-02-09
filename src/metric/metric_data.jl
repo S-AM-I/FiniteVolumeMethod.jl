@@ -148,6 +148,8 @@ function precompute_metric_at_faces(metric::AbstractMetric{2}, mesh::StructuredM
         sqrtg_yf[i, j] = sqrt_gamma(metric, xf, yf)
     end
 
-    return (alpha_xf, alpha_yf, betax_xf, betay_xf, betax_yf, betay_yf,
-            sqrtg_xf, sqrtg_yf)
+    return (
+        alpha_xf, alpha_yf, betax_xf, betay_xf, betax_yf, betay_yf,
+        sqrtg_xf, sqrtg_yf,
+    )
 end

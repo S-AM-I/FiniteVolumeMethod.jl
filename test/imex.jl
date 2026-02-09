@@ -57,21 +57,21 @@ using FiniteVolumeMethod, Test, StaticArrays, LinearAlgebra
             @test has_implicit_stage
 
             # b_ex sums to 1 (consistency)
-            @test sum(tab.b_ex) ≈ 1.0 atol = 1e-14
+            @test sum(tab.b_ex) ≈ 1.0 atol = 1.0e-14
 
             # b_im sums to 1 (consistency)
-            @test sum(tab.b_im) ≈ 1.0 atol = 1e-14
+            @test sum(tab.b_im) ≈ 1.0 atol = 1.0e-14
 
             # c_ex = A_ex * ones (row sums match abscissae)
             for k in 1:s
                 row_sum = sum(tab.A_ex[k][j] for j in 1:s)
-                @test row_sum ≈ tab.c_ex[k] atol = 1e-14
+                @test row_sum ≈ tab.c_ex[k] atol = 1.0e-14
             end
 
             # c_im = A_im * ones (row sums match abscissae)
             for k in 1:s
                 row_sum = sum(tab.A_im[k][j] for j in 1:s)
-                @test row_sum ≈ tab.c_im[k] atol = 1e-14
+                @test row_sum ≈ tab.c_im[k] atol = 1.0e-14
             end
         end
     end
@@ -142,13 +142,15 @@ end
     W_ref = to_primitive(law, U_ref)
 
     # IMEX solve with NullSource (should behave like explicit)
-    x_imex, U_imex, t_imex = solve_hyperbolic_imex(prob, NullSource();
-        scheme = IMEX_Midpoint())
+    x_imex, U_imex, t_imex = solve_hyperbolic_imex(
+        prob, NullSource();
+        scheme = IMEX_Midpoint()
+    )
     W_imex = to_primitive(law, U_imex)
 
     # Both should reach the final time
-    @test t_ref ≈ t_final atol = 1e-10
-    @test t_imex ≈ t_final atol = 1e-10
+    @test t_ref ≈ t_final atol = 1.0e-10
+    @test t_imex ≈ t_final atol = 1.0e-10
 
     # The solutions should be close (not identical due to different time
     # stepping structure, but the physics should match)
@@ -215,8 +217,10 @@ end
         final_time = 0.05, cfl = 0.4
     )
 
-    x, U_final, t_final = solve_hyperbolic_imex(prob, source;
-        scheme = IMEX_ARS222(), newton_tol = 1e-12, newton_maxiter = 10)
+    x, U_final, t_final = solve_hyperbolic_imex(
+        prob, source;
+        scheme = IMEX_ARS222(), newton_tol = 1.0e-12, newton_maxiter = 10
+    )
     W_final = to_primitive(law, U_final)
 
     # After evolution, pressure should have relaxed toward P_target
@@ -278,17 +282,19 @@ end
     energy0 = sum(U0[i][3] for i in 3:(N_cells + 2)) * dx
 
     # Solve with IMEX + NullSource (purely explicit, conservative)
-    x, U_final, t_final = solve_hyperbolic_imex(prob, NullSource();
-        scheme = IMEX_SSP3_433())
+    x, U_final, t_final = solve_hyperbolic_imex(
+        prob, NullSource();
+        scheme = IMEX_SSP3_433()
+    )
 
     mass_final = sum(U_final[i][1] for i in 1:N_cells) * dx
     momentum_final = sum(U_final[i][2] for i in 1:N_cells) * dx
     energy_final = sum(U_final[i][3] for i in 1:N_cells) * dx
 
     # Conservation should hold (NullSource adds no energy/mass/momentum)
-    @test mass_final ≈ mass0 rtol = 1e-10
-    @test momentum_final ≈ momentum0 rtol = 1e-10
-    @test energy_final ≈ energy0 rtol = 1e-10
+    @test mass_final ≈ mass0 rtol = 1.0e-10
+    @test momentum_final ≈ momentum0 rtol = 1.0e-10
+    @test energy_final ≈ energy0 rtol = 1.0e-10
 end
 
 # ============================================================
@@ -313,11 +319,13 @@ end
         ic; final_time = 0.01, cfl = 0.3
     )
 
-    coords, U_final, t_final = solve_hyperbolic_imex(prob, NullSource();
-        scheme = IMEX_Midpoint())
+    coords, U_final, t_final = solve_hyperbolic_imex(
+        prob, NullSource();
+        scheme = IMEX_Midpoint()
+    )
 
     # Should reach final time
-    @test t_final ≈ 0.01 atol = 1e-10
+    @test t_final ≈ 0.01 atol = 1.0e-10
 
     # Solution should have correct dimensions
     @test size(U_final) == (nx, ny)
@@ -363,15 +371,15 @@ end
     )
 
     for (name, scheme) in [
-        ("SSP3_433", IMEX_SSP3_433()),
-        ("ARS222", IMEX_ARS222()),
-        ("Midpoint", IMEX_Midpoint()),
-    ]
+            ("SSP3_433", IMEX_SSP3_433()),
+            ("ARS222", IMEX_ARS222()),
+            ("Midpoint", IMEX_Midpoint()),
+        ]
         @testset "$name" begin
             x, U, t = solve_hyperbolic_imex(prob, NullSource(); scheme = scheme)
             W = to_primitive(law, U)
 
-            @test t ≈ 0.05 atol = 1e-10
+            @test t ≈ 0.05 atol = 1.0e-10
 
             # Physical results
             for i in 1:N_cells

@@ -38,7 +38,7 @@ struct SRMHDEquations{Dim, EOS <: AbstractEOS} <: AbstractConservationLaw{Dim}
     con2prim_maxiter::Int
 end
 
-function SRMHDEquations{Dim}(eos::EOS; con2prim_tol = 1e-12, con2prim_maxiter = 50) where {Dim, EOS <: AbstractEOS}
+function SRMHDEquations{Dim}(eos::EOS; con2prim_tol = 1.0e-12, con2prim_maxiter = 50) where {Dim, EOS <: AbstractEOS}
     return SRMHDEquations{Dim, EOS}(eos, con2prim_tol, con2prim_maxiter)
 end
 
@@ -55,7 +55,7 @@ Compute the Lorentz factor W = 1/√(1 − v²).
 """
 @inline function lorentz_factor(vx, vy, vz)
     v_sq = vx^2 + vy^2 + vz^2
-    v_sq = min(v_sq, 1 - 1e-10)  # cap to prevent superluminal
+    v_sq = min(v_sq, 1 - 1.0e-10)  # cap to prevent superluminal
     return 1 / sqrt(1 - v_sq)
 end
 
@@ -227,14 +227,14 @@ a² = γP/(ρh), va² = b²/(ρh + b²).
     γ_eos = law.eos.gamma
 
     v_sq = vx^2 + vy^2 + vz^2
-    v_sq = min(v_sq, 1 - 1e-10)
+    v_sq = min(v_sq, 1 - 1.0e-10)
 
     W = 1 / sqrt(1 - v_sq)
     ε = P / ((γ_eos - 1) * ρ)
     h = 1 + ε + P / ρ
 
     cs_sq = γ_eos * P / (ρ * h)
-    cs_sq = min(cs_sq, 1 - 1e-10)
+    cs_sq = min(cs_sq, 1 - 1.0e-10)
 
     B_sq = Bx^2 + By^2 + Bz^2
     vdotB = vx * Bx + vy * By + vz * Bz
@@ -242,10 +242,10 @@ a² = γP/(ρh), va² = b²/(ρh + b²).
 
     rho_h = ρ * h
     ca_sq = b_sq / (rho_h + b_sq)
-    ca_sq = min(ca_sq, 1 - 1e-10)
+    ca_sq = min(ca_sq, 1 - 1.0e-10)
 
     c_ms_sq = cs_sq + ca_sq - cs_sq * ca_sq
-    c_ms_sq = clamp(c_ms_sq, zero(c_ms_sq), 1 - 1e-10)
+    c_ms_sq = clamp(c_ms_sq, zero(c_ms_sq), 1 - 1.0e-10)
     c_ms = sqrt(c_ms_sq)
 
     vn = dir == 1 ? vx : vy

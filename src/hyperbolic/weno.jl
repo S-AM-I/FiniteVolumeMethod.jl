@@ -27,7 +27,7 @@ struct WENO5{FT}
     p::Int
 end
 
-WENO5() = WENO5(1e-6, 2)
+WENO5() = WENO5(1.0e-6, 2)
 
 # ============================================================
 # nghost: number of ghost cells required by each reconstruction

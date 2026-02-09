@@ -55,8 +55,10 @@ end
 Compute the RHS including both inviscid Riemann fluxes and viscous fluxes:
   `dU[i]/dt = -1/dx * (F_{i+1/2} - F_{i-1/2}) + 1/dx * (Fv_{i+1/2} - Fv_{i-1/2})`
 """
-function hyperbolic_rhs!(dU::AbstractVector, U::AbstractVector,
-        prob::HyperbolicProblem{<:NavierStokesEquations{1}}, t)
+function hyperbolic_rhs!(
+        dU::AbstractVector, U::AbstractVector,
+        prob::HyperbolicProblem{<:NavierStokesEquations{1}}, t
+    )
     law = prob.law
     mesh = prob.mesh
     nc = ncells(mesh)

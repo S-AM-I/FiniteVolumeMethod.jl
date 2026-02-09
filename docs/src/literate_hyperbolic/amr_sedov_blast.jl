@@ -32,9 +32,9 @@ domain_hi = (1.0, 1.0)
 # The `GradientRefinement` criterion refines blocks where the density
 # gradient exceeds a threshold:
 criterion = GradientRefinement(
-    variable_index=1,              ## monitor density (index 1)
-    refine_threshold=0.1,
-    coarsen_threshold=0.01
+    variable_index = 1,              ## monitor density (index 1)
+    refine_threshold = 0.1,
+    coarsen_threshold = 0.01
 )
 
 grid = AMRGrid(law, criterion, block_size, max_level, domain_lo, domain_hi, Val(4))
@@ -44,7 +44,7 @@ grid = AMRGrid(law, criterion, block_size, max_level, domain_lo, domain_hi, Val(
 # uniform density with a high-pressure region near the origin.
 root_block = grid.blocks[1]
 dx_root = root_block.dx[1]
-P_bg = 1e-5
+P_bg = 1.0e-5
 P_blast = 1.0
 r_blast = 3.0 * dx_root
 
@@ -73,7 +73,7 @@ max_lev = max_active_level(grid)
 bcs = (TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC())
 prob = AMRProblem(
     grid, HLLCSolver(), NoReconstruction(), bcs;
-    final_time=0.05, cfl=0.3, regrid_interval=4
+    final_time = 0.05, cfl = 0.3, regrid_interval = 4
 )
 final_grid, t_final = solve_amr(prob)
 final_grid |> tc #hide
@@ -104,17 +104,21 @@ for block in active_blocks(final_grid)
     end
 end
 
-fig = Figure(fontsize=24, size=(1100, 500))
-ax1 = Axis(fig[1, 1], xlabel="x", ylabel="y",
-           title="Density (AMR, t=$(round(t_final, digits=3)))",
-           aspect=DataAspect())
-sc1 = scatter!(ax1, xs, ys, color=rhos, markersize=4, colormap=:inferno)
-Colorbar(fig[1, 2], sc1, label=L"\rho")
+fig = Figure(fontsize = 24, size = (1100, 500))
+ax1 = Axis(
+    fig[1, 1], xlabel = "x", ylabel = "y",
+    title = "Density (AMR, t=$(round(t_final, digits = 3)))",
+    aspect = DataAspect()
+)
+sc1 = scatter!(ax1, xs, ys, color = rhos, markersize = 4, colormap = :inferno)
+Colorbar(fig[1, 2], sc1, label = L"\rho")
 
-ax2 = Axis(fig[1, 3], xlabel="x", ylabel="y",
-           title="AMR levels", aspect=DataAspect())
-sc2 = scatter!(ax2, xs, ys, color=levels, markersize=4, colormap=:Set1_3)
-Colorbar(fig[1, 4], sc2, label="Level")
+ax2 = Axis(
+    fig[1, 3], xlabel = "x", ylabel = "y",
+    title = "AMR levels", aspect = DataAspect()
+)
+sc2 = scatter!(ax2, xs, ys, color = levels, markersize = 4, colormap = :Set1_3)
+Colorbar(fig[1, 4], sc2, label = "Level")
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "amr_sedov_blast.png") fig #src

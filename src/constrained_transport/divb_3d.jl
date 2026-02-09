@@ -21,8 +21,8 @@ function compute_divB_3d(ct::CTData3D, dx, dy, dz, nx::Int, ny::Int, nz::Int)
     divB = Array{FT, 3}(undef, nx, ny, nz)
     for k in 1:nz, j in 1:ny, i in 1:nx
         divB[i, j, k] = (Bx[i + 1, j, k] - Bx[i, j, k]) / dx +
-                         (By[i, j + 1, k] - By[i, j, k]) / dy +
-                         (Bz[i, j, k + 1] - Bz[i, j, k]) / dz
+            (By[i, j + 1, k] - By[i, j, k]) / dy +
+            (Bz[i, j, k + 1] - Bz[i, j, k]) / dz
     end
     return divB
 end

@@ -38,10 +38,12 @@ Runge-Kutta time integration.
 - `U_final::Vector{SVector{N}}`: Final conserved variable vectors at cell centers.
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic_imex(prob::HyperbolicProblem, stiff_source::AbstractStiffSource;
+function solve_hyperbolic_imex(
+        prob::HyperbolicProblem, stiff_source::AbstractStiffSource;
         scheme::AbstractIMEXScheme = IMEX_SSP3_433(),
-        newton_tol = 1e-10,
-        newton_maxiter::Int = 5)
+        newton_tol = 1.0e-10,
+        newton_maxiter::Int = 5
+    )
     mesh = prob.mesh
     nc = ncells(mesh)
     law = prob.law
@@ -116,8 +118,10 @@ function solve_hyperbolic_imex(prob::HyperbolicProblem, stiff_source::AbstractSt
                 #   U* = U_stage + a_kk * dt * S(U*)
                 # Newton iteration: given U_guess, solve
                 #   (I - a_kk*dt*J) * (U_new - U_guess) = U_stage + a_kk*dt*S(U_guess) - U_guess
-                _implicit_solve_1d!(U_stage, law, stiff_source, a_kk * dt, nc, N,
-                    newton_tol, newton_maxiter)
+                _implicit_solve_1d!(
+                    U_stage, law, stiff_source, a_kk * dt, nc, N,
+                    newton_tol, newton_maxiter
+                )
 
                 # After the solve, U_stage contains the updated stage value.
                 # K_im[k] = S(U_stage)
@@ -219,10 +223,12 @@ Runge-Kutta time integration.
 - `U_final::Matrix{SVector{N}}`: Final conserved variable matrix (nx x ny).
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic_imex(prob::HyperbolicProblem2D, stiff_source::AbstractStiffSource;
+function solve_hyperbolic_imex(
+        prob::HyperbolicProblem2D, stiff_source::AbstractStiffSource;
         scheme::AbstractIMEXScheme = IMEX_SSP3_433(),
-        newton_tol = 1e-10,
-        newton_maxiter::Int = 5)
+        newton_tol = 1.0e-10,
+        newton_maxiter::Int = 5
+    )
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     law = prob.law
@@ -283,8 +289,10 @@ function solve_hyperbolic_imex(prob::HyperbolicProblem2D, stiff_source::Abstract
             else
                 hyperbolic_rhs_2d!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
 
-                _implicit_solve_2d!(U_stage, law, stiff_source, a_kk * dt, nx, ny, N,
-                    newton_tol, newton_maxiter)
+                _implicit_solve_2d!(
+                    U_stage, law, stiff_source, a_kk * dt, nx, ny, N,
+                    newton_tol, newton_maxiter
+                )
 
                 _eval_stiff_source_2d!(K_im[k], U_stage, law, stiff_source, nx, ny)
             end

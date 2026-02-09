@@ -17,7 +17,7 @@ IdealGasEOS(; gamma = 1.4) = IdealGasEOS(gamma)
 end
 
 @inline function sound_speed(eos::IdealGasEOS, ρ, P)
-    return sqrt(eos.gamma * max(P, zero(P)) / max(ρ, 1e-30))
+    return sqrt(eos.gamma * max(P, zero(P)) / max(ρ, 1.0e-30))
 end
 
 @inline function internal_energy(eos::IdealGasEOS, ρ, P)

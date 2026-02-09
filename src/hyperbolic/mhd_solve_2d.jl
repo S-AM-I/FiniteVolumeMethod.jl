@@ -185,8 +185,10 @@ Compute the corner EMF uniformly at all corners from the extended face flux arra
 Corner (i,j) for i=1:nx+1, j=1:ny+1:
   Ez = 0.25 * (-Fx_all[i,j][7] - Fx_all[i,j+1][7] + Fy_all[i,j][6] + Fy_all[i+1,j][6])
 """
-function _compute_emf_from_extended!(emf_z::AbstractMatrix, Fx_all::AbstractMatrix,
-        Fy_all::AbstractMatrix, nx::Int, ny::Int)
+function _compute_emf_from_extended!(
+        emf_z::AbstractMatrix, Fx_all::AbstractMatrix,
+        Fy_all::AbstractMatrix, nx::Int, ny::Int
+    )
     for j in 1:(ny + 1), i in 1:(nx + 1)
         # x-face EMF: Ez = -F_By (negative of By induction flux)
         Ez_x_below = -Fx_all[i, j][7]       # x-face in row below corner
@@ -217,8 +219,10 @@ Solve the 2D MHD problem using constrained transport for ∇·B = 0.
 - `t_final`: Final time reached.
 - `ct`: Final `CTData2D` (for inspecting ∇·B, face-centered B, etc.).
 """
-function solve_hyperbolic(prob::HyperbolicProblem2D{<:IdealMHDEquations{2}};
-        method::Symbol = :ssprk3, vector_potential = nothing)
+function solve_hyperbolic(
+        prob::HyperbolicProblem2D{<:IdealMHDEquations{2}};
+        method::Symbol = :ssprk3, vector_potential = nothing
+    )
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy

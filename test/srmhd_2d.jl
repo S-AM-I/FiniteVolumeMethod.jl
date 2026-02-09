@@ -28,7 +28,7 @@ using StaticArrays
     # Solution should be uniform in y
     for iy in 2:ny
         for ix in 1:nx
-            @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1e-10
+            @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1.0e-10
         end
     end
 
@@ -60,7 +60,7 @@ end
     # Solution should be uniform in x
     for ix in 2:nx
         for iy in 1:ny
-            @test W[ix, iy][1] ≈ W[1, iy][1] atol = 1e-10
+            @test W[ix, iy][1] ≈ W[1, iy][1] atol = 1.0e-10
         end
     end
 
@@ -92,7 +92,7 @@ end
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
-    @test divB_max < 1e-13
+    @test divB_max < 1.0e-13
 end
 
 # ============================================================
@@ -129,7 +129,7 @@ end
     U0 = [FiniteVolumeMethod.primitive_to_conserved(law, ic(coords[ix, iy]...)) for ix in 1:nx, iy in 1:ny]
     D_total_0 = sum(U0[ix, iy][1] for ix in 1:nx, iy in 1:ny) * dV
 
-    @test D_total ≈ D_total_0 rtol = 1e-10
+    @test D_total ≈ D_total_0 rtol = 1.0e-10
 end
 
 # ============================================================

@@ -41,7 +41,7 @@ function compute_error(N, recon)
     prob = HyperbolicProblem(
         law, mesh, HLLCSolver(), recon,
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), advection_ic;
-        final_time=t_final, cfl=0.4
+        final_time = t_final, cfl = 0.4
     )
     x, U, t_end = solve_hyperbolic(prob)
     err = 0.0
@@ -70,26 +70,36 @@ err_char_weno3 = [compute_error(N, CharacteristicWENO(WENO3())) for N in resolut
 using CairoMakie
 
 function convergence_rate(errs)
-    return [log2(errs[i] / errs[i+1]) for i in 1:length(errs)-1]
+    return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
 
 rates_muscl = convergence_rate(err_muscl)
 rates_weno3 = convergence_rate(err_weno3)
 rates_char = convergence_rate(err_char_weno3)
 
-fig = Figure(fontsize=24, size=(600, 500))
-ax = Axis(fig[1, 1], xlabel="N", ylabel=L"L^1 \text{ error}",
-          xscale=log2, yscale=log10, title="Convergence: smooth density wave")
-scatterlines!(ax, resolutions, err_muscl, label="MUSCL (minmod)", marker=:circle,
-              color=:blue, linewidth=2, markersize=12)
-scatterlines!(ax, resolutions, err_weno3, label="WENO-3", marker=:utriangle,
-              color=:red, linewidth=2, markersize=12)
-scatterlines!(ax, resolutions, err_char_weno3, label="Char. WENO-3", marker=:diamond,
-              color=:green, linewidth=2, markersize=12)
+fig = Figure(fontsize = 24, size = (600, 500))
+ax = Axis(
+    fig[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error}",
+    xscale = log2, yscale = log10, title = "Convergence: smooth density wave"
+)
+scatterlines!(
+    ax, resolutions, err_muscl, label = "MUSCL (minmod)", marker = :circle,
+    color = :blue, linewidth = 2, markersize = 12
+)
+scatterlines!(
+    ax, resolutions, err_weno3, label = "WENO-3", marker = :utriangle,
+    color = :red, linewidth = 2, markersize = 12
+)
+scatterlines!(
+    ax, resolutions, err_char_weno3, label = "Char. WENO-3", marker = :diamond,
+    color = :green, linewidth = 2, markersize = 12
+)
 ## Reference slope
-lines!(ax, resolutions, err_muscl[1] .* (resolutions[1] ./ resolutions) .^ 2,
-       color=:gray, linestyle=:dash, linewidth=1, label=L"O(N^{-2})")
-axislegend(ax, position=:lb)
+lines!(
+    ax, resolutions, err_muscl[1] .* (resolutions[1] ./ resolutions) .^ 2,
+    color = :gray, linestyle = :dash, linewidth = 1, label = L"O(N^{-2})"
+)
+axislegend(ax, position = :lb)
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "weno_convergence_smooth.png") fig #src
@@ -107,14 +117,14 @@ mesh_sod = StructuredMesh1D(0.0, 1.0, N_sod)
 prob_muscl = HyperbolicProblem(
     law, mesh_sod, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), sod_ic;
-    final_time=0.2, cfl=0.4
+    final_time = 0.2, cfl = 0.4
 )
 x_m, U_m, _ = solve_hyperbolic(prob_muscl)
 
 prob_weno = HyperbolicProblem(
     law, mesh_sod, HLLCSolver(), WENO3(),
     DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), sod_ic;
-    final_time=0.2, cfl=0.4
+    final_time = 0.2, cfl = 0.4
 )
 x_w, U_w, _ = solve_hyperbolic(prob_weno)
 x_w |> tc #hide
@@ -122,12 +132,14 @@ x_w |> tc #hide
 rho_muscl = [conserved_to_primitive(law, U_m[i])[1] for i in eachindex(U_m)]
 rho_weno = [conserved_to_primitive(law, U_w[i])[1] for i in eachindex(U_w)]
 
-fig2 = Figure(fontsize=24, size=(600, 400))
-ax2 = Axis(fig2[1, 1], xlabel="x", ylabel=L"\rho",
-           title="Sod shock tube: MUSCL vs WENO-3")
-scatter!(ax2, x_m, rho_muscl, color=:blue, markersize=4, label="MUSCL")
-scatter!(ax2, x_w, rho_weno, color=:red, markersize=4, label="WENO-3")
-axislegend(ax2, position=:cb)
+fig2 = Figure(fontsize = 24, size = (600, 400))
+ax2 = Axis(
+    fig2[1, 1], xlabel = "x", ylabel = L"\rho",
+    title = "Sod shock tube: MUSCL vs WENO-3"
+)
+scatter!(ax2, x_m, rho_muscl, color = :blue, markersize = 4, label = "MUSCL")
+scatter!(ax2, x_w, rho_weno, color = :red, markersize = 4, label = "WENO-3")
+axislegend(ax2, position = :cb)
 resize_to_layout!(fig2)
 fig2
 @test_reference joinpath(@__DIR__, "../figures", "weno_convergence_sod.png") fig2 #src

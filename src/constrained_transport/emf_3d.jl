@@ -39,9 +39,11 @@ EMF from face fluxes:
   Ey = -Fz[6] + Fx[8]   (contributions from Bx and Bz induction)
   Ez = -Fx[7] + Fy[6]   (contributions from Bx and By induction)
 """
-function _compute_emf_3d_from_extended!(ct::CTData3D,
+function _compute_emf_3d_from_extended!(
+        ct::CTData3D,
         Fx_all::AbstractArray{T, 3}, Fy_all::AbstractArray{T, 3},
-        Fz_all::AbstractArray{T, 3}, nx::Int, ny::Int, nz::Int) where {T}
+        Fz_all::AbstractArray{T, 3}, nx::Int, ny::Int, nz::Int
+    ) where {T}
 
     # Ez at z-edges: size (nx+1) x (ny+1) x nz
     # Edge (i, j, k) is surrounded by:

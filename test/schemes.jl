@@ -105,12 +105,12 @@ end
 
 @testset "Gradient Reconstruction" begin
     # Create a simple test mesh
-    tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=true)
+    tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = true)
     mesh = FVMGeometry(tri)
 
     # Linear function: u(x, y) = 2x + 3y
     # Gradient should be (2, 3)
-    u = [2*x + 3*y for (x, y) in DelaunayTriangulation.each_point(tri)]
+    u = [2 * x + 3 * y for (x, y) in DelaunayTriangulation.each_point(tri)]
 
     @testset "GreenGaussGradient" begin
         method = GreenGaussGradient()
@@ -145,7 +145,7 @@ end
         @test scheme.limiter isa VanLeerLimiter
         @test scheme.gradient_method isa GreenGaussGradient
 
-        scheme2 = MUSCLScheme(limiter=MinmodLimiter(), gradient_method=LeastSquaresGradient())
+        scheme2 = MUSCLScheme(limiter = MinmodLimiter(), gradient_method = LeastSquaresGradient())
         @test scheme2.limiter isa MinmodLimiter
         @test scheme2.gradient_method isa LeastSquaresGradient
     end

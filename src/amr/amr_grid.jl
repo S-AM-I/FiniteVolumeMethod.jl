@@ -47,9 +47,11 @@ end
 
 Create a zero-initialized AMR block.
 """
-function AMRBlock(id::Int, level::Int, origin::NTuple{Dim, FT},
+function AMRBlock(
+        id::Int, level::Int, origin::NTuple{Dim, FT},
         dims::NTuple{Dim, Int}, dx::NTuple{Dim, FT},
-        ::Val{N}) where {N, FT, Dim}
+        ::Val{N}
+    ) where {N, FT, Dim}
     zero_state = zero(SVector{N, FT})
     U = fill(zero_state, dims...)
     return AMRBlock{N, FT, Dim}(id, level, origin, dims, dx, U, -1, Int[], true, Dict{Symbol, Int}())
@@ -106,10 +108,12 @@ Create an AMR grid with a single root block covering the entire domain.
 - `domain_lo`: Lower corner of the domain (tuple).
 - `domain_hi`: Upper corner of the domain (tuple).
 """
-function AMRGrid(law, criterion::AbstractRefinementCriterion,
+function AMRGrid(
+        law, criterion::AbstractRefinementCriterion,
         block_size::NTuple{Dim, Int}, max_level::Int,
         domain_lo::NTuple{Dim, FT}, domain_hi::NTuple{Dim, FT},
-        ::Val{N}) where {N, FT, Dim}
+        ::Val{N}
+    ) where {N, FT, Dim}
     # Compute dx for root level
     dx = ntuple(d -> (domain_hi[d] - domain_lo[d]) / block_size[d], Val(Dim))
 

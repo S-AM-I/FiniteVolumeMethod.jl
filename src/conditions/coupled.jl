@@ -50,12 +50,12 @@ The constraint is: `Σᵢ coefficients[i] * u[field_indices[i]] = rhs_value`
 coupled_bc = CoupledBC([1, 2], [2.0, 3.0], 5.0)
 ```
 """
-struct CoupledBC{T<:Real}
+struct CoupledBC{T <: Real}
     field_indices::Vector{Int}
     coefficients::Vector{T}
     rhs_value::T
 
-    function CoupledBC(field_indices::Vector{Int}, coefficients::Vector{T}, rhs_value::T) where {T<:Real}
+    function CoupledBC(field_indices::Vector{Int}, coefficients::Vector{T}, rhs_value::T) where {T <: Real}
         @assert length(field_indices) == length(coefficients) "Number of fields must match number of coefficients"
         @assert length(field_indices) > 0 "Must specify at least one field"
         return new{T}(field_indices, coefficients, rhs_value)
@@ -91,13 +91,13 @@ coupled_dirichlet = CoupledDirichlet(
 )
 ```
 """
-struct CoupledDirichlet{F<:Function, P}
+struct CoupledDirichlet{F <: Function, P}
     target_field::Int
     coupling_function::F
     parameters::P
 end
 
-CoupledDirichlet(target_field::Int, f::Function; parameters=nothing) =
+CoupledDirichlet(target_field::Int, f::Function; parameters = nothing) =
     CoupledDirichlet(target_field, f, parameters)
 
 """
@@ -121,13 +121,13 @@ coupled_neumann = CoupledNeumann(
 )
 ```
 """
-struct CoupledNeumann{F<:Function, P}
+struct CoupledNeumann{F <: Function, P}
     target_field::Int
     coupling_function::F
     parameters::P
 end
 
-CoupledNeumann(target_field::Int, f::Function; parameters=nothing) =
+CoupledNeumann(target_field::Int, f::Function; parameters = nothing) =
     CoupledNeumann(target_field, f, parameters)
 
 """
@@ -155,13 +155,13 @@ coupled_robin = CoupledRobin(
 )
 ```
 """
-struct CoupledRobin{F<:Function, P}
+struct CoupledRobin{F <: Function, P}
     target_field::Int
     coupling_function::F
     parameters::P
 end
 
-CoupledRobin(target_field::Int, f::Function; parameters=nothing) =
+CoupledRobin(target_field::Int, f::Function; parameters = nothing) =
     CoupledRobin(target_field, f, parameters)
 
 """
@@ -186,7 +186,7 @@ Evaluate a coupled Dirichlet BC given the current field values.
 # Returns
 The Dirichlet boundary value for the target field.
 """
-function evaluate_coupled_bc(bc::CoupledDirichlet, x, y, t, u_values, grad_values=nothing)
+function evaluate_coupled_bc(bc::CoupledDirichlet, x, y, t, u_values, grad_values = nothing)
     return bc.coupling_function(x, y, t, u_values, bc.parameters)
 end
 

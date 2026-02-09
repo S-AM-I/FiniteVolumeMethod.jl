@@ -34,8 +34,10 @@ The EMF at y-faces is `Ez_y = +Fy[6]` (positive of the Bx induction flux).
 
 Corner values are the arithmetic average of the 4 surrounding face EMFs.
 """
-function compute_emf_2d!(ct::CTData2D, Fx_faces::AbstractMatrix, Fy_faces::AbstractMatrix,
-        nx::Int, ny::Int)
+function compute_emf_2d!(
+        ct::CTData2D, Fx_faces::AbstractMatrix, Fy_faces::AbstractMatrix,
+        nx::Int, ny::Int
+    )
     emf_z = ct.emf_z
 
     # Interior corners (i=2:nx, j=2:ny) have 4 surrounding faces

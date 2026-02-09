@@ -19,7 +19,7 @@ MUSCL reconstruction scheme configuration.
 - `limiter::L`: The flux limiter to use
 - `gradient_method::G`: The gradient reconstruction method
 """
-struct MUSCLScheme{L<:AbstractLimiter, G<:AbstractGradientMethod}
+struct MUSCLScheme{L <: AbstractLimiter, G <: AbstractGradientMethod}
     limiter::L
     gradient_method::G
 end
@@ -30,8 +30,8 @@ end
 Create a MUSCL scheme with specified limiter and gradient method.
 """
 function MUSCLScheme(;
-        limiter::AbstractLimiter=VanLeerLimiter(),
-        gradient_method::AbstractGradientMethod=GreenGaussGradient()
+        limiter::AbstractLimiter = VanLeerLimiter(),
+        gradient_method::AbstractGradientMethod = GreenGaussGradient()
     )
     return MUSCLScheme(limiter, gradient_method)
 end
@@ -235,13 +235,13 @@ A flux function wrapper that applies MUSCL reconstruction.
 This can be used to create a flux function compatible with FVMProblem
 that uses MUSCL reconstruction internally.
 """
-struct MUSCLFluxFunction{S<:MUSCLScheme, D, V}
+struct MUSCLFluxFunction{S <: MUSCLScheme, D, V}
     scheme::S
     diffusion::D  # D(x, y, t, u, p) -> scalar
     velocity::V   # v(x, y, t, u, p) -> (vx, vy), or nothing for pure diffusion
 end
 
-function MUSCLFluxFunction(scheme::MUSCLScheme; diffusion, velocity=nothing)
+function MUSCLFluxFunction(scheme::MUSCLScheme; diffusion, velocity = nothing)
     return MUSCLFluxFunction(scheme, diffusion, velocity)
 end
 
@@ -321,41 +321,41 @@ An FVMProblem configured with MUSCL reconstruction.
 function create_muscl_problem(
         mesh::FVMGeometry,
         BCs::BoundaryConditions,
-        ICs::InternalConditions=InternalConditions();
+        ICs::InternalConditions = InternalConditions();
         diffusion_function,
-        diffusion_parameters=nothing,
-        velocity_function=nothing,
-        velocity_parameters=nothing,
-        source_function=(x, y, t, u, p) -> zero(typeof(x)),
-        source_parameters=nothing,
+        diffusion_parameters = nothing,
+        velocity_function = nothing,
+        velocity_parameters = nothing,
+        source_function = (x, y, t, u, p) -> zero(typeof(x)),
+        source_parameters = nothing,
         initial_condition,
-        initial_time=0.0,
+        initial_time = 0.0,
         final_time,
-        limiter::AbstractLimiter=VanLeerLimiter(),
-        gradient_method::AbstractGradientMethod=GreenGaussGradient(),
+        limiter::AbstractLimiter = VanLeerLimiter(),
+        gradient_method::AbstractGradientMethod = GreenGaussGradient(),
         kwargs...
     )
-    scheme = MUSCLScheme(limiter=limiter, gradient_method=gradient_method)
+    scheme = MUSCLScheme(limiter = limiter, gradient_method = gradient_method)
 
     # Wrap functions to include parameters
     D_wrapped = (x, y, t, u, p) -> diffusion_function(x, y, t, u, diffusion_parameters)
     v_wrapped = isnothing(velocity_function) ? nothing :
-                (x, y, t, u, p) -> velocity_function(x, y, t, u, velocity_parameters)
+        (x, y, t, u, p) -> velocity_function(x, y, t, u, velocity_parameters)
 
-    flux_fn = MUSCLFluxFunction(scheme; diffusion=D_wrapped, velocity=v_wrapped)
+    flux_fn = MUSCLFluxFunction(scheme; diffusion = D_wrapped, velocity = v_wrapped)
 
     # The flux function signature for FVMProblem is q(x, y, t, α, β, γ, p)
     flux = (x, y, t, α, β, γ, p) -> flux_fn(x, y, t, α, β, γ, p)
 
     return FVMProblem(
         mesh, BCs, ICs;
-        flux_function=flux,
-        flux_parameters=nothing,
-        source_function=source_function,
-        source_parameters=source_parameters,
-        initial_condition=initial_condition,
-        initial_time=initial_time,
-        final_time=final_time,
+        flux_function = flux,
+        flux_parameters = nothing,
+        source_function = source_function,
+        source_parameters = source_parameters,
+        initial_condition = initial_condition,
+        initial_time = initial_time,
+        final_time = final_time,
         kwargs...
     )
 end

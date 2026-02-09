@@ -70,7 +70,7 @@ model = StandardKEpsilon(;
 )
 ```
 """
-struct StandardKEpsilon{T<:Real}
+struct StandardKEpsilon{T <: Real}
     C_mu::T
     sigma_k::T
     sigma_epsilon::T
@@ -117,18 +117,18 @@ For dimensional problems with density:
 # Returns
 Turbulent viscosity (same shape as inputs).
 """
-function compute_turbulent_viscosity(model::StandardKEpsilon, k::Real, epsilon::Real; rho::Real=1.0)
+function compute_turbulent_viscosity(model::StandardKEpsilon, k::Real, epsilon::Real; rho::Real = 1.0)
     # Safeguard against division by zero
-    eps_safe = max(epsilon, 1e-10)
+    eps_safe = max(epsilon, 1.0e-10)
     k_safe = max(k, 0.0)
     return rho * model.C_mu * k_safe^2 / eps_safe
 end
 
-function compute_turbulent_viscosity(model::StandardKEpsilon, k::AbstractVector, epsilon::AbstractVector; rho=1.0)
+function compute_turbulent_viscosity(model::StandardKEpsilon, k::AbstractVector, epsilon::AbstractVector; rho = 1.0)
     nu_t = similar(k)
     rho_vec = rho isa Real ? fill(rho, length(k)) : rho
     @inbounds for i in eachindex(k)
-        eps_safe = max(epsilon[i], 1e-10)
+        eps_safe = max(epsilon[i], 1.0e-10)
         k_safe = max(k[i], 0.0)
         nu_t[i] = rho_vec[i] * model.C_mu * k_safe^2 / eps_safe
     end
@@ -238,7 +238,7 @@ function epsilon_source_function(x, y, t, u_tuple, p)
     Pk = haskey(p, :Pk) && !isnothing(p.Pk) ? p.Pk : 0.0
 
     # Safeguards
-    k_safe = max(k, 1e-10)
+    k_safe = max(k, 1.0e-10)
     eps_by_k = epsilon / k_safe
 
     # Source terms
@@ -266,7 +266,7 @@ Create a diffusion function for the k equation.
 A diffusion function `(x, y, t, u, p) -> Γk` suitable for `FVMProblem`.
 """
 function make_k_diffusion_function(model::StandardKEpsilon, nu::Real, nu_t_field::AbstractVector)
-    return function(x, y, t, u, p)
+    return function (x, y, t, u, p)
         # Get node index from parameters
         i = haskey(p, :node_index) ? p.node_index : 1
         nu_t = i <= length(nu_t_field) ? nu_t_field[i] : 0.0
@@ -292,7 +292,7 @@ Create a diffusion function for the ε equation.
 A diffusion function `(x, y, t, u, p) -> Γε` suitable for `FVMProblem`.
 """
 function make_epsilon_diffusion_function(model::StandardKEpsilon, nu::Real, nu_t_field::AbstractVector)
-    return function(x, y, t, u, p)
+    return function (x, y, t, u, p)
         i = haskey(p, :node_index) ? p.node_index : 1
         nu_t = i <= length(nu_t_field) ? nu_t_field[i] : 0.0
         return nu + nu_t / model.sigma_epsilon
@@ -321,11 +321,13 @@ where $u^+ = u/u_\tau$ and $y^+ = y u_\tau / \nu$.
 # Returns
 Friction velocity `u_τ`.
 """
-function compute_friction_velocity(u_tan::Real, y::Real, nu::Real;
-        kappa::Real = 0.41, E::Real = 9.8, max_iter::Int = 10, tol::Real = 1e-5)
+function compute_friction_velocity(
+        u_tan::Real, y::Real, nu::Real;
+        kappa::Real = 0.41, E::Real = 9.8, max_iter::Int = 10, tol::Real = 1.0e-5
+    )
 
     # Initial guess from viscous sublayer
-    u_tau = sqrt(abs(nu * u_tan / max(y, 1e-10)))
+    u_tau = sqrt(abs(nu * u_tan / max(y, 1.0e-10)))
 
     for _ in 1:max_iter
         y_plus = y * u_tau / nu
@@ -339,7 +341,7 @@ function compute_friction_velocity(u_tan::Real, y::Real, nu::Real;
             df = -u_tan / u_tau^2 - (1.0 / kappa) / u_tau
 
             delta = f / df
-            u_tau = max(u_tau - delta, 1e-10)
+            u_tau = max(u_tau - delta, 1.0e-10)
 
             if abs(delta) < tol
                 break
@@ -389,7 +391,7 @@ Compute equilibrium ε value at the wall for wall functions.
 Wall value of ε.
 """
 function epsilon_wall_value(u_tau::Real, y::Real; kappa::Real = 0.41, C_mu::Real = 0.09)
-    return C_mu^0.75 * k_wall_value(u_tau; C_mu=C_mu)^1.5 / (kappa * max(y, 1e-10))
+    return C_mu^0.75 * k_wall_value(u_tau; C_mu = C_mu)^1.5 / (kappa * max(y, 1.0e-10))
 end
 
 @doc raw"""
@@ -402,7 +404,7 @@ Parameters for turbulent wall boundary conditions.
 - `C_mu::T`: Model constant
 - `kappa::T`: von Kármán constant
 """
-struct TurbulentWallBC{T<:Real}
+struct TurbulentWallBC{T <: Real}
     roughness::T
     C_mu::T
     kappa::T
@@ -425,7 +427,7 @@ Only the coefficients are provided here; implementation is deferred.
 - `sigma_k1::T`, `sigma_k2::T`: Blending coefficients for k diffusion
 - `sigma_omega1::T`, `sigma_omega2::T`: Blending coefficients for ω diffusion
 """
-struct KappaOmegaSST{T<:Real}
+struct KappaOmegaSST{T <: Real}
     a1::T
     beta_star::T
     sigma_k1::T

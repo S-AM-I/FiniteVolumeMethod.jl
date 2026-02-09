@@ -40,7 +40,7 @@ end
         for w in states
             u = primitive_to_conserved(law, w)
             w2 = conserved_to_primitive(law, u)
-            @test w2 ≈ w atol = 1e-14
+            @test w2 ≈ w atol = 1.0e-14
         end
     end
 
@@ -170,10 +170,10 @@ end
         w_hydro = SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
         cf = fast_magnetosonic_speed(law, w_hydro, 1)
         cs_hydro = sqrt(eos.gamma * 1.0 / 1.0)  # √(γP/ρ)
-        @test cf ≈ cs_hydro atol = 1e-14
+        @test cf ≈ cs_hydro atol = 1.0e-14
 
         cs = slow_magnetosonic_speed(law, w_hydro, 1)
-        @test cs ≈ 0.0 atol = 1e-14
+        @test cs ≈ 0.0 atol = 1.0e-14
     end
 
     @testset "Perpendicular B only (Bn=0)" begin
@@ -184,8 +184,8 @@ end
 
         a_sq = eos.gamma * 1.0 / 1.0
         b_sq = 1.0 / 1.0  # By² / ρ
-        @test cf ≈ sqrt(a_sq + b_sq) atol = 1e-14
-        @test cs ≈ 0.0 atol = 1e-14
+        @test cf ≈ sqrt(a_sq + b_sq) atol = 1.0e-14
+        @test cs ≈ 0.0 atol = 1.0e-14
     end
 
     @testset "wave_speeds and max_wave_speed" begin
@@ -236,7 +236,7 @@ end
         for w in states
             F_exact = physical_flux(law, w, 1)
             F_hlld = solve_riemann(hlld, law, w, w, 1)
-            @test F_hlld ≈ F_exact atol = 1e-12
+            @test F_hlld ≈ F_exact atol = 1.0e-12
         end
     end
 
@@ -269,7 +269,7 @@ end
         @test all(isfinite.(F_lf))
 
         # Mass flux should have the same sign for all three
-        if abs(F_hlld[1]) > 1e-10
+        if abs(F_hlld[1]) > 1.0e-10
             @test sign(F_hlld[1]) == sign(F_hll[1])
         end
     end
@@ -283,7 +283,7 @@ end
 
         # Just check it's finite and reasonable
         @test all(isfinite.(F_hlld))
-        @test F_hlld[6] ≈ 0.0 atol = 1e-14  # No Bx flux
+        @test F_hlld[6] ≈ 0.0 atol = 1.0e-14  # No Bx flux
     end
 
     @testset "Degenerate: Bn=0 (no Alfvén waves)" begin
@@ -323,7 +323,7 @@ end
         x, U, t_final = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t_final ≈ 0.1 atol = 1e-10
+        @test t_final ≈ 0.1 atol = 1.0e-10
         @test length(x) == 800
         @test length(W) == 800
 
@@ -339,7 +339,7 @@ end
 
         # Bx should remain constant throughout (trivially satisfied in 1D)
         Bx_sol = [w[6] for w in W]
-        @test all(b -> abs(b - Bx) < 1e-10, Bx_sol)
+        @test all(b -> abs(b - Bx) < 1.0e-10, Bx_sol)
 
         # Check that the solution has structure (not all the same value)
         @test maximum(ρ) > minimum(ρ) + 0.01
@@ -368,7 +368,7 @@ end
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
 
-        @test t_final ≈ 0.1 atol = 1e-10
+        @test t_final ≈ 0.1 atol = 1.0e-10
         @test all(ρ .> 0)
         @test all(P .> 0)
         @test all(isfinite.(ρ))
@@ -423,7 +423,7 @@ end
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
 
-        @test t_final ≈ 0.1 atol = 1e-10
+        @test t_final ≈ 0.1 atol = 1.0e-10
         @test all(ρ .> 0)
         @test all(P .> 0)
     end
@@ -479,10 +479,10 @@ end
         energy_0 = sum(u[5] for u in U0) * dx
         energy_f = sum(u[5] for u in U_final) * dx
 
-        @test mass_f ≈ mass_0 atol = 1e-10
-        @test mom_x_f ≈ mom_x_0 atol = 1e-10
-        @test mom_y_f ≈ mom_y_0 atol = 1e-10
-        @test energy_f ≈ energy_0 atol = 1e-10
+        @test mass_f ≈ mass_0 atol = 1.0e-10
+        @test mom_x_f ≈ mom_x_0 atol = 1.0e-10
+        @test mom_y_f ≈ mom_y_0 atol = 1.0e-10
+        @test energy_f ≈ energy_0 atol = 1.0e-10
     end
 end
 
@@ -522,7 +522,7 @@ end
             ρ = [w[1] for w in W]
             P = [w[5] for w in W]
 
-            @test t_final ≈ 0.05 atol = 1e-10
+            @test t_final ≈ 0.05 atol = 1.0e-10
             @test all(ρ .> 0)
             @test all(P .> 0)
             @test all(isfinite.(ρ))
@@ -678,7 +678,7 @@ end
     ρ = [w[1] for w in W]
     P = [w[5] for w in W]
 
-    @test t_final ≈ 0.1 atol = 1e-10
+    @test t_final ≈ 0.1 atol = 1.0e-10
     @test all(ρ .> 0)    # Density should stay positive
     @test all(P .> 0)    # Pressure should stay positive
     @test all(isfinite.(ρ))
@@ -758,7 +758,7 @@ end
     ρ = [w[1] for w in W]
     P = [w[5] for w in W]
 
-    @test t_final ≈ 0.1 atol = 1e-10
+    @test t_final ≈ 0.1 atol = 1.0e-10
     @test all(ρ .> 0)
     @test all(P .> 0)
 end

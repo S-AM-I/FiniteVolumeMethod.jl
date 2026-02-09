@@ -39,7 +39,7 @@ bw_ic(x) = x < 0.5 ? wL : wR
 prob = HyperbolicProblem(
     law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), bw_ic;
-    final_time=0.1, cfl=0.8
+    final_time = 0.1, cfl = 0.8
 )
 x, U, t_final = solve_hyperbolic(prob)
 x |> tc #hide
@@ -55,14 +55,14 @@ vy = [conserved_to_primitive(law, U[i])[3] for i in eachindex(U)]
 P = [conserved_to_primitive(law, U[i])[5] for i in eachindex(U)]
 By = [conserved_to_primitive(law, U[i])[7] for i in eachindex(U)]
 
-fig = Figure(fontsize=20, size=(1200, 800))
+fig = Figure(fontsize = 20, size = (1200, 800))
 titles = [L"\rho", L"v_x", L"v_y", "P", L"B_y"]
 data = [rho, vx, vy, P, By]
 for (idx, (title, d)) in enumerate(zip(titles, data))
     row = (idx - 1) ÷ 3 + 1
     col = (idx - 1) % 3 + 1
-    ax = Axis(fig[row, col], xlabel="x", ylabel=title, title=title)
-    lines!(ax, x, d, color=:blue, linewidth=1.5)
+    ax = Axis(fig[row, col], xlabel = "x", ylabel = title, title = title)
+    lines!(ax, x, d, color = :blue, linewidth = 1.5)
 end
 resize_to_layout!(fig)
 fig
@@ -73,5 +73,5 @@ fig
 # contact discontinuity, slow shock, and fast rarefaction on the right.
 # Note that $B_x$ remains constant at $0.75$ throughout (not shown).
 Bx_vals = [U[i][6] for i in eachindex(U)] #hide
-@assert all(b -> abs(b - 0.75) < 1e-10, Bx_vals) #hide
+@assert all(b -> abs(b - 0.75) < 1.0e-10, Bx_vals) #hide
 @assert all(rho .> 0) #hide

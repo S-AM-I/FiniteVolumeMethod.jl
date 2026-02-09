@@ -36,7 +36,7 @@ using StaticArrays
     D_total_0 = sum(U0[ix, iy][1] for ix in 1:nx, iy in 1:ny) * dV
 
     # In Minkowski spacetime, geometric sources vanish → perfect conservation
-    @test D_total ≈ D_total_0 rtol = 1e-10
+    @test D_total ≈ D_total_0 rtol = 1.0e-10
 end
 
 @testset "CT DivB Preservation (GRMHD)" begin
@@ -59,7 +59,7 @@ end
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
-    @test divB_max < 1e-13
+    @test divB_max < 1.0e-13
 end
 
 @testset "GRMHD matches SRMHD in Minkowski" begin
@@ -93,7 +93,7 @@ end
 
     # Density profiles should match closely
     for iy in 1:ny, ix in 1:nx
-        @test W_gr[ix, iy][1] ≈ W_sr[ix, iy][1] rtol = 1e-10
+        @test W_gr[ix, iy][1] ≈ W_sr[ix, iy][1] rtol = 1.0e-10
     end
 end
 

@@ -25,7 +25,7 @@ using Test
             # Test near fixed point (golden ratio)
             φ = (1 + sqrt(5)) / 2
             result_near = linearize_bc(NonlinearDirichlet, f, 0.0, 0.0, 0.0, φ, (0.0, 0.0), nothing)
-            @test isapprox(result_near, φ, atol=1e-4)
+            @test isapprox(result_near, φ, atol = 1.0e-4)
         end
 
         @testset "linearize_bc for NonlinearNeumann" begin
@@ -48,7 +48,7 @@ using Test
 
         @testset "compute_boundary_gradient" begin
             # Create a simple mesh
-            tri = triangulate_rectangle(0, 1, 0, 1, 3, 3, single_boundary=true)
+            tri = triangulate_rectangle(0, 1, 0, 1, 3, 3, single_boundary = true)
             mesh = FVMGeometry(tri)
 
             # Linear solution u = x + y
@@ -68,8 +68,8 @@ using Test
             grad = compute_boundary_gradient(mesh, u, i, j)
 
             # Gradient of (x + y) should be (1, 1)
-            @test isapprox(grad[1], 1.0, atol=0.1)
-            @test isapprox(grad[2], 1.0, atol=0.1)
+            @test isapprox(grad[1], 1.0, atol = 0.1)
+            @test isapprox(grad[2], 1.0, atol = 0.1)
         end
     end
 
@@ -80,17 +80,17 @@ using Test
             @test bc1.shift ≈ 0.0
             @test bc1.direction == :x
 
-            bc2 = PeriodicBC(1, 3; shift=1.0, direction=:y)
+            bc2 = PeriodicBC(1, 3; shift = 1.0, direction = :y)
             @test bc2.shift ≈ 1.0
             @test bc2.direction == :y
 
-            bc3 = PeriodicBC((2, 4); shift=0.5)
+            bc3 = PeriodicBC((2, 4); shift = 0.5)
             @test bc3.segment_pair == (2, 4)
         end
 
         @testset "get_segment_nodes" begin
             # Create mesh with distinct boundary segments
-            tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=false)
+            tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = false)
             mesh = FVMGeometry(tri)
 
             # Get nodes on segment 1 (bottom)
@@ -101,17 +101,17 @@ using Test
             for n in nodes1
                 p = get_point(mesh, n)
                 _, y = getxy(p)
-                @test isapprox(y, 0.0, atol=1e-10)
+                @test isapprox(y, 0.0, atol = 1.0e-10)
             end
         end
 
         @testset "compute_periodic_mapping" begin
             # Create mesh with left-right periodicity
-            tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=false)
+            tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = false)
             mesh = FVMGeometry(tri)
 
             # Segment 4 is left (x=0), segment 2 is right (x=1)
-            bc = PeriodicBC(4, 2; direction=:x)
+            bc = PeriodicBC(4, 2; direction = :x)
             mapping = compute_periodic_mapping(mesh, bc)
 
             # Should have matched pairs
@@ -123,7 +123,7 @@ using Test
                 p2 = get_point(mesh, n2)
                 _, y1 = getxy(p1)
                 _, y2 = getxy(p2)
-                @test isapprox(y1, y2, atol=1e-8)
+                @test isapprox(y1, y2, atol = 1.0e-8)
             end
         end
 
@@ -135,8 +135,8 @@ using Test
             apply_periodic_constraints!(u, mapping)
 
             # After constraint: u[1] ≈ u[3] and u[2] ≈ u[4]
-            @test isapprox(u[1], u[3], atol=1e-10)
-            @test isapprox(u[2], u[4], atol=1e-10)
+            @test isapprox(u[1], u[3], atol = 1.0e-10)
+            @test isapprox(u[2], u[4], atol = 1.0e-10)
         end
 
         @testset "apply_periodic_constraints! with shift" begin
@@ -146,14 +146,14 @@ using Test
             apply_periodic_constraints!(u, mapping)
 
             # After constraint: u[1] - u[2] = shift = 2.0
-            @test isapprox(u[1] - u[2], 2.0, atol=1e-10)
+            @test isapprox(u[1] - u[2], 2.0, atol = 1.0e-10)
         end
 
         @testset "PeriodicConditions" begin
-            tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary=false)
+            tri = triangulate_rectangle(0, 1, 0, 1, 5, 5, single_boundary = false)
             mesh = FVMGeometry(tri)
 
-            bcs = [PeriodicBC(4, 2; direction=:x)]
+            bcs = [PeriodicBC(4, 2; direction = :x)]
             pc = PeriodicConditions(mesh, bcs)
 
             @test has_periodic_conditions(pc)
@@ -186,7 +186,7 @@ using Test
 
         @testset "CoupledNeumann" begin
             # flux depends on gradient of another field
-            cn = CoupledNeumann(1, (x, y, t, u, grad, p) -> -p.D * grad[2][1]; parameters=(D=0.5,))
+            cn = CoupledNeumann(1, (x, y, t, u, grad, p) -> -p.D * grad[2][1]; parameters = (D = 0.5,))
             @test get_target_field(cn) == 1
 
             u_vals = (1.0, 2.0)

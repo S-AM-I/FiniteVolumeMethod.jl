@@ -39,7 +39,7 @@ lambda_rate = 50.0  ## stiff cooling rate
 # molecular weight $\mu$. The temperature is computed as $T = P\mu/\rho$.
 T_target = P_target * mu_mol
 cooling_func = T -> lambda_rate * (T - T_target)
-source = CoolingSource(cooling_func; mu_mol=mu_mol)
+source = CoolingSource(cooling_func; mu_mol = mu_mol)
 
 w_init = SVector(rho_init, v_init, P_init)
 
@@ -53,19 +53,19 @@ prob = HyperbolicProblem(
     law, mesh, HLLSolver(), NoReconstruction(),
     TransmissiveBC(), TransmissiveBC(),
     x -> w_init;
-    final_time=t_final, cfl=0.4
+    final_time = t_final, cfl = 0.4
 )
 
 # **SSP3(4,3,3)** — 4-stage, 3rd-order SSP scheme:
 x_ssp, U_ssp, t_ssp = solve_hyperbolic_imex(
-    prob, source; scheme=IMEX_SSP3_433(),
-    newton_tol=1e-12, newton_maxiter=10
+    prob, source; scheme = IMEX_SSP3_433(),
+    newton_tol = 1.0e-12, newton_maxiter = 10
 )
 
 # **ARS(2,2,2)** — 3-stage, 2nd-order L-stable scheme:
 x_ars, U_ars, t_ars = solve_hyperbolic_imex(
-    prob, source; scheme=IMEX_ARS222(),
-    newton_tol=1e-12, newton_maxiter=10
+    prob, source; scheme = IMEX_ARS222(),
+    newton_tol = 1.0e-12, newton_maxiter = 10
 )
 x_ars |> tc #hide
 
@@ -84,21 +84,25 @@ P_avg_ars = sum(P_ars) / length(P_ars)
 # ## Visualisation
 using CairoMakie
 
-fig = Figure(fontsize=24, size=(900, 400))
-ax1 = Axis(fig[1, 1], xlabel="x", ylabel="P",
-           title="Pressure relaxation")
-scatter!(ax1, x_ssp, P_ssp, color=:blue, markersize=6, label="SSP3(4,3,3)")
-scatter!(ax1, x_ars, P_ars, color=:red, markersize=6, label="ARS(2,2,2)")
-hlines!(ax1, [P_target], color=:black, linestyle=:dash, label=L"P_{\mathrm{target}}")
-hlines!(ax1, [P_init], color=:gray, linestyle=:dot, label=L"P_{\mathrm{init}}")
-axislegend(ax1, position=:rt)
+fig = Figure(fontsize = 24, size = (900, 400))
+ax1 = Axis(
+    fig[1, 1], xlabel = "x", ylabel = "P",
+    title = "Pressure relaxation"
+)
+scatter!(ax1, x_ssp, P_ssp, color = :blue, markersize = 6, label = "SSP3(4,3,3)")
+scatter!(ax1, x_ars, P_ars, color = :red, markersize = 6, label = "ARS(2,2,2)")
+hlines!(ax1, [P_target], color = :black, linestyle = :dash, label = L"P_{\mathrm{target}}")
+hlines!(ax1, [P_init], color = :gray, linestyle = :dot, label = L"P_{\mathrm{init}}")
+axislegend(ax1, position = :rt)
 
 ## Also check that density is preserved
 rho_ssp = [conserved_to_primitive(law, U_ssp[i])[1] for i in eachindex(U_ssp)]
-ax2 = Axis(fig[1, 2], xlabel="x", ylabel=L"\rho",
-           title="Density (should be constant)")
-scatter!(ax2, x_ssp, rho_ssp, color=:blue, markersize=6)
-hlines!(ax2, [rho_init], color=:black, linestyle=:dash)
+ax2 = Axis(
+    fig[1, 2], xlabel = "x", ylabel = L"\rho",
+    title = "Density (should be constant)"
+)
+scatter!(ax2, x_ssp, rho_ssp, color = :blue, markersize = 6)
+hlines!(ax2, [rho_init], color = :black, linestyle = :dash)
 
 resize_to_layout!(fig)
 fig

@@ -82,8 +82,8 @@ end
             # Alfven speed for this direction
             Bn = dir == 1 ? w[6] : (dir == 2 ? w[7] : w[8])
             ca = abs(Bn) / sqrt(w[1])
-            @test cf >= ca - 1e-14
-            @test ca >= cs - 1e-14
+            @test cf >= ca - 1.0e-14
+            @test ca >= cs - 1.0e-14
         end
     end
 
@@ -103,10 +103,10 @@ end
         cs_hydro = sqrt(gamma * 1.0 / 1.0)
         for dir in 1:3
             cf = fast_magnetosonic_speed(law, w_hydro, dir)
-            @test cf ≈ cs_hydro atol = 1e-14
+            @test cf ≈ cs_hydro atol = 1.0e-14
 
             cs = slow_magnetosonic_speed(law, w_hydro, dir)
-            @test cs ≈ 0.0 atol = 1e-14
+            @test cs ≈ 0.0 atol = 1.0e-14
         end
     end
 end
@@ -136,7 +136,7 @@ end
     coords, U_final, t_final, ct = solve_hyperbolic(prob)
     W = to_primitive(law, U_final)
 
-    @test t_final ≈ 0.05 atol = 1e-10
+    @test t_final ≈ 0.05 atol = 1.0e-10
     @test size(U_final) == (nx, ny, nz)
 
     # Extract density along x at iy=1, iz=1
@@ -153,7 +153,7 @@ end
 
     # Solution should be approximately uniform in y and z
     for ix in 1:nx, iy in 1:ny, iz in 1:nz
-        @test W[ix, iy, iz][1] ≈ W[ix, 1, 1][1] atol = 1e-8
+        @test W[ix, iy, iz][1] ≈ W[ix, 1, 1][1] atol = 1.0e-8
     end
 
     # Bx should remain approximately constant
@@ -188,7 +188,7 @@ end
     coords, U_final, t_final, ct = solve_hyperbolic(prob)
     W = to_primitive(law, U_final)
 
-    @test t_final ≈ 0.05 atol = 1e-10
+    @test t_final ≈ 0.05 atol = 1.0e-10
 
     # Extract density along z at ix=1, iy=1
     rho_z = [W[1, 1, iz][1] for iz in 1:nz]
@@ -203,7 +203,7 @@ end
 
     # Solution should be approximately uniform in x and y
     for ix in 1:nx, iy in 1:ny, iz in 1:nz
-        @test W[ix, iy, iz][1] ≈ W[1, 1, iz][1] atol = 1e-8
+        @test W[ix, iy, iz][1] ≈ W[1, 1, iz][1] atol = 1.0e-8
     end
 end
 
@@ -227,7 +227,7 @@ end
         initialize_ct_3d_from_potential!(ct, Ax_func, Ay_func, Az_func, mesh)
 
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
-        @test divB < 1e-14
+        @test divB < 1.0e-14
     end
 
     @testset "DivB preserved after evolution" begin
@@ -267,8 +267,8 @@ end
         )
 
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
-        @test divB < 1e-14
-        @test t_final ≈ 0.02 atol = 1e-10
+        @test divB < 1.0e-14
+        @test t_final ≈ 0.02 atol = 1.0e-10
     end
 
     @testset "Uniform field: divB = 0" begin
@@ -286,7 +286,7 @@ end
 
         coords, U_final, t_final, ct = solve_hyperbolic(prob)
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
-        @test divB < 1e-12
+        @test divB < 1.0e-12
     end
 
     @testset "Euler method: divB = 0" begin
@@ -304,7 +304,7 @@ end
 
         _, _, _, ct = solve_hyperbolic(prob; method = :euler)
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
-        @test divB < 1e-12
+        @test divB < 1.0e-12
     end
 end
 
@@ -323,7 +323,7 @@ end
     rho_bg = 1.0
     P_bg = 1.0
     R0 = 0.3
-    A0 = 1e-3
+    A0 = 1.0e-3
 
     function loop_ic_3d(x, y, z)
         # B will be overwritten by CT, just set hydrodynamic part
@@ -360,8 +360,8 @@ end
         )
 
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
-        @test divB < 1e-14
-        @test t_final ≈ 0.02 atol = 1e-10
+        @test divB < 1.0e-14
+        @test t_final ≈ 0.02 atol = 1.0e-10
     end
 
     @testset "Density and pressure remain positive and nearly uniform" begin
@@ -437,7 +437,7 @@ end
     )
     _, U_final, t_final, ct = solve_hyperbolic(prob)
 
-    @test t_final ≈ 0.02 atol = 1e-10
+    @test t_final ≈ 0.02 atol = 1.0e-10
 
     # Compute conserved totals
     mass_0 = sum(u[1] for u in U0) * dV
@@ -451,15 +451,15 @@ end
     energy_0 = sum(u[5] for u in U0) * dV
     energy_f = sum(u[5] for u in U_final) * dV
 
-    @test mass_f ≈ mass_0 atol = 1e-10
-    @test momx_f ≈ momx_0 atol = 1e-10
-    @test momy_f ≈ momy_0 atol = 1e-10
-    @test momz_f ≈ momz_0 atol = 1e-10
-    @test energy_f ≈ energy_0 atol = 1e-8
+    @test mass_f ≈ mass_0 atol = 1.0e-10
+    @test momx_f ≈ momx_0 atol = 1.0e-10
+    @test momy_f ≈ momy_0 atol = 1.0e-10
+    @test momz_f ≈ momz_0 atol = 1.0e-10
+    @test energy_f ≈ energy_0 atol = 1.0e-8
 
     # divB should also be preserved
     divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
-    @test divB < 1e-12
+    @test divB < 1.0e-12
 end
 
 # ============================================================
@@ -503,7 +503,7 @@ end
         ct.Bx_face .= 1.0
         ct.By_face .= 0.0
         ct.Bz_face .= 0.0
-        @test max_divB_3d(ct, dx, dy, dz, nx, ny, nz) ≈ 0.0 atol = 1e-15
+        @test max_divB_3d(ct, dx, dy, dz, nx, ny, nz) ≈ 0.0 atol = 1.0e-15
 
         # Introduce non-zero divergence
         ct.Bx_face[5, 5, 5] = 2.0
@@ -547,7 +547,7 @@ end
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
             @test all(w -> all(isfinite, w), W)
-            @test max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz) < 1e-12
+            @test max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz) < 1.0e-12
         end
     end
 end
@@ -576,7 +576,7 @@ end
     u_ref = primitive_to_conserved(law, w_const)
 
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
-        @test U_final[ix, iy, iz] ≈ u_ref atol = 1e-12
+        @test U_final[ix, iy, iz] ≈ u_ref atol = 1.0e-12
     end
-    @test max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz) < 1e-13
+    @test max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz) < 1.0e-13
 end

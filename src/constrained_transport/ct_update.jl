@@ -52,8 +52,10 @@ Perform a weighted CT update for SSP-RK stages:
 
 where `ΔB` is the CT update computed from `ct_stage.emf_z`.
 """
-function ct_weighted_update!(ct_out::CTData2D, ct_old::CTData2D, ct_stage::CTData2D,
-        α_old, α_stage, dt, dx, dy, nx::Int, ny::Int)
+function ct_weighted_update!(
+        ct_out::CTData2D, ct_old::CTData2D, ct_stage::CTData2D,
+        α_old, α_stage, dt, dx, dy, nx::Int, ny::Int
+    )
     Bx_out = ct_out.Bx_face
     By_out = ct_out.By_face
     Bx_old = ct_old.Bx_face

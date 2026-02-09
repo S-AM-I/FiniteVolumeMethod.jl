@@ -107,7 +107,8 @@ For refinement ratio 2 in 2D:
 function restrict_B_face_2d!(
         Bx_coarse::AbstractMatrix, By_coarse::AbstractMatrix,
         Bx_fine::AbstractMatrix, By_fine::AbstractMatrix,
-        nx_c::Int, ny_c::Int)
+        nx_c::Int, ny_c::Int
+    )
     # Restrict Bx at x-faces
     for j in 1:ny_c, i in 1:(nx_c + 1)
         fi = 2 * i - 1
@@ -132,7 +133,8 @@ Each coarse face value = average of the 4 fine faces it covers.
 function restrict_B_face_3d!(
         Bx_coarse::AbstractArray{T, 3}, By_coarse::AbstractArray{T, 3}, Bz_coarse::AbstractArray{T, 3},
         Bx_fine::AbstractArray{T, 3}, By_fine::AbstractArray{T, 3}, Bz_fine::AbstractArray{T, 3},
-        nx_c::Int, ny_c::Int, nz_c::Int) where {T}
+        nx_c::Int, ny_c::Int, nz_c::Int
+    ) where {T}
     # Restrict Bx at x-faces: coarse face (i,j,k) = avg of 4 fine faces
     for k in 1:nz_c, j in 1:ny_c, i in 1:(nx_c + 1)
         fi = 2 * i - 1
@@ -142,7 +144,7 @@ function restrict_B_face_3d!(
         fk2 = 2 * k
         Bx_coarse[i, j, k] = 0.25 * (
             Bx_fine[fi, fj1, fk1] + Bx_fine[fi, fj2, fk1] +
-            Bx_fine[fi, fj1, fk2] + Bx_fine[fi, fj2, fk2]
+                Bx_fine[fi, fj1, fk2] + Bx_fine[fi, fj2, fk2]
         )
     end
 
@@ -155,7 +157,7 @@ function restrict_B_face_3d!(
         fk2 = 2 * k
         By_coarse[i, j, k] = 0.25 * (
             By_fine[fi1, fj, fk1] + By_fine[fi2, fj, fk1] +
-            By_fine[fi1, fj, fk2] + By_fine[fi2, fj, fk2]
+                By_fine[fi1, fj, fk2] + By_fine[fi2, fj, fk2]
         )
     end
 
@@ -168,7 +170,7 @@ function restrict_B_face_3d!(
         fj2 = 2 * j
         Bz_coarse[i, j, k] = 0.25 * (
             Bz_fine[fi1, fj1, fk] + Bz_fine[fi2, fj1, fk] +
-            Bz_fine[fi1, fj2, fk] + Bz_fine[fi2, fj2, fk]
+                Bz_fine[fi1, fj2, fk] + Bz_fine[fi2, fj2, fk]
         )
     end
 

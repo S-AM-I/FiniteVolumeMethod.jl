@@ -201,6 +201,7 @@ function _collect_pages!(set, pages)
             _collect_pages!(set, page[2])
         end
     end
+    return
 end
 _collect_pages!(set, _PAGES)
 missing_set = String[]

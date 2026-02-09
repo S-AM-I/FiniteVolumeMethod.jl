@@ -30,8 +30,10 @@ struct StructuredMesh3D{FT} <: AbstractMesh{3}
     dz::FT
 end
 
-function StructuredMesh3D(xmin::FT, xmax::FT, ymin::FT, ymax::FT,
-        zmin::FT, zmax::FT, nx::Int, ny::Int, nz::Int) where {FT}
+function StructuredMesh3D(
+        xmin::FT, xmax::FT, ymin::FT, ymax::FT,
+        zmin::FT, zmax::FT, nx::Int, ny::Int, nz::Int
+    ) where {FT}
     dx = (xmax - xmin) / nx
     dy = (ymax - ymin) / ny
     dz = (zmax - zmin) / nz

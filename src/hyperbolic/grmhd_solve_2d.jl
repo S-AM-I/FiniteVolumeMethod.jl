@@ -76,8 +76,10 @@ end
 Compute the time step using metric-corrected wave speeds:
   `lambda_coord = alpha * lambda_flat - beta`
 """
-function compute_dt_2d(prob::HyperbolicProblem2D{<:GRMHDEquations{2}},
-        U::AbstractMatrix, t, md::MetricData2D)
+function compute_dt_2d(
+        prob::HyperbolicProblem2D{<:GRMHDEquations{2}},
+        U::AbstractMatrix, t, md::MetricData2D
+    )
     law = prob.law
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -129,7 +131,8 @@ function _grmhd_compute_fluxes_2d!(
         Fx_all::AbstractMatrix, Fy_all::AbstractMatrix,
         dU::AbstractMatrix, U::AbstractMatrix,
         prob::HyperbolicProblem2D{<:GRMHDEquations{2}}, t,
-        md::MetricData2D, face_data)
+        md::MetricData2D, face_data
+    )
     law = prob.law
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -226,9 +229,11 @@ end
 
 Add geometric source terms to dU at all interior cells.
 """
-function _grmhd_add_source_terms!(dU::AbstractMatrix, U::AbstractMatrix,
+function _grmhd_add_source_terms!(
+        dU::AbstractMatrix, U::AbstractMatrix,
         law::GRMHDEquations{2}, md::MetricData2D,
-        mesh::StructuredMesh2D, nx::Int, ny::Int)
+        mesh::StructuredMesh2D, nx::Int, ny::Int
+    )
     for iy in 1:ny, ix in 1:nx
         ii, jj = ix + 2, iy + 2
         w = conserved_to_primitive(law, U[ii, jj])
@@ -258,8 +263,10 @@ Solve the 2D GRMHD problem using the Valencia formulation with:
 - `t_final`: Final time reached.
 - `ct`: Final `CTData2D` for inspecting div(B) and face-centered B.
 """
-function solve_hyperbolic(prob::HyperbolicProblem2D{<:GRMHDEquations{2}};
-        method::Symbol = :ssprk3, vector_potential = nothing)
+function solve_hyperbolic(
+        prob::HyperbolicProblem2D{<:GRMHDEquations{2}};
+        method::Symbol = :ssprk3, vector_potential = nothing
+    )
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy

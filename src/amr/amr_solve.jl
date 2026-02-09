@@ -40,10 +40,14 @@ struct AMRProblem{Grid, RS, Rec, BCs, FT}
     regrid_interval::Int
 end
 
-function AMRProblem(grid, riemann_solver, reconstruction, boundary_conditions;
-        initial_time = 0.0, final_time, cfl = 0.4, regrid_interval = 4)
-    return AMRProblem(grid, riemann_solver, reconstruction, boundary_conditions,
-        initial_time, final_time, cfl, regrid_interval)
+function AMRProblem(
+        grid, riemann_solver, reconstruction, boundary_conditions;
+        initial_time = 0.0, final_time, cfl = 0.4, regrid_interval = 4
+    )
+    return AMRProblem(
+        grid, riemann_solver, reconstruction, boundary_conditions,
+        initial_time, final_time, cfl, regrid_interval
+    )
 end
 
 """

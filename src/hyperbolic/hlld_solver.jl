@@ -85,8 +85,8 @@ function solve_riemann(::HLLDSolver, law::IdealMHDEquations, wL::SVector{8}, wR:
     ρR_star = ρR * (SR - vnR) / (SR - SM)
 
     # Guard against negative densities
-    ρL_star = max(ρL_star, 1e-20)
-    ρR_star = max(ρR_star, 1e-20)
+    ρL_star = max(ρL_star, 1.0e-20)
+    ρR_star = max(ρR_star, 1.0e-20)
 
     # Star tangential velocities and B-fields
     vt1L_star, vt2L_star, Bt1L_star, Bt2L_star = _hlld_tangential_star(
@@ -118,7 +118,7 @@ function solve_riemann(::HLLDSolver, law::IdealMHDEquations, wL::SVector{8}, wR:
     SL_star = SM - abs_Bn / sqrt_ρL_star
     SR_star = SM + abs_Bn / sqrt_ρR_star
 
-    if SM >= zero(SM)
+    return if SM >= zero(SM)
         # Left side of contact
         fL_star = fL + SL * (uL_star - uL)
         if SL_star >= zero(SL_star)
@@ -170,7 +170,7 @@ From Miyoshi & Kusano (2005), eqs (44)-(47).
 
     # Scale for tolerance check
     scale = max(abs(ρ * (SK - vn) * (SK - SM)), Bn_sq, eps(typeof(vn)))
-    if abs(denom) > 1e-8 * scale
+    if abs(denom) > 1.0e-8 * scale
         factor_v = sqrt(Bn_sq) * (SM - vn) / denom
         factor_B = (ρ * (SK - vn)^2 - Bn_sq) / denom
 
@@ -225,7 +225,7 @@ From Miyoshi & Kusano (2005), eqs (59)-(63).
     )
     denom = sqrt_ρL + sqrt_ρR
 
-    if denom < 1e-30
+    if denom < 1.0e-30
         # Both densities effectively zero — return star state as-is
         ρ_ds = side == :left ? ρL_star : ρR_star
         vt1_ds = side == :left ? vt1L_star : vt1R_star
@@ -238,16 +238,24 @@ From Miyoshi & Kusano (2005), eqs (59)-(63).
     sign_Bn = Bn >= zero(Bn) ? one(Bn) : -one(Bn)
 
     # Averaged tangential velocities (eq 59-60)
-    vt1_ds = (sqrt_ρL * vt1L_star + sqrt_ρR * vt1R_star +
-              (Bt1R_star - Bt1L_star) * sign_Bn) / denom
-    vt2_ds = (sqrt_ρL * vt2L_star + sqrt_ρR * vt2R_star +
-              (Bt2R_star - Bt2L_star) * sign_Bn) / denom
+    vt1_ds = (
+        sqrt_ρL * vt1L_star + sqrt_ρR * vt1R_star +
+            (Bt1R_star - Bt1L_star) * sign_Bn
+    ) / denom
+    vt2_ds = (
+        sqrt_ρL * vt2L_star + sqrt_ρR * vt2R_star +
+            (Bt2R_star - Bt2L_star) * sign_Bn
+    ) / denom
 
     # Averaged tangential B-fields (eq 61-62)
-    Bt1_ds = (sqrt_ρL * Bt1R_star + sqrt_ρR * Bt1L_star +
-              sqrt_ρL * sqrt_ρR * (vt1R_star - vt1L_star) * sign_Bn) / denom
-    Bt2_ds = (sqrt_ρL * Bt2R_star + sqrt_ρR * Bt2L_star +
-              sqrt_ρL * sqrt_ρR * (vt2R_star - vt2L_star) * sign_Bn) / denom
+    Bt1_ds = (
+        sqrt_ρL * Bt1R_star + sqrt_ρR * Bt1L_star +
+            sqrt_ρL * sqrt_ρR * (vt1R_star - vt1L_star) * sign_Bn
+    ) / denom
+    Bt2_ds = (
+        sqrt_ρL * Bt2R_star + sqrt_ρR * Bt2L_star +
+            sqrt_ρL * sqrt_ρR * (vt2R_star - vt2L_star) * sign_Bn
+    ) / denom
 
     # Energy update (eq 63)
     if side == :left

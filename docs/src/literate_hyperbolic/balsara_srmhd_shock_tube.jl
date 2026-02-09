@@ -35,7 +35,7 @@ ic(x) = x < 0.5 ? wL : wR
 prob = HyperbolicProblem(
     law, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), ic;
-    final_time=0.4, cfl=0.4
+    final_time = 0.4, cfl = 0.4
 )
 x, U, t_final = solve_hyperbolic(prob)
 x |> tc #hide
@@ -52,15 +52,15 @@ By = [conserved_to_primitive(law, U[i])[7] for i in eachindex(U)]
 # ## Visualisation
 using CairoMakie
 
-fig = Figure(fontsize=20, size=(1200, 400))
-ax1 = Axis(fig[1, 1], xlabel="x", ylabel=L"\rho", title="Density")
-lines!(ax1, x, rho, color=:blue, linewidth=1.5)
+fig = Figure(fontsize = 20, size = (1200, 400))
+ax1 = Axis(fig[1, 1], xlabel = "x", ylabel = L"\rho", title = "Density")
+lines!(ax1, x, rho, color = :blue, linewidth = 1.5)
 
-ax2 = Axis(fig[1, 2], xlabel="x", ylabel=L"v_x", title="Velocity")
-lines!(ax2, x, vx, color=:blue, linewidth=1.5)
+ax2 = Axis(fig[1, 2], xlabel = "x", ylabel = L"v_x", title = "Velocity")
+lines!(ax2, x, vx, color = :blue, linewidth = 1.5)
 
-ax3 = Axis(fig[1, 3], xlabel="x", ylabel=L"B_y", title="Magnetic Field (y)")
-lines!(ax3, x, By, color=:blue, linewidth=1.5)
+ax3 = Axis(fig[1, 3], xlabel = "x", ylabel = L"B_y", title = "Magnetic Field (y)")
+lines!(ax3, x, By, color = :blue, linewidth = 1.5)
 
 resize_to_layout!(fig)
 fig

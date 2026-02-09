@@ -126,7 +126,7 @@ For a single linearization step, we return the linearized Dirichlet value.
 # Returns
 The linearized Dirichlet boundary value.
 """
-function linearize_bc(::Type{NonlinearDirichlet}, f, x, y, t, u, grad_u, p; ε=1e-6)
+function linearize_bc(::Type{NonlinearDirichlet}, f, x, y, t, u, grad_u, p; ε = 1.0e-6)
     # Evaluate f at current state
     f_val = f(x, y, t, u, grad_u, p)
 
@@ -138,7 +138,7 @@ function linearize_bc(::Type{NonlinearDirichlet}, f, x, y, t, u, grad_u, p; ε=1
     # u_new = u - (f(u) - u) / (df/du - 1)
     denom = df_du - one(df_du)
 
-    if abs(denom) < 1e-12
+    if abs(denom) < 1.0e-12
         # Near fixed point or singular - return f(u) as estimate
         return f_val
     end
@@ -188,8 +188,8 @@ with additional metadata for nonlinear handling.
 - `nonlinear_types`: Tuple indicating which boundaries have nonlinear conditions
 - `gradient_cache`: Pre-allocated storage for gradient computations
 """
-struct NonlinearBoundaryConditions{F,C,P,N}
-    base_conditions::BoundaryConditions{F,C}
+struct NonlinearBoundaryConditions{F, C, P, N}
+    base_conditions::BoundaryConditions{F, C}
     nonlinear_types::N
     parameters::P
 end

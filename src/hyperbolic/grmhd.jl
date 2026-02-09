@@ -62,8 +62,10 @@ struct GRMHDEquations{Dim, EOS <: AbstractEOS, M <: AbstractMetric{Dim}} <: Abst
     con2prim_maxiter::Int
 end
 
-function GRMHDEquations{Dim}(eos::EOS, metric::M;
-        con2prim_tol = 1e-12, con2prim_maxiter = 50) where {Dim, EOS <: AbstractEOS, M <: AbstractMetric{Dim}}
+function GRMHDEquations{Dim}(
+        eos::EOS, metric::M;
+        con2prim_tol = 1.0e-12, con2prim_maxiter = 50
+    ) where {Dim, EOS <: AbstractEOS, M <: AbstractMetric{Dim}}
     return GRMHDEquations{Dim, EOS, M}(eos, metric, con2prim_tol, con2prim_maxiter)
 end
 
@@ -246,14 +248,14 @@ Uses the same formula as SRMHD (flat-space Lorentz factor).
     gamma_eos = law.eos.gamma
 
     v_sq = vx^2 + vy^2 + vz^2
-    v_sq = min(v_sq, 1 - 1e-10)
+    v_sq = min(v_sq, 1 - 1.0e-10)
 
     W = 1 / sqrt(1 - v_sq)
     eps_val = P / ((gamma_eos - 1) * rho)
     h = 1 + eps_val + P / rho
 
     cs_sq = gamma_eos * P / (rho * h)
-    cs_sq = min(cs_sq, 1 - 1e-10)
+    cs_sq = min(cs_sq, 1 - 1.0e-10)
 
     B_sq = Bx^2 + By^2 + Bz^2
     vdotB = vx * Bx + vy * By + vz * Bz
@@ -261,10 +263,10 @@ Uses the same formula as SRMHD (flat-space Lorentz factor).
 
     rho_h = rho * h
     ca_sq = b_sq / (rho_h + b_sq)
-    ca_sq = min(ca_sq, 1 - 1e-10)
+    ca_sq = min(ca_sq, 1 - 1.0e-10)
 
     c_ms_sq = cs_sq + ca_sq - cs_sq * ca_sq
-    c_ms_sq = clamp(c_ms_sq, zero(c_ms_sq), 1 - 1e-10)
+    c_ms_sq = clamp(c_ms_sq, zero(c_ms_sq), 1 - 1.0e-10)
     c_ms = sqrt(c_ms_sq)
 
     vn = dir == 1 ? vx : vy
@@ -293,8 +295,10 @@ Maximum wave speed in coordinate frame, accounting for lapse and shift:
 
 Used for CFL condition in the GRMHD solver.
 """
-@inline function grmhd_max_wave_speed_coord(law::GRMHDEquations, w::SVector{8}, dir::Int,
-        alpha, beta_dir)
+@inline function grmhd_max_wave_speed_coord(
+        law::GRMHDEquations, w::SVector{8}, dir::Int,
+        alpha, beta_dir
+    )
     lam_m, lam_p = _grmhd_wave_speeds(law, w, dir)
     # Transform to coordinate frame
     lam_m_coord = alpha * lam_m - beta_dir
@@ -332,9 +336,11 @@ The source terms are computed using the stress-energy tensor contracted with
 metric derivatives (Christoffel symbols). We use centered finite differences
 for the metric derivatives.
 """
-@inline function grmhd_source_terms(law::GRMHDEquations{2}, w::SVector{8},
+@inline function grmhd_source_terms(
+        law::GRMHDEquations{2}, w::SVector{8},
         u_densitized::SVector{8}, md::MetricData2D,
-        mesh::StructuredMesh2D, ix::Int, iy::Int)
+        mesh::StructuredMesh2D, ix::Int, iy::Int
+    )
     rho, vx, vy, vz, P, Bx, By, Bz = w
     gamma_eos = law.eos.gamma
     nx, ny = mesh.nx, mesh.ny
@@ -465,13 +471,13 @@ for the metric derivatives.
 
     # Momentum source for x-direction (j=x):
     Sx_src = -E_und * dalpha_dx +
-             Sx_und * dbetax_dx + Sy_und * dbetay_dx +
-             alp * 0.5 * (Txx * dgxx_dx + 2 * Txy * dgxy_dx + Tyy * dgyy_dx)
+        Sx_und * dbetax_dx + Sy_und * dbetay_dx +
+        alp * 0.5 * (Txx * dgxx_dx + 2 * Txy * dgxy_dx + Tyy * dgyy_dx)
 
     # Momentum source for y-direction (j=y):
     Sy_src = -E_und * dalpha_dy +
-             Sx_und * dbetax_dy + Sy_und * dbetay_dy +
-             alp * 0.5 * (Txx * dgxx_dy + 2 * Txy * dgxy_dy + Tyy * dgyy_dy)
+        Sx_und * dbetax_dy + Sy_und * dbetay_dy +
+        alp * 0.5 * (Txx * dgxx_dy + 2 * Txy * dgxy_dy + Tyy * dgyy_dy)
 
     # ---- Energy source: S_tau = sqrt(gamma) * [-S_j partial^j alpha + alpha T^kl K_kl] ----
     # Approximate: K_ij ~ (partial_i beta_j_low + partial_j beta_i_low) / (2 alpha)
@@ -499,7 +505,9 @@ for the metric derivatives.
     Sz_src = zero(Sx_src)
 
     # Multiply by sqrt(gamma) for the densitized source
-    return SVector(zero(Sx_src),
+    return SVector(
+        zero(Sx_src),
         sg * Sx_src, sg * Sy_src, sg * Sz_src, sg * tau_src,
-        zero(Sx_src), zero(Sx_src), zero(Sx_src))
+        zero(Sx_src), zero(Sx_src), zero(Sx_src)
+    )
 end

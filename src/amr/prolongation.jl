@@ -138,7 +138,8 @@ Uses the Balsara (2001) divergence-preserving interpolation:
 function prolongate_B_divergence_preserving_2d!(
         Bx_coarse::AbstractMatrix, By_coarse::AbstractMatrix,
         Bx_fine::AbstractMatrix, By_fine::AbstractMatrix,
-        nx_c::Int, ny_c::Int)
+        nx_c::Int, ny_c::Int
+    )
     # Refinement ratio is 2: each coarse cell -> 4 fine cells
     nx_f = 2 * nx_c
     ny_f = 2 * ny_c

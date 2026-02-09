@@ -25,9 +25,9 @@ using StaticArrays
 
         u_ref = primitive_to_conserved(law, w_const)
         for iy in 1:20, ix in 1:20
-            @test U_final[ix, iy] ≈ u_ref atol = 1e-12
+            @test U_final[ix, iy] ≈ u_ref atol = 1.0e-12
         end
-        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1e-13
+        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-13
     end
 
     @testset "Return value structure" begin
@@ -45,7 +45,7 @@ using StaticArrays
         coords, U, t, ct = result
         @test size(U) == (10, 10)
         @test size(coords) == (10, 10)
-        @test t ≈ 0.01 atol = 1e-10
+        @test t ≈ 0.01 atol = 1.0e-10
         @test ct isa CTData2D
     end
 end
@@ -68,7 +68,7 @@ end
         )
 
         _, _, _, ct = solve_hyperbolic(prob)
-        @test max_divB(ct, mesh.dx, mesh.dy, 30, 30) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 30, 30) < 1.0e-12
     end
 
     @testset "Non-uniform field: ∇·B = 0 maintained" begin
@@ -95,7 +95,7 @@ end
 
         _, _, _, ct = solve_hyperbolic(prob)
         divB_max = max_divB(ct, mesh.dx, mesh.dy, 30, 30)
-        @test divB_max < 1e-12
+        @test divB_max < 1.0e-12
     end
 
     @testset "Euler method: ∇·B = 0" begin
@@ -109,7 +109,7 @@ end
         )
 
         _, _, _, ct = solve_hyperbolic(prob; method = :euler)
-        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-12
     end
 end
 
@@ -148,11 +148,11 @@ end
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
 
-        @test t_final ≈ 0.1 atol = 1e-10
+        @test t_final ≈ 0.1 atol = 1.0e-10
         @test all(ρ .> 0)
         @test all(P .> 0)
         @test all(isfinite.(ρ))
-        @test max_divB(ct, mesh.dx, mesh.dy, 50, 50) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 50, 50) < 1.0e-12
 
         # Orszag-Tang should develop structure (not remain uniform)
         @test maximum(ρ) > minimum(ρ) + 0.1
@@ -172,10 +172,10 @@ end
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
 
-        @test t_final ≈ 0.1 atol = 1e-10
+        @test t_final ≈ 0.1 atol = 1.0e-10
         @test all(ρ .> 0)
         @test all(P .> 0)
-        @test max_divB(ct, mesh.dx, mesh.dy, 40, 40) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 40, 40) < 1.0e-12
     end
 
     @testset "HLLD vs HLL comparison" begin
@@ -206,7 +206,7 @@ end
         # HLLD should give a different (generally sharper) solution
         ρ_hlld = [w[1] for w in W_hlld]
         ρ_hll = [w[1] for w in W_hll]
-        @test maximum(abs.(ρ_hlld .- ρ_hll)) > 1e-6
+        @test maximum(abs.(ρ_hlld .- ρ_hll)) > 1.0e-6
     end
 end
 
@@ -224,7 +224,7 @@ end
     ρ_bg = 1.0
     P_bg = 1.0
     R0 = 0.3  # loop radius
-    A0 = 1e-3  # amplitude (weak field → linear regime)
+    A0 = 1.0e-3  # amplitude (weak field → linear regime)
 
     function loop_ic(x, y)
         # Center at (0.5, 0.5)
@@ -258,8 +258,8 @@ end
         )
 
         _, _, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_loop)
-        @test t_final ≈ 0.1 atol = 1e-10
-        @test max_divB(ct, mesh.dx, mesh.dy, 50, 50) < 1e-12
+        @test t_final ≈ 0.1 atol = 1.0e-10
+        @test max_divB(ct, mesh.dx, mesh.dy, 50, 50) < 1.0e-12
     end
 
     @testset "Density and pressure remain positive" begin
@@ -352,10 +352,10 @@ end
         energy_0 = sum(u[5] for u in U0) * dA
         energy_f = sum(u[5] for u in U_final) * dA
 
-        @test mass_f ≈ mass_0 atol = 1e-10
-        @test momx_f ≈ momx_0 atol = 1e-10
-        @test momy_f ≈ momy_0 atol = 1e-10
-        @test energy_f ≈ energy_0 atol = 1e-8  # Energy may have slightly larger error
+        @test mass_f ≈ mass_0 atol = 1.0e-10
+        @test momx_f ≈ momx_0 atol = 1.0e-10
+        @test momy_f ≈ momy_0 atol = 1.0e-10
+        @test energy_f ≈ energy_0 atol = 1.0e-8  # Energy may have slightly larger error
     end
 end
 
@@ -380,7 +380,7 @@ end
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)
         @test all(w -> w[5] > 0, W)
-        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-12
     end
 
     @testset "ReflectiveBC" begin
@@ -401,7 +401,7 @@ end
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)
         @test all(w -> w[5] > 0, W)
-        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-12
     end
 
     @testset "PeriodicBC" begin
@@ -422,7 +422,7 @@ end
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)
         @test all(w -> w[5] > 0, W)
-        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-12
     end
 end
 
@@ -461,7 +461,7 @@ end
             W = to_primitive(law, U)
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
-            @test max_divB(ct, mesh.dx, mesh.dy, 30, 30) < 1e-12
+            @test max_divB(ct, mesh.dx, mesh.dy, 30, 30) < 1.0e-12
         end
     end
 end
@@ -495,7 +495,7 @@ end
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
             @test all(w -> all(isfinite, w), W)
-            @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1e-12
+            @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-12
         end
     end
 end
@@ -529,7 +529,7 @@ end
         # Solution should be uniform in y
         for ix in 1:200
             for iy in 2:4
-                @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1e-10
+                @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1.0e-10
             end
         end
 
@@ -570,7 +570,7 @@ end
             W = to_primitive(law, U)
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
-            @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1e-12
+            @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-12
         end
     end
 end
@@ -621,10 +621,10 @@ end
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
 
-        @test t ≈ 0.02 atol = 1e-10
+        @test t ≈ 0.02 atol = 1.0e-10
         @test all(ρ .> 0)
         @test all(P .> 0)
-        @test max_divB(ct, mesh.dx, mesh.dy, 40, 40) < 1e-12
+        @test max_divB(ct, mesh.dx, mesh.dy, 40, 40) < 1.0e-12
     end
 end
 
@@ -659,8 +659,8 @@ end
         # Uniform Bx, zero By → ∇·B = 0
         ct.Bx_face .= 1.0
         ct.By_face .= 0.0
-        @test max_divB(ct, 0.1, 0.1, 10, 10) ≈ 0.0 atol = 1e-15
-        @test l2_divB(ct, 0.1, 0.1, 10, 10) ≈ 0.0 atol = 1e-15
+        @test max_divB(ct, 0.1, 0.1, 10, 10) ≈ 0.0 atol = 1.0e-15
+        @test l2_divB(ct, 0.1, 0.1, 10, 10) ≈ 0.0 atol = 1.0e-15
 
         # Non-zero divergence
         ct.Bx_face[5, 5] = 2.0

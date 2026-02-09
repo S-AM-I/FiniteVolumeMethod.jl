@@ -47,7 +47,7 @@ end
 # $B_x = \partial A_z/\partial y$ and $B_y = -\partial A_z/\partial x$ is:
 function Az_ot(x, y)
     return cos(2 * pi * y) / (2 * pi * sqrt(4 * pi)) +
-           cos(4 * pi * x) / (4 * pi * sqrt(4 * pi))
+        cos(4 * pi * x) / (4 * pi * sqrt(4 * pi))
 end
 
 # ## Solving
@@ -56,12 +56,12 @@ prob = HyperbolicProblem2D(
     law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-    ot_ic; final_time=0.5, cfl=0.4
+    ot_ic; final_time = 0.5, cfl = 0.4
 )
 
 # The `vector_potential` keyword tells `solve_hyperbolic` to initialise
 # the face-centred magnetic field from $A_z$ via Stokes' theorem:
-coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential=Az_ot)
+coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_ot)
 coords |> tc #hide
 
 # ## Checking $\nabla\cdot\vb B$
@@ -69,7 +69,7 @@ coords |> tc #hide
 # at machine precision:
 divB_max = max_divB(ct, mesh)
 
-@assert divB_max < 1e-12 #hide
+@assert divB_max < 1.0e-12 #hide
 
 # ## Visualisation
 using CairoMakie
@@ -80,15 +80,19 @@ yc = [coords[2][j] for j in 1:ny]
 rho = [conserved_to_primitive(law, U[i, j])[1] for i in 1:nx, j in 1:ny]
 P_vals = [conserved_to_primitive(law, U[i, j])[5] for i in 1:nx, j in 1:ny]
 
-fig = Figure(fontsize=24, size=(1100, 500))
-ax1 = Axis(fig[1, 1], xlabel="x", ylabel="y",
-           title="Density at t = $(round(t_final, digits=2))", aspect=DataAspect())
-hm1 = heatmap!(ax1, xc, yc, rho, colormap=:viridis)
+fig = Figure(fontsize = 24, size = (1100, 500))
+ax1 = Axis(
+    fig[1, 1], xlabel = "x", ylabel = "y",
+    title = "Density at t = $(round(t_final, digits = 2))", aspect = DataAspect()
+)
+hm1 = heatmap!(ax1, xc, yc, rho, colormap = :viridis)
 Colorbar(fig[1, 2], hm1)
 
-ax2 = Axis(fig[1, 3], xlabel="x", ylabel="y",
-           title="Pressure", aspect=DataAspect())
-hm2 = heatmap!(ax2, xc, yc, P_vals, colormap=:magma)
+ax2 = Axis(
+    fig[1, 3], xlabel = "x", ylabel = "y",
+    title = "Pressure", aspect = DataAspect()
+)
+hm2 = heatmap!(ax2, xc, yc, P_vals, colormap = :magma)
 Colorbar(fig[1, 4], hm2)
 resize_to_layout!(fig)
 fig

@@ -23,7 +23,7 @@ struct WENO3{FT}
     epsilon::FT
 end
 
-WENO3() = WENO3(1e-6)
+WENO3() = WENO3(1.0e-6)
 
 # ============================================================
 # Scalar WENO-3 reconstruction

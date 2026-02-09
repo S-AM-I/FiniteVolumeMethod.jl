@@ -40,11 +40,11 @@ function kh_ic(x, y)
     sigma = 0.05
     rho = rho1 + (rho2 - rho1) * (
         0.5 * (1.0 + tanh((y - 0.25) / sigma)) -
-        0.5 * (1.0 + tanh((y - 0.75) / sigma))
+            0.5 * (1.0 + tanh((y - 0.75) / sigma))
     )
     vx_smooth = -v_shear + 2 * v_shear * (
         0.5 * (1.0 + tanh((y - 0.25) / sigma)) -
-        0.5 * (1.0 + tanh((y - 0.75) / sigma))
+            0.5 * (1.0 + tanh((y - 0.75) / sigma))
     )
     ## Sinusoidal perturbation in vy to seed the instability
     vy = A_pert * sin(4 * pi * x)
@@ -62,7 +62,7 @@ prob_low = HyperbolicProblem2D(
     law, mesh_low, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-    kh_ic; final_time=t_final, cfl=0.4
+    kh_ic; final_time = t_final, cfl = 0.4
 )
 coords_low, U_low, _ = solve_hyperbolic(prob_low)
 
@@ -72,7 +72,7 @@ prob_high = HyperbolicProblem2D(
     law, mesh_high, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-    kh_ic; final_time=t_final, cfl=0.4
+    kh_ic; final_time = t_final, cfl = 0.4
 )
 coords_high, U_high, t_end = solve_hyperbolic(prob_high)
 coords_high |> tc #hide
@@ -80,21 +80,25 @@ coords_high |> tc #hide
 # ## Visualisation
 using CairoMakie
 
-fig = Figure(fontsize=24, size=(1100, 500))
+fig = Figure(fontsize = 24, size = (1100, 500))
 
-ax1 = Axis(fig[1, 1], xlabel="x", ylabel="y",
-           title="Density (N=$(N_low))", aspect=DataAspect())
+ax1 = Axis(
+    fig[1, 1], xlabel = "x", ylabel = "y",
+    title = "Density (N=$(N_low))", aspect = DataAspect()
+)
 xc_l = [coords_low[1][i] for i in 1:N_low]
 yc_l = [coords_low[2][j] for j in 1:N_low]
 rho_low = [conserved_to_primitive(law, U_low[i, j])[1] for i in 1:N_low, j in 1:N_low]
-hm1 = heatmap!(ax1, xc_l, yc_l, rho_low, colormap=:viridis)
+hm1 = heatmap!(ax1, xc_l, yc_l, rho_low, colormap = :viridis)
 
-ax2 = Axis(fig[1, 2], xlabel="x", ylabel="y",
-           title="Density (N=$(N_high))", aspect=DataAspect())
+ax2 = Axis(
+    fig[1, 2], xlabel = "x", ylabel = "y",
+    title = "Density (N=$(N_high))", aspect = DataAspect()
+)
 xc_h = [coords_high[1][i] for i in 1:N_high]
 yc_h = [coords_high[2][j] for j in 1:N_high]
 rho_high = [conserved_to_primitive(law, U_high[i, j])[1] for i in 1:N_high, j in 1:N_high]
-hm2 = heatmap!(ax2, xc_h, yc_h, rho_high, colormap=:viridis)
+hm2 = heatmap!(ax2, xc_h, yc_h, rho_high, colormap = :viridis)
 Colorbar(fig[1, 3], hm2)
 
 resize_to_layout!(fig)

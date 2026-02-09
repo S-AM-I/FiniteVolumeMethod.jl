@@ -64,8 +64,10 @@ end
 Solve the 2D SRMHD problem using constrained transport for ∇·B = 0.
 Same structure as the IdealMHDEquations{2} solver.
 """
-function solve_hyperbolic(prob::HyperbolicProblem2D{<:SRMHDEquations{2}};
-        method::Symbol = :ssprk3, vector_potential = nothing)
+function solve_hyperbolic(
+        prob::HyperbolicProblem2D{<:SRMHDEquations{2}};
+        method::Symbol = :ssprk3, vector_potential = nothing
+    )
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy

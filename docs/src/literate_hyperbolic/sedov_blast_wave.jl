@@ -24,7 +24,7 @@ N = 50
 mesh = StructuredMesh2D(-1.0, 1.0, -1.0, 1.0, N, N)
 
 # The background pressure is very low, with a strong blast in the central cells:
-P_bg = 1e-5
+P_bg = 1.0e-5
 P_blast = 1.0
 r_blast = 3.0 * mesh.dx
 
@@ -39,7 +39,7 @@ prob = HyperbolicProblem2D(
     law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(),
     TransmissiveBC(), TransmissiveBC(),
-    sedov_ic; final_time=0.1, cfl=0.3
+    sedov_ic; final_time = 0.1, cfl = 0.3
 )
 coords, U, t_final = solve_hyperbolic(prob)
 coords |> tc #hide
@@ -53,14 +53,16 @@ xc = [coords[1][i] for i in 1:nx]
 yc = [coords[2][j] for j in 1:ny]
 rho = [conserved_to_primitive(law, U[i, j])[1] for i in 1:nx, j in 1:ny]
 
-fig = Figure(fontsize=24, size=(1000, 500))
-ax1 = Axis(fig[1, 1], xlabel="x", ylabel="y", title="Density at t = $(round(t_final, digits=3))",
-           aspect=DataAspect())
-hm = heatmap!(ax1, xc, yc, rho, colormap=:inferno)
+fig = Figure(fontsize = 24, size = (1000, 500))
+ax1 = Axis(
+    fig[1, 1], xlabel = "x", ylabel = "y", title = "Density at t = $(round(t_final, digits = 3))",
+    aspect = DataAspect()
+)
+hm = heatmap!(ax1, xc, yc, rho, colormap = :inferno)
 Colorbar(fig[1, 2], hm)
 
 # We also plot the radial density profile to check cylindrical symmetry:
-ax2 = Axis(fig[1, 3], xlabel="r", ylabel=L"\rho", title="Radial profile")
+ax2 = Axis(fig[1, 3], xlabel = "r", ylabel = L"\rho", title = "Radial profile")
 r_vals = Float64[]
 rho_vals = Float64[]
 for i in 1:nx, j in 1:ny
@@ -68,7 +70,7 @@ for i in 1:nx, j in 1:ny
     push!(r_vals, r)
     push!(rho_vals, rho[i, j])
 end
-scatter!(ax2, r_vals, rho_vals, color=:blue, markersize=3)
+scatter!(ax2, r_vals, rho_vals, color = :blue, markersize = 3)
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "sedov_blast_wave.png") fig #src

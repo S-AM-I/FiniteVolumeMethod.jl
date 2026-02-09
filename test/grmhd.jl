@@ -52,7 +52,7 @@ using LinearAlgebra
         m_kerr0 = KerrMetric(M, 0.0)
         m_sch = SchwarzschildMetric(M)
         for (x, y) in [(5.0, 0.0), (3.0, 4.0), (0.0, 6.0)]
-            @test lapse(m_kerr0, x, y) ≈ lapse(m_sch, x, y) atol = 1e-10
+            @test lapse(m_kerr0, x, y) ≈ lapse(m_sch, x, y) atol = 1.0e-10
         end
     end
 
@@ -101,10 +101,10 @@ end
             u_gr = primitive_to_conserved(law_gr, w)
             u_sr = primitive_to_conserved(law_sr, w)
             # In Minkowski with √γ=1, GRMHD conserved = SRMHD conserved
-            @test u_gr ≈ u_sr atol = 1e-12
+            @test u_gr ≈ u_sr atol = 1.0e-12
 
             w_gr = conserved_to_primitive(law_gr, u_gr)
-            @test w_gr ≈ w atol = 1e-9
+            @test w_gr ≈ w atol = 1.0e-9
         end
     end
 
@@ -115,7 +115,7 @@ end
         mesh_src = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 4, 4)
         md_src = FiniteVolumeMethod.precompute_metric(metric, mesh_src)
         src = FiniteVolumeMethod.grmhd_source_terms(law_gr, w, u, md_src, mesh_src, 2, 2)
-        @test all(abs.(src) .< 1e-14)
+        @test all(abs.(src) .< 1.0e-14)
     end
 end
 
@@ -131,7 +131,7 @@ end
         w = SVector(1.0, 0.3, 0.2, 0.0, 2.0, 0.5, 0.8, 0.3)
         u = primitive_to_conserved(law, w)
         w2 = conserved_to_primitive(law, u)
-        @test w2 ≈ w atol = 1e-9
+        @test w2 ≈ w atol = 1.0e-9
     end
 
     @testset "Schwarzschild con2prim roundtrip" begin
@@ -141,7 +141,7 @@ end
         w = SVector(1.0, 0.1, 0.0, 0.0, 1.0, 0.5, 0.0, 0.0)
         u = primitive_to_conserved(law, w)
         w2 = conserved_to_primitive(law, u)
-        @test w2[1] ≈ w[1] rtol = 1e-6
-        @test w2[5] ≈ w[5] rtol = 1e-6
+        @test w2[1] ≈ w[1] rtol = 1.0e-6
+        @test w2[5] ≈ w[5] rtol = 1.0e-6
     end
 end

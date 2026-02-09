@@ -125,7 +125,7 @@ end
     w = SVector(1.0, 0.5, 1.0)  # ρ, v, P
     u = primitive_to_conserved(law, w)
     w2 = conserved_to_primitive(law, u)
-    @test w2 ≈ w atol = 1e-14
+    @test w2 ≈ w atol = 1.0e-14
 
     # Test flux computation
     f = physical_flux(law, w, 1)
@@ -170,10 +170,10 @@ end
         f_exact = physical_flux(law, w, 1)
 
         f_lf = solve_riemann(LaxFriedrichsSolver(), law, w, w, 1)
-        @test f_lf ≈ f_exact atol = 1e-14
+        @test f_lf ≈ f_exact atol = 1.0e-14
 
         f_hll = solve_riemann(HLLSolver(), law, w, w, 1)
-        @test f_hll ≈ f_exact atol = 1e-14
+        @test f_hll ≈ f_exact atol = 1.0e-14
     end
 end
 
@@ -199,7 +199,7 @@ end
         x, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.2 atol = 1e-10
+        @test t ≈ 0.2 atol = 1.0e-10
 
         # Compare against exact solution at sample points
         # Use L1 error norm — should decrease with resolution
@@ -277,9 +277,9 @@ end
     # The solution should be symmetric about x=0.5
     N = length(W)
     for i in 1:div(N, 4)
-        @test W[i][1] ≈ W[N + 1 - i][1] atol = 1e-10
-        @test W[i][2] ≈ -W[N + 1 - i][2] atol = 1e-10
-        @test W[i][3] ≈ W[N + 1 - i][3] atol = 1e-10
+        @test W[i][1] ≈ W[N + 1 - i][1] atol = 1.0e-10
+        @test W[i][2] ≈ -W[N + 1 - i][2] atol = 1.0e-10
+        @test W[i][3] ≈ W[N + 1 - i][3] atol = 1.0e-10
     end
 end
 
@@ -315,9 +315,9 @@ end
     energy_final = sum(U_final[i][3] for i in 1:100) * dx
 
     # Conservation should hold to near machine precision for periodic BCs
-    @test mass_final ≈ mass0 rtol = 1e-12
-    @test momentum_final ≈ momentum0 rtol = 1e-12
-    @test energy_final ≈ energy0 rtol = 1e-12
+    @test mass_final ≈ mass0 rtol = 1.0e-12
+    @test momentum_final ≈ momentum0 rtol = 1.0e-12
+    @test energy_final ≈ energy0 rtol = 1.0e-12
 end
 
 @testset "CFL Stability" begin
@@ -341,7 +341,7 @@ end
     # dt should be positive and bounded by CFL * dx / max_wave_speed
     @test dt > 0
     c_max = sound_speed(eos, 1.0, 1.0)  # max sound speed in left state
-    @test dt <= 0.5 * mesh.dx / c_max + 1e-14
+    @test dt <= 0.5 * mesh.dx / c_max + 1.0e-14
 
     # dt should not exceed final_time - t
     prob2 = HyperbolicProblem(
@@ -391,12 +391,12 @@ end
             end
 
             # Should reach final time
-            @test t ≈ 0.2 atol = 1e-10
+            @test t ≈ 0.2 atol = 1.0e-10
 
             # L1 error should be reasonable
             dx = 1.0 / 100
             ρ_err = sum(abs(W[i][1] - sod_exact(x[i], 0.2)[1]) * dx for i in 1:100)
-            @test ρ_err < 0.10  # All limiters should give reasonable results
+            @test ρ_err < 0.1  # All limiters should give reasonable results
         end
     end
 end
@@ -420,7 +420,7 @@ end
     W = to_primitive(law, U)
 
     # Should complete and give valid results (more diffusive than MUSCL)
-    @test t ≈ 0.2 atol = 1e-10
+    @test t ≈ 0.2 atol = 1.0e-10
     for i in 1:100
         @test W[i][1] > 0
         @test W[i][3] > 0
@@ -483,7 +483,7 @@ end
     w = SVector(1.0, 0.5, 0.3, 1.0)  # ρ, vx, vy, P
     u = primitive_to_conserved(law, w)
     w2 = conserved_to_primitive(law, u)
-    @test w2 ≈ w atol = 1e-14
+    @test w2 ≈ w atol = 1.0e-14
 
     # X-flux
     fx = physical_flux(law, w, 1)

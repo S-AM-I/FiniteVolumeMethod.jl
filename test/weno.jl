@@ -51,9 +51,9 @@ end
     @test nghost(CellCenteredMUSCL(MinmodLimiter())) == 2
     @test nghost(CellCenteredMUSCL(SuperbeeLimiter())) == 2
     @test nghost(WENO3()) == 2
-    @test nghost(WENO3(1e-10)) == 2
+    @test nghost(WENO3(1.0e-10)) == 2
     @test nghost(WENO5()) == 3
-    @test nghost(WENO5(1e-10, 2)) == 3
+    @test nghost(WENO5(1.0e-10, 2)) == 3
     @test nghost(CharacteristicWENO(WENO3())) == 2
     @test nghost(CharacteristicWENO(WENO5())) == 3
 end
@@ -66,20 +66,20 @@ end
     recon = WENO3()
 
     @testset "Default epsilon" begin
-        @test recon.epsilon == 1e-6
+        @test recon.epsilon == 1.0e-6
     end
 
     @testset "Custom epsilon" begin
-        r = WENO3(1e-12)
-        @test r.epsilon == 1e-12
+        r = WENO3(1.0e-12)
+        @test r.epsilon == 1.0e-12
     end
 
     @testset "Uniform data returns cell value" begin
         # For uniform data, reconstruction should return the cell value exactly
         val = 3.5
         wL_face, wR_face = reconstruct_interface(recon, val, val, val, val)
-        @test wL_face ≈ val atol = 1e-14
-        @test wR_face ≈ val atol = 1e-14
+        @test wL_face ≈ val atol = 1.0e-14
+        @test wR_face ≈ val atol = 1.0e-14
     end
 
     @testset "Linear data (exact for 3rd order)" begin
@@ -95,8 +95,8 @@ end
         wL_face, wR_face = reconstruct_interface(recon, wLL, wL, wR, wRR)
 
         # Both left and right reconstructions should give 4.0 for linear data
-        @test wL_face ≈ 4.0 atol = 1e-10
-        @test wR_face ≈ 4.0 atol = 1e-10
+        @test wL_face ≈ 4.0 atol = 1.0e-10
+        @test wR_face ≈ 4.0 atol = 1.0e-10
     end
 
     @testset "Smooth quadratic data" begin
@@ -149,30 +149,30 @@ end
         wL_face, wR_face = reconstruct_interface(recon, wLL, wL, wR, wRR)
 
         # By symmetry, both face values should be equal
-        @test wL_face ≈ wR_face atol = 1e-14
+        @test wL_face ≈ wR_face atol = 1.0e-14
     end
 
     @testset "Internal _weno3 functions" begin
-        eps = 1e-6
+        eps = 1.0e-6
 
         # Test left reconstruction with uniform data
         val = 5.0
         result = FiniteVolumeMethod._weno3_reconstruct_left(val, val, val, eps)
-        @test result ≈ val atol = 1e-14
+        @test result ≈ val atol = 1.0e-14
 
         # Test right reconstruction with uniform data
         result_r = FiniteVolumeMethod._weno3_reconstruct_right(val, val, val, eps)
-        @test result_r ≈ val atol = 1e-14
+        @test result_r ≈ val atol = 1.0e-14
 
         # Test left reconstruction with linear data: v0=0, v1=1, v2=2
         # Face at x=1.5 should give 1.5
         left_val = FiniteVolumeMethod._weno3_reconstruct_left(0.0, 1.0, 2.0, eps)
-        @test left_val ≈ 1.5 atol = 1e-10
+        @test left_val ≈ 1.5 atol = 1.0e-10
 
         # Test right reconstruction with linear data: v0=0, v1=1, v2=2
         # Face at x=0.5 should give 0.5
         right_val = FiniteVolumeMethod._weno3_reconstruct_right(0.0, 1.0, 2.0, eps)
-        @test right_val ≈ 0.5 atol = 1e-10
+        @test right_val ≈ 0.5 atol = 1.0e-10
     end
 end
 
@@ -184,21 +184,21 @@ end
     recon = WENO5()
 
     @testset "Default parameters" begin
-        @test recon.epsilon == 1e-6
+        @test recon.epsilon == 1.0e-6
         @test recon.p == 2
     end
 
     @testset "Custom parameters" begin
-        r = WENO5(1e-12, 1)
-        @test r.epsilon == 1e-12
+        r = WENO5(1.0e-12, 1)
+        @test r.epsilon == 1.0e-12
         @test r.p == 1
     end
 
     @testset "Uniform data" begin
         val = 2.7
         left_face, right_face = reconstruct_interface_weno5(recon, val, val, val, val, val, val)
-        @test left_face ≈ val atol = 1e-14
-        @test right_face ≈ val atol = 1e-14
+        @test left_face ≈ val atol = 1.0e-14
+        @test right_face ≈ val atol = 1.0e-14
     end
 
     @testset "Linear data (exact)" begin
@@ -212,8 +212,8 @@ end
 
         # Interface between v3 and v4, at x = 0.5; exact = 2.5
         left_face, right_face = reconstruct_interface_weno5(recon, v1, v2, v3, v4, v5, v6)
-        @test left_face ≈ 2.5 atol = 1e-10
-        @test right_face ≈ 2.5 atol = 1e-10
+        @test left_face ≈ 2.5 atol = 1.0e-10
+        @test right_face ≈ 2.5 atol = 1.0e-10
     end
 
     @testset "Quadratic data" begin
@@ -277,27 +277,27 @@ end
     end
 
     @testset "Internal _weno5 functions" begin
-        eps_val = 1e-6
+        eps_val = 1.0e-6
         p_val = 2
 
         # Uniform data
         val = 4.2
         result = FiniteVolumeMethod._weno5_reconstruct_left(val, val, val, val, val, eps_val, p_val)
-        @test result ≈ val atol = 1e-14
+        @test result ≈ val atol = 1.0e-14
 
         result_r = FiniteVolumeMethod._weno5_reconstruct_right(val, val, val, val, val, eps_val, p_val)
-        @test result_r ≈ val atol = 1e-14
+        @test result_r ≈ val atol = 1.0e-14
 
         # Linear data: v = [1, 2, 3, 4, 5]
         left_val = FiniteVolumeMethod._weno5_reconstruct_left(1.0, 2.0, 3.0, 4.0, 5.0, eps_val, p_val)
-        @test left_val ≈ 3.5 atol = 1e-10
+        @test left_val ≈ 3.5 atol = 1.0e-10
 
         right_val = FiniteVolumeMethod._weno5_reconstruct_right(1.0, 2.0, 3.0, 4.0, 5.0, eps_val, p_val)
-        @test right_val ≈ 2.5 atol = 1e-10
+        @test right_val ≈ 2.5 atol = 1.0e-10
 
         # Right = mirror of left
         left_mirror = FiniteVolumeMethod._weno5_reconstruct_left(5.0, 4.0, 3.0, 2.0, 1.0, eps_val, p_val)
-        @test right_val ≈ left_mirror atol = 1e-14
+        @test right_val ≈ left_mirror atol = 1.0e-14
     end
 end
 
@@ -312,8 +312,8 @@ end
         # Uniform SVector data
         w = SVector(1.0, 2.0, 3.0)
         wL_face, wR_face = reconstruct_interface(recon, w, w, w, w)
-        @test wL_face ≈ w atol = 1e-14
-        @test wR_face ≈ w atol = 1e-14
+        @test wL_face ≈ w atol = 1.0e-14
+        @test wR_face ≈ w atol = 1.0e-14
 
         # Linear SVector data
         wLL = SVector(0.0, 0.0, 0.0)
@@ -325,8 +325,8 @@ end
 
         # For linear data, face value = 1.5 * (1,2,3)
         expected = SVector(1.5, 3.0, 4.5)
-        @test wL_face ≈ expected atol = 1e-10
-        @test wR_face ≈ expected atol = 1e-10
+        @test wL_face ≈ expected atol = 1.0e-10
+        @test wR_face ≈ expected atol = 1.0e-10
     end
 
     @testset "WENO3 SVector component-wise consistency" begin
@@ -342,8 +342,8 @@ end
         # Each component should match the scalar reconstruction
         for k in 1:3
             sL, sR = reconstruct_interface(recon, wLL[k], wL[k], wR[k], wRR[k])
-            @test wL_face[k] ≈ sL atol = 1e-14
-            @test wR_face[k] ≈ sR atol = 1e-14
+            @test wL_face[k] ≈ sL atol = 1.0e-14
+            @test wR_face[k] ≈ sR atol = 1.0e-14
         end
     end
 
@@ -353,8 +353,8 @@ end
         # Uniform SVector data
         w = SVector(1.0, 2.0, 3.0)
         left_face, right_face = reconstruct_interface_weno5(recon, w, w, w, w, w, w)
-        @test left_face ≈ w atol = 1e-14
-        @test right_face ≈ w atol = 1e-14
+        @test left_face ≈ w atol = 1.0e-14
+        @test right_face ≈ w atol = 1.0e-14
 
         # Linear SVector data
         v1 = SVector(0.0, 0.0, 0.0)
@@ -368,8 +368,8 @@ end
 
         # Face between v3 and v4 at midpoint: expected = 2.5 * (1,2,3)
         expected = SVector(2.5, 5.0, 7.5)
-        @test left_face ≈ expected atol = 1e-10
-        @test right_face ≈ expected atol = 1e-10
+        @test left_face ≈ expected atol = 1.0e-10
+        @test right_face ≈ expected atol = 1.0e-10
     end
 
     @testset "WENO5 SVector component-wise consistency" begin
@@ -387,8 +387,8 @@ end
         # Each component should match the scalar reconstruction
         for k in 1:3
             sL, sR = reconstruct_interface_weno5(recon, v1[k], v2[k], v3[k], v4[k], v5[k], v6[k])
-            @test left_face[k] ≈ sL atol = 1e-14
-            @test right_face[k] ≈ sR atol = 1e-14
+            @test left_face[k] ≈ sL atol = 1.0e-14
+            @test right_face[k] ≈ sR atol = 1.0e-14
         end
     end
 end
@@ -416,11 +416,11 @@ end
             R = right_eigenvectors(law, w, 1)
 
             product = L * R
-            @test product ≈ I(3) atol = 1e-12
+            @test product ≈ I(3) atol = 1.0e-12
 
             # Also check R * L = I
             product2 = R * L
-            @test product2 ≈ I(3) atol = 1e-12
+            @test product2 ≈ I(3) atol = 1.0e-12
         end
     end
 
@@ -439,7 +439,7 @@ end
                 R = right_eigenvectors(law, w, dir)
 
                 product = L * R
-                @test product ≈ I(4) atol = 1e-12
+                @test product ≈ I(4) atol = 1.0e-12
             end
         end
     end
@@ -471,8 +471,8 @@ end
         wL_char, wR_char = reconstruct_interface(cw, wLL, wL, wR, wRR)
         wL_plain, wR_plain = reconstruct_interface(plain, wLL, wL, wR, wRR)
 
-        @test wL_char ≈ wL_plain atol = 1e-14
-        @test wR_char ≈ wR_plain atol = 1e-14
+        @test wL_char ≈ wL_plain atol = 1.0e-14
+        @test wR_char ≈ wR_plain atol = 1.0e-14
     end
 
     @testset "Characteristic WENO3 1D dispatch" begin
@@ -622,7 +622,7 @@ end
         W = to_primitive(law, U)
 
         # Should reach final time
-        @test t ≈ 0.2 atol = 1e-10
+        @test t ≈ 0.2 atol = 1.0e-10
 
         # No NaN or Inf
         for i in 1:N
@@ -644,7 +644,7 @@ end
         # L1 error should be reasonable
         dx = 1.0 / N
         rho_err = sum(abs(W[i][1] - sod_exact_weno(x[i], 0.2)[1]) * dx for i in 1:N)
-        @test rho_err < 0.10
+        @test rho_err < 0.1
     end
 
     @testset "WENO3 + HLL" begin
@@ -661,7 +661,7 @@ end
         x, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.2 atol = 1e-10
+        @test t ≈ 0.2 atol = 1.0e-10
         for i in 1:N
             @test all(isfinite, W[i])
             @test W[i][1] > 0
@@ -683,7 +683,7 @@ end
         x, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.2 atol = 1e-10
+        @test t ≈ 0.2 atol = 1.0e-10
         for i in 1:N
             @test all(isfinite, W[i])
             @test W[i][1] > 0
@@ -717,9 +717,9 @@ end
         momentum_final = sum(U_final[i][2] for i in 1:N) * dx
         energy_final = sum(U_final[i][3] for i in 1:N) * dx
 
-        @test mass_final ≈ mass0 rtol = 1e-12
-        @test momentum_final ≈ momentum0 rtol = 1e-12
-        @test energy_final ≈ energy0 rtol = 1e-12
+        @test mass_final ≈ mass0 rtol = 1.0e-12
+        @test momentum_final ≈ momentum0 rtol = 1.0e-12
+        @test energy_final ≈ energy0 rtol = 1.0e-12
     end
 
     @testset "CharacteristicWENO3 on Sod" begin
@@ -736,7 +736,7 @@ end
         x, U, t = solve_hyperbolic(prob)
         W = to_primitive(law, U)
 
-        @test t ≈ 0.2 atol = 1e-10
+        @test t ≈ 0.2 atol = 1.0e-10
         for i in 1:N
             @test all(isfinite, W[i])
             @test W[i][1] > 0
@@ -746,6 +746,6 @@ end
         # L1 error should be reasonable
         dx = 1.0 / N
         rho_err = sum(abs(W[i][1] - sod_exact_weno(x[i], 0.2)[1]) * dx for i in 1:N)
-        @test rho_err < 0.10
+        @test rho_err < 0.1
     end
 end

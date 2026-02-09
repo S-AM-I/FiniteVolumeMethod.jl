@@ -71,8 +71,8 @@ Columns are the right eigenvectors `r₁, r₂, r₃`.
 @inline function right_eigenvectors(law::EulerEquations{1}, w::SVector{3}, dir::Int)
     ρ, v, P = w
     γ = law.eos.gamma
-    ρ = max(ρ, 1e-12)
-    P = max(P, 1e-12)
+    ρ = max(ρ, 1.0e-12)
+    P = max(P, 1.0e-12)
     c = sound_speed(law.eos, ρ, P)
     H = (total_energy(law.eos, ρ, v, P) + P) / ρ  # specific enthalpy
 
@@ -95,8 +95,8 @@ Left eigenvector matrix (rows are left eigenvectors) of the 1D Euler flux Jacobi
 @inline function left_eigenvectors(law::EulerEquations{1}, w::SVector{3}, dir::Int)
     ρ, v, P = w
     γ = law.eos.gamma
-    ρ = max(ρ, 1e-12)
-    P = max(P, 1e-12)
+    ρ = max(ρ, 1.0e-12)
+    P = max(P, 1.0e-12)
     c = sound_speed(law.eos, ρ, P)
     b1 = (γ - 1) / c^2
     b2 = 0.5 * b1 * v^2
@@ -126,8 +126,8 @@ Primitive state: `w = [ρ, vx, vy, P]`.
 @inline function right_eigenvectors(law::EulerEquations{2}, w::SVector{4}, dir::Int)
     ρ, vx, vy, P = w
     γ = law.eos.gamma
-    ρ = max(ρ, 1e-12)
-    P = max(P, 1e-12)
+    ρ = max(ρ, 1.0e-12)
+    P = max(P, 1.0e-12)
     c = sound_speed(law.eos, ρ, P)
     H = (total_energy(law.eos, ρ, vx, vy, P) + P) / ρ
 
@@ -159,8 +159,8 @@ Left eigenvector matrix (rows are left eigenvectors) of the 2D Euler flux Jacobi
 @inline function left_eigenvectors(law::EulerEquations{2}, w::SVector{4}, dir::Int)
     ρ, vx, vy, P = w
     γ = law.eos.gamma
-    ρ = max(ρ, 1e-12)
-    P = max(P, 1e-12)
+    ρ = max(ρ, 1.0e-12)
+    P = max(P, 1.0e-12)
     c = sound_speed(law.eos, ρ, P)
     b1 = (γ - 1) / c^2
     q2 = vx^2 + vy^2

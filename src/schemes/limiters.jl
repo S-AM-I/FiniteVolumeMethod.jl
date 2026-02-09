@@ -87,7 +87,7 @@ at the cost of accuracy.
 # Returns
 The minmod of `a` and `b`.
 """
-@inline function minmod(a::T, b::T) where {T<:Real}
+@inline function minmod(a::T, b::T) where {T <: Real}
     if a > zero(T) && b > zero(T)
         return min(a, b)
     elseif a < zero(T) && b < zero(T)
@@ -116,7 +116,7 @@ discontinuities but may be slightly oscillatory near extrema.
 # Returns
 The superbee limiter value.
 """
-@inline function superbee(a::T, b::T) where {T<:Real}
+@inline function superbee(a::T, b::T) where {T <: Real}
     return max(minmod(2a, b), minmod(a, 2b))
 end
 
@@ -142,7 +142,7 @@ using a harmonic mean formulation.
 # Returns
 The van Leer limiter value.
 """
-@inline function van_leer(a::T, b::T) where {T<:Real}
+@inline function van_leer(a::T, b::T) where {T <: Real}
     ab = a * b
     if ab > zero(T)
         return 2ab / (a + b)
@@ -171,7 +171,7 @@ a smoothing factor for very small values.
 # Returns
 The Venkatakrishnan limiter value in [0, 1].
 """
-@inline function venkatakrishnan(r::T, ε::T=T(1e-6)) where {T<:Real}
+@inline function venkatakrishnan(r::T, ε::T = T(1.0e-6)) where {T <: Real}
     if r < ε
         return zero(T)
     end
@@ -204,7 +204,7 @@ gradient reconstruction on unstructured meshes.
 # Returns
 The limiting factor in [0, 1].
 """
-@inline function barth_jespersen(φ_center::T, φ_min::T, φ_max::T, φ_face::T) where {T<:Real}
+@inline function barth_jespersen(φ_center::T, φ_min::T, φ_max::T, φ_face::T) where {T <: Real}
     Δ = φ_face - φ_center
     if abs(Δ) < eps(T)
         return one(T)
@@ -234,7 +234,7 @@ while maintaining TVD properties.
 # Returns
 The Koren limiter value.
 """
-@inline function koren(r::T, β::T=T(1//3)) where {T<:Real}
+@inline function koren(r::T, β::T = T(1 // 3)) where {T <: Real}
     return max(zero(T), min(2r, min((one(T) + 2r) / 3, T(2))))
 end
 
@@ -256,7 +256,7 @@ optimized for second-order accuracy.
 # Returns
 The OSPRE limiter value.
 """
-@inline function ospre(r::T) where {T<:Real}
+@inline function ospre(r::T) where {T <: Real}
     r² = r * r
     denom = r² + r + one(T)
     if denom < eps(T)
@@ -270,42 +270,42 @@ end
 
 Apply the minmod limiter.
 """
-@inline apply_limiter(::MinmodLimiter, a::T, b::T) where {T<:Real} = minmod(a, b)
+@inline apply_limiter(::MinmodLimiter, a::T, b::T) where {T <: Real} = minmod(a, b)
 
 """
     apply_limiter(::SuperbeeLimiter, a::T, b::T) where {T<:Real}
 
 Apply the superbee limiter.
 """
-@inline apply_limiter(::SuperbeeLimiter, a::T, b::T) where {T<:Real} = superbee(a, b)
+@inline apply_limiter(::SuperbeeLimiter, a::T, b::T) where {T <: Real} = superbee(a, b)
 
 """
     apply_limiter(::VanLeerLimiter, a::T, b::T) where {T<:Real}
 
 Apply the van Leer limiter.
 """
-@inline apply_limiter(::VanLeerLimiter, a::T, b::T) where {T<:Real} = van_leer(a, b)
+@inline apply_limiter(::VanLeerLimiter, a::T, b::T) where {T <: Real} = van_leer(a, b)
 
 """
     apply_limiter(::VenkatakrishnanLimiter, r::T) where {T<:Real}
 
 Apply the Venkatakrishnan limiter.
 """
-@inline apply_limiter(::VenkatakrishnanLimiter, r::T) where {T<:Real} = venkatakrishnan(r)
+@inline apply_limiter(::VenkatakrishnanLimiter, r::T) where {T <: Real} = venkatakrishnan(r)
 
 """
     apply_limiter(::KorenLimiter, r::T) where {T<:Real}
 
 Apply the Koren limiter.
 """
-@inline apply_limiter(::KorenLimiter, r::T) where {T<:Real} = koren(r)
+@inline apply_limiter(::KorenLimiter, r::T) where {T <: Real} = koren(r)
 
 """
     apply_limiter(::OspreLimiter, r::T) where {T<:Real}
 
 Apply the OSPRE limiter.
 """
-@inline apply_limiter(::OspreLimiter, r::T) where {T<:Real} = ospre(r)
+@inline apply_limiter(::OspreLimiter, r::T) where {T <: Real} = ospre(r)
 
 @doc raw"""
     compute_slope_ratio(φ_L::T, φ_C::T, φ_R::T) where {T<:Real} -> T
@@ -324,11 +324,11 @@ r = \frac{\phi_C - \phi_L}{\phi_R - \phi_C}
 # Returns
 The slope ratio, or a large value if the denominator is near zero.
 """
-@inline function compute_slope_ratio(φ_L::T, φ_C::T, φ_R::T) where {T<:Real}
+@inline function compute_slope_ratio(φ_L::T, φ_C::T, φ_R::T) where {T <: Real}
     Δ_down = φ_R - φ_C
     Δ_up = φ_C - φ_L
     if abs(Δ_down) < eps(T)
-        return sign(Δ_up) * T(1e10)
+        return sign(Δ_up) * T(1.0e10)
     end
     return Δ_up / Δ_down
 end
@@ -345,7 +345,7 @@ Select an appropriate limiter based on problem characteristics.
 # Returns
 An appropriate limiter instance.
 """
-function select_limiter(problem_type::Symbol, mesh_type::Symbol=:structured)
+function select_limiter(problem_type::Symbol, mesh_type::Symbol = :structured)
     if mesh_type == :unstructured
         return VenkatakrishnanLimiter()
     end

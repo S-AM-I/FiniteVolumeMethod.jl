@@ -134,15 +134,15 @@ end
 function AdvectionDiffusionEquation(
         mesh::FVMGeometry,
         BCs::BoundaryConditions,
-        ICs::InternalConditions=InternalConditions();
+        ICs::InternalConditions = InternalConditions();
         diffusion_function,
-        diffusion_parameters=nothing,
+        diffusion_parameters = nothing,
         velocity_function,
-        velocity_parameters=nothing,
-        source_function=(x, y, t, u, p) -> zero(typeof(x)),
-        source_parameters=nothing,
+        velocity_parameters = nothing,
+        source_function = (x, y, t, u, p) -> zero(typeof(x)),
+        source_parameters = nothing,
         initial_condition,
-        initial_time=0.0,
+        initial_time = 0.0,
         final_time,
         kwargs...
     )

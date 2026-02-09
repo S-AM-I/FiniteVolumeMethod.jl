@@ -73,7 +73,8 @@ function _mhd_compute_fluxes_3d!(
         Fx_all::AbstractArray{T, 3}, Fy_all::AbstractArray{T, 3},
         Fz_all::AbstractArray{T, 3},
         dU::AbstractArray{T, 3}, U::AbstractArray{T, 3},
-        prob::HyperbolicProblem3D, t) where {T}
+        prob::HyperbolicProblem3D, t
+    ) where {T}
     law = prob.law
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
@@ -166,11 +167,13 @@ Solve the 3D MHD problem using constrained transport for div(B) = 0.
 - `t_final`: Final time reached.
 - `ct`: Final `CTData3D` (for inspecting div(B), face-centered B, etc.).
 """
-function solve_hyperbolic(prob::HyperbolicProblem3D{<:IdealMHDEquations{3}};
+function solve_hyperbolic(
+        prob::HyperbolicProblem3D{<:IdealMHDEquations{3}};
         method::Symbol = :ssprk3,
         vector_potential_x = nothing,
         vector_potential_y = nothing,
-        vector_potential_z = nothing)
+        vector_potential_z = nothing
+    )
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     dx, dy, dz = mesh.dx, mesh.dy, mesh.dz

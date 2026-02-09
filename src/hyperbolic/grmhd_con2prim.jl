@@ -53,12 +53,16 @@ end
 Metric-aware con2prim using precomputed (cached) metric quantities.
 This is the fast path used in the solver loop.
 """
-@inline function grmhd_con2prim_cached(law::GRMHDEquations, u_tilde::SVector{8},
-        sg, gixx, gixy, giyy, gxx, gxy, gyy)
+@inline function grmhd_con2prim_cached(
+        law::GRMHDEquations, u_tilde::SVector{8},
+        sg, gixx, gixy, giyy, gxx, gxy, gyy
+    )
     gi = StaticArrays.SMatrix{2, 2}(gixx, gixy, gixy, giyy)
     gm = StaticArrays.SMatrix{2, 2}(gxx, gxy, gxy, gyy)
-    return _grmhd_con2prim_with_metric(law.eos, u_tilde, sg, gi, gm,
-        law.con2prim_tol, law.con2prim_maxiter)
+    return _grmhd_con2prim_with_metric(
+        law.eos, u_tilde, sg, gi, gm,
+        law.con2prim_tol, law.con2prim_maxiter
+    )
 end
 
 """
@@ -76,9 +80,11 @@ Internal metric-aware con2prim implementation.
 - `tol`: Convergence tolerance.
 - `maxiter`: Maximum iterations.
 """
-function _grmhd_con2prim_with_metric(eos, u_tilde::SVector{8}, sg,
+function _grmhd_con2prim_with_metric(
+        eos, u_tilde::SVector{8}, sg,
         gi::StaticArrays.SMatrix{2, 2}, gm::StaticArrays.SMatrix{2, 2},
-        tol::Real, maxiter::Int)
+        tol::Real, maxiter::Int
+    )
     gamma_eos = eos.gamma
     gm1 = gamma_eos - 1
 
@@ -94,7 +100,7 @@ function _grmhd_con2prim_with_metric(eos, u_tilde::SVector{8}, sg,
     Bz = u_tilde[8] * inv_sg
 
     # Floor conserved density
-    D = max(D, 1e-12)
+    D = max(D, 1.0e-12)
 
     # Compute S^2 = gamma^ij S_i S_j (raised with inverse spatial metric)
     # In 2D: S^2 = gi[1,1]*Sx^2 + 2*gi[1,2]*Sx*Sy + gi[2,2]*Sy^2 + Sz^2
@@ -116,7 +122,7 @@ function _grmhd_con2prim_with_metric(eos, u_tilde::SVector{8}, sg,
     # Initial guess: ξ ≈ τ + D + P_guess (non-relativistic estimate)
     SdotB_sq = SdotB^2
     E_approx = tau + D
-    P_guess = max(gm1 * (E_approx - 0.5 * B_sq - 0.5 * S_sq / max(E_approx + B_sq, 1e-30)), 1e-16)
+    P_guess = max(gm1 * (E_approx - 0.5 * B_sq - 0.5 * S_sq / max(E_approx + B_sq, 1.0e-30)), 1.0e-16)
     xi = E_approx + P_guess
 
     FT = typeof(xi)
@@ -133,13 +139,13 @@ function _grmhd_con2prim_with_metric(eos, u_tilde::SVector{8}, sg,
         # v^2 from momentum (metric-corrected S^2)
         # v² = [S²ξ² + (S·B)²(2ξ + B²)] / [ξ²(ξ + B²)²]
         v_sq = (S_sq + SdotB_over_xi * SdotB * (2 + B_sq / xi)) / (xi_plus_Bsq^2)
-        v_sq = clamp(v_sq, zero(v_sq), 1 - 1e-10)
+        v_sq = clamp(v_sq, zero(v_sq), 1 - 1.0e-10)
 
         W_sq = 1 / (1 - v_sq)
         W = sqrt(W_sq)
 
-        rho = max(D / W, 1e-12)
-        P_val = max(gm1 / gamma_eos * (xi / W_sq - rho), 1e-16)
+        rho = max(D / W, 1.0e-12)
+        P_val = max(gm1 / gamma_eos * (xi / W_sq - rho), 1.0e-16)
 
         # Magnetic pressure in comoving frame
         b_sq_iter = B_sq / W_sq + SdotB^2 / xi^2
@@ -155,22 +161,22 @@ function _grmhd_con2prim_with_metric(eos, u_tilde::SVector{8}, sg,
         end
 
         # Numerical derivative
-        dxi = max(abs(xi) * 1e-7, 1e-20)
+        dxi = max(abs(xi) * 1.0e-7, 1.0e-20)
         xi_p = xi + dxi
 
         SdotB_over_xi_p = SdotB / xi_p
         v_sq_p = (S_sq + SdotB_over_xi_p * SdotB * (2 + B_sq / xi_p)) / ((xi_p + B_sq)^2)
-        v_sq_p = clamp(v_sq_p, zero(v_sq_p), 1 - 1e-10)
+        v_sq_p = clamp(v_sq_p, zero(v_sq_p), 1 - 1.0e-10)
         W_sq_p = 1 / (1 - v_sq_p)
         W_p = sqrt(W_sq_p)
-        rho_p = max(D / W_p, 1e-12)
-        P_val_p = max(gm1 / gamma_eos * (xi_p / W_sq_p - rho_p), 1e-16)
+        rho_p = max(D / W_p, 1.0e-12)
+        P_val_p = max(gm1 / gamma_eos * (xi_p / W_sq_p - rho_p), 1.0e-16)
         b_sq_p = B_sq / W_sq_p + SdotB^2 / xi_p^2
         P_tot_p = P_val_p + 0.5 * b_sq_p
         f_val_p = xi_p + B_sq - P_tot_p - tau - D
 
         df_dxi = (f_val_p - f_val) / dxi
-        if abs(df_dxi) < 1e-30
+        if abs(df_dxi) < 1.0e-30
             break
         end
 
@@ -209,10 +215,10 @@ function _grmhd_con2prim_with_metric(eos, u_tilde::SVector{8}, sg,
 
     # Compute proper v^2 = gamma_ij v^i v^j
     v_sq = gm[1, 1] * vx_val^2 + 2 * gm[1, 2] * vx_val * vy_val + gm[2, 2] * vy_val^2 + vz_val^2
-    v_sq = min(v_sq, 1 - 1e-10)
+    v_sq = min(v_sq, 1 - 1.0e-10)
     W = 1 / sqrt(1 - v_sq)
-    rho = max(D / W, 1e-12)
-    P_val = max(gm1 / gamma_eos * (xi / W^2 - rho), 1e-16)
+    rho = max(D / W, 1.0e-12)
+    P_val = max(gm1 / gamma_eos * (xi / W^2 - rho), 1.0e-16)
 
     w = SVector(rho, vx_val, vy_val, vz_val, P_val, Bx, By, Bz)
     result = Con2PrimResult(converged, iterations, residual)
@@ -239,8 +245,10 @@ end
 
 Convert primitive to densitized conserved using precomputed metric data.
 """
-@inline function grmhd_prim2con_densitized_cached(law::GRMHDEquations, w::SVector{8},
-        sg, gxx, gxy, gyy)
+@inline function grmhd_prim2con_densitized_cached(
+        law::GRMHDEquations, w::SVector{8},
+        sg, gxx, gxy, gyy
+    )
     gm = StaticArrays.SMatrix{2, 2}(gxx, gxy, gxy, gyy)
     return _grmhd_prim2con_densitized(law.eos, w, sg, gm)
 end
@@ -253,14 +261,16 @@ Internal: compute densitized conserved from primitives with metric data.
 The Lorentz factor uses v^2 = gamma_ij v^i v^j, and the momentum S_j
 is covariant (lowered with gamma_ij).
 """
-@inline function _grmhd_prim2con_densitized(eos, w::SVector{8}, sg,
-        gm::StaticArrays.SMatrix{2, 2})
+@inline function _grmhd_prim2con_densitized(
+        eos, w::SVector{8}, sg,
+        gm::StaticArrays.SMatrix{2, 2}
+    )
     rho, vx, vy, vz, P, Bx, By, Bz = w
     gamma_eos = eos.gamma
 
     # v^2 = gamma_ij v^i v^j (metric-corrected)
     v_sq = gm[1, 1] * vx^2 + 2 * gm[1, 2] * vx * vy + gm[2, 2] * vy^2 + vz^2
-    v_sq = min(v_sq, 1 - 1e-10)
+    v_sq = min(v_sq, 1 - 1.0e-10)
 
     W = 1 / sqrt(1 - v_sq)
     W_sq = W^2
@@ -304,6 +314,8 @@ is covariant (lowered with gamma_ij).
     tau = rho_h_W2 + B_sq - Ptot - D
 
     # Densitize: multiply by sqrt(gamma)
-    return SVector(sg * D, sg * Sx_c, sg * Sy_c, sg * Sz_c,
-        sg * tau, sg * Bx, sg * By, sg * Bz)
+    return SVector(
+        sg * D, sg * Sx_c, sg * Sy_c, sg * Sz_c,
+        sg * tau, sg * Bx, sg * By, sg * Bz
+    )
 end

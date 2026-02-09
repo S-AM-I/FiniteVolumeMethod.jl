@@ -59,8 +59,10 @@ Compute the 2D RHS including inviscid and viscous fluxes:
                 +1/dx * (Fvx_{i+1/2,j} - Fvx_{i-1/2,j})
                 +1/dy * (Fvy_{i,j+1/2} - Fvy_{i,j-1/2})`
 """
-function hyperbolic_rhs_2d!(dU::AbstractMatrix, U::AbstractMatrix,
-        prob::HyperbolicProblem2D{<:NavierStokesEquations{2}}, t)
+function hyperbolic_rhs_2d!(
+        dU::AbstractMatrix, U::AbstractMatrix,
+        prob::HyperbolicProblem2D{<:NavierStokesEquations{2}}, t
+    )
     law = prob.law
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -137,10 +139,14 @@ function hyperbolic_rhs_2d!(dU::AbstractMatrix, U::AbstractMatrix,
 
             # Cross-derivatives via 4-cell average
             # ∂vx/∂y ≈ (vx[iL,j+1] + vx[iR,j+1] - vx[iL,j-1] - vx[iR,j-1]) / (4*dy)
-            dvx_dy = (W[iL, jj + 1][2] + W[iR, jj + 1][2] -
-                       W[iL, jj - 1][2] - W[iR, jj - 1][2]) / (4.0 * dy)
-            dvy_dy = (W[iL, jj + 1][3] + W[iR, jj + 1][3] -
-                       W[iL, jj - 1][3] - W[iR, jj - 1][3]) / (4.0 * dy)
+            dvx_dy = (
+                W[iL, jj + 1][2] + W[iR, jj + 1][2] -
+                    W[iL, jj - 1][2] - W[iR, jj - 1][2]
+            ) / (4.0 * dy)
+            dvy_dy = (
+                W[iL, jj + 1][3] + W[iR, jj + 1][3] -
+                    W[iL, jj - 1][3] - W[iR, jj - 1][3]
+            ) / (4.0 * dy)
 
             Fv = viscous_flux_x_2d(law, wL, wR, dvx_dy, dvy_dy, dx)
 
@@ -166,10 +172,14 @@ function hyperbolic_rhs_2d!(dU::AbstractMatrix, U::AbstractMatrix,
 
             # Cross-derivatives via 4-cell average
             # ∂vx/∂x ≈ (vx[i+1,jL] + vx[i+1,jR] - vx[i-1,jL] - vx[i-1,jR]) / (4*dx)
-            dvx_dx = (W[ii + 1, jL][2] + W[ii + 1, jR][2] -
-                       W[ii - 1, jL][2] - W[ii - 1, jR][2]) / (4.0 * dx)
-            dvy_dx = (W[ii + 1, jL][3] + W[ii + 1, jR][3] -
-                       W[ii - 1, jL][3] - W[ii - 1, jR][3]) / (4.0 * dx)
+            dvx_dx = (
+                W[ii + 1, jL][2] + W[ii + 1, jR][2] -
+                    W[ii - 1, jL][2] - W[ii - 1, jR][2]
+            ) / (4.0 * dx)
+            dvy_dx = (
+                W[ii + 1, jL][3] + W[ii + 1, jR][3] -
+                    W[ii - 1, jL][3] - W[ii - 1, jR][3]
+            ) / (4.0 * dx)
 
             Fv = viscous_flux_y_2d(law, wB, wT, dvx_dx, dvy_dx, dy)
 

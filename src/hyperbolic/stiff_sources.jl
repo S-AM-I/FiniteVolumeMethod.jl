@@ -95,8 +95,10 @@ end
     Bx = u[6]
     By = u[7]
     Bz = u[8]
-    return SVector(zero(η), zero(η), zero(η), zero(η), zero(η),
-        -η * Bx, -η * By, -η * Bz)
+    return SVector(
+        zero(η), zero(η), zero(η), zero(η), zero(η),
+        -η * Bx, -η * By, -η * Bz
+    )
 end
 
 @inline function stiff_source_jacobian(src::ResistiveSource, law::IdealMHDEquations, w::SVector{8}, u::SVector{8})
