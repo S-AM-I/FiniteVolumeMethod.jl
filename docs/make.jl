@@ -20,11 +20,11 @@ if RUN_EXAMPLES
     #   EditURL = "../../../../../../../AppData/Local/Temp/jl_8nsMGu/name_just_the_code.jl"
     #   ```
     function update_edit_url(content, file, folder)
-        content = replace(content, "<unknown>" => "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main")
+        content = replace(content, "<unknown>" => "https://github.com/S-AM-I/FiniteVolumeMethod.jl/tree/main")
         content = replace(content, "temp/" => "") # as of Literate 2.14.1
         content = replace(
             content,
-            r"EditURL\s*=\s*\"[^\"]*\"" => "EditURL = \"https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_$(folder)/$file\""
+            r"EditURL\s*=\s*\"[^\"]*\"" => "EditURL = \"https://github.com/S-AM-I/FiniteVolumeMethod.jl/tree/main/docs/src/literate_$(folder)/$file\""
         )
         return content
     end
@@ -74,14 +74,37 @@ if RUN_EXAMPLES
         "wyos/poissons_equation.jl",
         "wyos/linear_reaction_diffusion_equations.jl",
     ]
-    example_files = vcat(tutorial_files, wyos_files)
+    hyperbolic_tutorial_files = [
+        "hyperbolic/tutorials/sod_shock_tube.jl",
+        "hyperbolic/tutorials/sedov_blast_wave.jl",
+        "hyperbolic/tutorials/brio_wu_shock_tube.jl",
+        "hyperbolic/tutorials/orszag_tang_vortex.jl",
+        "hyperbolic/tutorials/taylor_green_vortex.jl",
+        "hyperbolic/tutorials/field_loop_advection.jl",
+        "hyperbolic/tutorials/kelvin_helmholtz_instability.jl",
+        "hyperbolic/tutorials/balsara_srmhd_shock_tube.jl",
+        "hyperbolic/tutorials/weno_convergence.jl",
+        "hyperbolic/tutorials/couette_flow.jl",
+        "hyperbolic/tutorials/imex_stiff_relaxation.jl",
+        "hyperbolic/tutorials/amr_sedov_blast.jl",
+    ]
+    mkpath(joinpath(@__DIR__, "src", "hyperbolic", "tutorials"))
+    example_files = vcat(tutorial_files, wyos_files, hyperbolic_tutorial_files)
     session_tmp = mktempdir()
 
     map(1:length(example_files)) do n
         example = example_files[n]
-        folder, file = splitpath(example)
-        dir = joinpath(@__DIR__, "src", "literate_" * folder)
-        outputdir = joinpath(@__DIR__, "src", folder)
+        # Hyperbolic tutorials live in literate_hyperbolic/ but output to hyperbolic/tutorials/
+        if startswith(example, "hyperbolic/tutorials/")
+            file = basename(example)
+            dir = joinpath(@__DIR__, "src", "literate_hyperbolic")
+            outputdir = joinpath(@__DIR__, "src", "hyperbolic", "tutorials")
+            folder = "hyperbolic"  # for EditURL
+        else
+            folder, file = splitpath(example)
+            dir = joinpath(@__DIR__, "src", "literate_" * folder)
+            outputdir = joinpath(@__DIR__, "src", folder)
+        end
         file_path = joinpath(dir, file)
         # See also https://github.com/Ferrite-FEM/Ferrite.jl/blob/d474caf357c696cdb80d7c5e1edcbc7b4c91af6b/docs/generate.jl for some of this
         new_file_path = add_just_the_code_section(dir, file)
@@ -147,25 +170,39 @@ _PAGES = [
         "Laplace's Equation" => "wyos/laplaces_equation.md",
     ],
     "Mathematical and Implementation Details" => "math.md",
+    "Hyperbolic Solver" => [
+        "Overview" => "hyperbolic/overview.md",
+        "Tutorials" => [
+            "Sod Shock Tube" => "hyperbolic/tutorials/sod_shock_tube.md",
+            "Sedov Blast Wave" => "hyperbolic/tutorials/sedov_blast_wave.md",
+            "Brio-Wu MHD Shock Tube" => "hyperbolic/tutorials/brio_wu_shock_tube.md",
+            "Orszag-Tang Vortex" => "hyperbolic/tutorials/orszag_tang_vortex.md",
+            "Taylor-Green Vortex Decay" => "hyperbolic/tutorials/taylor_green_vortex.md",
+            "Field Loop Advection" => "hyperbolic/tutorials/field_loop_advection.md",
+            "Kelvin-Helmholtz Instability" => "hyperbolic/tutorials/kelvin_helmholtz_instability.md",
+            "Balsara SRMHD Shock Tube" => "hyperbolic/tutorials/balsara_srmhd_shock_tube.md",
+            "WENO Convergence Study" => "hyperbolic/tutorials/weno_convergence.md",
+            "Couette Flow" => "hyperbolic/tutorials/couette_flow.md",
+            "IMEX Stiff Relaxation" => "hyperbolic/tutorials/imex_stiff_relaxation.md",
+            "AMR Sedov Blast" => "hyperbolic/tutorials/amr_sedov_blast.md",
+        ],
+        "Interface" => "hyperbolic/interface.md",
+        "Mathematical Details" => "hyperbolic/math.md",
+    ],
 ]
 
 # Make sure we haven't forgotten any files
 set = Set{String}()
-for page in _PAGES
-    if page[2] isa String
-        push!(set, normpath(page[2]))
-    else
-        for _page in page[2]
-            if _page[2] isa String
-                push!(set, normpath(_page[2]))
-            else
-                for __page in _page[2]
-                    push!(set, normpath(__page[2]))
-                end
-            end
+function _collect_pages!(set, pages)
+    for page in pages
+        if page[2] isa String
+            push!(set, normpath(page[2]))
+        else
+            _collect_pages!(set, page[2])
         end
     end
 end
+_collect_pages!(set, _PAGES)
 missing_set = String[]
 doc_dir = joinpath(@__DIR__, "src", "")
 for (root, dir, files) in walkdir(doc_dir)
@@ -190,7 +227,7 @@ makedocs(;
     authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>",
     sitename = "FiniteVolumeMethod.jl",
     format = Documenter.HTML(;
-        canonical = "https://SciML.github.io/FiniteVolumeMethod.jl",
+        canonical = "https://S-AM-I.github.io/FiniteVolumeMethod.jl",
         edit_link = "main",
         collapselevel = 1,
         assets = String[],
@@ -211,7 +248,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo = "github.com/SciML/FiniteVolumeMethod.jl",
+    repo = "github.com/S-AM-I/FiniteVolumeMethod.jl",
     devbranch = "main",
     push_preview = true
 )

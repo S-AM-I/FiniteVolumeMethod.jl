@@ -27,3 +27,5 @@ The [tutorials](tutorials/overview.md) in the sidebar demonstrate the many possi
  5. `LaplacesEquation`: $\div[D(\vb x)\grad u] = 0$.
 
 See the [Solvers for Specific Problems, and Writing Your Own](wyos/overview.md) section for more information on these templates.
+
+In addition to the parabolic/elliptic solver above, this package provides a **cell-centered finite volume solver** for hyperbolic conservation laws $\partial_t \vb U + \nabla \cdot \vb F(\vb U) = \vb S(\vb U)$ on structured Cartesian meshes in 1D, 2D, and 3D. This includes the Euler equations, ideal MHD with constrained transport, Navier-Stokes, special and general relativistic MHD, WENO reconstruction, IMEX time integration, and block-structured AMR. See the [Hyperbolic Solver](hyperbolic/overview.md) section.
