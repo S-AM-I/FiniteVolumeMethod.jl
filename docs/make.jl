@@ -170,6 +170,7 @@ _PAGES = [
         "Laplace's Equation" => "wyos/laplaces_equation.md",
     ],
     "Mathematical and Implementation Details" => "math.md",
+    "The Finite Volume Method" => "finite-volume-method.md",
     "Hyperbolic Solver" => [
         "Overview" => "hyperbolic/overview.md",
         "Tutorials" => [
