@@ -12,6 +12,47 @@ using LinearAlgebra
 
     @test nvariables(law) == 8
     @test law.eos === eos
+
+    # Different gamma
+    eos2 = IdealGasEOS(gamma = 2.0)
+    law2 = IdealMHDEquations{3}(eos2)
+    @test law2.eos.gamma ≈ 2.0
+    @test nvariables(law2) == 8
+end
+
+@testset "3D MHD Primitive <-> Conserved Roundtrip" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+
+    @testset "Specific states" begin
+        states = [
+            SVector(1.0, 0.5, -0.3, 0.2, 2.0, 0.7, 0.8, 0.4),
+            SVector(0.125, -1.0, 0.5, 0.3, 0.1, 0.75, -1.0, 0.0),
+            SVector(3.0, 0.0, 0.0, 0.0, 10.0, 5.0, 3.0, 1.0),
+        ]
+        for w in states
+            u = primitive_to_conserved(law, w)
+            w2 = conserved_to_primitive(law, u)
+            @test w2 ≈ w atol = 1.0e-12
+        end
+    end
+
+    @testset "Random states" begin
+        for _ in 1:20
+            ρ = 0.1 + 3.0 * rand()
+            vx = -2.0 + 4.0 * rand()
+            vy = -2.0 + 4.0 * rand()
+            vz = -2.0 + 4.0 * rand()
+            P = 0.01 + 5.0 * rand()
+            Bx = -3.0 + 6.0 * rand()
+            By = -3.0 + 6.0 * rand()
+            Bz = -3.0 + 6.0 * rand()
+            w = SVector(ρ, vx, vy, vz, P, Bx, By, Bz)
+            u = primitive_to_conserved(law, w)
+            w2 = conserved_to_primitive(law, u)
+            @test w2 ≈ w atol = 1.0e-12
+        end
+    end
 end
 
 @testset "3D MHD Physical Flux" begin
@@ -62,6 +103,36 @@ end
         @test H[7] ≈ By * vz - Bz * vy
         @test H[8] ≈ 0.0  # Bz flux = 0
     end
+
+    @testset "B=0 reduces to Euler flux" begin
+        eos14 = IdealGasEOS(1.4)
+        law_mhd = IdealMHDEquations{3}(eos14)
+        law_euler = EulerEquations{3}(eos14)
+
+        w_mhd = SVector(1.0, 0.5, -0.3, 0.2, 2.0, 0.0, 0.0, 0.0)
+        w_euler = SVector(1.0, 0.5, -0.3, 0.2, 2.0)
+
+        for dir in 1:3
+            f_mhd = physical_flux(law_mhd, w_mhd, dir)
+            f_euler = physical_flux(law_euler, w_euler, dir)
+            @test f_mhd[1] ≈ f_euler[1] atol = 1.0e-14
+            @test f_mhd[2] ≈ f_euler[2] atol = 1.0e-14
+            @test f_mhd[3] ≈ f_euler[3] atol = 1.0e-14
+            @test f_mhd[4] ≈ f_euler[4] atol = 1.0e-14
+            @test f_mhd[5] ≈ f_euler[5] atol = 1.0e-14
+        end
+    end
+
+    @testset "Flux consistency through roundtrip" begin
+        for dir in 1:3
+            w_test = SVector(2.0, 1.0, -0.5, 0.3, 3.0, 0.5, -0.7, 0.9)
+            f1 = physical_flux(law, w_test, dir)
+            u = primitive_to_conserved(law, w_test)
+            w2 = conserved_to_primitive(law, u)
+            f2 = physical_flux(law, w2, dir)
+            @test f1 ≈ f2 atol = 1.0e-14
+        end
+    end
 end
 
 @testset "3D MHD Wave Speeds" begin
@@ -107,6 +178,14 @@ end
 
             cs = slow_magnetosonic_speed(law, w_hydro, dir)
             @test cs ≈ 0.0 atol = 1.0e-14
+        end
+    end
+
+    @testset "Symmetric speeds for v=0" begin
+        w_sym = SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.5, 0.3, 0.2)
+        for dir in 1:3
+            lam_min, lam_max = wave_speeds(law, w_sym, dir)
+            @test lam_min ≈ -lam_max atol = 1.0e-14
         end
     end
 end
@@ -162,6 +241,49 @@ end
 end
 
 # ============================================================
+# 2b. 3D Brio-Wu Along y-axis
+# ============================================================
+@testset "3D Brio-Wu y-axis" begin
+    eos = IdealGasEOS(gamma = 2.0)
+    law = IdealMHDEquations{3}(eos)
+
+    By_val = 0.75
+    wL = SVector(1.0, 0.0, 0.0, 0.0, 1.0, 1.0, By_val, 0.0)
+    wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, -1.0, By_val, 0.0)
+    bw_y_ic(x, y, z) = y < 0.5 ? wL : wR
+
+    nx, ny, nz = 4, 40, 4
+    mesh = StructuredMesh3D(0.0, 0.1, 0.0, 1.0, 0.0, 0.1, nx, ny, nz)
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        bw_y_ic; final_time = 0.05, cfl = 0.3
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    W = to_primitive(law, U_final)
+
+    @test t_final ≈ 0.05 atol = 1.0e-10
+
+    # Extract density along y at ix=1, iz=1
+    rho_y = [W[1, iy, 1][1] for iy in 1:ny]
+    P_y = [W[1, iy, 1][5] for iy in 1:ny]
+
+    @test all(rho_y .> 0)
+    @test all(P_y .> 0)
+
+    # Should have structure in y (not uniform)
+    @test maximum(rho_y) > minimum(rho_y) + 0.01
+
+    # Uniform in x and z
+    for ix in 1:nx, iy in 1:ny, iz in 1:nz
+        @test W[ix, iy, iz][1] ≈ W[1, iy, 1][1] atol = 1.0e-8
+    end
+end
+
+# ============================================================
 # 3. 3D Brio-Wu Along z-axis
 # ============================================================
 @testset "3D Brio-Wu z-axis" begin
@@ -204,6 +326,55 @@ end
     # Solution should be approximately uniform in x and y
     for ix in 1:nx, iy in 1:ny, iz in 1:nz
         @test W[ix, iy, iz][1] ≈ W[1, 1, iz][1] atol = 1.0e-8
+    end
+end
+
+# ============================================================
+# 3b. 3D Brio-Wu with MUSCL Reconstruction
+# ============================================================
+@testset "3D Brio-Wu MUSCL" begin
+    eos = IdealGasEOS(gamma = 2.0)
+    law = IdealMHDEquations{3}(eos)
+
+    Bx_val = 0.75
+    wL = SVector(1.0, 0.0, 0.0, 0.0, 1.0, Bx_val, 1.0, 0.0)
+    wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, Bx_val, -1.0, 0.0)
+    bw_ic(x, y, z) = x < 0.5 ? wL : wR
+
+    limiters = [
+        ("Minmod", MinmodLimiter()),
+        ("Superbee", SuperbeeLimiter()),
+        ("VanLeer", VanLeerLimiter()),
+        ("Koren", KorenLimiter()),
+        ("Ospre", OspreLimiter()),
+    ]
+
+    @testset "$name" for (name, lim) in limiters
+        nx, ny, nz = 30, 4, 4
+        mesh = StructuredMesh3D(0.0, 1.0, 0.0, 0.1, 0.0, 0.1, nx, ny, nz)
+        prob = HyperbolicProblem3D(
+            law, mesh, HLLSolver(), CellCenteredMUSCL(lim),
+            TransmissiveBC(), TransmissiveBC(),
+            TransmissiveBC(), TransmissiveBC(),
+            TransmissiveBC(), TransmissiveBC(),
+            bw_ic; final_time = 0.05, cfl = 0.3
+        )
+
+        coords, U_final, t_final, ct = solve_hyperbolic(prob)
+        W = to_primitive(law, U_final)
+
+        # Positivity
+        for iz in 1:nz, iy in 1:ny, ix in 1:nx
+            @test W[ix, iy, iz][1] > 0
+            @test W[ix, iy, iz][5] > 0
+        end
+
+        # Shock structure
+        @test W[1, 1, 1][1] > W[nx, 1, 1][1]
+
+        # divB
+        divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
+        @test divB < 1.0e-12
     end
 end
 
@@ -303,6 +474,27 @@ end
         )
 
         _, _, _, ct = solve_hyperbolic(prob; method = :euler)
+        divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
+        @test divB < 1.0e-12
+    end
+
+    @testset "DivB with MUSCL reconstruction" begin
+        nx, ny, nz = 8, 8, 8
+        mesh = StructuredMesh3D(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, nx, ny, nz)
+        ic(x, y, z) = SVector(
+            1.0 + 0.1 * sin(2π * x),
+            0.1, -0.1, 0.05, 1.0, 0.5, 0.3, 0.2
+        )
+
+        prob = HyperbolicProblem3D(
+            law, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
+            PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+            PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+            PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+            ic; final_time = 0.01, cfl = 0.3
+        )
+
+        _, _, _, ct = solve_hyperbolic(prob)
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
         @test divB < 1.0e-12
     end
@@ -463,6 +655,48 @@ end
 end
 
 # ============================================================
+# 6b. Conservation with MUSCL + Forward Euler
+# ============================================================
+@testset "3D MHD Conservation MUSCL + Euler" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+
+    ic(x, y, z) = SVector(
+        1.0 + 0.1 * sin(2π * x) * sin(2π * y),
+        0.1, -0.05, 0.05, 1.0, 0.3, 0.5, 0.2
+    )
+
+    nx, ny, nz = 8, 8, 8
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, nx, ny, nz)
+    dV = mesh.dx * mesh.dy * mesh.dz
+
+    prob0 = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), CellCenteredMUSCL(VanLeerLimiter()),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        ic; final_time = 0.0, cfl = 0.2
+    )
+    _, U0, _, _ = solve_hyperbolic(prob0)
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), CellCenteredMUSCL(VanLeerLimiter()),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        ic; final_time = 0.01, cfl = 0.2
+    )
+    _, U_final, _, ct = solve_hyperbolic(prob; method = :euler)
+
+    mass_0 = sum(u[1] for u in U0) * dV
+    mass_f = sum(u[1] for u in U_final) * dV
+    @test mass_f ≈ mass_0 atol = 1.0e-10
+
+    divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
+    @test divB < 1.0e-12
+end
+
+# ============================================================
 # CTData3D Structure Tests
 # ============================================================
 @testset "CTData3D" begin
@@ -528,6 +762,7 @@ end
     solvers = [
         ("HLL", HLLSolver()),
         ("Lax-Friedrichs", LaxFriedrichsSolver()),
+        ("HLLD", HLLDSolver()),
     ]
 
     for (name, solver) in solvers
@@ -579,4 +814,369 @@ end
         @test U_final[ix, iy, iz] ≈ u_ref atol = 1.0e-12
     end
     @test max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz) < 1.0e-13
+end
+
+# ============================================================
+# 3D MHD Uniform Flow Preservation (with B)
+# ============================================================
+@testset "3D MHD Uniform Flow Preservation" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+
+    nx, ny, nz = 8, 8, 8
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, nx, ny, nz)
+    # Moving uniform state with non-trivial B
+    w_uniform = SVector(1.0, 0.5, -0.3, 0.2, 1.0, 0.5, 0.3, 0.1)
+    ic(x, y, z) = w_uniform
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        ic; final_time = 0.05, cfl = 0.3
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    W = to_primitive(law, U_final)
+    u_ref = primitive_to_conserved(law, w_uniform)
+
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        @test U_final[ix, iy, iz] ≈ u_ref atol = 1.0e-10
+    end
+    @test max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz) < 1.0e-13
+end
+
+# ============================================================
+# 3D MHD Reflective BC Symmetry
+# ============================================================
+@testset "3D MHD Reflective BC Symmetry" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+
+    N = 8
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, N, N, N)
+
+    # Symmetric MHD pressure pulse at center with B=0
+    # (Non-zero uniform B breaks reflective BC symmetry since Bn flips)
+    ic = function (x, y, z)
+        r = sqrt((x - 0.5)^2 + (y - 0.5)^2 + (z - 0.5)^2)
+        P = r < 0.2 ? 5.0 : 1.0
+        return SVector(1.0, 0.0, 0.0, 0.0, P, 0.0, 0.0, 0.0)
+    end
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        ReflectiveBC(), ReflectiveBC(),
+        ReflectiveBC(), ReflectiveBC(),
+        ReflectiveBC(), ReflectiveBC(),
+        ic; final_time = 0.02, cfl = 0.3
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    W = to_primitive(law, U_final)
+
+    # Positivity
+    for iz in 1:N, iy in 1:N, ix in 1:N
+        @test W[ix, iy, iz][1] > 0
+        @test W[ix, iy, iz][5] > 0
+    end
+
+    # x-symmetry for density (B=0 → pure hydro symmetry)
+    for iz in 1:N, iy in 1:N, ix in 1:div(N, 2)
+        @test W[ix, iy, iz][1] ≈ W[N + 1 - ix, iy, iz][1] rtol = 1.0e-8
+    end
+end
+
+# ============================================================
+# 3D MHD Blast Wave
+# ============================================================
+@testset "3D MHD Blast Wave" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+
+    N = 10
+    mesh = StructuredMesh3D(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0, N, N, N)
+    dV = mesh.dx * mesh.dy * mesh.dz
+
+    ic = function (x, y, z)
+        r = sqrt(x^2 + y^2 + z^2)
+        P = r < 0.3 ? 10.0 : 0.1
+        # Uniform B field
+        return SVector(1.0, 0.0, 0.0, 0.0, P, 1.0, 0.0, 0.0)
+    end
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        ic; final_time = 0.05, cfl = 0.3
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    W = to_primitive(law, U_final)
+
+    # Positivity
+    for iz in 1:N, iy in 1:N, ix in 1:N
+        @test W[ix, iy, iz][1] > 0
+        @test W[ix, iy, iz][5] > 0
+    end
+
+    # divB preserved
+    divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, N, N, N)
+    @test divB < 1.0e-12
+
+    # Max pressure should be near center
+    P_max, idx_max = -Inf, (1, 1, 1)
+    for iz in 1:N, iy in 1:N, ix in 1:N
+        if W[ix, iy, iz][5] > P_max
+            P_max = W[ix, iy, iz][5]
+            idx_max = (ix, iy, iz)
+        end
+    end
+    center_lo = div(N, 2)
+    center_hi = div(N, 2) + 1
+    @test center_lo <= idx_max[1] <= center_hi
+end
+
+# ============================================================
+# 3D MHD with HLLD Solver - Brio-Wu
+# ============================================================
+@testset "3D MHD HLLD Brio-Wu" begin
+    eos = IdealGasEOS(gamma = 2.0)
+    law = IdealMHDEquations{3}(eos)
+
+    Bx_val = 0.75
+    wL = SVector(1.0, 0.0, 0.0, 0.0, 1.0, Bx_val, 1.0, 0.0)
+    wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, Bx_val, -1.0, 0.0)
+    bw_ic(x, y, z) = x < 0.5 ? wL : wR
+
+    nx, ny, nz = 30, 4, 4
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 0.1, 0.0, 0.1, nx, ny, nz)
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLDSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        bw_ic; final_time = 0.05, cfl = 0.3
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    W = to_primitive(law, U_final)
+
+    # Positivity
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        @test W[ix, iy, iz][1] > 0
+        @test W[ix, iy, iz][5] > 0
+    end
+
+    # Shock structure
+    @test W[1, 1, 1][1] > W[nx, 1, 1][1]
+
+    # divB
+    divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
+    @test divB < 1.0e-12
+end
+
+# ============================================================
+# 3D MHD HLLD vs HLL Sharpness
+# ============================================================
+@testset "3D MHD HLLD vs HLL" begin
+    eos = IdealGasEOS(gamma = 2.0)
+    law = IdealMHDEquations{3}(eos)
+
+    Bx_val = 0.75
+    wL = SVector(1.0, 0.0, 0.0, 0.0, 1.0, Bx_val, 1.0, 0.0)
+    wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, Bx_val, -1.0, 0.0)
+    bw_ic(x, y, z) = x < 0.5 ? wL : wR
+
+    nx, ny, nz = 40, 4, 4
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 0.1, 0.0, 0.1, nx, ny, nz)
+    recon = NoReconstruction()
+
+    prob_hlld = HyperbolicProblem3D(
+        law, mesh, HLLDSolver(), recon,
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        bw_ic; final_time = 0.1, cfl = 0.3
+    )
+    prob_hll = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), recon,
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        bw_ic; final_time = 0.1, cfl = 0.3
+    )
+
+    _, U_hlld, _, _ = solve_hyperbolic(prob_hlld)
+    _, U_hll, _, _ = solve_hyperbolic(prob_hll)
+    W_hlld = to_primitive(law, U_hlld)
+    W_hll = to_primitive(law, U_hll)
+
+    # HLLD should have sharper features (higher max gradient)
+    max_grad_hlld = maximum(abs(W_hlld[ix + 1, 1, 1][1] - W_hlld[ix, 1, 1][1]) for ix in 1:(nx - 1))
+    max_grad_hll = maximum(abs(W_hll[ix + 1, 1, 1][1] - W_hll[ix, 1, 1][1]) for ix in 1:(nx - 1))
+    @test max_grad_hlld >= max_grad_hll * 0.95
+end
+
+# ============================================================
+# 3D MHD Different Gamma (gamma=1.4)
+# ============================================================
+@testset "3D MHD gamma=1.4" begin
+    eos = IdealGasEOS(1.4)
+    law = IdealMHDEquations{3}(eos)
+
+    ic(x, y, z) = SVector(
+        1.0 + 0.1 * sin(2π * x),
+        0.1, 0.0, 0.0, 1.0, 0.5, 0.3, 0.0
+    )
+
+    nx, ny, nz = 8, 8, 8
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, nx, ny, nz)
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        ic; final_time = 0.02, cfl = 0.3
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    W = to_primitive(law, U_final)
+
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        @test W[ix, iy, iz][1] > 0
+        @test W[ix, iy, iz][5] > 0
+    end
+
+    divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
+    @test divB < 1.0e-12
+end
+
+# ============================================================
+# 3D MHD Forward Euler
+# ============================================================
+@testset "3D MHD Forward Euler" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+
+    Bx_val = 0.75
+    wL = SVector(1.0, 0.0, 0.0, 0.0, 1.0, Bx_val, 1.0, 0.0)
+    wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, Bx_val, -1.0, 0.0)
+    bw_ic(x, y, z) = x < 0.5 ? wL : wR
+
+    nx, ny, nz = 20, 4, 4
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 0.1, 0.0, 0.1, nx, ny, nz)
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        bw_ic; final_time = 0.05, cfl = 0.2
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob; method = :euler)
+
+    @test t_final ≈ 0.05 atol = 1.0e-10
+
+    W = to_primitive(law, U_final)
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        @test W[ix, iy, iz][1] > 0
+        @test W[ix, iy, iz][5] > 0
+    end
+
+    # Shock direction
+    @test W[1, 1, 1][1] > W[nx, 1, 1][1]
+
+    # divB
+    divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
+    @test divB < 1.0e-12
+end
+
+# ============================================================
+# 3D MHD Strong Shock
+# ============================================================
+@testset "3D MHD Strong Shock" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+
+    Bx_val = 1.0
+    wL = SVector(1.0, 0.0, 0.0, 0.0, 100.0, Bx_val, 2.0, 0.0)
+    wR = SVector(1.0, 0.0, 0.0, 0.0, 1.0, Bx_val, -2.0, 0.0)
+    ic(x, y, z) = x < 0.5 ? wL : wR
+
+    nx, ny, nz = 30, 4, 4
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 0.1, 0.0, 0.1, nx, ny, nz)
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        ic; final_time = 0.01, cfl = 0.2
+    )
+
+    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    W = to_primitive(law, U_final)
+
+    # Positivity
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        @test W[ix, iy, iz][1] > 0
+        @test W[ix, iy, iz][5] > 0
+    end
+
+    # Left pressure > right
+    @test W[1, 1, 1][5] > W[nx, 1, 1][5]
+end
+
+# ============================================================
+# 3D MHD B=0 Matches Euler
+# ============================================================
+@testset "3D MHD B=0 Matches Euler" begin
+    eos = IdealGasEOS(1.4)
+    law_mhd = IdealMHDEquations{3}(eos)
+    law_euler = EulerEquations{3}(eos)
+
+    wL_mhd = SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
+    wR_mhd = SVector(0.125, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0)
+    wL_euler = SVector(1.0, 0.0, 0.0, 0.0, 1.0)
+    wR_euler = SVector(0.125, 0.0, 0.0, 0.0, 0.1)
+
+    nx, ny, nz = 20, 4, 4
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 0.1, 0.0, 0.1, nx, ny, nz)
+
+    prob_mhd = HyperbolicProblem3D(
+        law_mhd, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        (x, y, z) -> x < 0.5 ? wL_mhd : wR_mhd;
+        final_time = 0.1, cfl = 0.3
+    )
+    prob_euler = HyperbolicProblem3D(
+        law_euler, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        TransmissiveBC(), TransmissiveBC(),
+        (x, y, z) -> x < 0.5 ? wL_euler : wR_euler;
+        final_time = 0.1, cfl = 0.3
+    )
+
+    _, U_mhd, _, _ = solve_hyperbolic(prob_mhd)
+    _, U_euler, _ = solve_hyperbolic(prob_euler)
+
+    W_mhd = to_primitive(law_mhd, U_mhd)
+    W_euler = to_primitive(law_euler, U_euler)
+
+    # Hydrodynamic variables should match
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        @test W_mhd[ix, iy, iz][1] ≈ W_euler[ix, iy, iz][1] atol = 1.0e-10  # ρ
+        @test W_mhd[ix, iy, iz][2] ≈ W_euler[ix, iy, iz][2] atol = 1.0e-10  # vx
+        @test W_mhd[ix, iy, iz][5] ≈ W_euler[ix, iy, iz][5] atol = 1.0e-10  # P
+    end
 end

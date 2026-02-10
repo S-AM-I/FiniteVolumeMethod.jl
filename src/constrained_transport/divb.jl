@@ -34,6 +34,15 @@ function max_divB(ct::CTData2D, dx, dy, nx::Int, ny::Int)
 end
 
 """
+    max_divB(ct::CTData2D, mesh::StructuredMesh2D) -> FT
+
+Convenience method that extracts mesh parameters automatically.
+"""
+function max_divB(ct::CTData2D, mesh::StructuredMesh2D)
+    return max_divB(ct, mesh.dx, mesh.dy, mesh.nx, mesh.ny)
+end
+
+"""
     l2_divB(ct::CTData2D, dx, dy, nx::Int, ny::Int) -> FT
 
 Compute the L2 norm of ∇·B.

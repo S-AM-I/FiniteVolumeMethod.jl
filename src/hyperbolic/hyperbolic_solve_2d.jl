@@ -222,16 +222,27 @@ end
 # ============================================================
 
 """
-    solve_hyperbolic(prob::HyperbolicProblem2D; method=:ssprk3) -> (coords, U_final, t_final)
+    solve_hyperbolic(prob::HyperbolicProblem2D; method=:ssprk3, parallel=false)
+        -> (coords, U_final, t_final)
 
 Solve the 2D hyperbolic problem using explicit time integration.
+
+# Keyword Arguments
+- `method::Symbol`: Time integration method (`:euler` or `:ssprk3`).
+- `parallel::Bool`: Use multi-threaded flux computation (default: `false`).
+  When `true`, threads over rows/columns for flux sweeps and uses
+  threaded CFL reduction. Requires `Threads.nthreads() > 1` for speedup.
 
 # Returns
 - `coords::Vector{Tuple{Float64,Float64}}`: Cell center coordinates (ix, iy order).
 - `U_final::Matrix{SVector{N}}`: Final conserved variable matrix (nx × ny, interior only).
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3)
+function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3, parallel::Bool = false)
+    # Select serial or threaded functions
+    _rhs! = parallel ? _hyperbolic_rhs_2d_threaded! : hyperbolic_rhs_2d!
+    _compute_dt = parallel ? _compute_dt_2d_threaded : compute_dt_2d
+
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     N = nvariables(prob.law)
@@ -249,12 +260,12 @@ function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3)
 
     if method == :euler
         while t < prob.final_time - eps(typeof(t))
-            dt = compute_dt_2d(prob, U, t)
+            dt = _compute_dt(prob, U, t)
             if dt <= zero(dt)
                 break
             end
-            hyperbolic_rhs_2d!(dU, U, prob, t)
-            for iy in 1:ny, ix in 1:nx
+            _rhs!(dU, U, prob, t)
+            @inbounds for iy in 1:ny, ix in 1:nx
                 U[ix + 2, iy + 2] = U[ix + 2, iy + 2] + dt * dU[ix + 2, iy + 2]
             end
             t += dt
@@ -268,30 +279,30 @@ function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3)
         end
 
         while t < prob.final_time - eps(typeof(t))
-            dt = compute_dt_2d(prob, U, t)
+            dt = _compute_dt(prob, U, t)
             if dt <= zero(dt)
                 break
             end
 
             # Stage 1: U1 = U + dt * L(U)
-            hyperbolic_rhs_2d!(dU, U, prob, t)
-            for iy in 1:ny, ix in 1:nx
+            _rhs!(dU, U, prob, t)
+            @inbounds for iy in 1:ny, ix in 1:nx
                 ii, jj = ix + 2, iy + 2
                 U1[ii, jj] = U[ii, jj] + dt * dU[ii, jj]
             end
 
             # Stage 2: U2 = 3/4 U + 1/4 (U1 + dt * L(U1))
             apply_boundary_conditions_2d!(U1, prob, t + dt)
-            hyperbolic_rhs_2d!(dU, U1, prob, t + dt)
-            for iy in 1:ny, ix in 1:nx
+            _rhs!(dU, U1, prob, t + dt)
+            @inbounds for iy in 1:ny, ix in 1:nx
                 ii, jj = ix + 2, iy + 2
                 U2[ii, jj] = 0.75 * U[ii, jj] + 0.25 * (U1[ii, jj] + dt * dU[ii, jj])
             end
 
             # Stage 3: U = 1/3 U + 2/3 (U2 + dt * L(U2))
             apply_boundary_conditions_2d!(U2, prob, t + 0.5 * dt)
-            hyperbolic_rhs_2d!(dU, U2, prob, t + 0.5 * dt)
-            for iy in 1:ny, ix in 1:nx
+            _rhs!(dU, U2, prob, t + 0.5 * dt)
+            @inbounds for iy in 1:ny, ix in 1:nx
                 ii, jj = ix + 2, iy + 2
                 U[ii, jj] = (1.0 / 3.0) * U[ii, jj] + (2.0 / 3.0) * (U2[ii, jj] + dt * dU[ii, jj])
             end

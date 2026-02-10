@@ -79,6 +79,21 @@ end
     @testset verbose = true "IMEX" begin
         safe_include("imex.jl")
     end
+    @testset verbose = true "Unstructured Hyperbolic" begin
+        safe_include("unstructured_hyperbolic.jl")
+    end
+    @testset verbose = true "Multi-Physics Coupling" begin
+        safe_include("coupling.jl")
+    end
+    @testset verbose = true "Performance & Threading" begin
+        safe_include("performance.jl")
+    end
+    @testset verbose = true "Advanced Numerics" begin
+        safe_include("advanced_numerics.jl")
+    end
+    @testset verbose = true "Extended Physics" begin
+        safe_include("extended_physics.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

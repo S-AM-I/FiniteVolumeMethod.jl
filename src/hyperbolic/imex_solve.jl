@@ -213,10 +213,14 @@ end
 
 """
     solve_hyperbolic_imex(prob::HyperbolicProblem2D, stiff_source::AbstractStiffSource;
-                          scheme=IMEX_SSP3_433(), newton_tol=1e-10, newton_maxiter=5)
+                          scheme=IMEX_SSP3_433(), newton_tol=1e-10, newton_maxiter=5,
+                          parallel=false)
 
 Solve a 2D hyperbolic problem with stiff source terms using IMEX
 Runge-Kutta time integration.
+
+# Keyword Arguments
+- `parallel::Bool`: Use multi-threaded flux and implicit solve (default: `false`).
 
 # Returns
 - `coords`: Cell center coordinates (nx x ny matrix of tuples).
@@ -227,7 +231,8 @@ function solve_hyperbolic_imex(
         prob::HyperbolicProblem2D, stiff_source::AbstractStiffSource;
         scheme::AbstractIMEXScheme = IMEX_SSP3_433(),
         newton_tol = 1.0e-10,
-        newton_maxiter::Int = 5
+        newton_maxiter::Int = 5,
+        parallel::Bool = false
     )
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -262,10 +267,15 @@ function solve_hyperbolic_imex(
         dU_tmp[i, j] = zero_state
     end
 
+    # Select serial or threaded functions
+    _rhs! = parallel ? _hyperbolic_rhs_2d_threaded! : hyperbolic_rhs_2d!
+    _compute_dt = parallel ? _compute_dt_2d_threaded : compute_dt_2d
+    _implicit_solve! = parallel ? _implicit_solve_2d_threaded! : _implicit_solve_2d!
+
     t = prob.initial_time
 
     while t < prob.final_time - eps(typeof(t))
-        dt = compute_dt_2d(prob, U, t)
+        dt = _compute_dt(prob, U, t)
         if dt <= zero(dt)
             break
         end
@@ -285,11 +295,11 @@ function solve_hyperbolic_imex(
 
             if a_kk == 0.0
                 _eval_stiff_source_2d!(K_im[k], U_stage, law, stiff_source, nx, ny)
-                hyperbolic_rhs_2d!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
+                _rhs!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
             else
-                hyperbolic_rhs_2d!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
+                _rhs!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
 
-                _implicit_solve_2d!(
+                _implicit_solve!(
                     U_stage, law, stiff_source, a_kk * dt, nx, ny, N,
                     newton_tol, newton_maxiter
                 )

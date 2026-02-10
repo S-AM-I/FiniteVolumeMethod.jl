@@ -87,6 +87,10 @@ if RUN_EXAMPLES
         "hyperbolic/tutorials/couette_flow.jl",
         "hyperbolic/tutorials/imex_stiff_relaxation.jl",
         "hyperbolic/tutorials/amr_sedov_blast.jl",
+        "hyperbolic/tutorials/limiter_comparison.jl",
+        "hyperbolic/tutorials/mhd_rotor.jl",
+        "hyperbolic/tutorials/grmhd_flat_space_shock.jl",
+        "hyperbolic/tutorials/srmhd_cylindrical_blast.jl",
     ]
     mkpath(joinpath(@__DIR__, "src", "hyperbolic", "tutorials"))
     example_files = vcat(tutorial_files, wyos_files, hyperbolic_tutorial_files)
@@ -186,6 +190,10 @@ _PAGES = [
             "Couette Flow" => "hyperbolic/tutorials/couette_flow.md",
             "IMEX Stiff Relaxation" => "hyperbolic/tutorials/imex_stiff_relaxation.md",
             "AMR Sedov Blast" => "hyperbolic/tutorials/amr_sedov_blast.md",
+            "Limiter Comparison" => "hyperbolic/tutorials/limiter_comparison.md",
+            "MHD Rotor" => "hyperbolic/tutorials/mhd_rotor.md",
+            "GRMHD in Flat Spacetime" => "hyperbolic/tutorials/grmhd_flat_space_shock.md",
+            "SRMHD Cylindrical Blast" => "hyperbolic/tutorials/srmhd_cylindrical_blast.md",
         ],
         "Interface" => "hyperbolic/interface.md",
         "Mathematical Details" => "hyperbolic/math.md",

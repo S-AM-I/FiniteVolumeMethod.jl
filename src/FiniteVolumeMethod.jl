@@ -88,6 +88,21 @@ include("hyperbolic/noslip_bc.jl")
 include("hyperbolic/navier_stokes_solve.jl")
 include("hyperbolic/navier_stokes_solve_2d.jl")
 
+# Resistive MHD (magnetic diffusivity)
+include("hyperbolic/resistive_mhd.jl")
+
+# Hall MHD (whistler waves, ion-scale dynamics)
+include("hyperbolic/hall_mhd.jl")
+
+# Shallow Water Equations
+include("hyperbolic/shallow_water.jl")
+
+# SR Hydro (relativistic hydro without B)
+include("hyperbolic/srhydro.jl")
+
+# Two-Fluid Plasma (separate ion/electron fluids)
+include("hyperbolic/two_fluid.jl")
+
 # SRMHD (Special Relativistic MHD)
 include("hyperbolic/con2prim.jl")
 include("hyperbolic/srmhd.jl")
@@ -133,6 +148,12 @@ include("amr/restriction.jl")
 include("amr/flux_correction.jl")
 include("amr/amr_solve.jl")
 
+# Multi-rate (subcycling) time stepping for AMR
+include("hyperbolic/multirate.jl")
+
+# PPM reconstruction (Colella & Woodward 1984)
+include("hyperbolic/ppm.jl")
+
 # WENO reconstruction and IMEX time integration (Phase 8)
 include("hyperbolic/weno3.jl")
 include("hyperbolic/weno.jl")
@@ -140,6 +161,23 @@ include("hyperbolic/characteristic_projection.jl")
 include("hyperbolic/stiff_sources.jl")
 include("hyperbolic/imex.jl")
 include("hyperbolic/imex_solve.jl")
+
+# Positivity-preserving limiter (Zhang & Shu 2010)
+include("hyperbolic/positivity_limiter.jl")
+
+# Threading support for 2D solvers (Phase 12)
+include("hyperbolic/threading.jl")
+
+# Unstructured mesh hyperbolic solver (Phase 10)
+include("mesh/unstructured_hyperbolic_mesh.jl")
+include("hyperbolic/unstructured_problem.jl")
+include("hyperbolic/unstructured_solve.jl")
+
+# Multi-physics coupling via operator splitting (Phase 11)
+include("coupling/abstract_coupling.jl")
+include("coupling/operators.jl")
+include("coupling/data_transfer.jl")
+include("coupling/coupled_solve.jl")
 
 export FVMGeometry,
     FVMProblem,
@@ -278,6 +316,8 @@ export FVMGeometry,
     CellCenteredMUSCL,
     NoReconstruction,
     reconstruct_interface,
+    # PPM reconstruction
+    PPMReconstruction,
     # WENO reconstruction
     WENO3,
     WENO5,
@@ -311,6 +351,33 @@ export FVMGeometry,
     viscous_flux_1d,
     viscous_flux_x_2d,
     viscous_flux_y_2d,
+    # Resistive MHD
+    ResistiveMHDEquations,
+    resistive_flux_x,
+    resistive_flux_y,
+    ohmic_heating,
+    resistive_dt,
+    # Hall MHD
+    HallMHDEquations,
+    whistler_speed,
+    hall_flux_x,
+    hall_flux_y,
+    hall_dt,
+    # Shallow Water
+    ShallowWaterEquations,
+    BottomTopography,
+    topography_source_1d,
+    # SR Hydro
+    SRHydroEquations,
+    srhydro_con2prim,
+    # Two-Fluid Plasma
+    TwoFluidEquations,
+    ion_primitive,
+    electron_primitive,
+    ion_conserved,
+    electron_conserved,
+    lorentz_source_1d,
+    lorentz_source_2d,
     # 2D mesh helpers
     cell_ij,
     cell_idx,
@@ -328,6 +395,11 @@ export FVMGeometry,
     imex_tableau,
     imex_nstages,
     solve_hyperbolic_imex,
+    # Positivity limiter
+    PositivityLimiter,
+    apply_positivity_limiter!,
+    apply_positivity_limiter_2d!,
+    limit_reconstructed_states,
     # Constrained transport (2D)
     CTData2D,
     initialize_ct!,
@@ -381,6 +453,12 @@ export FVMGeometry,
     solve_amr,
     compute_dt_amr,
     advance_level!,
+    # Multi-rate subcycling
+    SubcyclingScheme,
+    solve_amr_subcycled,
+    advance_level_subcycled!,
+    compute_dt_subcycled,
+    total_substeps,
     # SRMHD
     SRMHDEquations,
     lorentz_factor,
@@ -407,7 +485,27 @@ export FVMGeometry,
     grmhd_primitive_to_conserved_densitized,
     grmhd_prim2con_densitized_cached,
     grmhd_max_wave_speed_coord,
-    grmhd_source_terms
+    grmhd_source_terms,
+    # Unstructured hyperbolic solver
+    UnstructuredHyperbolicMesh,
+    UnstructuredHyperbolicProblem,
+    rotate_to_normal,
+    rotate_flux_from_normal,
+    boundary_ghost_state,
+    get_bc,
+    # Multi-physics coupling
+    AbstractOperator,
+    AbstractSplittingScheme,
+    LieTrotterSplitting,
+    StrangSplitting,
+    CoupledProblem,
+    HyperbolicOperator,
+    SourceOperator,
+    advance!,
+    compute_operator_dt,
+    solve_coupled,
+    cell_to_vertex,
+    vertex_to_cell
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin
