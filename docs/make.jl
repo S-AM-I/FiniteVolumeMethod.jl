@@ -279,8 +279,12 @@ makedocs(;
     warnonly = true
 )
 
-deploydocs(;
-    repo = "github.com/cx-xd/FiniteVolumeMethod.jl",
-    devbranch = "main",
-    push_preview = true
-)
+# Only run deploydocs for local/non-Actions deployment (e.g. TagBot).
+# GitHub Pages deployment is handled by actions/deploy-pages in CI.
+if !IS_CI
+    deploydocs(;
+        repo = "github.com/cx-xd/FiniteVolumeMethod.jl",
+        devbranch = "main",
+        push_preview = true
+    )
+end
