@@ -1297,14 +1297,14 @@ end
 
     totals0 = [
         sum(U0[ix + 2, iy + 2, iz + 2][v] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
-        for v in 1:5
+            for v in 1:5
     ]
 
     _, U_final, _ = solve_hyperbolic(prob)
 
     totals_f = [
         sum(U_final[ix, iy, iz][v] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
-        for v in 1:5
+            for v in 1:5
     ]
 
     for v in 1:5

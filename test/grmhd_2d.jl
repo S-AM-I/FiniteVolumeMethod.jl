@@ -39,7 +39,7 @@ _mean(itr) = sum(itr) / length(collect(itr))
     D_total_0 = sum(U0[ix, iy][1] for ix in 1:nx, iy in 1:ny) * dV
 
     # In Minkowski spacetime, geometric sources vanish → perfect conservation
-    @test D_total ≈ D_total_0 rtol = 1e-10
+    @test D_total ≈ D_total_0 rtol = 1.0e-10
 end
 
 @testset "Flat-Spacetime Full Conservation" begin
@@ -72,10 +72,10 @@ end
         total = sum(U[ix, iy][var] for ix in 1:nx, iy in 1:ny) * dV
         total_0 = sum(U0[ix, iy][var] for ix in 1:nx, iy in 1:ny) * dV
         # Use atol for quantities near zero (like momentum), rtol for large ones
-        if abs(total_0) > 1e-10
-            @test total ≈ total_0 rtol = 1e-9
+        if abs(total_0) > 1.0e-10
+            @test total ≈ total_0 rtol = 1.0e-9
         else
-            @test total ≈ total_0 atol = 1e-12
+            @test total ≈ total_0 atol = 1.0e-12
         end
     end
 end
@@ -100,7 +100,7 @@ end
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
-    @test divB_max < 1e-13
+    @test divB_max < 1.0e-13
 end
 
 @testset "GRMHD matches SRMHD in Minkowski" begin
@@ -134,7 +134,7 @@ end
 
     # Density profiles should match closely
     for iy in 1:ny, ix in 1:nx
-        @test W_gr[ix, iy][1] ≈ W_sr[ix, iy][1] rtol = 1e-10
+        @test W_gr[ix, iy][1] ≈ W_sr[ix, iy][1] rtol = 1.0e-10
     end
 end
 
@@ -168,7 +168,7 @@ end
     W_sr = to_primitive(law_sr, U_sr)
 
     for iy in 1:ny, ix in 1:nx
-        @test W_gr[ix, iy][1] ≈ W_sr[ix, iy][1] rtol = 1e-10
+        @test W_gr[ix, iy][1] ≈ W_sr[ix, iy][1] rtol = 1.0e-10
     end
 end
 
@@ -243,7 +243,7 @@ end
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
-    @test divB_max < 1e-12
+    @test divB_max < 1.0e-12
 end
 
 # ============================================================
@@ -388,7 +388,7 @@ end
     coords, U, t, ct = solve_hyperbolic(prob; method = :euler, vector_potential = nothing)
     W = to_primitive(law, U)
 
-    @test t ≈ 0.02 atol = 1e-10
+    @test t ≈ 0.02 atol = 1.0e-10
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
 end
@@ -487,4 +487,3 @@ end
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
 end
-

@@ -43,7 +43,7 @@ end
         "InternalConditions with $(length(ICs.dirichlet_nodes)) Dirichlet nodes and $(length(ICs.dudt_nodes)) Dudt nodes"
     conds = FVM.Conditions(mesh, BCs, ICs)
     @test sprint(show, MIME"text/plain"(), conds) ==
-        "Conditions with\n   $(length(conds.neumann_edges)) Neumann edges\n   $(length(conds.constrained_edges)) Constrained edges\n   $(length(conds.dirichlet_nodes)) Dirichlet nodes\n   $(length(conds.dudt_nodes)) Dudt nodes"
+        "Conditions with\n   $(length(conds.neumann_edges)) Neumann edges\n   $(length(conds.constrained_edges)) Constrained edges\n   $(length(conds.robin_edges)) Robin edges\n   $(length(conds.dirichlet_nodes)) Dirichlet nodes\n   $(length(conds.dudt_nodes)) Dudt nodes"
     @test FVM.get_f(conds, 1) == conds.functions[1]
     @test FVM.get_f(conds, 2) == conds.functions[2]
     @test BCs.condition_types == t

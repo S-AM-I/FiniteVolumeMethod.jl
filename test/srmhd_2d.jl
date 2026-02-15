@@ -28,7 +28,7 @@ using StaticArrays
     # Solution should be uniform in y
     for iy in 2:ny
         for ix in 1:nx
-            @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1e-10
+            @test W[ix, iy][1] ≈ W[ix, 1][1] atol = 1.0e-10
         end
     end
 
@@ -60,7 +60,7 @@ end
     # Solution should be uniform in x
     for ix in 2:nx
         for iy in 1:ny
-            @test W[ix, iy][1] ≈ W[1, iy][1] atol = 1e-10
+            @test W[ix, iy][1] ≈ W[1, iy][1] atol = 1.0e-10
         end
     end
 
@@ -92,7 +92,7 @@ end
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
-    @test divB_max < 1e-13
+    @test divB_max < 1.0e-13
 end
 
 # ============================================================
@@ -129,7 +129,7 @@ end
     U0 = [FiniteVolumeMethod.primitive_to_conserved(law, ic(coords[ix, iy]...)) for ix in 1:nx, iy in 1:ny]
     D_total_0 = sum(U0[ix, iy][1] for ix in 1:nx, iy in 1:ny) * dV
 
-    @test D_total ≈ D_total_0 rtol = 1e-10
+    @test D_total ≈ D_total_0 rtol = 1.0e-10
 end
 
 # ============================================================
@@ -274,10 +274,10 @@ end
 
     # Uniform flow should remain uniform with periodic BCs
     for iy in 1:ny, ix in 1:nx
-        @test W[ix, iy][1] ≈ w0[1] atol = 1e-8
-        @test W[ix, iy][2] ≈ w0[2] atol = 1e-8
-        @test W[ix, iy][3] ≈ w0[3] atol = 1e-8
-        @test W[ix, iy][5] ≈ w0[5] atol = 1e-8
+        @test W[ix, iy][1] ≈ w0[1] atol = 1.0e-8
+        @test W[ix, iy][2] ≈ w0[2] atol = 1.0e-8
+        @test W[ix, iy][3] ≈ w0[3] atol = 1.0e-8
+        @test W[ix, iy][5] ≈ w0[5] atol = 1.0e-8
     end
 end
 
@@ -444,7 +444,7 @@ end
     coords, U, t, ct = solve_hyperbolic(prob; method = :euler, vector_potential = nothing)
     W = to_primitive(law, U)
 
-    @test t ≈ 0.05 atol = 1e-10
+    @test t ≈ 0.05 atol = 1.0e-10
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
 end
@@ -537,7 +537,7 @@ end
     for var in [1, 5]  # D and tau
         total = sum(U[ix, iy][var] for ix in 1:nx, iy in 1:ny) * dV
         total_0 = sum(U0[ix, iy][var] for ix in 1:nx, iy in 1:ny) * dV
-        @test total ≈ total_0 rtol = 1e-9
+        @test total ≈ total_0 rtol = 1.0e-9
     end
 end
 
@@ -582,7 +582,7 @@ end
     R0 = 0.3
     Az(x, y) = begin
         r = sqrt(x^2 + y^2)
-        r < R0 ? 1e-3 * (R0 - r) : 0.0
+        r < R0 ? 1.0e-3 * (R0 - r) : 0.0
     end
 
     ic(x, y) = SVector(1.0, 0.1, 0.1, 0.0, 1.0, 0.0, 0.0, 0.0)
@@ -598,7 +598,7 @@ end
 
     # div(B) should be preserved to machine precision
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
-    @test divB_max < 1e-13
+    @test divB_max < 1.0e-13
 
     # Solution should remain physical
     W = to_primitive(law, U)

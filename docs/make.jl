@@ -1,4 +1,5 @@
 IS_CI = get(ENV, "CI", "false") == "true"
+IS_LIVESERVER = get(ENV, "LIVESERVER_ACTIVE", "false") == "true"
 RUN_EXAMPLES = !IS_CI
 
 if RUN_EXAMPLES
@@ -138,6 +139,29 @@ if RUN_EXAMPLES
     end
 end
 
+# In CI, generate Literate markdown for hyperbolic tutorials without execution.
+# These .md files are not committed to the repo and are normally only generated
+# during local builds with RUN_EXAMPLES=true.
+if !RUN_EXAMPLES
+    using Literate
+    outputdir = joinpath(@__DIR__, "src", "hyperbolic", "tutorials")
+    mkpath(outputdir)
+    srcdir = joinpath(@__DIR__, "src", "literate_hyperbolic")
+    if isdir(srcdir)
+        for file in readdir(srcdir)
+            endswith(file, ".jl") || continue
+            Literate.markdown(
+                joinpath(srcdir, file),
+                outputdir;
+                documenter = true,
+                execute = false,
+                flavor = Literate.DocumenterFlavor(),
+                name = splitext(file)[1]
+            )
+        end
+    end
+end
+
 using FiniteVolumeMethod
 using Documenter
 using Literate
@@ -230,8 +254,6 @@ DocMeta.setdocmeta!(
     FiniteVolumeMethod, :DocTestSetup, :(using FiniteVolumeMethod, Test);
     recursive = true
 )
-IS_LIVESERVER = get(ENV, "LIVESERVER_ACTIVE", "false") == "true"
-IS_CI = get(ENV, "CI", "false") == "true"
 makedocs(;
     modules = [FiniteVolumeMethod],
     authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>",

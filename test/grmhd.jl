@@ -49,15 +49,15 @@ using LinearAlgebra
         # Kerr-Schild identity: alpha = 1/sqrt(1 + 2H) where H = M/r
         for r in [3.0, 5.0, 10.0, 50.0]
             H = M / r
-            @test lapse(m, r, 0.0) ≈ 1 / sqrt(1 + 2 * H) atol = 1e-14
-            @test sqrt_gamma(m, r, 0.0) ≈ sqrt(1 + 2 * H) atol = 1e-14
+            @test lapse(m, r, 0.0) ≈ 1 / sqrt(1 + 2 * H) atol = 1.0e-14
+            @test sqrt_gamma(m, r, 0.0) ≈ sqrt(1 + 2 * H) atol = 1.0e-14
         end
 
         # Metric determinant consistency: det(gamma_ij) = (sqrt_gamma)^2
         for (x, y) in [(3.0, 0.0), (4.0, 3.0), (0.0, 5.0)]
             g = spatial_metric(m, x, y)
             sg = sqrt_gamma(m, x, y)
-            @test det(g) ≈ sg^2 atol = 1e-12
+            @test det(g) ≈ sg^2 atol = 1.0e-12
         end
 
         # Inverse metric: gamma^ij * gamma_jk = delta_ik
@@ -65,10 +65,10 @@ using LinearAlgebra
             g = spatial_metric(m, x, y)
             gi = inv_spatial_metric(m, x, y)
             prod = g * gi
-            @test prod[1, 1] ≈ 1.0 atol = 1e-12
-            @test prod[2, 2] ≈ 1.0 atol = 1e-12
-            @test prod[1, 2] ≈ 0.0 atol = 1e-12
-            @test prod[2, 1] ≈ 0.0 atol = 1e-12
+            @test prod[1, 1] ≈ 1.0 atol = 1.0e-12
+            @test prod[2, 2] ≈ 1.0 atol = 1.0e-12
+            @test prod[1, 2] ≈ 0.0 atol = 1.0e-12
+            @test prod[2, 1] ≈ 0.0 atol = 1.0e-12
         end
 
         # Shift vector direction: should be radial and point inward
@@ -77,8 +77,8 @@ using LinearAlgebra
             r = sqrt(x^2 + y^2)
             # Shift should be parallel to radial direction
             lx, ly = x / r, y / r
-            @test β[1] / norm(β) ≈ lx atol = 1e-12
-            @test β[2] / norm(β) ≈ ly atol = 1e-12
+            @test β[1] / norm(β) ≈ lx atol = 1.0e-12
+            @test β[2] / norm(β) ≈ ly atol = 1.0e-12
         end
 
         # r_min floor test
@@ -102,11 +102,11 @@ using LinearAlgebra
         m_kerr0 = KerrMetric(M, 0.0)
         m_sch = SchwarzschildMetric(M)
         for (x, y) in [(5.0, 0.0), (3.0, 4.0), (0.0, 6.0)]
-            @test lapse(m_kerr0, x, y) ≈ lapse(m_sch, x, y) atol = 1e-10
+            @test lapse(m_kerr0, x, y) ≈ lapse(m_sch, x, y) atol = 1.0e-10
             gi_k = inv_spatial_metric(m_kerr0, x, y)
             gi_s = inv_spatial_metric(m_sch, x, y)
-            @test gi_k ≈ gi_s atol = 1e-10
-            @test sqrt_gamma(m_kerr0, x, y) ≈ sqrt_gamma(m_sch, x, y) atol = 1e-10
+            @test gi_k ≈ gi_s atol = 1.0e-10
+            @test sqrt_gamma(m_kerr0, x, y) ≈ sqrt_gamma(m_sch, x, y) atol = 1.0e-10
         end
 
         # Inverse metric consistency for Kerr
@@ -114,16 +114,16 @@ using LinearAlgebra
             g = spatial_metric(m, x, y)
             gi = inv_spatial_metric(m, x, y)
             prod = g * gi
-            @test prod[1, 1] ≈ 1.0 atol = 1e-12
-            @test prod[2, 2] ≈ 1.0 atol = 1e-12
-            @test prod[1, 2] ≈ 0.0 atol = 1e-12
+            @test prod[1, 1] ≈ 1.0 atol = 1.0e-12
+            @test prod[2, 2] ≈ 1.0 atol = 1.0e-12
+            @test prod[1, 2] ≈ 0.0 atol = 1.0e-12
         end
 
         # Determinant consistency
         for (x, y) in [(5.0, 0.0), (3.0, 4.0), (0.0, 6.0)]
             g = spatial_metric(m, x, y)
             sg = sqrt_gamma(m, x, y)
-            @test det(g) ≈ sg^2 atol = 1e-12
+            @test det(g) ≈ sg^2 atol = 1.0e-12
         end
 
         # Frame dragging: off-diagonal shift should be nonzero for a ≠ 0
@@ -194,12 +194,12 @@ end
     @test nvariables(law) == 8
     @test law.eos === eos
     @test law.metric === metric
-    @test law.con2prim_tol == 1e-12
+    @test law.con2prim_tol == 1.0e-12
     @test law.con2prim_maxiter == 50
 
     # Custom con2prim params
-    law2 = GRMHDEquations{2}(eos, metric; con2prim_tol = 1e-10, con2prim_maxiter = 100)
-    @test law2.con2prim_tol == 1e-10
+    law2 = GRMHDEquations{2}(eos, metric; con2prim_tol = 1.0e-10, con2prim_maxiter = 100)
+    @test law2.con2prim_tol == 1.0e-10
     @test law2.con2prim_maxiter == 100
 
     # Different metrics
@@ -229,10 +229,10 @@ end
             u_gr = primitive_to_conserved(law_gr, w)
             u_sr = primitive_to_conserved(law_sr, w)
             # In Minkowski with √γ=1, GRMHD conserved = SRMHD conserved
-            @test u_gr ≈ u_sr atol = 1e-12
+            @test u_gr ≈ u_sr atol = 1.0e-12
 
             w_gr = conserved_to_primitive(law_gr, u_gr)
-            @test w_gr ≈ w atol = 1e-9
+            @test w_gr ≈ w atol = 1.0e-9
         end
     end
 
@@ -246,7 +246,7 @@ end
             for dir in [1, 2]
                 f_gr = physical_flux(law_gr, w, dir)
                 f_sr = physical_flux(law_sr, w, dir)
-                @test f_gr ≈ f_sr atol = 1e-12
+                @test f_gr ≈ f_sr atol = 1.0e-12
             end
         end
     end
@@ -261,8 +261,8 @@ end
             for dir in [1, 2]
                 λm_gr, λp_gr = wave_speeds(law_gr, w, dir)
                 λm_sr, λp_sr = wave_speeds(law_sr, w, dir)
-                @test λm_gr ≈ λm_sr atol = 1e-12
-                @test λp_gr ≈ λp_sr atol = 1e-12
+                @test λm_gr ≈ λm_sr atol = 1.0e-12
+                @test λp_gr ≈ λp_sr atol = 1.0e-12
             end
         end
     end
@@ -274,7 +274,7 @@ end
         mesh_src = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 4, 4)
         md_src = FiniteVolumeMethod.precompute_metric(metric, mesh_src)
         src = FiniteVolumeMethod.grmhd_source_terms(law_gr, w, u, md_src, mesh_src, 2, 2)
-        @test all(abs.(src) .< 1e-14)
+        @test all(abs.(src) .< 1.0e-14)
     end
 
     @testset "Source terms vanish for all Minkowski states" begin
@@ -289,7 +289,7 @@ end
             u = primitive_to_conserved(law_gr, w)
             for ix in 2:5, iy in 2:5
                 src = FiniteVolumeMethod.grmhd_source_terms(law_gr, w, u, md_src, mesh_src, ix, iy)
-                @test all(abs.(src) .< 1e-13)
+                @test all(abs.(src) .< 1.0e-13)
             end
         end
     end
@@ -307,7 +307,7 @@ end
         w = SVector(1.0, 0.3, 0.2, 0.0, 2.0, 0.5, 0.8, 0.3)
         u = primitive_to_conserved(law, w)
         w2 = conserved_to_primitive(law, u)
-        @test w2 ≈ w atol = 1e-9
+        @test w2 ≈ w atol = 1.0e-9
     end
 
     @testset "Schwarzschild con2prim roundtrip" begin
@@ -317,8 +317,8 @@ end
         w = SVector(1.0, 0.1, 0.0, 0.0, 1.0, 0.5, 0.0, 0.0)
         u = primitive_to_conserved(law, w)
         w2 = conserved_to_primitive(law, u)
-        @test w2[1] ≈ w[1] rtol = 1e-6
-        @test w2[5] ≈ w[5] rtol = 1e-6
+        @test w2[1] ≈ w[1] rtol = 1.0e-6
+        @test w2[5] ≈ w[5] rtol = 1.0e-6
     end
 
     @testset "Schwarzschild densitized con2prim roundtrip" begin
@@ -333,8 +333,8 @@ end
             u_d = FiniteVolumeMethod.grmhd_primitive_to_conserved_densitized(law, w, x, y)
             w2, result = FiniteVolumeMethod.grmhd_con2prim(law, u_d, x, y)
             @test result.converged
-            @test w2[1] ≈ w[1] rtol = 1e-6
-            @test w2[5] ≈ w[5] rtol = 1e-6
+            @test w2[1] ≈ w[1] rtol = 1.0e-6
+            @test w2[5] ≈ w[5] rtol = 1.0e-6
         end
     end
 
@@ -350,8 +350,8 @@ end
             u_d = FiniteVolumeMethod.grmhd_primitive_to_conserved_densitized(law, w, x, y)
             w2, result = FiniteVolumeMethod.grmhd_con2prim(law, u_d, x, y)
             @test result.converged
-            @test w2[1] ≈ w[1] rtol = 1e-5
-            @test w2[5] ≈ w[5] rtol = 1e-5
+            @test w2[1] ≈ w[1] rtol = 1.0e-5
+            @test w2[5] ≈ w[5] rtol = 1.0e-5
         end
     end
 
@@ -373,7 +373,7 @@ end
             law, u_d, sg, gi[1, 1], gi[1, 2], gi[2, 2], gm[1, 1], gm[1, 2], gm[2, 2]
         )
 
-        @test w_full ≈ w_cached atol = 1e-12
+        @test w_full ≈ w_cached atol = 1.0e-12
         @test res_full.converged == res_cached.converged
     end
 
@@ -389,10 +389,10 @@ end
                 u_d = FiniteVolumeMethod.grmhd_primitive_to_conserved_densitized(law, w, x, y)
                 w2, result = FiniteVolumeMethod.grmhd_con2prim(law, u_d, x, y)
                 @test result.converged
-                @test w2[1] ≈ w[1] rtol = 1e-8
-                @test abs(w2[2]) < 1e-8  # velocity should be zero
-                @test abs(w2[3]) < 1e-8
-                @test w2[5] ≈ w[5] rtol = 1e-6
+                @test w2[1] ≈ w[1] rtol = 1.0e-8
+                @test abs(w2[2]) < 1.0e-8  # velocity should be zero
+                @test abs(w2[3]) < 1.0e-8
+                @test w2[5] ≈ w[5] rtol = 1.0e-6
             end
         end
     end
@@ -415,8 +415,8 @@ end
             u_d = FiniteVolumeMethod.grmhd_primitive_to_conserved_densitized(law, w, x, y)
             w2, result = FiniteVolumeMethod.grmhd_con2prim(law, u_d, x, y)
             @test result.converged
-            @test w2[1] ≈ w[1] rtol = 1e-6
-            @test w2[5] ≈ w[5] rtol = 1e-6
+            @test w2[1] ≈ w[1] rtol = 1.0e-6
+            @test w2[5] ≈ w[5] rtol = 1.0e-6
         end
     end
 end
@@ -432,9 +432,9 @@ end
     @testset "Normal B-field flux = 0" begin
         w = SVector(1.0, 0.3, 0.2, 0.0, 2.0, 0.5, 0.8, 0.3)
         f1 = physical_flux(law, w, 1)
-        @test f1[6] ≈ 0.0 atol = 1e-14  # Bx flux = 0 for x-direction
+        @test f1[6] ≈ 0.0 atol = 1.0e-14  # Bx flux = 0 for x-direction
         f2 = physical_flux(law, w, 2)
-        @test f2[7] ≈ 0.0 atol = 1e-14  # By flux = 0 for y-direction
+        @test f2[7] ≈ 0.0 atol = 1.0e-14  # By flux = 0 for y-direction
     end
 
     @testset "B=0 reduces to SR hydro flux" begin
@@ -447,15 +447,15 @@ end
         ε = P / ((γ_eos - 1) * ρ)
         h = 1 + ε + P / ρ
         D = ρ * W
-        @test f[1] ≈ D * vx atol = 1e-14
+        @test f[1] ≈ D * vx atol = 1.0e-14
     end
 
     @testset "Static state has zero mass flux" begin
         w = SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.5, 0.5, 0.0)
         f1 = physical_flux(law, w, 1)
         f2 = physical_flux(law, w, 2)
-        @test f1[1] ≈ 0.0 atol = 1e-14  # D * vx = 0
-        @test f2[1] ≈ 0.0 atol = 1e-14  # D * vy = 0
+        @test f1[1] ≈ 0.0 atol = 1.0e-14  # D * vx = 0
+        @test f2[1] ≈ 0.0 atol = 1.0e-14  # D * vy = 0
     end
 end
 
@@ -472,7 +472,7 @@ end
         λm, λp = wave_speeds(law, w, 1)
         @test λp > 0
         @test λm < 0
-        @test λp ≈ -λm atol = 1e-14
+        @test λp ≈ -λm atol = 1.0e-14
     end
 
     @testset "Bounded by speed of light" begin
@@ -537,15 +537,15 @@ end
         # At interior cell (4, 4), source should be nonzero
         src = FiniteVolumeMethod.grmhd_source_terms(law, w, u, md, mesh, 4, 4)
         # D source should always be zero
-        @test src[1] ≈ 0.0 atol = 1e-14
+        @test src[1] ≈ 0.0 atol = 1.0e-14
         # B sources should be zero
-        @test src[6] ≈ 0.0 atol = 1e-14
-        @test src[7] ≈ 0.0 atol = 1e-14
-        @test src[8] ≈ 0.0 atol = 1e-14
+        @test src[6] ≈ 0.0 atol = 1.0e-14
+        @test src[7] ≈ 0.0 atol = 1.0e-14
+        @test src[8] ≈ 0.0 atol = 1.0e-14
         # Momentum/energy sources should be nonzero (gravity!)
         # At least some of them must be nonzero
         momentum_src = abs(src[2]) + abs(src[3]) + abs(src[5])
-        @test momentum_src > 1e-10
+        @test momentum_src > 1.0e-10
     end
 
     @testset "Source terms structure" begin
@@ -560,10 +560,10 @@ end
         for ix in 2:9, iy in 2:9
             src = FiniteVolumeMethod.grmhd_source_terms(law, w, u, md, mesh, ix, iy)
             # D and B sources always zero
-            @test src[1] ≈ 0.0 atol = 1e-14
-            @test src[6] ≈ 0.0 atol = 1e-14
-            @test src[7] ≈ 0.0 atol = 1e-14
-            @test src[8] ≈ 0.0 atol = 1e-14
+            @test src[1] ≈ 0.0 atol = 1.0e-14
+            @test src[6] ≈ 0.0 atol = 1.0e-14
+            @test src[7] ≈ 0.0 atol = 1.0e-14
+            @test src[8] ≈ 0.0 atol = 1.0e-14
             # All components finite
             @test all(isfinite, src)
         end
@@ -602,7 +602,7 @@ end
         u_und = primitive_to_conserved(law, w)
         u_den = FiniteVolumeMethod.grmhd_primitive_to_conserved_densitized(law, w, 0.5, 0.5)
         # In Minkowski, sqrt(gamma) = 1, so densitized = undensitized
-        @test u_und ≈ u_den atol = 1e-12
+        @test u_und ≈ u_den atol = 1.0e-12
     end
 
     @testset "Schwarzschild: densitized includes sqrt(gamma)" begin
@@ -613,7 +613,7 @@ end
         u_den = FiniteVolumeMethod.grmhd_primitive_to_conserved_densitized(law, w, x, y)
         sg = sqrt_gamma(metric, x, y)
         # D component should be sqrt(gamma) * rho * W
-        @test u_den[1] ≈ sg * w[1] atol = 1e-12  # v=0, so W=1
+        @test u_den[1] ≈ sg * w[1] atol = 1.0e-12  # v=0, so W=1
     end
 
     @testset "Cached prim2con consistency" begin
@@ -627,6 +627,6 @@ end
         u_cached = FiniteVolumeMethod.grmhd_prim2con_densitized_cached(
             law, w, sg, gm[1, 1], gm[1, 2], gm[2, 2]
         )
-        @test u_full ≈ u_cached atol = 1e-14
+        @test u_full ≈ u_cached atol = 1.0e-14
     end
 end
