@@ -28,6 +28,7 @@ jobs:
           - ubuntu-latest
         arch:
           - x64
+    continue-on-error: ${{ matrix.version == 'pre' }}
     steps:
       - name: Increase swapfile
         run: |
