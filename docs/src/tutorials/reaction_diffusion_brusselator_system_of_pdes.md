@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/reaction_diffusion_brusselator_system_of_pdes.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/reaction_diffusion_brusselator_system_of_pdes.jl"
 ```
 
 ````@example reaction_diffusion_brusselator_system_of_pdes
@@ -9,10 +9,8 @@ nothing #hide
 ````
 
 # A Reaction-Diffusion Brusselator System of PDEs
-
 In this tutorial, we show how we can solve systems of PDEs.
 We consider the reaction-diffusion Brusselator system:
-
 ```math
 \begin{equation}\label{eq:brusleeq}
 \begin{aligned}
@@ -21,10 +19,8 @@ We consider the reaction-diffusion Brusselator system:
 \end{aligned}
 \end{equation}
 ```
-
 Since this is a somewhat contrived example, we will be using the exact
 solution to define sensible initial and boundary conditions:[^1]
-
 ```math
 \begin{equation}\label{eq:brusleexct}
 \begin{aligned}
@@ -33,10 +29,9 @@ solution to define sensible initial and boundary conditions:[^1]
 \end{aligned}
 \end{equation}
 ```
-
 [^1]: See [Islam, Ali, and Haq (2010)](https://doi.org/10.1016/j.apm.2010.03.028).
-    We can use these exact solutions \eqref{eq:brusleexct} to also show how we can mix boundary conditions.
-    We use:
+We can use these exact solutions \eqref{eq:brusleexct} to also show how we can mix boundary conditions.
+We use:
 ```math
 \begin{equation*}
 \begin{aligned}
@@ -53,7 +48,6 @@ solution to define sensible initial and boundary conditions:[^1]
 \end{aligned}
 \end{equation*}
 ```
-
 For implementing these equations, we need to write the Neumann boundary conditions
 in the forms
 $\vb q_1 \vdot \vu n = f(\vb x, t)$ and $\vb q_2 \vdot \vu n = f(\vb x, t)$,
@@ -62,7 +56,6 @@ So, we need to rewrite \eqref{eq:brusleeq} in the conservation form;
 previously, we've also allowed for reaction-diffusion formulations, but unfortunately
 we do not allow this specification for systems due to some technical limitations.
 We can write \eqref{eq:brusleeq} in the conservation form as follows:
-
 ```math
 \begin{equation}
 \begin{aligned}
@@ -71,20 +64,16 @@ We can write \eqref{eq:brusleeq} in the conservation form as follows:
 \end{aligned}
 \end{equation}
 ```
-
 where $\vb q_1 = -\grad\Phi/4$, $S_1 = \Phi^2\Psi - 2\Phi$,
 $\vb q_2 = -\grad\Psi/4$, and $S_2 = -\Phi^2\Psi + \Phi$.
 Now that we have these flux functions, let us rewrite our boundary conditions. Remember that
 $\vu n$ is the outward unit normal, so for example on the bottom boundary we have
-
 ```math
 \vb q_1 \vdot \vu n = -\frac14\grad\Phi \vdot -\vu j = \frac{1}{4}\pdv{\Phi}{y}.
 ```
-
 The normal vectors are $-\vu j$, $\vu i$, $\vu j$, and $-\vu i$ for the
 bottom, right, top, and left sides of the square, respectively. So,
 our boundary become:
-
 ```math
 \begin{equation*}
 \begin{aligned}
@@ -165,13 +154,17 @@ nothing #hide
 Next, we can define the `FVMProblem`s for each variable.
 
 ````@example reaction_diffusion_brusselator_system_of_pdes
-Φ_prob = FVMProblem(mesh, Φ_BCs; flux_function = Φ_q, source_function = Φ_S,
-    initial_condition = Φ₀, final_time = 5.0)
+Φ_prob = FVMProblem(
+    mesh, Φ_BCs; flux_function = Φ_q, source_function = Φ_S,
+    initial_condition = Φ₀, final_time = 5.0
+)
 ````
 
 ````@example reaction_diffusion_brusselator_system_of_pdes
-Ψ_prob = FVMProblem(mesh, Ψ_BCs; flux_function = Ψ_q, source_function = Ψ_S,
-    initial_condition = Ψ₀, final_time = 5.0)
+Ψ_prob = FVMProblem(
+    mesh, Ψ_BCs; flux_function = Ψ_q, source_function = Ψ_S,
+    initial_condition = Ψ₀, final_time = 5.0
+)
 ````
 
 Finally, the `FVMSystem` is constructed by these two problems:
@@ -209,23 +202,33 @@ are the values of $\Psi$ at the third time. We can visualise the solutions as fo
 using CairoMakie
 fig = Figure(fontsize = 38)
 for i in eachindex(sol)
-    ax1 = Axis(fig[1, i], xlabel = L"x", ylabel = L"y",
+    ax1 = Axis(
+        fig[1, i], xlabel = L"x", ylabel = L"y",
         width = 400, height = 400,
-        title = L"\Phi: t = %$(sol.t[i])", titlealign = :left)
-    ax2 = Axis(fig[2, i], xlabel = L"x", ylabel = L"y",
+        title = L"\Phi: t = %$(sol.t[i])", titlealign = :left
+    )
+    ax2 = Axis(
+        fig[2, i], xlabel = L"x", ylabel = L"y",
         width = 400, height = 400,
-        title = L"\Psi: t = %$(sol.t[i])", titlealign = :left)
+        title = L"\Psi: t = %$(sol.t[i])", titlealign = :left
+    )
     tricontourf!(ax1, tri, sol[i][1, :], levels = 0:0.1:1, colormap = :matter)
     tricontourf!(ax2, tri, sol[i][2, :], levels = 1:10:100, colormap = :matter)
 end
 resize_to_layout!(fig)
 fig
+
+    ax3 = Axis(
+        title = L"Exact $\Phi: t = %$(sol.t[i])$", titlealign = :left
+    ax4 = Axis(
+        title = L"Exact $\Psi: t = %$(sol.t[i])$", titlealign = :left
+@test_reference joinpath(
+    @__DIR__, "../figures", "reaction_diffusion_brusselator_system_of_pdes_exact_comparisons.png"
 ````
 
 ## Just the code
-
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/reaction_diffusion_brusselator_system_of_pdes.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/reaction_diffusion_brusselator_system_of_pdes.jl).
 
 ```julia
 using FiniteVolumeMethod, DelaunayTriangulation
@@ -258,11 +261,15 @@ mesh = FVMGeometry(tri)
 Φ₀ = [Φ_exact(x, y, 0) for (x, y) in DelaunayTriangulation.each_point(tri)]
 Ψ₀ = [Ψ_exact(x, y, 0) for (x, y) in DelaunayTriangulation.each_point(tri)];
 
-Φ_prob = FVMProblem(mesh, Φ_BCs; flux_function = Φ_q, source_function = Φ_S,
-    initial_condition = Φ₀, final_time = 5.0)
+Φ_prob = FVMProblem(
+    mesh, Φ_BCs; flux_function = Φ_q, source_function = Φ_S,
+    initial_condition = Φ₀, final_time = 5.0
+)
 
-Ψ_prob = FVMProblem(mesh, Ψ_BCs; flux_function = Ψ_q, source_function = Ψ_S,
-    initial_condition = Ψ₀, final_time = 5.0)
+Ψ_prob = FVMProblem(
+    mesh, Ψ_BCs; flux_function = Ψ_q, source_function = Ψ_S,
+    initial_condition = Ψ₀, final_time = 5.0
+)
 
 system = FVMSystem(Φ_prob, Ψ_prob)
 
@@ -276,19 +283,31 @@ sol.u[3][1, :]
 using CairoMakie
 fig = Figure(fontsize = 38)
 for i in eachindex(sol)
-    ax1 = Axis(fig[1, i], xlabel = L"x", ylabel = L"y",
+    ax1 = Axis(
+        fig[1, i], xlabel = L"x", ylabel = L"y",
         width = 400, height = 400,
-        title = L"\Phi: t = %$(sol.t[i])", titlealign = :left)
-    ax2 = Axis(fig[2, i], xlabel = L"x", ylabel = L"y",
+        title = L"\Phi: t = %$(sol.t[i])", titlealign = :left
+    )
+    ax2 = Axis(
+        fig[2, i], xlabel = L"x", ylabel = L"y",
         width = 400, height = 400,
-        title = L"\Psi: t = %$(sol.t[i])", titlealign = :left)
+        title = L"\Psi: t = %$(sol.t[i])", titlealign = :left
+    )
     tricontourf!(ax1, tri, sol[i][1, :], levels = 0:0.1:1, colormap = :matter)
     tricontourf!(ax2, tri, sol[i][2, :], levels = 1:10:100, colormap = :matter)
 end
 resize_to_layout!(fig)
 fig
+
+    ax3 = Axis(
+        title = L"Exact $\Phi: t = %$(sol.t[i])$", titlealign = :left
+    ax4 = Axis(
+        title = L"Exact $\Psi: t = %$(sol.t[i])$", titlealign = :left
+@test_reference joinpath(
+    @__DIR__, "../figures", "reaction_diffusion_brusselator_system_of_pdes_exact_comparisons.png"
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

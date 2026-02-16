@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/linear_reaction_diffusion_equations.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/linear_reaction_diffusion_equations.jl"
 ```
 
 ````@example linear_reaction_diffusion_equations
@@ -9,29 +9,23 @@ nothing #hide
 ````
 
 # Linear Reaction-Diffusion Equations
-
 ```@contents
 Pages = ["linear_reaction_diffusion_equations.md"]
 ```
-
 Next, we write a specialised solver for solving linear reaction-diffusion equations. What
 we produce in this section can also be accessed in `FiniteVolumeMethod.LinearReactionDiffusionEquation`.
 
 ## Mathematical Details
-
 To start, let's give the mathematical details. The problems we will be solving take the form
-
 ```math
 \pdv{u}{t} = \div\left[D(\vb x)\grad u\right] + f(\vb x)u.
 ```
-
 We want to turn this into an equation of the form $\mathrm d\vb u/\mathrm dt = \vb A\vb u + \vb b$
 as usual. This takes the same form as our [diffusion equation example](diffusion_equations.md),
 except with the extra $f(\vb x)u$ term, which just adds an exta $f(\vb x)$ term
 to the diagonal of $\vb A$. See the previois sections for further mathematical details.
 
 ## Implementation
-
 Let us now implement the solver. For constructing $\vb A$, we can use `FiniteVolumeMethod.triangle_contributions!`
 as in the previous sections, but we will need an extra function to add $f(\vb x)$ to the appropriate diagonals.
 We can also reuse `apply_dirichlet_conditions!`, `apply_dudt_conditions`, and
@@ -41,15 +35,18 @@ We can also reuse `apply_dirichlet_conditions!`, `apply_dudt_conditions`, and
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(
-        A, mesh, conditions, source_function, source_parameters)
+        A, mesh, conditions, source_function, source_parameters
+    )
     for i in each_solid_vertex(mesh.triangulation)
         if !FVM.has_condition(conditions, i)
             x, y = get_point(mesh, i)
             A[i, i] += source_function(x, y, source_parameters)
         end
     end
+    return
 end
-function linear_reaction_diffusion_equation(mesh::FVMGeometry,
+function linear_reaction_diffusion_equation(
+        mesh::FVMGeometry,
         BCs::BoundaryConditions,
         ICs::InternalConditions = InternalConditions();
         diffusion_function,
@@ -58,7 +55,8 @@ function linear_reaction_diffusion_equation(mesh::FVMGeometry,
         source_parameters = nothing,
         initial_condition,
         initial_time = 0.0,
-        final_time)
+        final_time
+    )
     conditions = Conditions(mesh, BCs, ICs)
     n = DelaunayTriangulation.num_solid_vertices(mesh.triangulation)
     Afull = zeros(n + 1, n + 1)
@@ -66,9 +64,11 @@ function linear_reaction_diffusion_equation(mesh::FVMGeometry,
     b = @views Afull[begin:(end - 1), end]
     _ic = vcat(initial_condition, 1)
     FVM.triangle_contributions!(
-        A, mesh, conditions, diffusion_function, diffusion_parameters)
+        A, mesh, conditions, diffusion_function, diffusion_parameters
+    )
     FVM.boundary_edge_contributions!(
-        A, b, mesh, conditions, diffusion_function, diffusion_parameters)
+        A, b, mesh, conditions, diffusion_function, diffusion_parameters
+    )
     linear_source_contributions!(A, mesh, conditions, source_function, source_parameters)
     FVM.apply_dudt_conditions!(b, mesh, conditions)
     FVM.apply_dirichlet_conditions!(_ic, mesh, conditions)
@@ -85,11 +85,9 @@ this is essentially the same function except we now have `linear_source_contribu
 and `source_function` and `source_parameters` arguments.
 
 Let's now test this function. We consider the problem
-
 ```math
 \pdv{T}{t} = \div\left[10^{-3}x^2y\grad T\right] + (x-1)(y-1)T, \quad \vb x \in [0,1]^2,
 ```
-
 with $\grad T \vdot\vu n = 1$ on the boundary.
 
 ````@example linear_reaction_diffusion_equations
@@ -98,13 +96,15 @@ tri = triangulate_rectangle(0, 1, 0, 1, 150, 150, single_boundary = true)
 mesh = FVMGeometry(tri)
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> one(x), Neumann)
 diffusion_function = (x, y, p) -> p.D * x^2 * y
-diffusion_parameters = (D = 1e-3,)
+diffusion_parameters = (D = 1.0e-3,)
 source_function = (x, y, p) -> (x - 1) * (y - 1)
 initial_condition = [x^2 + y^2 for (x, y) in DelaunayTriangulation.each_point(tri)]
 final_time = 8.0
-prob = linear_reaction_diffusion_equation(mesh, BCs;
+prob = linear_reaction_diffusion_equation(
+    mesh, BCs;
     diffusion_function, diffusion_parameters,
-    source_function, initial_condition, final_time)
+    source_function, initial_condition, final_time
+)
 prob |> tc #hide
 ````
 
@@ -117,11 +117,15 @@ sol |> tc #hide
 using CairoMakie
 fig = Figure(fontsize = 38)
 for j in eachindex(sol)
-    ax = Axis(fig[1, j], width = 600, height = 600,
+    ax = Axis(
+        fig[1, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
-        title = "t = $(sol.t[j])")
-    tricontourf!(ax, tri, sol.u[j], levels = 0:0.1:1, extendlow = :auto,
-        extendhigh = :auto, colormap = :turbo)
+        title = "t = $(sol.t[j])"
+    )
+    tricontourf!(
+        ax, tri, sol.u[j], levels = 0:0.1:1, extendlow = :auto,
+        extendhigh = :auto, colormap = :turbo
+    )
     tightlimits!(ax)
 end
 resize_to_layout!(fig)
@@ -134,16 +138,18 @@ we need them in the form $\vb q\vdot\vu n = \ldots$. For this problem, $\vb q=-D
 which gives $\vb q\vdot\vu n = -D$.
 
 ````@example linear_reaction_diffusion_equations
-_BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> -p.D(x, y, p.Dp), Neumann;
-    parameters = (D = diffusion_function, Dp = diffusion_parameters))
+_BCs = BoundaryConditions(
+    mesh, (x, y, t, u, p) -> -p.D(x, y, p.Dp), Neumann;
+    parameters = (D = diffusion_function, Dp = diffusion_parameters)
+)
 fvm_prob = FVMProblem(
     mesh,
     _BCs;
-    diffusion_function = let D=diffusion_function
+    diffusion_function = let D = diffusion_function
         (x, y, t, u, p) -> D(x, y, p)
     end,
     diffusion_parameters = diffusion_parameters,
-    source_function = let S=source_function
+    source_function = let S = source_function
         (x, y, t, u, p) -> S(x, y, p) * u
     end,
     final_time = final_time,
@@ -151,26 +157,32 @@ fvm_prob = FVMProblem(
 )
 fvm_sol = solve(fvm_prob, Tsit5(), saveat = 2.0)
 fvm_sol |> tc #hide
+
+    ax = Axis(
+        title = "t = $(fvm_sol.t[j])"
+    tricontourf!(
+        ax, tri, fvm_sol.u[j], levels = 0:0.1:1,
+        extendlow = :auto, extendhigh = :auto, colormap = :turbo
 ````
 
 ## Using the Provided Template
-
 The above code is implemented in `LinearReactionDiffusionEquation` in FiniteVolumeMethod.jl.
 
 ````@example linear_reaction_diffusion_equations
-prob = LinearReactionDiffusionEquation(mesh, BCs;
+prob = LinearReactionDiffusionEquation(
+    mesh, BCs;
     diffusion_function, diffusion_parameters,
-    source_function, initial_condition, final_time)
+    source_function, initial_condition, final_time
+)
 sol = solve(prob, Tsit5(); saveat = 2)
 sol |> tc #hide
 ````
 
 Here is a benchmark comparison of `LinearReactionDiffusionEquation` versus `FVMProblem`.
-
 ````julia
 using BenchmarkTools
 using Sundials
-@btime solve($prob, $CVODE_BDF(linear_solver = :GMRES); saveat = $2);
+@btime solve($prob, $CVODE_BDF(linear_solver=:GMRES); saveat=$2);
 ````
 
 ````
@@ -178,7 +190,7 @@ using Sundials
 ````
 
 ````julia
-@btime solve($fvm_prob, $CVODE_BDF(linear_solver = :GMRES); saveat = $2);
+@btime solve($fvm_prob, $CVODE_BDF(linear_solver=:GMRES); saveat=$2);
 ````
 
 ````
@@ -186,23 +198,25 @@ using Sundials
 ````
 
 ## Just the code
-
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/linear_reaction_diffusion_equations.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/linear_reaction_diffusion_equations.jl).
 
 ```julia
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(
-        A, mesh, conditions, source_function, source_parameters)
+        A, mesh, conditions, source_function, source_parameters
+    )
     for i in each_solid_vertex(mesh.triangulation)
         if !FVM.has_condition(conditions, i)
             x, y = get_point(mesh, i)
             A[i, i] += source_function(x, y, source_parameters)
         end
     end
+    return
 end
-function linear_reaction_diffusion_equation(mesh::FVMGeometry,
+function linear_reaction_diffusion_equation(
+        mesh::FVMGeometry,
         BCs::BoundaryConditions,
         ICs::InternalConditions = InternalConditions();
         diffusion_function,
@@ -211,7 +225,8 @@ function linear_reaction_diffusion_equation(mesh::FVMGeometry,
         source_parameters = nothing,
         initial_condition,
         initial_time = 0.0,
-        final_time)
+        final_time
+    )
     conditions = Conditions(mesh, BCs, ICs)
     n = DelaunayTriangulation.num_solid_vertices(mesh.triangulation)
     Afull = zeros(n + 1, n + 1)
@@ -219,9 +234,11 @@ function linear_reaction_diffusion_equation(mesh::FVMGeometry,
     b = @views Afull[begin:(end - 1), end]
     _ic = vcat(initial_condition, 1)
     FVM.triangle_contributions!(
-        A, mesh, conditions, diffusion_function, diffusion_parameters)
+        A, mesh, conditions, diffusion_function, diffusion_parameters
+    )
     FVM.boundary_edge_contributions!(
-        A, b, mesh, conditions, diffusion_function, diffusion_parameters)
+        A, b, mesh, conditions, diffusion_function, diffusion_parameters
+    )
     linear_source_contributions!(A, mesh, conditions, source_function, source_parameters)
     FVM.apply_dudt_conditions!(b, mesh, conditions)
     FVM.apply_dirichlet_conditions!(_ic, mesh, conditions)
@@ -236,39 +253,47 @@ tri = triangulate_rectangle(0, 1, 0, 1, 150, 150, single_boundary = true)
 mesh = FVMGeometry(tri)
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> one(x), Neumann)
 diffusion_function = (x, y, p) -> p.D * x^2 * y
-diffusion_parameters = (D = 1e-3,)
+diffusion_parameters = (D = 1.0e-3,)
 source_function = (x, y, p) -> (x - 1) * (y - 1)
 initial_condition = [x^2 + y^2 for (x, y) in DelaunayTriangulation.each_point(tri)]
 final_time = 8.0
-prob = linear_reaction_diffusion_equation(mesh, BCs;
+prob = linear_reaction_diffusion_equation(
+    mesh, BCs;
     diffusion_function, diffusion_parameters,
-    source_function, initial_condition, final_time)
+    source_function, initial_condition, final_time
+)
 
 sol = solve(prob, Tsit5(); saveat = 2)
 
 using CairoMakie
 fig = Figure(fontsize = 38)
 for j in eachindex(sol)
-    ax = Axis(fig[1, j], width = 600, height = 600,
+    ax = Axis(
+        fig[1, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
-        title = "t = $(sol.t[j])")
-    tricontourf!(ax, tri, sol.u[j], levels = 0:0.1:1, extendlow = :auto,
-        extendhigh = :auto, colormap = :turbo)
+        title = "t = $(sol.t[j])"
+    )
+    tricontourf!(
+        ax, tri, sol.u[j], levels = 0:0.1:1, extendlow = :auto,
+        extendhigh = :auto, colormap = :turbo
+    )
     tightlimits!(ax)
 end
 resize_to_layout!(fig)
 fig
 
-_BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> -p.D(x, y, p.Dp), Neumann;
-    parameters = (D = diffusion_function, Dp = diffusion_parameters))
+_BCs = BoundaryConditions(
+    mesh, (x, y, t, u, p) -> -p.D(x, y, p.Dp), Neumann;
+    parameters = (D = diffusion_function, Dp = diffusion_parameters)
+)
 fvm_prob = FVMProblem(
     mesh,
     _BCs;
-    diffusion_function = let D=diffusion_function
+    diffusion_function = let D = diffusion_function
         (x, y, t, u, p) -> D(x, y, p)
     end,
     diffusion_parameters = diffusion_parameters,
-    source_function = let S=source_function
+    source_function = let S = source_function
         (x, y, t, u, p) -> S(x, y, p) * u
     end,
     final_time = final_time,
@@ -276,12 +301,21 @@ fvm_prob = FVMProblem(
 )
 fvm_sol = solve(fvm_prob, Tsit5(), saveat = 2.0)
 
-prob = LinearReactionDiffusionEquation(mesh, BCs;
+    ax = Axis(
+        title = "t = $(fvm_sol.t[j])"
+    tricontourf!(
+        ax, tri, fvm_sol.u[j], levels = 0:0.1:1,
+        extendlow = :auto, extendhigh = :auto, colormap = :turbo
+
+prob = LinearReactionDiffusionEquation(
+    mesh, BCs;
     diffusion_function, diffusion_parameters,
-    source_function, initial_condition, final_time)
+    source_function, initial_condition, final_time
+)
 sol = solve(prob, Tsit5(); saveat = 2)
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

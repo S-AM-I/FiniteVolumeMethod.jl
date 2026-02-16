@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.jl"
 ```
 
 ````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
@@ -9,9 +9,7 @@ nothing #hide
 ````
 
 # Helmholtz Equation with Inhomogeneous Boundary Conditions
-
 In this tutorial, we consider the following steady state problem:
-
 ```math
 \begin{equation}
 \begin{aligned}
@@ -20,7 +18,6 @@ In this tutorial, we consider the following steady state problem:
 \end{aligned}
 \end{equation}
 ```
-
 We can define this problem in the same way we have defined previous problems,
 except that the final `FVMProblem` must be wrapped in a `SteadyFVMProblem`.
 Let us start by defining the mesh and the boundary conditions.
@@ -32,11 +29,9 @@ mesh = FVMGeometry(tri)
 ````
 
 For the boundary condition,
-
 ```math
 \pdv{u}{\vb n} = 1,
 ```
-
 which is the same as $\grad u \vdot \vu n = 1$, this needs to be expressed in terms of $\vb q$.
 Since $\vb q = -\grad u$ for this problem, the boundary condition is $\vb q \vdot \vu n = -1$.
 
@@ -51,17 +46,13 @@ which is needed for the nonlinear solver, and `final_time` should now
 be `Inf`. For the initial condition, let us simply let
 the initial estimate be all zeros. For the diffusion and source terms,
 note that previously we have been considered equations of the form
-
 ```math
 \pdv{u}{t} + \div\vb q = S \quad \textnormal{or} \quad \pdv{u}{t} = \div[D\grad u] + S,
 ```
-
 while steady state problems take the form
-
 ```math
 \div\vb q = S \quad \textnormal{or} \quad \div[D\grad u] + S = 0.
 ```
-
 So, for this problem, $D = 1$ and $S = u$.
 
 ````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
@@ -69,11 +60,13 @@ diffusion_function = (x, y, t, u, p) -> one(u)
 source_function = (x, y, t, u, p) -> u
 initial_condition = zeros(DelaunayTriangulation.num_solid_vertices(tri))
 final_time = Inf
-prob = FVMProblem(mesh, BCs;
+prob = FVMProblem(
+    mesh, BCs;
     diffusion_function,
     source_function,
     initial_condition,
-    final_time)
+    final_time
+)
 ````
 
 ````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
@@ -103,12 +96,17 @@ Now let's visualise.
 using CairoMakie
 fig, ax, sc = tricontourf(tri, sol.u, levels = -2.5:0.15:-1.0, colormap = :matter)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures", "helmholtz_equation_with_inhomogeneous_boundary_conditions.png"
+
+@test_reference joinpath(
+    @__DIR__, "../figures",
+    "helmholtz_equation_with_inhomogeneous_boundary_conditions_exact_comparisons.png"
 ````
 
 ## Just the code
-
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.jl).
 
 ```julia
 using DelaunayTriangulation, FiniteVolumeMethod
@@ -121,11 +119,13 @@ diffusion_function = (x, y, t, u, p) -> one(u)
 source_function = (x, y, t, u, p) -> u
 initial_condition = zeros(DelaunayTriangulation.num_solid_vertices(tri))
 final_time = Inf
-prob = FVMProblem(mesh, BCs;
+prob = FVMProblem(
+    mesh, BCs;
     diffusion_function,
     source_function,
     initial_condition,
-    final_time)
+    final_time
+)
 
 steady_prob = SteadyFVMProblem(prob)
 
@@ -138,8 +138,15 @@ sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 using CairoMakie
 fig, ax, sc = tricontourf(tri, sol.u, levels = -2.5:0.15:-1.0, colormap = :matter)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures", "helmholtz_equation_with_inhomogeneous_boundary_conditions.png"
+
+@test_reference joinpath(
+    @__DIR__, "../figures",
+    "helmholtz_equation_with_inhomogeneous_boundary_conditions_exact_comparisons.png"
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

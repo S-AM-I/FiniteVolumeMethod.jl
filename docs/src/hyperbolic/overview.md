@@ -4,7 +4,9 @@
 Pages = ["overview.md"]
 ```
 
-This section provides tutorials for the cell-centered finite volume solver for hyperbolic conservation laws on structured Cartesian meshes. Each tutorial is self-contained and demonstrates a different aspect of the solver. At the end of each tutorial we show the uncommented code; click the `Edit on GitHub` link at the top right of each page to see the source script.
+This section provides tutorials for the cell-centered finite volume solver for hyperbolic conservation laws on structured Cartesian meshes. For tutorials on the parabolic/elliptic (cell-vertex) solver, see [Parabolic and Elliptic PDE Tutorials](../tutorials/overview.md).
+
+Each tutorial is self-contained and demonstrates a different aspect of the solver. At the end of each tutorial we show the uncommented code; click the `Edit on GitHub` link at the top right of each page to see the source script.
 
 For the mathematical and implementation details of the solver, see the [Mathematical Details](math.md) page. For the complete API reference, see the [Interface](interface.md) page.
 
@@ -125,3 +127,19 @@ where the source term drives the gas toward an equilibrium temperature on a time
 # AMR Sedov Blast
 
 [This tutorial](tutorials/amr_sedov_blast.md) solves the Sedov blast wave with block-structured adaptive mesh refinement (AMR). We demonstrate `AMRGrid`, `GradientRefinement`, `solve_amr`, and the Berger-Colella flux correction that maintains conservation at coarse-fine boundaries. The AMR automatically refines around the shock front while keeping the smooth interior at coarse resolution.
+
+# Limiter Comparison
+
+[This tutorial](tutorials/limiter_comparison.md) compares all five MUSCL slope limiters (minmod, van Leer, MC, superbee, and zero limiter) on the Sod shock tube problem. We run the same problem with each limiter and compare the density profiles side-by-side, illustrating the trade-off between numerical diffusion and oscillation control.
+
+# MHD Rotor
+
+[This tutorial](tutorials/mhd_rotor.md) simulates the Balsara & Spicer MHD rotor problem, where a dense rotating disk is embedded in a uniform magnetic field. The interaction between torsional Alfven waves and the rotor boundary produces a rich MHD flow structure. We demonstrate the constrained transport algorithm on a problem with strong rotational dynamics.
+
+# GRMHD in Flat Spacetime
+
+[This tutorial](tutorials/grmhd_flat_space_shock.md) verifies that the GRMHD solver reduces to SRMHD in Minkowski (flat) spacetime. By setting the lapse $\alpha = 1$, shift $\beta^i = 0$, and spatial metric $\gamma_{ij} = \delta_{ij}$, we solve a standard relativistic shock tube and confirm agreement with the SRMHD solver.
+
+# SRMHD Cylindrical Blast
+
+[This tutorial](tutorials/srmhd_cylindrical_blast.md) simulates a 2D special relativistic MHD blast wave with a uniform magnetic field. The magnetic field breaks cylindrical symmetry, producing an asymmetric blast morphology that tests the solver's ability to handle strong relativistic shocks in the presence of magnetic fields.

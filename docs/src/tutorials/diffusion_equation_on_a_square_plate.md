@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl"
 ```
 
 ````@example diffusion_equation_on_a_square_plate
@@ -9,9 +9,7 @@ nothing #hide
 ````
 
 # Diffusion Equation on a Square Plate
-
 This tutorial considers a diffusion equation on a square plate:
-
 ```math
 \begin{equation*}
 \begin{aligned}
@@ -21,13 +19,10 @@ u(\vb x, 0) &= f(\vb x) & \vb x \in \Omega,
 \end{aligned}
 \end{equation*}
 ```
-
 where $\Omega = [0, 2]^2$ and
-
 ```math
 f(x, y) = \begin{cases} 50 & y \leq 1, \\ 0 & y > 1. \end{cases}
 ```
-
 To solve this problem, the first step is to define the mesh.
 
 ````@example diffusion_equation_on_a_square_plate
@@ -96,21 +91,24 @@ To visualise the solution, we can use `tricontourf!` from Makie.jl.
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     local ax
-    ax = Axis(fig[1, i], width = 600, height = 600,
+    ax = Axis(
+        fig[1, i], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
         title = "t = $(sol.t[j])",
-        titlealign = :left)
+        titlealign = :left
+    )
     tricontourf!(ax, tri, sol.u[j], levels = 0:5:50, colormap = :matter)
     tightlimits!(ax)
 end
 resize_to_layout!(fig)
 fig
+
+                nterm = (1 - cos(n * π / 2)) / n * sin(n * π * y / 2) *
 ````
 
 ## Just the code
-
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl).
 
 ```julia
 using FiniteVolumeMethod, DelaunayTriangulation
@@ -141,17 +139,22 @@ sol = solve(prob, Tsit5(), saveat = 0.05)
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     local ax
-    ax = Axis(fig[1, i], width = 600, height = 600,
+    ax = Axis(
+        fig[1, i], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
         title = "t = $(sol.t[j])",
-        titlealign = :left)
+        titlealign = :left
+    )
     tricontourf!(ax, tri, sol.u[j], levels = 0:5:50, colormap = :matter)
     tightlimits!(ax)
 end
 resize_to_layout!(fig)
 fig
+
+                nterm = (1 - cos(n * π / 2)) / n * sin(n * π * y / 2) *
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

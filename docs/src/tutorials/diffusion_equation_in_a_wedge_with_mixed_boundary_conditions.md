@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl"
 ```
 
 ````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
@@ -9,10 +9,8 @@ nothing #hide
 ````
 
 # Diffusion Equation in a Wedge with Mixed Boundary Conditions
-
 In this example, we consider a diffusion equation on a wedge
 with angle $\alpha$ and mixed boundary conditions:
-
 ```math
 \begin{equation*}
 \begin{aligned}
@@ -24,7 +22,6 @@ u(r, \theta, 0) &= f(r,\theta) & 0<r<1,\,0<\theta<\alpha,
 \end{aligned}
 \end{equation*}
 ```
-
 where we take $f(r,\theta) = 1-r$ and $\alpha=\pi/4$.
 
 Note that the PDE is provided in polar form, but Cartesian coordinates
@@ -55,7 +52,7 @@ upper_edge = [3, 1]
 boundary_nodes = [bottom_edge, [arc], upper_edge]
 tri = triangulate(points; boundary_nodes)
 A = get_area(tri)
-refine!(tri; max_area = 1e-4A)
+refine!(tri; max_area = 1.0e-4A)
 mesh = FVMGeometry(tri)
 ````
 
@@ -124,21 +121,31 @@ using CairoMakie
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     local ax
-    ax = Axis(fig[1, i], width = 600, height = 600,
+    ax = Axis(
+        fig[1, i], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
         title = "t = $(sol.t[j])",
-        titlealign = :left)
+        titlealign = :left
+    )
     tricontourf!(ax, tri, sol.u[j], levels = 0:0.01:1, colormap = :matter)
     tightlimits!(ax)
 end
 resize_to_layout!(fig)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures", "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.png"
+
+            integrand = rθ -> _f(rθ[2], rθ[1]) * besselj(order, ζ[m, n + 1] * rθ[2]) *
+            A[m, n + 1] = 4.0 / (α * besselj(order + 1, ζ[m, n + 1])^2) *
+            s += +A[m, n + 1] * exp(-ζ[m, n + 1]^2 * t) * besselj(order, ζ[m, n + 1] * r) *
+@test_reference joinpath(
+    @__DIR__, "../figures",
+    "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions_exact_comparisons.png"
 ````
 
 ## Just the code
-
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl).
 
 ```julia
 using DelaunayTriangulation, FiniteVolumeMethod, ElasticArrays
@@ -151,7 +158,7 @@ upper_edge = [3, 1]
 boundary_nodes = [bottom_edge, [arc], upper_edge]
 tri = triangulate(points; boundary_nodes)
 A = get_area(tri)
-refine!(tri; max_area = 1e-4A)
+refine!(tri; max_area = 1.0e-4A)
 mesh = FVMGeometry(tri)
 
 using CairoMakie
@@ -179,17 +186,29 @@ using CairoMakie
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     local ax
-    ax = Axis(fig[1, i], width = 600, height = 600,
+    ax = Axis(
+        fig[1, i], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
         title = "t = $(sol.t[j])",
-        titlealign = :left)
+        titlealign = :left
+    )
     tricontourf!(ax, tri, sol.u[j], levels = 0:0.01:1, colormap = :matter)
     tightlimits!(ax)
 end
 resize_to_layout!(fig)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures", "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.png"
+
+            integrand = rθ -> _f(rθ[2], rθ[1]) * besselj(order, ζ[m, n + 1] * rθ[2]) *
+            A[m, n + 1] = 4.0 / (α * besselj(order + 1, ζ[m, n + 1])^2) *
+            s += +A[m, n + 1] * exp(-ζ[m, n + 1]^2 * t) * besselj(order, ζ[m, n + 1] * r) *
+@test_reference joinpath(
+    @__DIR__, "../figures",
+    "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions_exact_comparisons.png"
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

@@ -170,38 +170,27 @@ using Dates
 # All the pages to be included
 _PAGES = [
     "Introduction" => "index.md",
-    "Interface" => "interface.md",
     "Tutorials" => [
-        "Section Overview" => "tutorials/overview.md",
-        "Diffusion Equation on a Square Plate" => "tutorials/diffusion_equation_on_a_square_plate.md",
-        "Diffusion Equation in a Wedge with Mixed Boundary Conditions" => "tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.md",
-        "Reaction-Diffusion Equation with a Time-dependent Dirichlet Boundary Condition on a Disk" => "tutorials/reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.md",
-        "Porous-Medium Equation" => "tutorials/porous_medium_equation.md",
-        "Porous-Fisher Equation and Travelling Waves" => "tutorials/porous_fisher_equation_and_travelling_waves.md",
-        "Piecewise Linear and Natural Neighbour Interpolation for an Advection-Diffusion Equation" => "tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.md",
-        "Helmholtz Equation with Inhomogeneous Boundary Conditions" => "tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.md",
-        "Laplace's Equation with Internal Dirichlet Conditions" => "tutorials/laplaces_equation_with_internal_dirichlet_conditions.md",
-        "Equilibrium Temperature Distribution with Mixed Boundary Conditions and using EnsembleProblems" => "tutorials/equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.md",
-        "A Reaction-Diffusion Brusselator System of PDEs" => "tutorials/reaction_diffusion_brusselator_system_of_pdes.md",
-        "Gray-Scott Model: Turing Patterns from a Coupled Reaction-Diffusion System" => "tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.md",
-        "Diffusion Equation on an Annulus" => "tutorials/diffusion_equation_on_an_annulus.md",
-        "Mean Exit Time" => "tutorials/mean_exit_time.md",
-        "Solving Mazes with Laplace's Equation" => "tutorials/solving_mazes_with_laplaces_equation.md",
-        "Keller-Segel Model of Chemotaxis" => "tutorials/keller_segel_chemotaxis.md",
-    ],
-    "Solvers for Specific Problems, and Writing Your Own" => [
-        "Section Overview" => "wyos/overview.md",
-        "Diffusion Equations" => "wyos/diffusion_equations.md",
-        "Mean Exit Time Problems" => "wyos/mean_exit_time.md",
-        "Linear Reaction-Diffusion Equations" => "wyos/linear_reaction_diffusion_equations.md",
-        "Poisson's Equation" => "wyos/poissons_equation.md",
-        "Laplace's Equation" => "wyos/laplaces_equation.md",
-    ],
-    "Mathematical and Implementation Details" => "math.md",
-    "The Finite Volume Method" => "finite-volume-method.md",
-    "Hyperbolic Solver" => [
-        "Overview" => "hyperbolic/overview.md",
-        "Tutorials" => [
+        "Parabolic and Elliptic PDEs" => [
+            "Overview" => "tutorials/overview.md",
+            "Diffusion Equation on a Square Plate" => "tutorials/diffusion_equation_on_a_square_plate.md",
+            "Diffusion Equation in a Wedge with Mixed Boundary Conditions" => "tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.md",
+            "Reaction-Diffusion Equation with a Time-dependent Dirichlet Boundary Condition on a Disk" => "tutorials/reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.md",
+            "Porous-Medium Equation" => "tutorials/porous_medium_equation.md",
+            "Porous-Fisher Equation and Travelling Waves" => "tutorials/porous_fisher_equation_and_travelling_waves.md",
+            "Piecewise Linear and Natural Neighbour Interpolation for an Advection-Diffusion Equation" => "tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.md",
+            "Helmholtz Equation with Inhomogeneous Boundary Conditions" => "tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.md",
+            "Laplace's Equation with Internal Dirichlet Conditions" => "tutorials/laplaces_equation_with_internal_dirichlet_conditions.md",
+            "Equilibrium Temperature Distribution with Mixed Boundary Conditions and using EnsembleProblems" => "tutorials/equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.md",
+            "A Reaction-Diffusion Brusselator System of PDEs" => "tutorials/reaction_diffusion_brusselator_system_of_pdes.md",
+            "Gray-Scott Model: Turing Patterns from a Coupled Reaction-Diffusion System" => "tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.md",
+            "Diffusion Equation on an Annulus" => "tutorials/diffusion_equation_on_an_annulus.md",
+            "Mean Exit Time" => "tutorials/mean_exit_time.md",
+            "Solving Mazes with Laplace's Equation" => "tutorials/solving_mazes_with_laplaces_equation.md",
+            "Keller-Segel Model of Chemotaxis" => "tutorials/keller_segel_chemotaxis.md",
+        ],
+        "Hyperbolic Conservation Laws" => [
+            "Overview" => "hyperbolic/overview.md",
             "Sod Shock Tube" => "hyperbolic/tutorials/sod_shock_tube.md",
             "Sedov Blast Wave" => "hyperbolic/tutorials/sedov_blast_wave.md",
             "Brio-Wu MHD Shock Tube" => "hyperbolic/tutorials/brio_wu_shock_tube.md",
@@ -219,8 +208,23 @@ _PAGES = [
             "GRMHD in Flat Spacetime" => "hyperbolic/tutorials/grmhd_flat_space_shock.md",
             "SRMHD Cylindrical Blast" => "hyperbolic/tutorials/srmhd_cylindrical_blast.md",
         ],
-        "Interface" => "hyperbolic/interface.md",
-        "Mathematical Details" => "hyperbolic/math.md",
+    ],
+    "Solvers for Specific Problems, and Writing Your Own" => [
+        "Section Overview" => "wyos/overview.md",
+        "Diffusion Equations" => "wyos/diffusion_equations.md",
+        "Mean Exit Time Problems" => "wyos/mean_exit_time.md",
+        "Linear Reaction-Diffusion Equations" => "wyos/linear_reaction_diffusion_equations.md",
+        "Poisson's Equation" => "wyos/poissons_equation.md",
+        "Laplace's Equation" => "wyos/laplaces_equation.md",
+    ],
+    "Mathematical Details" => [
+        "General FVM Theory" => "finite-volume-method.md",
+        "Parabolic Solver (Cell-Vertex)" => "math.md",
+        "Hyperbolic Solver (Cell-Centered)" => "hyperbolic/math.md",
+    ],
+    "Interface" => [
+        "Parabolic Solver" => "interface.md",
+        "Hyperbolic Solver" => "hyperbolic/interface.md",
     ],
 ]
 
@@ -261,7 +265,7 @@ makedocs(;
     format = Documenter.HTML(;
         canonical = "https://cx-xd.github.io/FiniteVolumeMethod.jl",
         edit_link = "main",
-        collapselevel = 1,
+        collapselevel = 2,
         assets = String[],
         mathengine = MathJax3(
             Dict(

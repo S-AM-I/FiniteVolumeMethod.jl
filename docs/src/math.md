@@ -4,6 +4,8 @@
 Pages = ["math.md"]
 ```
 
+This page describes the parabolic/elliptic (cell-vertex) solver. For general FVM theory, see [General FVM Theory](finite-volume-method.md). For the hyperbolic (cell-centered) solver, see [Hyperbolic Solver](hyperbolic/math.md).
+
 Here we outline the mathematical and implementation details involved in implementing the finite volume method (FVM). We assume that our partial differential equation (PDE) is given by
 
 ```math

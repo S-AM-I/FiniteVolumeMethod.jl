@@ -4,7 +4,7 @@
 Pages = ["math.md"]
 ```
 
-This page describes the mathematical framework and implementation details of the cell-centered finite volume solver for hyperbolic conservation laws. For the parabolic (cell-vertex) solver, see the [main mathematical details page](../math.md).
+This page describes the mathematical framework and implementation details of the cell-centered finite volume solver for hyperbolic conservation laws. For general FVM theory, see [General FVM Theory](../finite-volume-method.md). For the parabolic (cell-vertex) solver, see the [Parabolic Solver](../math.md).
 
 ## Hyperbolic Conservation Laws
 

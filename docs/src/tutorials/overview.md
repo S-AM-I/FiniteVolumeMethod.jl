@@ -4,6 +4,8 @@
 Pages = ["overview.md"]
 ```
 
+These tutorials cover the parabolic/elliptic (cell-vertex) solver. For tutorials on the hyperbolic (cell-centered) solver, see [Hyperbolic Conservation Laws Tutorials](../hyperbolic/overview.md).
+
 We provide many tutorials in this section. Each tutorial is self-contained, although
 more detail will be offered in the earlier examples. At the end of each tutorial we show the uncommented code, but if you want to see the actual script itself that generates these tutorials, then click on the `Edit on GitHub` section on the top right of the respective tutorial.
 

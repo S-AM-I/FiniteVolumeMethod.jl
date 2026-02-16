@@ -8,6 +8,8 @@ CurrentModule = FiniteVolumeMethod
 Pages = ["interface.md"]
 ```
 
+This page documents the parabolic/elliptic (cell-vertex) solver interface. For the hyperbolic (cell-centered) solver interface, see [Hyperbolic Solver Interface](hyperbolic/interface.md).
+
 In this section, we describe the basic interface for defining and solving PDEs using this package. This interface will also be made clearer in the tutorials. The basic summary of the discussion below is as follows:
 
  1. Use `FVMGeometry` to define the problem's mesh.
@@ -168,4 +170,4 @@ You can evaluate the piecewise linear interpolation corresponding to a solution 
 pl_interpolate
 ```
 
-Better interpolants are available from [NaturalNeighbours.jl](https://github.com/DanielVandH/NaturalNeighbours.jl) - see the [this tutorial](tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.md) for some examples.
+Better interpolants are available from [NaturalNeighbours.jl](https://github.com/DanielVandH/NaturalNeighbours.jl) - see [this tutorial](tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.md) for some examples.

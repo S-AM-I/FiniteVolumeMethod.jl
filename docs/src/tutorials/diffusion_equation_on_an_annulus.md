@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_an_annulus.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_an_annulus.jl"
 ```
 
 ````@example diffusion_equation_on_an_annulus
@@ -9,10 +9,8 @@ nothing #hide
 ````
 
 # Diffusion Equation on an Annulus
-
 In this tutorial, we consider a
 diffusion equation on an annulus:
-
 ```math
 \begin{equation}
 \begin{aligned}
@@ -23,16 +21,13 @@ u(\vb x, t) &= u_0(\vb x),
 \end{aligned}
 \end{equation}
 ```
-
 demonstrating how we can solve PDEs over multiply-connected domains.
 Here, $\mathcal D(0, r)$ is a circle of radius $r$ centred at the origin,
 $\Omega$ is the annulus between $\mathcal D(0,0.2)$ and
 $\mathcal D(0, 1)$, $c(t) = 50[1-\mathrm{e}^{-t/2}]$, and
-
 ```math
 u_0(x) = 10\mathrm{e}^{-25\left[\left(x+\frac12\right)^2+\left(y+\frac12\right)^2\right]} - 10\mathrm{e}^{-45\left[\left(x-\frac12\right)^2+\left(y-\frac12\right)^2\right]} - 5\mathrm{e}^{-50\left[\left(x+\frac{3}{10}\right)^2+\left(y+\frac12\right)^2\right]}.
 ```
-
 For the mesh, we use two `CircularArc`s to define the annulus.
 
 ````@example diffusion_equation_on_an_annulus
@@ -44,7 +39,7 @@ boundary_nodes = [[[outer]], [[inner]]]
 points = NTuple{2, Float64}[]
 tri = triangulate(points; boundary_nodes)
 A = get_area(tri)
-refine!(tri; max_area = 1e-4A)
+refine!(tri; max_area = 1.0e-4A)
 triplot(tri)
 ````
 
@@ -82,20 +77,26 @@ BCs = BoundaryConditions(mesh, (outer_bc, inner_bc), types)
 Finally, let's define the problem and solve it.
 
 ````@example diffusion_equation_on_an_annulus
-initial_condition_f = (x,
-    y) -> begin
+initial_condition_f = (
+    x,
+    y,
+) -> begin
     10 * exp(-25 * ((x + 0.5) * (x + 0.5) + (y + 0.5) * (y + 0.5))) -
-    5 * exp(-50 * ((x + 0.3) * (x + 0.3) + (y + 0.5) * (y + 0.5))) -
-    10 * exp(-45 * ((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)))
+        5 * exp(-50 * ((x + 0.3) * (x + 0.3) + (y + 0.5) * (y + 0.5))) -
+        10 * exp(-45 * ((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)))
 end
 diffusion_function = (x, y, t, u, p) -> one(u)
-initial_condition = [initial_condition_f(x, y)
-                     for (x, y) in DelaunayTriangulation.each_point(tri)]
+initial_condition = [
+    initial_condition_f(x, y)
+        for (x, y) in DelaunayTriangulation.each_point(tri)
+]
 final_time = 2.0
-prob = FVMProblem(mesh, BCs;
+prob = FVMProblem(
+    mesh, BCs;
     diffusion_function,
     final_time,
-    initial_condition)
+    initial_condition
+)
 ````
 
 ````@example diffusion_equation_on_an_annulus
@@ -108,10 +109,12 @@ sol |> tc #hide
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     local ax
-    ax = Axis(fig[1, i], width = 600, height = 600,
+    ax = Axis(
+        fig[1, i], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
         title = "t = $(sol.t[j])",
-        titlealign = :left)
+        titlealign = :left
+    )
     tricontourf!(ax, tri, sol.u[j], levels = -10:2:40, colormap = :matter)
     tightlimits!(ax)
 end
@@ -178,9 +181,13 @@ itp_vals |> tc #hide
 
 ````@example diffusion_equation_on_an_annulus
 fig, ax,
-sc = contourf(
-    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40)
+    sc = contourf(
+    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
+)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures",
+    "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours_bad.png"
 ````
 
 The issue here is that the interpolant is trying to extrapolate inside the hole and
@@ -193,15 +200,17 @@ itp_vals |> tc #hide
 
 ````@example diffusion_equation_on_an_annulus
 fig, ax,
-sc = contourf(
-    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40)
+    sc = contourf(
+    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
+)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures", "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours.png"
 ````
 
 ## Just the code
-
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_an_annulus.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_an_annulus.jl).
 
 ```julia
 using DelaunayTriangulation, FiniteVolumeMethod, CairoMakie
@@ -212,7 +221,7 @@ boundary_nodes = [[[outer]], [[inner]]]
 points = NTuple{2, Float64}[]
 tri = triangulate(points; boundary_nodes)
 A = get_area(tri)
-refine!(tri; max_area = 1e-4A)
+refine!(tri; max_area = 1.0e-4A)
 triplot(tri)
 
 mesh = FVMGeometry(tri)
@@ -231,20 +240,26 @@ inner_bc = (x, y, t, u, p) -> oftype(u, 50(1 - exp(-t / 2)))
 types = (Neumann, Dirichlet)
 BCs = BoundaryConditions(mesh, (outer_bc, inner_bc), types)
 
-initial_condition_f = (x,
-    y) -> begin
+initial_condition_f = (
+    x,
+    y,
+) -> begin
     10 * exp(-25 * ((x + 0.5) * (x + 0.5) + (y + 0.5) * (y + 0.5))) -
-    5 * exp(-50 * ((x + 0.3) * (x + 0.3) + (y + 0.5) * (y + 0.5))) -
-    10 * exp(-45 * ((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)))
+        5 * exp(-50 * ((x + 0.3) * (x + 0.3) + (y + 0.5) * (y + 0.5))) -
+        10 * exp(-45 * ((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)))
 end
 diffusion_function = (x, y, t, u, p) -> one(u)
-initial_condition = [initial_condition_f(x, y)
-                     for (x, y) in DelaunayTriangulation.each_point(tri)]
+initial_condition = [
+    initial_condition_f(x, y)
+        for (x, y) in DelaunayTriangulation.each_point(tri)
+]
 final_time = 2.0
-prob = FVMProblem(mesh, BCs;
+prob = FVMProblem(
+    mesh, BCs;
     diffusion_function,
     final_time,
-    initial_condition)
+    initial_condition
+)
 
 using OrdinaryDiffEq, LinearSolve
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 0.2)
@@ -252,10 +267,12 @@ sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 0.2)
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     local ax
-    ax = Axis(fig[1, i], width = 600, height = 600,
+    ax = Axis(
+        fig[1, i], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
         title = "t = $(sol.t[j])",
-        titlealign = :left)
+        titlealign = :left
+    )
     tricontourf!(ax, tri, sol.u[j], levels = -10:2:40, colormap = :matter)
     tightlimits!(ax)
 end
@@ -291,18 +308,26 @@ itp = interpolate(tri, u, derivatives = true)
 itp_vals = itp(_x, _y; method = Farin())
 
 fig, ax,
-sc = contourf(
-    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40)
+    sc = contourf(
+    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
+)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures",
+    "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours_bad.png"
 
 itp_vals = itp(_x, _y; method = Farin(), project = false)
 
 fig, ax,
-sc = contourf(
-    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40)
+    sc = contourf(
+    x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
+)
 fig
+@test_reference joinpath(
+    @__DIR__, "../figures", "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours.png"
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

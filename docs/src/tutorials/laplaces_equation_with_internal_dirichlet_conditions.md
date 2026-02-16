@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/laplaces_equation_with_internal_dirichlet_conditions.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/laplaces_equation_with_internal_dirichlet_conditions.jl"
 ```
 
 ````@example laplaces_equation_with_internal_dirichlet_conditions
@@ -9,10 +9,8 @@ nothing #hide
 ````
 
 # Laplace's Equation with Internal Dirichlet Conditions
-
 In this tutorial, we consider Laplace's equation with some additional complexity
 put into the problem via internal Dirichlet conditions:
-
 ```math
 \begin{equation}
 \begin{aligned}
@@ -25,7 +23,6 @@ u(1/2, y) &= 0 & 0 \leq y \leq 2/5.
 \end{aligned}
 \end{equation}
 ```
-
 To start with solving this problem, let us define an initial mesh.
 
 ````@example laplaces_equation_with_internal_dirichlet_conditions
@@ -40,6 +37,7 @@ We do not need to add any constrained edges in this case, since these internal
 conditions are enforced only at points.
 
 [^1]: Of course, by defining the grid spacing appropriately we could have such points, but we just want to show here how we can add these points in if needed.
+
 Let us now add in the points.
 
 ````@example laplaces_equation_with_internal_dirichlet_conditions
@@ -55,7 +53,7 @@ fig
 It may also help to refine the mesh slightly.
 
 ````@example laplaces_equation_with_internal_dirichlet_conditions
-refine!(tri, max_area = 1e-4)
+refine!(tri, max_area = 1.0e-4)
 fig, ax, sc = triplot(tri)
 fig
 ````
@@ -110,8 +108,10 @@ condition for that vertex. In this case, that function index
 is `1` as we only have a single function.
 
 ````@example laplaces_equation_with_internal_dirichlet_conditions
-ICs = InternalConditions((x, y, t, u, p) -> zero(u),
-    dirichlet_nodes = Dict(vertices .=> 1))
+ICs = InternalConditions(
+    (x, y, t, u, p) -> zero(u),
+    dirichlet_nodes = Dict(vertices .=> 1)
+)
 ````
 
 Now we can define the problem. As discussed in
@@ -137,10 +137,12 @@ provided as the third argument of `FVMProblem`.
 ````@example laplaces_equation_with_internal_dirichlet_conditions
 diffusion_function = (x, y, t, u, p) -> one(u) # ∇²u = ∇⋅[D∇u], D = 1
 final_time = Inf
-prob = FVMProblem(mesh, BCs, ICs;
+prob = FVMProblem(
+    mesh, BCs, ICs;
     diffusion_function,
     initial_condition,
-    final_time)
+    final_time
+)
 ````
 
 ````@example laplaces_equation_with_internal_dirichlet_conditions
@@ -162,9 +164,8 @@ fig
 ````
 
 ## Just the code
-
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/laplaces_equation_with_internal_dirichlet_conditions.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/laplaces_equation_with_internal_dirichlet_conditions.jl).
 
 ```julia
 using DelaunayTriangulation, FiniteVolumeMethod
@@ -178,7 +179,7 @@ end
 fig, ax, sc = triplot(tri)
 fig
 
-refine!(tri, max_area = 1e-4)
+refine!(tri, max_area = 1.0e-4)
 fig, ax, sc = triplot(tri)
 fig
 
@@ -208,8 +209,10 @@ points = [get_point(tri, i) for i in vertices]
 scatter!(ax, points, color = :red, markersize = 10)
 fig
 
-ICs = InternalConditions((x, y, t, u, p) -> zero(u),
-    dirichlet_nodes = Dict(vertices .=> 1))
+ICs = InternalConditions(
+    (x, y, t, u, p) -> zero(u),
+    dirichlet_nodes = Dict(vertices .=> 1)
+)
 
 initial_condition = zeros(DelaunayTriangulation.num_points(tri))
 for i in each_solid_vertex(tri)
@@ -219,10 +222,12 @@ end
 
 diffusion_function = (x, y, t, u, p) -> one(u) # ∇²u = ∇⋅[D∇u], D = 1
 final_time = Inf
-prob = FVMProblem(mesh, BCs, ICs;
+prob = FVMProblem(
+    mesh, BCs, ICs;
     diffusion_function,
     initial_condition,
-    final_time)
+    final_time
+)
 
 steady_prob = SteadyFVMProblem(prob)
 
@@ -234,6 +239,7 @@ tightlimits!(ax)
 fig
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

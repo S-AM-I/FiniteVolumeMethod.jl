@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl"
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl"
 ```
 
 ````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
@@ -12,7 +12,6 @@ nothing #hide
 
 In this tutorial, we explore some pattern formation from the
 Gray-Scott model:
-
 ```math
 \begin{equation}
 \begin{aligned}
@@ -21,17 +20,14 @@ Gray-Scott model:
 \end{aligned}
 \end{equation}
 ```
-
 where $u$ and $v$ are the concentrations of two chemical species. The
 initial conditions we use are:
-
 ```math
 \begin{align*}
 u(x, y, 0) &= 1 -\exp\left[-80\left(x^2 + y^2\right)\right], \\
 v(x, y, 0) &= \exp\left[-80\left(x^2+y^2\right)\right].
 \end{align*}
 ```
-
 The domain we use is $[-1, 1]^2$, and we use
 zero flux boundary conditions.
 
@@ -61,17 +57,21 @@ v_qp = ε₂
 u_Sp = b
 v_Sp = d
 u_icf = (x, y) -> 1 - exp(-80 * (x^2 + y^2))
-v_icf = (x, y) -> exp(-80 * (x ^ 2 + y^2))
+v_icf = (x, y) -> exp(-80 * (x^2 + y^2))
 u_ic = [u_icf(x, y) for (x, y) in DelaunayTriangulation.each_point(tri)]
 v_ic = [v_icf(x, y) for (x, y) in DelaunayTriangulation.each_point(tri)]
-u_prob = FVMProblem(mesh, u_BCs;
+u_prob = FVMProblem(
+    mesh, u_BCs;
     flux_function = u_q, flux_parameters = u_qp,
     source_function = u_S, source_parameters = u_Sp,
-    initial_condition = u_ic, final_time = 6000.0)
-v_prob = FVMProblem(mesh, v_BCs;
+    initial_condition = u_ic, final_time = 6000.0
+)
+v_prob = FVMProblem(
+    mesh, v_BCs;
     flux_function = v_q, flux_parameters = v_qp,
     source_function = v_S, source_parameters = v_Sp,
-    initial_condition = v_ic, final_time = 6000.0)
+    initial_condition = v_ic, final_time = 6000.0
+)
 prob = FVMSystem(u_prob, v_prob)
 ````
 
@@ -96,18 +96,28 @@ x = LinRange(-1, 1, 200)
 y = LinRange(-1, 1, 200)
 heatmap!(ax, x, y, u, colorrange = (0.0, 0.4))
 hidedecorations!(ax)
-record(fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol);
-    framerate = 60) do _i
+record(
+    fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol);
+    framerate = 60
+) do _i
     i[] = _i
 end
 ````
 
 ![Animation of the Gray-Scott model](../figures/gray_scott_patterns.mp4)
 
-## Just the code
+````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
+    ax = Axis(
+        fig[plotij[i]...], width = 600, height = 600,
+        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
+    ax = Axis(
+        fig[plotij[i]...], width = 600, height = 600,
+        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
+````
 
+## Just the code
 An uncommented version of this example is given below.
-You can view the source code for this file [here](https://github.com/SciML/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl).
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl).
 
 ```julia
 using FiniteVolumeMethod, DelaunayTriangulation
@@ -131,17 +141,21 @@ v_qp = ε₂
 u_Sp = b
 v_Sp = d
 u_icf = (x, y) -> 1 - exp(-80 * (x^2 + y^2))
-v_icf = (x, y) -> exp(-80 * (x ^ 2 + y^2))
+v_icf = (x, y) -> exp(-80 * (x^2 + y^2))
 u_ic = [u_icf(x, y) for (x, y) in DelaunayTriangulation.each_point(tri)]
 v_ic = [v_icf(x, y) for (x, y) in DelaunayTriangulation.each_point(tri)]
-u_prob = FVMProblem(mesh, u_BCs;
+u_prob = FVMProblem(
+    mesh, u_BCs;
     flux_function = u_q, flux_parameters = u_qp,
     source_function = u_S, source_parameters = u_Sp,
-    initial_condition = u_ic, final_time = 6000.0)
-v_prob = FVMProblem(mesh, v_BCs;
+    initial_condition = u_ic, final_time = 6000.0
+)
+v_prob = FVMProblem(
+    mesh, v_BCs;
     flux_function = v_q, flux_parameters = v_qp,
     source_function = v_S, source_parameters = v_Sp,
-    initial_condition = v_ic, final_time = 6000.0)
+    initial_condition = v_ic, final_time = 6000.0
+)
 prob = FVMSystem(u_prob, v_prob)
 
 using OrdinaryDiffEq, LinearSolve
@@ -157,12 +171,22 @@ x = LinRange(-1, 1, 200)
 y = LinRange(-1, 1, 200)
 heatmap!(ax, x, y, u, colorrange = (0.0, 0.4))
 hidedecorations!(ax)
-record(fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol);
-    framerate = 60) do _i
+record(
+    fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol);
+    framerate = 60
+) do _i
     i[] = _i
 end
+
+    ax = Axis(
+        fig[plotij[i]...], width = 600, height = 600,
+        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
+    ax = Axis(
+        fig[plotij[i]...], width = 600, height = 600,
+        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
 ```
 
-* * *
+---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

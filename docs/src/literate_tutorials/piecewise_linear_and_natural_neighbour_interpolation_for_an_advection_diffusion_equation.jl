@@ -1,6 +1,6 @@
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
-# # Piecewise Linear and Natural Neighbour Inteprolation for an Advection-Diffusion Equation
+# # Piecewise Linear and Natural Neighbour Interpolation for an Advection-Diffusion Equation
 # In this tutorial, we have three aims:
 #
 # 1. Demonstrate how to solve an advection-diffusion equation.
