@@ -97,7 +97,7 @@ end
     return bc.state
 end
 
-@inline function boundary_ghost_state(::ReflectiveBC, law::EulerEquations{2}, w, nx, ny)
+@inline function boundary_ghost_state(::ReflectiveBC, law::EulerEquations{2}, w::SVector{4}, nx, ny)
     rho, vx, vy, P = w
     # Reflect normal velocity: v_ghost = v - 2*(v·n)*n
     vn = vx * nx + vy * ny

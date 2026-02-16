@@ -18,7 +18,7 @@ using PreallocationTools: PreallocationTools, DiffCache, get_tmp
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, LinearProblem,
     MatrixOperator, ODEFunction, ODEProblem, SteadyStateProblem
 using SparseArrays: SparseArrays, sparse
-using StaticArrays: StaticArrays, SVector, SMatrix
+using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
 include("geometry.jl")

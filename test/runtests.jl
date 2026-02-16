@@ -161,7 +161,8 @@ end
     end
 
     @testset verbose = true "Aqua" begin
-        Aqua.test_all(FiniteVolumeMethod; ambiguities = false, project_extras = false) # don't care about julia < 1.2
+        Aqua.test_all(FiniteVolumeMethod; ambiguities = false, project_extras = false, unbound_args = false) # don't care about julia < 1.2
+        Aqua.test_unbound_args(FiniteVolumeMethod; broken = true) # Val{N} pattern in AMR constructors is a known false positive
         Aqua.test_ambiguities(FiniteVolumeMethod) # don't pick up Base and Core...
     end
 
