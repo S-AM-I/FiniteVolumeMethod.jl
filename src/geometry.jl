@@ -50,9 +50,9 @@ struct FVMGeometry{T, S, C <: AbstractCoordinateSystem}
 end
 function Base.:(==)(a::FVMGeometry, b::FVMGeometry)
     return a.triangulation === b.triangulation &&
-           a.cv_volumes == b.cv_volumes &&
-           a.triangle_props == b.triangle_props &&
-           a.coordinate_system == b.coordinate_system
+        a.cv_volumes == b.cv_volumes &&
+        a.triangle_props == b.triangle_props &&
+        a.coordinate_system == b.coordinate_system
 end
 function Base.show(io::IO, ::MIME"text/plain", geo::FVMGeometry)
     nv = DelaunayTriangulation.num_solid_vertices(geo.triangulation_statistics)
@@ -105,7 +105,7 @@ function build_vertex_map(tri::Triangulation)
 end
 =#
 
-function FVMGeometry(tri::Triangulation; coordinate_system::AbstractCoordinateSystem=Cartesian())
+function FVMGeometry(tri::Triangulation; coordinate_system::AbstractCoordinateSystem = Cartesian())
     stats = statistics(tri)
     nn = DelaunayTriangulation.num_points(tri)
     nt = num_solid_triangles(stats)
