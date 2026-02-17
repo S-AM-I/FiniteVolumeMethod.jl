@@ -7,7 +7,9 @@ FiniteVolumeMethod.jl is a comprehensive Julia package for solving 2D/3D partial
 **Parabolic/Elliptic (Triangular FVM):**
 - Generic form: ∂u/∂t + ∇·q(x, t, u) = S(x, t, u)
 - Control volumes around mesh vertices; flux evaluation at CV edges via linear shape functions
-- Optimized templates: DiffusionEquation, PoissonsEquation, LaplacesEquation, LinearReactionDiffusionEquation, MeanExitTimeProblem, AdvectionDiffusionEquation, AnisotropicDiffusionEquation
+- Coordinate systems: Cartesian, Cylindrical (axisymmetric r,z), Spherical (r,θ) — Jacobian weighting on volumes and fluxes
+- Included templates: AdvectionDiffusionEquation, AnisotropicDiffusionEquation
+- Reference implementations (wyos, not module-included): DiffusionEquation, PoissonsEquation, LaplacesEquation, LinearReactionDiffusionEquation, MeanExitTimeProblem
 - BCs: Dirichlet, Neumann, Robin, Dudt, Constrained, plus nonlinear, periodic, and coupled variants
 
 **Hyperbolic (Cell-Centered FVM):**
@@ -20,6 +22,7 @@ FiniteVolumeMethod.jl is a comprehensive Julia package for solving 2D/3D partial
 - Block-structured AMR with Berger-Colella flux correction and multi-rate subcycling
 - IMEX time integration: SSP3_433, ARS222, Midpoint
 - Spacetime metrics: Minkowski, Schwarzschild, Kerr (for GRMHD)
+- Multi-physics coupling via operator splitting (Lie-Trotter, Strang)
 
 **Gradient Reconstruction:** Green-Gauss, Least-Squares
 
@@ -30,6 +33,7 @@ FiniteVolumeMethod.jl is a comprehensive Julia package for solving 2D/3D partial
 - StaticArrays (SVector) for conserved variable tuples in the hyperbolic solver.
 - PreallocationTools (DiffCache) for automatic differentiation compatibility.
 - Threading via ChunkSplitters for parallel 2D hyperbolic solves.
+- Formatting: Runic.jl (enforced by CI).
 - Current version: 1.2.0.
 
 ## Key References

@@ -1,13 +1,15 @@
 # ROADMAP — FiniteVolumeMethod.jl
 
 ## Current Milestone
-**Documentation and CI stability** — Ensure documentation builds and deploys correctly, fix remaining known test failures, and stabilize CI pipeline.
+**Test coverage and CI hygiene** — Ensure all tests run in CI, clean up stale artifacts, and stabilize documentation.
 
 ## Objectives
 
-- [ ] Migrate cylindrical/spherical coordinate assembly from Simu.jl's SimuFVM (required for CRUD.jl — curvilinear FVM on PWR fuel rod geometry)
-- [ ] Fix Aqua.jl compat bounds (missing entries for LinearAlgebra, SparseArrays, Test in Project.toml)
-- [ ] Fix reference image PSNR test threshold (slightly below 25 in one tutorial)
+- [x] Migrate cylindrical/spherical coordinate assembly from Simu.jl's SimuFVM (landed in `a545f6b`)
+- [ ] Add `test_coordinate_systems.jl` to `runtests.jl` (11 tests exist but are not invoked)
+- [ ] Remove or recreate `keller_segel_chemotaxis` tutorial (file deleted but still in docs `_PAGES`)
+- [ ] Clean up stale CI log directories (`logs/`, `logs_57507113439/`)
+- [ ] Fix reference image PSNR test threshold (CI workaround: `JULIA_REFERENCETESTS_UPDATE=true`)
 - [ ] Expand tutorials for advanced features (AMR, GRMHD, operator splitting)
 - [ ] Verify documentation deployment pipeline (Documenter.jl + GitHub Pages)
 
