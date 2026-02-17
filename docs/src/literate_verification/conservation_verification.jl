@@ -52,7 +52,7 @@ total_energy = Float64[]
 mesh = StructuredMesh1D(0.0, 1.0, N)
 
 ## Initial state: compute conserved quantities from IC
-begin
+let
     m = 0.0
     mom = 0.0
     en = 0.0

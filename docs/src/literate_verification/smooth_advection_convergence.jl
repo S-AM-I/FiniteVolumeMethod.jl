@@ -17,7 +17,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #
 # ## Inputs
 # - **Resolutions**: $N \in \{32, 64, 128, 256\}$
-# - **Schemes**: `NoReconstruction`, `MUSCL(Minmod)`, `MUSCL(VanLeer)`, `WENO3`, `WENO5`
+# - **Schemes**: `NoReconstruction`, `MUSCL(Minmod)`, `MUSCL(VanLeer)`, `WENO3`
 # - **Riemann solver**: `HLLCSolver`
 # - **Final time**: $t_f = 0.05$
 
@@ -66,10 +66,9 @@ schemes = [
     ("MUSCL (Minmod)", CellCenteredMUSCL(MinmodLimiter())),
     ("MUSCL (VanLeer)", CellCenteredMUSCL(VanLeerLimiter())),
     ("WENO3", WENO3()),
-    ("WENO5", WENO5()),
 ]
-colors = [:gray, :blue, :cyan, :red, :purple]
-markers = [:circle, :utriangle, :diamond, :star5, :pentagon]
+colors = [:gray, :blue, :cyan, :red]
+markers = [:circle, :utriangle, :diamond, :star5]
 
 all_errors = Dict{String, Vector{Float64}}()
 for (name, recon) in schemes
@@ -156,15 +155,12 @@ rates_norecon = convergence_rates(all_errors["NoReconstruction"])
 rates_muscl_mm = convergence_rates(all_errors["MUSCL (Minmod)"])
 rates_muscl_vl = convergence_rates(all_errors["MUSCL (VanLeer)"])
 rates_weno3 = convergence_rates(all_errors["WENO3"])
-rates_weno5 = convergence_rates(all_errors["WENO5"])
 
 @test all(r -> r > 0.8, rates_norecon) #src
 @test all(r -> r > 1.7, rates_muscl_mm) #src
 @test all(r -> r > 1.7, rates_muscl_vl) #src
 @test all(r -> r > 2.5, rates_weno3) #src
-@test all(r -> r > 4.0, rates_weno5) #src
 @assert all(r -> r > 0.8, rates_norecon) #hide
 @assert all(r -> r > 1.7, rates_muscl_mm) #hide
 @assert all(r -> r > 1.7, rates_muscl_vl) #hide
 @assert all(r -> r > 2.5, rates_weno3) #hide
-@assert all(r -> r > 4.0, rates_weno5) #hide

@@ -36,6 +36,8 @@ bc_poisson(x, y, t, u, p) = zero(u)
 mesh_sizes = [10, 20, 40, 80]
 errors_Linf = Float64[]
 errors_L2 = Float64[]
+last_tri = nothing
+last_sol = nothing
 
 for N in mesh_sizes
     tri = triangulate_rectangle(0.0, 1.0, 0.0, 1.0, N, N; single_boundary = true)
@@ -53,6 +55,10 @@ for N in mesh_sizes
     )
     steady_prob = SteadyFVMProblem(prob)
     sol = solve(steady_prob, DynamicSS(Rosenbrock23()))
+
+    ## Cache finest mesh result for visualisation
+    global last_tri = tri
+    global last_sol = sol
 
     ## Compute errors
     err_inf = 0.0
@@ -78,19 +84,8 @@ rates_L2 = convergence_rates(errors_L2)
 
 # ## Visualisation — Solution Comparison
 # Three panels at the finest mesh: numerical, exact, and error.
-N_fine = mesh_sizes[end]
-tri_fine = triangulate_rectangle(0.0, 1.0, 0.0, 1.0, N_fine, N_fine; single_boundary = true)
-mesh_fine = FVMGeometry(tri_fine)
-BCs_fine = BoundaryConditions(mesh_fine, bc_poisson, Dirichlet)
-ic_fine = zeros(DelaunayTriangulation.num_points(tri_fine))
-prob_fine = FVMProblem(
-    mesh_fine, BCs_fine;
-    diffusion_function = D_poisson,
-    source_function = source_poisson,
-    initial_condition = ic_fine,
-    final_time = Inf
-)
-sol_fine = solve(SteadyFVMProblem(prob_fine), DynamicSS(Rosenbrock23()))
+tri_fine = last_tri
+sol_fine = last_sol
 
 u_num = sol_fine.u
 u_ex = [u_exact(x, y) for (x, y) in DelaunayTriangulation.each_point(tri_fine)]

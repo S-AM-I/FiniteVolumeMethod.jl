@@ -84,8 +84,8 @@ prob_fine = HyperbolicProblem2D(
 coords_fine, U_fine, t_fine, ct_fine = solve_hyperbolic(prob_fine; vector_potential = Az_loop)
 
 nx, ny = N_fine, N_fine
-xc = [coords_fine[1][i] for i in 1:nx]
-yc = [coords_fine[2][j] for j in 1:ny]
+xc = [coords_fine[i, 1][1] for i in 1:nx]
+yc = [coords_fine[1, j][2] for j in 1:ny]
 
 Bmag = [
     begin
