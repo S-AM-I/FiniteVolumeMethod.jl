@@ -94,7 +94,16 @@ if RUN_EXAMPLES
         "hyperbolic/tutorials/srmhd_cylindrical_blast.jl",
     ]
     mkpath(joinpath(@__DIR__, "src", "hyperbolic", "tutorials"))
-    example_files = vcat(tutorial_files, wyos_files, hyperbolic_tutorial_files)
+    mkpath(joinpath(@__DIR__, "src", "verification"))
+    verification_files = [
+        "verification/mms_convergence.jl",
+        "verification/poisson_convergence.jl",
+        "verification/smooth_advection_convergence.jl",
+        "verification/sod_grid_convergence.jl",
+        "verification/conservation_verification.jl",
+        "verification/mhd_divb_verification.jl",
+    ]
+    example_files = vcat(tutorial_files, wyos_files, hyperbolic_tutorial_files, verification_files)
     session_tmp = mktempdir()
 
     map(1:length(example_files)) do n
@@ -160,6 +169,22 @@ if !RUN_EXAMPLES
             )
         end
     end
+    outputdir_ver = joinpath(@__DIR__, "src", "verification")
+    mkpath(outputdir_ver)
+    srcdir_ver = joinpath(@__DIR__, "src", "literate_verification")
+    if isdir(srcdir_ver)
+        for file in readdir(srcdir_ver)
+            endswith(file, ".jl") || continue
+            Literate.markdown(
+                joinpath(srcdir_ver, file),
+                outputdir_ver;
+                documenter = true,
+                execute = false,
+                flavor = Literate.DocumenterFlavor(),
+                name = splitext(file)[1]
+            )
+        end
+    end
 end
 
 using FiniteVolumeMethod
@@ -216,6 +241,15 @@ _PAGES = [
         "Linear Reaction-Diffusion Equations" => "wyos/linear_reaction_diffusion_equations.md",
         "Poisson's Equation" => "wyos/poissons_equation.md",
         "Laplace's Equation" => "wyos/laplaces_equation.md",
+    ],
+    "Verification & Validation" => [
+        "Overview" => "verification/overview.md",
+        "MMS Convergence (Parabolic)" => "verification/mms_convergence.md",
+        "Poisson Equation Convergence" => "verification/poisson_convergence.md",
+        "Smooth Advection Order of Accuracy" => "verification/smooth_advection_convergence.md",
+        "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
+        "Conservation Verification" => "verification/conservation_verification.md",
+        "MHD div(B) Preservation" => "verification/mhd_divb_verification.md",
     ],
     "Mathematical Details" => [
         "General FVM Theory" => "finite-volume-method.md",

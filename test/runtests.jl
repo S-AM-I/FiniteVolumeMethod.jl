@@ -160,6 +160,26 @@ end
         safe_include(joinpath(dir, file_names[5]); name = file_names[5]) # laplaces_equation
     end
 
+    @testset verbose = true "Verification" begin
+        dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_verification")
+        files = readdir(dir)
+        file_names = [
+            "conservation_verification.jl",
+            "mhd_divb_verification.jl",
+            "mms_convergence.jl",
+            "poisson_convergence.jl",
+            "smooth_advection_convergence.jl",
+            "sod_grid_convergence.jl",
+        ]
+        @test length(files) == length(file_names)
+        safe_include(joinpath(dir, file_names[1]); name = file_names[1])
+        safe_include(joinpath(dir, file_names[2]); name = file_names[2])
+        safe_include(joinpath(dir, file_names[3]); name = file_names[3])
+        safe_include(joinpath(dir, file_names[4]); name = file_names[4])
+        safe_include(joinpath(dir, file_names[5]); name = file_names[5])
+        safe_include(joinpath(dir, file_names[6]); name = file_names[6])
+    end
+
     @testset verbose = true "Aqua" begin
         Aqua.test_all(FiniteVolumeMethod; ambiguities = false, project_extras = false, unbound_args = false) # don't care about julia < 1.2
         Aqua.test_unbound_args(FiniteVolumeMethod; broken = true) # Val{N} pattern in AMR constructors is a known false positive
