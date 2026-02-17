@@ -22,6 +22,7 @@ abstract type AbstractFVMProblem end
 @inline get_triangle_props(prob::AbstractFVMProblem, i, j, k) = get_triangle_props(prob.mesh, i, j, k)
 @inline DelaunayTriangulation.get_point(prob::AbstractFVMProblem, i) = get_point(prob.mesh, i)
 @inline get_volume(prob::AbstractFVMProblem, i) = get_volume(prob.mesh, i)
+@inline get_coordinate_system(prob::AbstractFVMProblem) = prob.mesh.coordinate_system
 @inline get_dirichlet_nodes(prob::AbstractFVMProblem) = get_dirichlet_nodes(prob.conditions)
 
 """

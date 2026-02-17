@@ -41,17 +41,26 @@ This is a constructor for the [`FVMGeometry`](@ref) struct, which holds the mesh
   - `cv_volumes::Vector{Float64}`: A `Vector` of the volumes of each control volume.
   - `triangle_props::Dict{NTuple{3,Int},TriangleProperties}`: A `Dict` mapping the indices of each triangle to its [`TriangleProperties`].
 """
-struct FVMGeometry{T, S}
+struct FVMGeometry{T, S, C <: AbstractCoordinateSystem}
     triangulation::T
     triangulation_statistics::S
     cv_volumes::Vector{Float64}
     triangle_props::Dict{NTuple{3, Int}, TriangleProperties}
+    coordinate_system::C
+end
+function Base.:(==)(a::FVMGeometry, b::FVMGeometry)
+    return a.triangulation === b.triangulation &&
+           a.cv_volumes == b.cv_volumes &&
+           a.triangle_props == b.triangle_props &&
+           a.coordinate_system == b.coordinate_system
 end
 function Base.show(io::IO, ::MIME"text/plain", geo::FVMGeometry)
     nv = DelaunayTriangulation.num_solid_vertices(geo.triangulation_statistics)
     nt = DelaunayTriangulation.num_solid_triangles(geo.triangulation_statistics)
     ne = DelaunayTriangulation.num_solid_edges(geo.triangulation_statistics)
-    return print(io, "FVMGeometry with $(nv) control volumes, $(nt) triangles, and $(ne) edges")
+    cs = geo.coordinate_system
+    cs_str = cs isa Cartesian ? "" : " ($(nameof(typeof(cs))) coordinates)"
+    return print(io, "FVMGeometry with $(nv) control volumes, $(nt) triangles, and $(ne) edges$(cs_str)")
 end
 """
     get_triangle_props(mesh, i, j, k)
@@ -96,7 +105,7 @@ function build_vertex_map(tri::Triangulation)
 end
 =#
 
-function FVMGeometry(tri::Triangulation)
+function FVMGeometry(tri::Triangulation; coordinate_system::AbstractCoordinateSystem=Cartesian())
     stats = statistics(tri)
     nn = DelaunayTriangulation.num_points(tri)
     nt = num_solid_triangles(stats)
@@ -130,9 +139,14 @@ function FVMGeometry(tri::Triangulation)
         S₁ = 1 / 2 * abs(pcx * m₁₃y - pcy * m₁₃x)
         S₂ = 1 / 2 * abs(qcx * m₂₁y - qcy * m₂₁x)
         S₃ = 1 / 2 * abs(rcx * m₃₂y - rcy * m₃₂x)
-        cv_volumes[i] += S₁
-        cv_volumes[j] += S₂
-        cv_volumes[k] += S₃
+        # Apply geometric weighting for non-Cartesian coordinates
+        # Use midpoint between vertex and centroid as representative point
+        w₁ = geometric_volume_weight(coordinate_system, (px + cx) / 2, (py + cy) / 2)
+        w₂ = geometric_volume_weight(coordinate_system, (qx + cx) / 2, (qy + cy) / 2)
+        w₃ = geometric_volume_weight(coordinate_system, (rx + cx) / 2, (ry + cy) / 2)
+        cv_volumes[i] += S₁ * w₁
+        cv_volumes[j] += S₂ * w₂
+        cv_volumes[k] += S₃ * w₃
         ## Next, we need to compute the shape function coefficients
         Δ = qx * ry - qy * rx - px * ry + rx * py + px * qy - qx * py
         s₁ = (qy - ry) / Δ
@@ -165,5 +179,5 @@ function FVMGeometry(tri::Triangulation)
             ((n₁x, n₁y), (n₂x, n₂y), (n₃x, n₃y)), (ℓ₁, ℓ₂, ℓ₃)
         )
     end
-    return FVMGeometry(tri, stats, cv_volumes, triangle_props)
+    return FVMGeometry(tri, stats, cv_volumes, triangle_props, coordinate_system)
 end

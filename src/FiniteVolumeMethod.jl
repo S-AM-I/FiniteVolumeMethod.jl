@@ -21,6 +21,7 @@ using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
+include("coordinate_systems.jl")
 include("geometry.jl")
 include("conditions.jl")
 include("problem.jl")
@@ -194,6 +195,14 @@ export FVMGeometry,
     solve,
     compute_flux,
     pl_interpolate,
+    # Coordinate systems
+    AbstractCoordinateSystem,
+    Cartesian,
+    Cylindrical,
+    Spherical,
+    geometric_volume_weight,
+    geometric_flux_weight,
+    get_coordinate_system,
     # Flux limiters
     AbstractLimiter,
     MinmodLimiter,

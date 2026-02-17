@@ -50,7 +50,9 @@ end
     nx, ny, mᵢx, mᵢy, mⱼx, mⱼy, ℓ = get_boundary_cv_components(prob.mesh, i, j)
     q1 = _get_boundary_flux(prob, mᵢx, mᵢy, t, α, β, γ, nx, ny, i, j, α * mᵢx + β * mᵢy + γ)
     q2 = _get_boundary_flux(prob, mⱼx, mⱼy, t, α, β, γ, nx, ny, i, j, α * mⱼx + β * mⱼy + γ)
-    return q1 * ℓ, q2 * ℓ
+    w1 = geometric_flux_weight(get_coordinate_system(prob), mᵢx, mᵢy)
+    w2 = geometric_flux_weight(get_coordinate_system(prob), mⱼx, mⱼy)
+    return q1 * ℓ * w1, q2 * ℓ * w2
 end
 
 # function for getting both fluxes for a system problem
@@ -58,8 +60,10 @@ end
     nx, ny, mᵢx, mᵢy, mⱼx, mⱼy, ℓ = get_boundary_cv_components(prob.mesh, i, j)
     u_shapeᵢ = ntuple(var -> α[var] * mᵢx + β[var] * mᵢy + γ[var], _neqs(prob))
     u_shapeⱼ = ntuple(var -> α[var] * mⱼx + β[var] * mⱼy + γ[var], _neqs(prob))
-    q1 = _get_boundary_fluxes(prob, mᵢx, mᵢy, t, α, β, γ, nx, ny, i, j, u_shapeᵢ, ℓ)
-    q2 = _get_boundary_fluxes(prob, mⱼx, mⱼy, t, α, β, γ, nx, ny, i, j, u_shapeⱼ, ℓ)
+    w1 = geometric_flux_weight(get_coordinate_system(prob), mᵢx, mᵢy)
+    w2 = geometric_flux_weight(get_coordinate_system(prob), mⱼx, mⱼy)
+    q1 = _get_boundary_fluxes(prob, mᵢx, mᵢy, t, α, β, γ, nx, ny, i, j, u_shapeᵢ, ℓ * w1)
+    q2 = _get_boundary_fluxes(prob, mⱼx, mⱼy, t, α, β, γ, nx, ny, i, j, u_shapeⱼ, ℓ * w2)
     return q1, q2
 end
 

@@ -59,7 +59,8 @@ end
     ) where {A, T}
     x, y, nx, ny, ℓ = get_cv_components(props, edge_index)
     qn = _get_flux(prob, x, y, t, α, β, γ, nx, ny)
-    return qn * ℓ
+    w = geometric_flux_weight(get_coordinate_system(prob), x, y)
+    return qn * ℓ * w
 end
 
 # primitive: get flux contribution for a system without a boundary condition for a single variable. This is used as a function barrier
@@ -73,8 +74,9 @@ end
 function get_flux(prob::FVMSystem, props, α::A, β, γ, t::T, edge_index) where {A, T}
     x, y, nx, ny, ℓ = get_cv_components(props, edge_index)
     q = eval_flux_function(prob, x, y, t, α, β, γ)
+    w = geometric_flux_weight(get_coordinate_system(prob), x, y)
     qn = ntuple(_neqs(prob)) do var
-        _get_flux(nx, ny, q, ℓ, var)
+        _get_flux(nx, ny, q, ℓ * w, var)
     end
     return qn
 end
