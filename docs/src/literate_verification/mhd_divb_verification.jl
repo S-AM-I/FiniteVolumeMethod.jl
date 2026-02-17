@@ -89,9 +89,9 @@ yc = [coords_fine[2][j] for j in 1:ny]
 
 Bmag = [
     begin
-        w = conserved_to_primitive(law, U_fine[i, j])
-        sqrt(w[6]^2 + w[7]^2)
-    end for i in 1:nx, j in 1:ny
+            w = conserved_to_primitive(law, U_fine[i, j])
+            sqrt(w[6]^2 + w[7]^2)
+        end for i in 1:nx, j in 1:ny
 ]
 
 divB_field = compute_divB(ct_fine, mesh_fine.dx, mesh_fine.dy, nx, ny)
@@ -100,7 +100,7 @@ divB_abs = abs.(divB_field)
 fig1 = Figure(fontsize = 24, size = (1100, 500))
 ax1 = Axis(
     fig1[1, 1], xlabel = "x", ylabel = "y",
-    title = "|B| at t = $(round(t_fine, digits=2))", aspect = DataAspect()
+    title = "|B| at t = $(round(t_fine, digits = 2))", aspect = DataAspect()
 )
 hm1 = heatmap!(ax1, xc, yc, Bmag, colormap = :viridis)
 Colorbar(fig1[1, 2], hm1)
@@ -129,5 +129,5 @@ fig2
 
 # ## Test Assertions
 # All max|div(B)| values should be at machine precision, independent of N.
-@test all(d -> d < 1e-12, divB_max_values) #src
-@assert all(d -> d < 1e-12, divB_max_values) #hide
+@test all(d -> d < 1.0e-12, divB_max_values) #src
+@assert all(d -> d < 1.0e-12, divB_max_values) #hide

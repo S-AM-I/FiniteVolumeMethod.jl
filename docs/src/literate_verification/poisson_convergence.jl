@@ -130,7 +130,7 @@ lines!(
 axislegend(ax, position = :rb)
 for i in eachindex(rates_Linf)
     x_mid = sqrt(h_vals[i] * h_vals[i + 1])
-    text!(ax, x_mid, errors_Linf[i] * 0.6; text = "$(round(rates_Linf[i], digits=2))", fontsize = 14, color = :blue)
+    text!(ax, x_mid, errors_Linf[i] * 0.6; text = "$(round(rates_Linf[i], digits = 2))", fontsize = 14, color = :blue)
 end
 resize_to_layout!(fig2)
 fig2

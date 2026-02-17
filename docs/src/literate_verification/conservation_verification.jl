@@ -126,7 +126,7 @@ momentum_err = [abs(total_momentum[i] - total_momentum[1]) / abs(total_momentum[
 energy_err = [abs(total_energy[i] - total_energy[1]) / abs(total_energy[1]) for i in eachindex(total_energy)]
 
 ## Replace exact zeros with a small value for log-scale plotting
-eps_floor = 1e-16
+eps_floor = 1.0e-16
 mass_err_plot = max.(mass_err, eps_floor)
 momentum_err_plot = max.(momentum_err, eps_floor)
 energy_err_plot = max.(energy_err, eps_floor)
@@ -150,9 +150,9 @@ fig
 @test_reference joinpath(@__DIR__, "../figures", "conservation_verification.png") fig #src
 
 # ## Test Assertions
-@test maximum(mass_err) < 1e-10 #src
-@test maximum(momentum_err) < 1e-10 #src
-@test maximum(energy_err) < 1e-10 #src
-@assert maximum(mass_err) < 1e-10 #hide
-@assert maximum(momentum_err) < 1e-10 #hide
-@assert maximum(energy_err) < 1e-10 #hide
+@test maximum(mass_err) < 1.0e-10 #src
+@test maximum(momentum_err) < 1.0e-10 #src
+@test maximum(energy_err) < 1.0e-10 #src
+@assert maximum(mass_err) < 1.0e-10 #hide
+@assert maximum(momentum_err) < 1.0e-10 #hide
+@assert maximum(energy_err) < 1.0e-10 #hide
