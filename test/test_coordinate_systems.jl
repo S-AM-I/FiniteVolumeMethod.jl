@@ -17,7 +17,7 @@ using DelaunayTriangulation
         mesh = FVMGeometry(tri)
         @test mesh.coordinate_system isa Cartesian
         # Total volume should be approximately 1.0
-        @test sum(mesh.cv_volumes) ≈ 1.0 atol =0.01
+        @test sum(mesh.cv_volumes) ≈ 1.0 atol = 0.01
     end
 
     @testset "FVMGeometry with Cylindrical" begin
@@ -31,7 +31,7 @@ using DelaunayTriangulation
         # Cylindrical volumes should be larger because r > 1
         # The r-weighted area ∫∫ r dr dz for r ∈ [1,2], z ∈ [0,1] = ∫₁² r dr = 3/2
         @test sum(mesh_cyl.cv_volumes) > sum(mesh_cart.cv_volumes)
-        @test sum(mesh_cyl.cv_volumes) ≈ 1.5 atol =0.15  # ∫₁² r dr = 1.5
+        @test sum(mesh_cyl.cv_volumes) ≈ 1.5 atol = 0.15  # ∫₁² r dr = 1.5
     end
 
     @testset "Cartesian backward compatibility" begin
