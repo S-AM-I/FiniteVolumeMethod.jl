@@ -6,12 +6,13 @@
 ## Objectives
 
 - [x] Migrate cylindrical/spherical coordinate assembly from Simu.jl's SimuFVM (landed in `a545f6b`)
+- [x] CI: Use `'1'` (auto-latest stable) instead of hardcoded `'1.11'` in test matrix
 - [ ] Add `test_coordinate_systems.jl` to `runtests.jl` (11 tests exist but are not invoked)
 - [ ] Remove or recreate `keller_segel_chemotaxis` tutorial (file deleted but still in docs `_PAGES`)
 - [ ] Clean up stale CI log directories (`logs/`, `logs_57507113439/`)
 - [ ] Fix reference image PSNR test threshold (CI workaround: `JULIA_REFERENCETESTS_UPDATE=true`)
 - [ ] Expand tutorials for advanced features (AMR, GRMHD, operator splitting)
-- [ ] Verify documentation deployment pipeline (Documenter.jl + GitHub Pages)
+- [x] Verify documentation deployment pipeline (Documenter.jl + GitHub Pages — confirmed working, runs in parallel with tests)
 
 ## Future Milestones
 
