@@ -99,6 +99,22 @@ variable_names(::TwoFluidEquations{2}) = ["rho_i", "rho_i_vx", "rho_i_vy", "E_i"
 variable_names(::ResistiveMHDEquations) = ["rho", "rho_vx", "rho_vy", "rho_vz", "E", "Bx", "By", "Bz"]
 variable_names(::HallMHDEquations) = ["rho", "rho_vx", "rho_vy", "rho_vz", "E", "Bx", "By", "Bz"]
 
+function variable_names(law::ReactiveEulerEquations{1, NS}) where {NS}
+    base = ["rho", "rho_v", "E"]
+    for name in law.species_names
+        push!(base, "rho_Y_$(name)")
+    end
+    return base
+end
+
+function variable_names(law::ReactiveEulerEquations{2, NS}) where {NS}
+    base = ["rho", "rho_vx", "rho_vy", "E"]
+    for name in law.species_names
+        push!(base, "rho_Y_$(name)")
+    end
+    return base
+end
+
 # ============================================================
 # Mesh serialization
 # ============================================================

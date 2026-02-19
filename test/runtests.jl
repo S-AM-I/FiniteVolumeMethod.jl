@@ -94,6 +94,9 @@ end
     @testset verbose = true "Extended Physics" begin
         safe_include("extended_physics.jl")
     end
+    @testset verbose = true "Reactive Euler" begin
+        safe_include("reactive_euler.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
@@ -182,9 +185,12 @@ end
             "mms_convergence.jl",
             "ns_convergence.jl",
             "orszag_tang_verification.jl",
+            "passive_scalar_convergence.jl",
             "poisson_convergence.jl",
+            "premixed_flame_1d.jl",
             "smooth_advection_convergence.jl",
             "source_term_convergence.jl",
+            "species_conservation.jl",
             "sod_grid_convergence.jl",
             "srmhd_convergence.jl",
             "toro_riemann_tests.jl",

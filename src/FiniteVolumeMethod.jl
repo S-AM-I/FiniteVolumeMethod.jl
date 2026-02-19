@@ -163,6 +163,10 @@ include("hyperbolic/stiff_sources.jl")
 include("hyperbolic/imex.jl")
 include("hyperbolic/imex_solve.jl")
 
+# Reactive Euler (multi-species with Arrhenius chemistry)
+include("hyperbolic/reactive_euler.jl")
+include("hyperbolic/chemistry.jl")
+
 # Positivity-preserving limiter (Zhang & Shu 2010)
 include("hyperbolic/positivity_limiter.jl")
 
@@ -392,6 +396,16 @@ export FVMGeometry,
     electron_conserved,
     lorentz_source_1d,
     lorentz_source_2d,
+    # Reactive Euler
+    ReactiveEulerEquations,
+    euler_primitive,
+    euler_conserved,
+    species_mass_fractions,
+    species_partial_densities,
+    temperature,
+    ArrheniusReaction,
+    ReactionMechanism,
+    ChemistrySource,
     # 2D mesh helpers
     cell_ij,
     cell_idx,
