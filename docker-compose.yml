@@ -78,7 +78,6 @@ services:
   # Full docs build with executed examples
   docs:
     <<: *common
-    mem_limit: 10g
     environment:
       <<: *env
       CI: "false"
@@ -90,7 +89,6 @@ services:
   # Fast docs build — no executed examples (mirrors CI docs job)
   docs-ci:
     <<: *common
-    mem_limit: 4g
     environment:
       <<: *env
       CI: "true"
