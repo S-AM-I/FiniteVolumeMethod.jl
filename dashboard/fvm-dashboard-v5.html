@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FVM Dashboard v5</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2/dist/chartjs-plugin-zoom.min.js"></script>
+<style>
+/* ── Reset & Base ────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-0: #0d1117; --bg-1: #161b22; --bg-2: #21262d; --bg-3: #30363d;
+    --fg-0: #c9d1d9; --fg-1: #8b949e; --fg-2: #6e7681;
+    --accent: #58a6ff; --accent-dim: #1f6feb33;
+    --green: #3fb950; --red: #f85149; --yellow: #d29922; --orange: #db6d28;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --sidebar-w: 56px; --topbar-h: 48px;
+    --radius: 6px; --transition: 150ms ease;
+}
+html, body { height: 100%; background: var(--bg-0); color: var(--fg-0); font-family: var(--font-sans); font-size: 14px; overflow: hidden; }
+button { font-family: inherit; font-size: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+select, input { font-family: var(--font-mono); font-size: 12px; background: var(--bg-2); color: var(--fg-0); border: 1px solid var(--bg-3); border-radius: var(--radius); padding: 4px 8px; outline: none; }
+select:focus, input:focus { border-color: var(--accent); }
+input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; }
+input[type="range"] { accent-color: var(--accent); }
+
+/* ── Layout ──────────────────────────────────────────── */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.topbar {
+    display: flex; align-items: center; height: var(--topbar-h);
+    background: var(--bg-1); border-bottom: 1px solid var(--bg-3); padding: 0 16px; gap: 12px; flex-shrink: 0;
+}
+.topbar-brand { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.topbar-brand span { color: var(--accent); }
+.topbar-meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-1); background: var(--bg-2); padding: 2px 10px; border-radius: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; }
+.topbar-spacer { flex: 1; }
+.topbar-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+    background: var(--bg-2); border: 1px solid var(--bg-3); border-radius: var(--radius);
+    font-size: 12px; transition: background var(--transition);
+}
+.topbar-btn:hover { background: var(--bg-3); }
+.topbar-btn.active { border-color: var(--accent); background: var(--accent-dim); }
+.ws-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-2); flex-shrink: 0; }
+.ws-dot.connected { background: var(--green); }
+.ws-dot.connecting { background: var(--yellow); }
+.ws-dot.error { background: var(--red); }
+
+.main { display: flex; flex: 1; overflow: hidden; }
+.sidebar {
+    width: var(--sidebar-w); background: var(--bg-1); border-right: 1px solid var(--bg-3);
+    display: flex; flex-direction: column; padding-top: 8px; flex-shrink: 0;
+}
+.sidebar-tab {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; height: 52px; gap: 2px; font-size: 10px; color: var(--fg-2);
+    border-left: 2px solid transparent; transition: all var(--transition);
+}
+.sidebar-tab:hover { color: var(--fg-1); background: var(--bg-2); }
+.sidebar-tab.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+.sidebar-tab svg { width: 20px; height: 20px; }
+
+.content { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; }
+.panel { display: none; flex: 1; flex-direction: column; gap: 12px; min-height: 0; }
+.panel.active { display: flex; }
+
+/* ── Cards ───────────────────────────────────────────── */
+.card { background: var(--bg-1); border: 1px solid var(--bg-3); border-radius: var(--radius); overflow: hidden; }
+.card-header { display: flex; align-items: center; padding: 8px 12px; gap: 8px; border-bottom: 1px solid var(--bg-3); font-size: 12px; font-weight: 600; color: var(--fg-1); }
+.card-body { padding: 12px; }
+
+/* ── Solution Panel ──────────────────────────────────── */
+.solution-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-1); border: 1px solid var(--bg-3); border-radius: var(--radius); }
+.solution-controls label { font-size: 12px; color: var(--fg-1); }
+.solution-controls select, .solution-controls input { min-width: 0; }
+.snapshot-slider-group { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
+.snapshot-slider-group input[type="range"] { flex: 1; }
+.snapshot-readout { font-family: var(--font-mono); font-size: 11px; color: var(--fg-1); white-space: nowrap; }
+.control-group { display: flex; align-items: center; gap: 6px; }
+.control-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--bg-3); }
+.control-btn:hover { background: var(--bg-3); }
+.control-btn.active { background: var(--accent-dim); border-color: var(--accent); }
+
+.solution-view { flex: 1; position: relative; min-height: 200px; display: flex; align-items: center; justify-content: center; }
+.solution-view canvas { image-rendering: pixelated; max-width: 100%; max-height: 100%; }
+.hover-readout {
+    position: absolute; bottom: 8px; left: 8px; font-family: var(--font-mono); font-size: 11px;
+    background: var(--bg-0); color: var(--fg-0); padding: 4px 8px; border-radius: var(--radius);
+    border: 1px solid var(--bg-3); pointer-events: none; opacity: 0; transition: opacity var(--transition);
+}
+.hover-readout.visible { opacity: 1; }
+.colorbar-container { display: flex; align-items: stretch; gap: 4px; height: 100%; }
+.colorbar { width: 16px; border: 1px solid var(--bg-3); border-radius: 2px; }
+.colorbar-labels { display: flex; flex-direction: column; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--fg-1); }
+.range-inputs { display: flex; align-items: center; gap: 4px; }
+.range-inputs input[type="number"] { width: 70px; }
+
+/* ── Monitor Panel ───────────────────────────────────── */
+.monitor-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
+.monitor-grid .card { display: flex; flex-direction: column; min-height: 0; }
+.monitor-grid .card-body { flex: 1; min-height: 0; position: relative; }
+.monitor-grid canvas { width: 100% !important; height: 100% !important; }
+
+/* ── Compare Panel ───────────────────────────────────── */
+.drop-zone {
+    border: 2px dashed var(--bg-3); border-radius: var(--radius); padding: 32px;
+    text-align: center; color: var(--fg-2); transition: all var(--transition);
+}
+.drop-zone.drag-over { border-color: var(--accent); background: var(--accent-dim); color: var(--fg-0); }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.compare-table th, .compare-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--bg-3); }
+.compare-table th { color: var(--fg-1); font-weight: 600; background: var(--bg-2); position: sticky; top: 0; }
+.compare-table td { font-family: var(--font-mono); }
+
+/* ── Profiles Panel ──────────────────────────────────── */
+.stub-message { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px; color: var(--fg-2); }
+.stub-message svg { width: 48px; height: 48px; opacity: 0.4; }
+.stub-controls { display: flex; gap: 8px; opacity: 0.4; pointer-events: none; }
+
+/* ── Toast ────────────────────────────────────────────── */
+.toast-container { position: fixed; bottom: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
+.toast {
+    font-size: 12px; padding: 8px 16px; border-radius: var(--radius); background: var(--bg-2);
+    border: 1px solid var(--bg-3); box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    animation: toast-in 200ms ease, toast-out 300ms ease 3s forwards;
+}
+.toast.error { border-color: var(--red); color: var(--red); }
+.toast.success { border-color: var(--green); color: var(--green); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(-4px); } }
+
+/* ── Empty State ─────────────────────────────────────── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px; color: var(--fg-2); padding: 48px; }
+.empty-state svg { width: 64px; height: 64px; opacity: 0.3; }
+.empty-state p { max-width: 360px; text-align: center; line-height: 1.5; }
+
+/* ── Helpers ──────────────────────────────────────────── */
+.flex-row { display: flex; align-items: center; gap: 8px; }
+.flex-1 { flex: 1; }
+.text-mono { font-family: var(--font-mono); }
+.text-sm { font-size: 12px; }
+.text-xs { font-size: 11px; }
+.text-muted { color: var(--fg-1); }
+.gap-4 { gap: 4px; }
+.gap-8 { gap: 8px; }
+.mt-8 { margin-top: 8px; }
+.mb-8 { margin-bottom: 8px; }
+.ml-auto { margin-left: auto; }
+.hidden { display: none !important; }
+.w-full { width: 100%; }
+</style>
+</head>
+<body>
+<div class="app">
+    <!-- ── Top Bar ──────────────────────────────────── -->
+    <div class="topbar">
+        <div class="topbar-brand">FVM <span>Dashboard</span> v5</div>
+        <div class="topbar-meta" id="session-meta">No session loaded</div>
+        <div class="topbar-spacer"></div>
+        <input type="file" id="file-input" accept=".json" multiple style="display:none">
+        <button class="topbar-btn" id="btn-load" title="Load .fvm-session.json">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 12.5a.5.5 0 01-1 0V3.5a2 2 0 012-2h5.793L14 5.207V12.5a.5.5 0 01-1 0V6H9.5a.5.5 0 01-.5-.5V2H4.5a1 1 0 00-1 1v9.5zM10 2.207V5.5h3.293L10 2.207z"/></svg>
+            Load
+        </button>
+        <button class="topbar-btn" id="btn-demo" title="Generate synthetic demo data">Demo</button>
+        <div style="width:1px;height:24px;background:var(--bg-3)"></div>
+        <div class="flex-row gap-4">
+            <div class="ws-dot" id="ws-dot"></div>
+            <input id="ws-url" value="ws://localhost:8765" style="width:180px;font-size:11px" title="WebSocket URL">
+            <button class="topbar-btn" id="btn-ws" title="Toggle WebSocket connection">Connect</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- ── Sidebar ─────────────────────────────── -->
+        <nav class="sidebar">
+            <button class="sidebar-tab active" data-panel="solution" title="Solution Field (1)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+                Sol
+            </button>
+            <button class="sidebar-tab" data-panel="monitor" title="Convergence Monitor (2)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Mon
+            </button>
+            <button class="sidebar-tab" data-panel="compare" title="Run Comparison (3)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Cmp
+            </button>
+            <button class="sidebar-tab" data-panel="profiles" title="Species Profiles (4)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                Prof
+            </button>
+        </nav>
+
+        <!-- ── Content ─────────────────────────────── -->
+        <div class="content" id="drop-target">
+            <!-- Solution Panel -->
+            <div class="panel active" id="panel-solution">
+                <div class="solution-controls" id="sol-controls">
+                    <div class="control-group">
+                        <label>Variable</label>
+                        <select id="sol-var"></select>
+                    </div>
+                    <div class="control-group">
+                        <label>Colormap</label>
+                        <select id="sol-cmap">
+                            <option value="viridis" selected>Viridis</option>
+                            <option value="inferno">Inferno</option>
+                            <option value="plasma">Plasma</option>
+                            <option value="magma">Magma</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <input type="checkbox" id="sol-autorange" checked>
+                        <label for="sol-autorange">Auto range</label>
+                    </div>
+                    <div class="range-inputs" id="range-inputs" style="display:none">
+                        <input type="number" id="sol-min" step="any" placeholder="min">
+                        <span class="text-muted">-</span>
+                        <input type="number" id="sol-max" step="any" placeholder="max">
+                    </div>
+                    <div class="control-group hidden" id="zslice-group">
+                        <label>Z-slice</label>
+                        <input type="range" id="sol-zslice" min="0" value="0" style="width:80px">
+                        <span class="snapshot-readout" id="zslice-readout">0</span>
+                    </div>
+                    <div class="snapshot-slider-group">
+                        <button class="control-btn" id="btn-prev" title="Previous snapshot (Left)">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M11 2L5 8l6 6"/></svg>
+                        </button>
+                        <button class="control-btn" id="btn-play" title="Play/Pause (Space)">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" id="play-icon"><path d="M4 2l10 6-10 6z"/></svg>
+                        </button>
+                        <button class="control-btn" id="btn-next" title="Next snapshot (Right)">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2l6 6-6 6"/></svg>
+                        </button>
+                        <input type="range" id="sol-snap" min="0" value="0" style="flex:1">
+                        <span class="snapshot-readout" id="snap-readout">step 0 | t=0.000</span>
+                    </div>
+                </div>
+                <div class="solution-view" id="solution-view">
+                    <div class="empty-state" id="sol-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+                        <p>Load a <code>.fvm-session.json</code> file or connect via WebSocket to visualize solution fields.</p>
+                    </div>
+                    <canvas id="sol-canvas" class="hidden"></canvas>
+                    <canvas id="sol-1d-chart-canvas" class="hidden" style="max-width:100%;max-height:100%"></canvas>
+                    <div class="colorbar-container hidden" id="colorbar-container">
+                        <canvas class="colorbar" id="colorbar-canvas" width="16" height="256"></canvas>
+                        <div class="colorbar-labels">
+                            <span id="cb-max">1.0</span>
+                            <span id="cb-mid">0.5</span>
+                            <span id="cb-min">0.0</span>
+                        </div>
+                    </div>
+                    <div class="hover-readout" id="hover-readout"></div>
+                </div>
+            </div>
+
+            <!-- Monitor Panel -->
+            <div class="panel" id="panel-monitor">
+                <div class="monitor-grid" id="monitor-grid">
+                    <div class="card">
+                        <div class="card-header">Residual Norm vs Step</div>
+                        <div class="card-body"><canvas id="chart-residual"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Conserved Totals vs Time</div>
+                        <div class="card-body"><canvas id="chart-conserved"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Time Step (dt) vs Time</div>
+                        <div class="card-body"><canvas id="chart-dt"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Wall Time vs Step</div>
+                        <div class="card-body"><canvas id="chart-walltime"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compare Panel -->
+            <div class="panel" id="panel-compare">
+                <div class="drop-zone" id="compare-drop">
+                    <p>Drop multiple <code>.fvm-session.json</code> files here to compare runs</p>
+                    <button class="topbar-btn mt-8" id="btn-compare-load">Load Files</button>
+                    <input type="file" id="compare-file-input" accept=".json" multiple style="display:none">
+                </div>
+                <div class="card mt-8">
+                    <div class="card-header">Convergence Overlay</div>
+                    <div class="card-body" style="height:300px"><canvas id="chart-compare"></canvas></div>
+                </div>
+                <div class="card mt-8">
+                    <div class="card-header">Error Norm Table</div>
+                    <div class="card-body" style="overflow-x:auto">
+                        <table class="compare-table" id="compare-table">
+                            <thead><tr><th>Session</th><th>Mesh</th><th>Final Residual</th><th>Conservation Drift</th><th>Order (est.)</th></tr></thead>
+                            <tbody id="compare-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card mt-8 hidden" id="convergence-plot-card">
+                    <div class="card-header">Log-Log Convergence Plot</div>
+                    <div class="card-body" style="height:300px"><canvas id="chart-convergence"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Profiles Panel — Species mass-fraction line charts -->
+            <div class="panel" id="panel-profiles">
+                <div class="panel-toolbar" style="display:flex;gap:12px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--bg-3);flex-shrink:0">
+                    <label style="font-size:12px;color:var(--fg-1)">Species</label>
+                    <select id="prof-species" style="min-width:120px"></select>
+                    <label style="font-size:12px;color:var(--fg-1)" id="prof-cut-label" class="hidden">Cut</label>
+                    <select id="prof-cut-dir" class="hidden"><option value="x">X</option><option value="y">Y</option></select>
+                    <label style="font-size:12px;color:var(--fg-1)" id="prof-pos-label" class="hidden">Pos</label>
+                    <input type="range" id="prof-cut-pos" min="0" value="0" style="width:100px" class="hidden">
+                    <span class="snapshot-readout hidden" id="prof-pos-readout">0</span>
+                    <div style="flex:1"></div>
+                    <div class="snapshot-slider-group" style="flex:0 1 300px">
+                        <input type="range" id="prof-snap" min="0" value="0" style="flex:1">
+                        <span class="snapshot-readout" id="prof-snap-readout">step 0 | t=0</span>
+                    </div>
+                </div>
+                <div id="prof-empty" class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                    <p>Load a session with <code>rho_Y_*</code> variables to view species profiles.</p>
+                </div>
+                <div style="position:relative;flex:1;min-height:0">
+                    <canvas id="prof-chart-canvas" class="hidden" style="max-width:100%;max-height:100%"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   Colormaps — 256-entry RGB lookup tables
+   ════════════════════════════════════════════════════════════ */
+const COLORMAPS = {};
+
+(function generateColormaps() {
+    // Viridis — perceptually uniform sequential (dark purple → yellow)
+    const viridisData = [
+        [0.267004,0.004874,0.329415],[0.282327,0.140926,0.457517],[0.253935,0.265254,0.529983],
+        [0.206756,0.371758,0.553117],[0.163625,0.471133,0.558148],[0.127568,0.566949,0.550556],
+        [0.134692,0.658636,0.517649],[0.266941,0.748751,0.440573],[0.477504,0.821444,0.318195],
+        [0.741388,0.873449,0.149561],[0.993248,0.906157,0.143936]
+    ];
+    // Inferno — perceptually uniform (black → yellow)
+    const infernoData = [
+        [0.001462,0.000466,0.013866],[0.087411,0.044556,0.224813],[0.258234,0.038571,0.406485],
+        [0.416331,0.090834,0.432943],[0.578304,0.148039,0.404411],[0.735683,0.215906,0.329651],
+        [0.865006,0.316822,0.226055],[0.954506,0.468744,0.099874],[0.987622,0.645320,0.039886],
+        [0.964394,0.843848,0.273391],[0.988362,0.998364,0.644924]
+    ];
+    // Plasma — perceptually uniform (blue-purple → yellow)
+    const plasmaData = [
+        [0.050383,0.029803,0.527975],[0.219891,0.015580,0.609009],[0.382914,0.001055,0.653068],
+        [0.530026,0.027180,0.654463],[0.659741,0.098455,0.604987],[0.773195,0.179144,0.519291],
+        [0.869186,0.269515,0.410583],[0.942253,0.377643,0.290788],[0.984591,0.509498,0.161979],
+        [0.985314,0.668740,0.042095],[0.940015,0.975158,0.131326]
+    ];
+    // Magma — perceptually uniform (black → white-hot)
+    const magmaData = [
+        [0.001462,0.000466,0.013866],[0.060518,0.049419,0.170638],[0.164109,0.062603,0.365064],
+        [0.300634,0.066985,0.481637],[0.426548,0.095980,0.512401],[0.562738,0.131610,0.505838],
+        [0.706585,0.188450,0.451161],[0.845561,0.289667,0.365268],[0.946636,0.441597,0.296380],
+        [0.990127,0.650327,0.323594],[0.996341,0.878868,0.545049]
+    ];
+
+    function interpolateLUT(stops) {
+        const lut = new Uint8Array(256 * 3);
+        for (let i = 0; i < 256; i++) {
+            const t = i / 255;
+            const idx = t * (stops.length - 1);
+            const lo = Math.floor(idx);
+            const hi = Math.min(lo + 1, stops.length - 1);
+            const f = idx - lo;
+            lut[i * 3]     = Math.round((stops[lo][0] * (1 - f) + stops[hi][0] * f) * 255);
+            lut[i * 3 + 1] = Math.round((stops[lo][1] * (1 - f) + stops[hi][1] * f) * 255);
+            lut[i * 3 + 2] = Math.round((stops[lo][2] * (1 - f) + stops[hi][2] * f) * 255);
+        }
+        return lut;
+    }
+    COLORMAPS.viridis = interpolateLUT(viridisData);
+    COLORMAPS.inferno = interpolateLUT(infernoData);
+    COLORMAPS.plasma  = interpolateLUT(plasmaData);
+    COLORMAPS.magma   = interpolateLUT(magmaData);
+})();
+
+/* ════════════════════════════════════════════════════════════
+   Observable Store
+   ════════════════════════════════════════════════════════════ */
+const Store = {
+    _state: {
+        sessions: [],
+        activeSessionIdx: -1,
+        activePanel: 'solution',
+        selectedVariable: 0,
+        selectedSnapshot: -1,
+        autoAdvance: true,
+        colormap: 'viridis',
+        autoRange: true,
+        manualMin: 0,
+        manualMax: 1,
+        zSlice: 0,
+        wsUrl: 'ws://localhost:8765',
+        wsStatus: 'disconnected',
+        playing: false,
+        compareSessions: [],
+    },
+    _listeners: [],
+    get(key) { return this._state[key]; },
+    set(updates) {
+        const prev = { ...this._state };
+        Object.assign(this._state, updates);
+        for (const fn of this._listeners) fn(this._state, prev);
+    },
+    subscribe(fn) { this._listeners.push(fn); },
+    state() { return this._state; },
+};
+
+/* ════════════════════════════════════════════════════════════
+   Utilities
+   ════════════════════════════════════════════════════════════ */
+function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = 'toast' + (type !== 'info' ? ` ${type}` : '');
+    el.textContent = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+
+function formatNum(v, digits = 4) {
+    if (v == null || isNaN(v)) return '—';
+    if (Math.abs(v) < 1e-2 || Math.abs(v) >= 1e4) return v.toExponential(digits);
+    return v.toPrecision(digits + 1);
+}
+
+function meshSize(mesh) {
+    if (!mesh) return '?';
+    if (mesh.type === 'StructuredMesh1D') return `${mesh.ncells}`;
+    if (mesh.type === 'StructuredMesh2D') return `${mesh.nx}x${mesh.ny}`;
+    if (mesh.type === 'StructuredMesh3D') return `${mesh.nx}x${mesh.ny}x${mesh.nz}`;
+    if (mesh.type === 'UnstructuredHyperbolicMesh') return `${mesh.ntriangles} tri`;
+    if (mesh.type === 'FVMGeometry') return `${mesh.num_triangles} tri`;
+    return '?';
+}
+
+function sessionLabel(s, i) {
+    return s._filename || `Live #${i + 1}`;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Data Ingestion — Parse & Validate
+   ════════════════════════════════════════════════════════════ */
+function validateSession(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    if (!obj.variables || !obj.mesh || !obj.snapshots) return null;
+    return obj;
+}
+
+function addSession(data, filename) {
+    data._filename = filename || null;
+    const sessions = [...Store.get('sessions'), data];
+    const idx = sessions.length - 1;
+    Store.set({
+        sessions,
+        activeSessionIdx: idx,
+        selectedSnapshot: data.snapshots.length > 0 ? data.snapshots.length - 1 : -1,
+        selectedVariable: 0,
+    });
+    toast(`Loaded: ${filename || 'live session'}`, 'success');
+}
+
+function handleFiles(files) {
+    for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const data = JSON.parse(reader.result);
+                const valid = validateSession(data);
+                if (!valid) { toast(`Invalid session: ${file.name}`, 'error'); return; }
+                addSession(valid, file.name);
+            } catch (e) {
+                toast(`Parse error: ${file.name}`, 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+}
+
+/* ════════════════════════════════════════════════════════════
+   WebSocket
+   ════════════════════════════════════════════════════════════ */
+let ws = null;
+let liveSessionIdx = -1;
+
+function wsConnect() {
+    const url = Store.get('wsUrl');
+    if (ws) { ws.close(); ws = null; }
+    Store.set({ wsStatus: 'connecting' });
+    try {
+        ws = new WebSocket(url);
+    } catch (e) {
+        Store.set({ wsStatus: 'disconnected' });
+        toast('Invalid WebSocket URL', 'error');
+        return;
+    }
+    ws.onopen = () => {
+        Store.set({ wsStatus: 'connected' });
+        toast('WebSocket connected', 'success');
+    };
+    ws.onclose = () => {
+        Store.set({ wsStatus: 'disconnected' });
+        ws = null;
+        liveSessionIdx = -1;
+    };
+    ws.onerror = () => {
+        Store.set({ wsStatus: 'error' });
+        toast('WebSocket error', 'error');
+    };
+    ws.onmessage = (ev) => {
+        try {
+            const msg = JSON.parse(ev.data);
+            if (msg.type === 'session_metadata') {
+                const data = validateSession(msg.data);
+                if (!data) return;
+                data._live = true;
+                data._filename = null;
+                addSession(data, null);
+                liveSessionIdx = Store.get('sessions').length - 1;
+            } else if (msg.type === 'snapshot') {
+                if (liveSessionIdx < 0) return;
+                const sessions = Store.get('sessions');
+                const s = sessions[liveSessionIdx];
+                if (!s) return;
+                s.snapshots.push(msg.data);
+                const isActive = Store.get('activeSessionIdx') === liveSessionIdx;
+                const isAutoAdv = Store.get('autoAdvance');
+                Store.set({
+                    sessions: [...sessions],
+                    ...(isActive && isAutoAdv ? { selectedSnapshot: s.snapshots.length - 1 } : {}),
+                });
+            }
+        } catch (e) {
+            // ignore malformed
+        }
+    };
+}
+
+function wsDisconnect() {
+    if (ws) ws.close();
+    ws = null;
+    liveSessionIdx = -1;
+    Store.set({ wsStatus: 'disconnected' });
+}
+
+function wsToggle() {
+    if (Store.get('wsStatus') === 'connected' || Store.get('wsStatus') === 'connecting') {
+        wsDisconnect();
+    } else {
+        wsConnect();
+    }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Chart.js Defaults
+   ════════════════════════════════════════════════════════════ */
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = "'SF Mono', 'Cascadia Code', Consolas, monospace";
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.padding = 8;
+Chart.defaults.animation = false;
+
+const CHART_COLORS = ['#58a6ff', '#3fb950', '#f85149', '#d29922', '#db6d28', '#a371f7', '#79c0ff', '#56d364'];
+
+function zoomOpts() {
+    return {
+        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' },
+        pan: { enabled: true, mode: 'xy' },
+    };
+}
+
+/* ════════════════════════════════════════════════════════════
+   Monitor Charts
+   ════════════════════════════════════════════════════════════ */
+let chartResidual, chartConserved, chartDt, chartWalltime;
+
+function initMonitorCharts() {
+    const mkChart = (id, label, xLabel, yLabel, logY = false) => {
+        return new Chart(document.getElementById(id), {
+            type: 'line',
+            data: { datasets: [] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: xLabel } },
+                    y: { type: logY ? 'logarithmic' : 'linear', title: { display: true, text: yLabel } },
+                },
+                plugins: { zoom: zoomOpts(), legend: { display: label === 'conserved' } },
+                elements: { point: { radius: 0 }, line: { borderWidth: 1.5 } },
+            },
+        });
+    };
+    chartResidual  = mkChart('chart-residual', 'residual', 'Step', 'Residual Norm', true);
+    chartConserved = mkChart('chart-conserved', 'conserved', 'Time', 'Total');
+    chartDt        = mkChart('chart-dt', 'dt', 'Time', 'dt');
+    chartWalltime  = mkChart('chart-walltime', 'walltime', 'Step', 'Wall Time (s)');
+}
+
+function updateMonitorCharts() {
+    const s = Store.get('sessions')[Store.get('activeSessionIdx')];
+    if (!s) return;
+    const snaps = s.snapshots;
+
+    // Residual
+    chartResidual.data.datasets = [{
+        label: 'Residual', data: snaps.map(sn => ({ x: sn.step, y: sn.residual_norm })),
+        borderColor: CHART_COLORS[0], backgroundColor: CHART_COLORS[0] + '33',
+    }];
+    chartResidual.update('none');
+
+    // Conserved totals
+    if (snaps.length > 0 && snaps[0].conserved_totals) {
+        const keys = Object.keys(snaps[0].conserved_totals);
+        chartConserved.data.datasets = keys.map((k, i) => ({
+            label: k, data: snaps.map(sn => ({ x: sn.time, y: sn.conserved_totals[k] })),
+            borderColor: CHART_COLORS[i % CHART_COLORS.length],
+        }));
+    } else {
+        chartConserved.data.datasets = [];
+    }
+    chartConserved.update('none');
+
+    // dt
+    chartDt.data.datasets = [{
+        label: 'dt', data: snaps.map(sn => ({ x: sn.time, y: sn.dt })),
+        borderColor: CHART_COLORS[1],
+    }];
+    chartDt.update('none');
+
+    // Wall time
+    chartWalltime.data.datasets = [{
+        label: 'Wall Time', data: snaps.map(sn => ({ x: sn.step, y: sn.wall_time })),
+        borderColor: CHART_COLORS[2],
+    }];
+    chartWalltime.update('none');
+}
+
+/* ════════════════════════════════════════════════════════════
+   Solution Field — Heatmap (2D) & Line Chart (1D)
+   ════════════════════════════════════════════════════════════ */
+let sol1dChart = null;
+
+function getActiveSnapshot() {
+    const s = Store.get('sessions')[Store.get('activeSessionIdx')];
+    if (!s) return null;
+    const idx = Store.get('selectedSnapshot');
+    if (idx < 0 || idx >= s.snapshots.length) return null;
+    return s.snapshots[idx];
+}
+
+function getActiveSession() {
+    return Store.get('sessions')[Store.get('activeSessionIdx')] || null;
+}
+
+/** Extract a flat Float64 array of the selected variable from the snapshot solution.
+ *  Returns { values, nx, ny, nz, is1d, is3d } */
+function extractField(snap, session, varIdx, zSlice) {
+    const sol = snap.solution;
+    const meshType = session.mesh.type;
+
+    if (meshType === 'StructuredMesh1D') {
+        // sol = [[v1,v2,...], [v1,v2,...], ...] — array of cells, each cell is array of vars
+        const nx = sol.length;
+        const values = new Float64Array(nx);
+        for (let i = 0; i < nx; i++) values[i] = sol[i][varIdx];
+        return { values, nx, ny: 1, nz: 1, is1d: true, is3d: false };
+    }
+
+    if (meshType === 'StructuredMesh2D') {
+        // sol = nested: sol[j][i] = [v1,v2,...] (j=y-index outer, i=x-index inner)
+        const ny = sol.length;
+        const nx = sol[0].length;
+        const values = new Float64Array(nx * ny);
+        for (let j = 0; j < ny; j++)
+            for (let i = 0; i < nx; i++)
+                values[j * nx + i] = sol[j][i][varIdx];
+        return { values, nx, ny, nz: 1, is1d: false, is3d: false };
+    }
+
+    if (meshType === 'StructuredMesh3D') {
+        // sol[k][j][i] = [vars...] — take z-slice
+        const nz = sol.length;
+        const ny = sol[0].length;
+        const nx = sol[0][0].length;
+        const k = Math.min(zSlice, nz - 1);
+        const values = new Float64Array(nx * ny);
+        for (let j = 0; j < ny; j++)
+            for (let i = 0; i < nx; i++)
+                values[j * nx + i] = sol[k][j][i][varIdx];
+        return { values, nx, ny, nz, is1d: false, is3d: true };
+    }
+
+    return null;
+}
+
+function renderHeatmap(field, nx, ny) {
+    const canvas = document.getElementById('sol-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = nx;
+    canvas.height = ny;
+
+    const lut = COLORMAPS[Store.get('colormap')];
+    let vmin, vmax;
+    if (Store.get('autoRange')) {
+        vmin = Infinity; vmax = -Infinity;
+        for (let i = 0; i < field.length; i++) {
+            if (field[i] < vmin) vmin = field[i];
+            if (field[i] > vmax) vmax = field[i];
+        }
+        if (vmin === vmax) { vmin -= 0.5; vmax += 0.5; }
+    } else {
+        vmin = Store.get('manualMin');
+        vmax = Store.get('manualMax');
+        if (vmin >= vmax) { vmin = 0; vmax = 1; }
+    }
+    Store._state.manualMin = vmin;
+    Store._state.manualMax = vmax;
+
+    const imgData = ctx.createImageData(nx, ny);
+    const d = imgData.data;
+    const range = vmax - vmin || 1;
+    for (let j = 0; j < ny; j++) {
+        // Flip Y: row 0 of image = top = highest y
+        const srcRow = ny - 1 - j;
+        for (let i = 0; i < nx; i++) {
+            const val = field[srcRow * nx + i];
+            const t = Math.max(0, Math.min(1, (val - vmin) / range));
+            const ci = Math.round(t * 255);
+            const px = (j * nx + i) * 4;
+            d[px]     = lut[ci * 3];
+            d[px + 1] = lut[ci * 3 + 1];
+            d[px + 2] = lut[ci * 3 + 2];
+            d[px + 3] = 255;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Scale canvas display
+    const container = document.getElementById('solution-view');
+    const maxW = container.clientWidth - 60;
+    const maxH = container.clientHeight - 20;
+    const scale = Math.min(maxW / nx, maxH / ny, 8);
+    canvas.style.width  = Math.round(nx * scale) + 'px';
+    canvas.style.height = Math.round(ny * scale) + 'px';
+
+    updateColorbar(vmin, vmax);
+
+    // Show canvas, hide empty
+    canvas.classList.remove('hidden');
+    document.getElementById('sol-empty').classList.add('hidden');
+    document.getElementById('sol-1d-chart-canvas').classList.add('hidden');
+    document.getElementById('colorbar-container').classList.remove('hidden');
+}
+
+function render1D(field, session) {
+    const canvas = document.getElementById('sol-1d-chart-canvas');
+    canvas.classList.remove('hidden');
+    document.getElementById('sol-empty').classList.add('hidden');
+    document.getElementById('sol-canvas').classList.add('hidden');
+    document.getElementById('colorbar-container').classList.add('hidden');
+
+    const mesh = session.mesh;
+    const nx = field.length;
+    const dx = mesh.dx || (mesh.xmax - mesh.xmin) / nx;
+    const xmin = mesh.xmin || 0;
+
+    const xVals = [];
+    for (let i = 0; i < nx; i++) xVals.push(xmin + (i + 0.5) * dx);
+
+    const data = xVals.map((x, i) => ({ x, y: field[i] }));
+    const varName = session.variables[Store.get('selectedVariable')] || 'u';
+
+    if (sol1dChart) {
+        sol1dChart.data.datasets[0].data = data;
+        sol1dChart.data.datasets[0].label = varName;
+        sol1dChart.update('none');
+    } else {
+        sol1dChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: varName, data,
+                    borderColor: CHART_COLORS[0],
+                    borderWidth: 1.5,
+                    pointRadius: nx < 100 ? 2 : 0,
+                    fill: false,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'x' } },
+                    y: { title: { display: true, text: varName } },
+                },
+                plugins: { zoom: zoomOpts() },
+            },
+        });
+    }
+}
+
+function updateColorbar(vmin, vmax) {
+    const canvas = document.getElementById('colorbar-canvas');
+    const ctx = canvas.getContext('2d');
+    const lut = COLORMAPS[Store.get('colormap')];
+    const imgData = ctx.createImageData(16, 256);
+    const d = imgData.data;
+    for (let j = 0; j < 256; j++) {
+        const ci = 255 - j; // top = max
+        for (let i = 0; i < 16; i++) {
+            const px = (j * 16 + i) * 4;
+            d[px]     = lut[ci * 3];
+            d[px + 1] = lut[ci * 3 + 1];
+            d[px + 2] = lut[ci * 3 + 2];
+            d[px + 3] = 255;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    document.getElementById('cb-max').textContent = formatNum(vmax);
+    document.getElementById('cb-mid').textContent = formatNum((vmin + vmax) / 2);
+    document.getElementById('cb-min').textContent = formatNum(vmin);
+}
+
+function renderSolution() {
+    const snap = getActiveSnapshot();
+    const session = getActiveSession();
+    if (!snap || !session) {
+        document.getElementById('sol-canvas').classList.add('hidden');
+        document.getElementById('sol-1d-chart-canvas').classList.add('hidden');
+        document.getElementById('colorbar-container').classList.add('hidden');
+        document.getElementById('sol-empty').classList.remove('hidden');
+        return;
+    }
+
+    const result = extractField(snap, session, Store.get('selectedVariable'), Store.get('zSlice'));
+    if (!result) return;
+
+    if (result.is1d) {
+        render1D(result.values, session);
+    } else {
+        renderHeatmap(result.values, result.nx, result.ny);
+    }
+
+    // Update snapshot readout
+    const readout = document.getElementById('snap-readout');
+    readout.textContent = `step ${snap.step} | t=${formatNum(snap.time)}`;
+
+    // Z-slice visibility
+    const zGroup = document.getElementById('zslice-group');
+    if (result.is3d) {
+        zGroup.classList.remove('hidden');
+        document.getElementById('sol-zslice').max = result.nz - 1;
+        document.getElementById('zslice-readout').textContent = Store.get('zSlice');
+    } else {
+        zGroup.classList.add('hidden');
+    }
+}
+
+/* ── Hover readout ──────────────────────────────────── */
+function initHoverReadout() {
+    const canvas = document.getElementById('sol-canvas');
+    const readout = document.getElementById('hover-readout');
+
+    canvas.addEventListener('mousemove', (e) => {
+        const snap = getActiveSnapshot();
+        const session = getActiveSession();
+        if (!snap || !session) return;
+        const result = extractField(snap, session, Store.get('selectedVariable'), Store.get('zSlice'));
+        if (!result || result.is1d) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = result.nx / rect.width;
+        const scaleY = result.ny / rect.height;
+        const ix = Math.floor((e.clientX - rect.left) * scaleX);
+        const iy_display = Math.floor((e.clientY - rect.top) * scaleY);
+        // Flip Y back: display row 0 = top = highest y
+        const iy = result.ny - 1 - iy_display;
+
+        if (ix < 0 || ix >= result.nx || iy < 0 || iy >= result.ny) {
+            readout.classList.remove('visible');
+            return;
+        }
+
+        const mesh = session.mesh;
+        const dx = mesh.dx || 1;
+        const dy = mesh.dy || 1;
+        const xmin = mesh.xmin || 0;
+        const ymin = mesh.ymin || 0;
+        const x = xmin + (ix + 0.5) * dx;
+        const y = ymin + (iy + 0.5) * dy;
+        const val = result.values[iy * result.nx + ix];
+        const varName = session.variables[Store.get('selectedVariable')] || 'u';
+
+        readout.textContent = `x=${formatNum(x)} y=${formatNum(y)} ${varName}=${formatNum(val, 6)}`;
+        readout.classList.add('visible');
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        readout.classList.remove('visible');
+    });
+}
+
+/* ════════════════════════════════════════════════════════════
+   Compare Panel
+   ════════════════════════════════════════════════════════════ */
+let chartCompare = null;
+let chartConvergence = null;
+
+function initCompareCharts() {
+    chartCompare = new Chart(document.getElementById('chart-compare'), {
+        type: 'line',
+        data: { datasets: [] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'Step' } },
+                y: { type: 'logarithmic', title: { display: true, text: 'Residual Norm' } },
+            },
+            plugins: { zoom: zoomOpts() },
+            elements: { point: { radius: 0 }, line: { borderWidth: 1.5 } },
+        },
+    });
+    chartConvergence = new Chart(document.getElementById('chart-convergence'), {
+        type: 'scatter',
+        data: { datasets: [] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { type: 'logarithmic', title: { display: true, text: 'Grid Size (h)' } },
+                y: { type: 'logarithmic', title: { display: true, text: 'Error Norm' } },
+            },
+            plugins: { zoom: zoomOpts() },
+        },
+    });
+}
+
+function addCompareFiles(files) {
+    for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const data = JSON.parse(reader.result);
+                const valid = validateSession(data);
+                if (!valid) { toast(`Invalid: ${file.name}`, 'error'); return; }
+                valid._filename = file.name;
+                const cs = [...Store.get('compareSessions'), valid];
+                Store.set({ compareSessions: cs });
+                updateComparePanel();
+                toast(`Compare: added ${file.name}`, 'success');
+            } catch (e) {
+                toast(`Parse error: ${file.name}`, 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+}
+
+function updateComparePanel() {
+    const sessions = Store.get('compareSessions');
+
+    // Overlay residual curves
+    chartCompare.data.datasets = sessions.map((s, i) => ({
+        label: sessionLabel(s, i),
+        data: s.snapshots.map(sn => ({ x: sn.step, y: sn.residual_norm })),
+        borderColor: CHART_COLORS[i % CHART_COLORS.length],
+    }));
+    chartCompare.update('none');
+
+    // Error norm table
+    const tbody = document.getElementById('compare-tbody');
+    tbody.innerHTML = '';
+    sessions.forEach((s, i) => {
+        const snaps = s.snapshots;
+        const last = snaps[snaps.length - 1];
+        const first = snaps[0];
+
+        // Conservation drift: max relative change in any conserved total
+        let drift = '—';
+        if (first && last && first.conserved_totals && last.conserved_totals) {
+            const keys = Object.keys(first.conserved_totals);
+            let maxDrift = 0;
+            for (const k of keys) {
+                const ref = first.conserved_totals[k];
+                if (Math.abs(ref) > 1e-15) {
+                    maxDrift = Math.max(maxDrift, Math.abs((last.conserved_totals[k] - ref) / ref));
+                }
+            }
+            drift = formatNum(maxDrift);
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="color:${CHART_COLORS[i % CHART_COLORS.length]}">${sessionLabel(s, i)}</td>
+            <td>${meshSize(s.mesh)}</td>
+            <td>${last ? formatNum(last.residual_norm) : '—'}</td>
+            <td>${drift}</td>
+            <td>—</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Convergence plot from convergence_data
+    const hasConvergence = sessions.some(s => s.convergence && s.convergence.length > 1);
+    const convCard = document.getElementById('convergence-plot-card');
+    if (hasConvergence) {
+        convCard.classList.remove('hidden');
+        const datasets = [];
+        let dsIdx = 0;
+        for (const s of sessions) {
+            if (!s.convergence || s.convergence.length < 2) continue;
+            const conv = s.convergence;
+            // Find error norm keys (L1_*, L2_*, Linf_*)
+            const keys = Object.keys(conv[0]).filter(k => k.startsWith('L1_') || k.startsWith('L2_') || k.startsWith('Linf_'));
+            for (const key of keys) {
+                const pts = conv
+                    .filter(c => c.grid_size && c[key] != null)
+                    .map(c => ({ x: 1 / c.grid_size, y: c[key] }))
+                    .sort((a, b) => a.x - b.x);
+                if (pts.length < 2) continue;
+
+                // Linear regression in log-log space for order estimation
+                const logX = pts.map(p => Math.log(p.x));
+                const logY = pts.map(p => Math.log(p.y));
+                const n = logX.length;
+                const sumX = logX.reduce((a, b) => a + b, 0);
+                const sumY = logY.reduce((a, b) => a + b, 0);
+                const sumXY = logX.reduce((a, x, i) => a + x * logY[i], 0);
+                const sumX2 = logX.reduce((a, x) => a + x * x, 0);
+                const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+
+                // Add regression line
+                const xRange = [pts[0].x, pts[pts.length - 1].x];
+                const b_intercept = (sumY - slope * sumX) / n;
+                const regrLine = xRange.map(x => ({ x, y: Math.exp(b_intercept + slope * Math.log(x)) }));
+
+                const color = CHART_COLORS[dsIdx % CHART_COLORS.length];
+                datasets.push({
+                    label: `${sessionLabel(s, 0)} ${key} (O≈${slope.toFixed(2)})`,
+                    data: pts, borderColor: color, backgroundColor: color,
+                    showLine: false, pointRadius: 4,
+                });
+                datasets.push({
+                    label: `fit`, data: regrLine,
+                    borderColor: color + '88', borderDash: [6, 3],
+                    showLine: true, pointRadius: 0, borderWidth: 1,
+                });
+                dsIdx++;
+
+                // Update table order column for this session
+                const row = tbody.querySelector(`tr:nth-child(${sessions.indexOf(s) + 1})`);
+                if (row) {
+                    const cells = row.querySelectorAll('td');
+                    cells[4].textContent = slope.toFixed(2);
+                }
+            }
+        }
+        chartConvergence.data.datasets = datasets;
+        chartConvergence.update('none');
+    } else {
+        convCard.classList.add('hidden');
+    }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Synthetic Demo Data
+   ════════════════════════════════════════════════════════════ */
+function generateDemoSession() {
+    const nx = 64, ny = 64, nSteps = 50;
+    const variables = ['rho', 'rho_vx', 'rho_vy', 'E'];
+    const mesh = { type: 'StructuredMesh2D', nx, ny, xmin: 0, xmax: 1, ymin: 0, ymax: 1, dx: 1 / nx, dy: 1 / ny };
+
+    const snapshots = [];
+    for (let step = 0; step <= nSteps; step++) {
+        const t = step * 0.01;
+        const sol = [];
+        for (let j = 0; j < ny; j++) {
+            const row = [];
+            for (let i = 0; i < nx; i++) {
+                const x = (i + 0.5) / nx;
+                const y = (j + 0.5) / ny;
+                const rho = 1.0 + 0.3 * Math.sin(2 * Math.PI * (x - 0.3 * t)) * Math.cos(2 * Math.PI * (y - 0.2 * t));
+                const vx = 0.3 + 0.1 * Math.cos(2 * Math.PI * x);
+                const vy = 0.2 + 0.1 * Math.sin(2 * Math.PI * y);
+                const E = 2.5 + 0.5 * rho;
+                row.push([rho, rho * vx, rho * vy, E]);
+            }
+            sol.push(row);
+        }
+        snapshots.push({
+            time: t, step,
+            solution: sol,
+            residual_norm: 1e-1 * Math.exp(-0.08 * step) + 1e-6 * Math.random(),
+            conserved_totals: {
+                rho: nx * ny * (1.0 + 0.001 * Math.random()),
+                E: nx * ny * (3.0 + 0.002 * Math.random()),
+            },
+            dt: 0.01 * (1 + 0.1 * Math.sin(step * 0.2)),
+            wall_time: step * 0.25 + 0.05 * step * step / nSteps,
+        });
+    }
+
+    return {
+        version: '1.0',
+        problem_type: 'HyperbolicProblem2D',
+        law: 'EulerEquations{2}',
+        mesh, variables, snapshots,
+        parameters: { cfl: 0.4, solver: 'HLLCSolver', reconstruction: 'CellCenteredMUSCL' },
+        convergence: [],
+    };
+}
+
+/* ════════════════════════════════════════════════════════════
+   Play/Pause Animation
+   ════════════════════════════════════════════════════════════ */
+let playTimer = null;
+
+function togglePlay() {
+    if (Store.get('playing')) {
+        stopPlay();
+    } else {
+        startPlay();
+    }
+}
+
+function startPlay() {
+    Store.set({ playing: true });
+    playTimer = setInterval(() => {
+        const session = getActiveSession();
+        if (!session) { stopPlay(); return; }
+        const idx = Store.get('selectedSnapshot');
+        const max = session.snapshots.length - 1;
+        if (idx >= max) {
+            Store.set({ selectedSnapshot: 0 });
+        } else {
+            Store.set({ selectedSnapshot: idx + 1 });
+        }
+    }, 100);
+}
+
+function stopPlay() {
+    Store.set({ playing: false });
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   UI Wiring
+   ════════════════════════════════════════════════════════════ */
+function initUI() {
+    // Sidebar tabs
+    document.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            Store.set({ activePanel: tab.dataset.panel });
+        });
+    });
+
+    // File load
+    document.getElementById('btn-load').addEventListener('click', () => {
+        document.getElementById('file-input').click();
+    });
+    document.getElementById('file-input').addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+        e.target.value = '';
+    });
+
+    // Demo
+    document.getElementById('btn-demo').addEventListener('click', () => {
+        const demo = generateDemoSession();
+        addSession(demo, 'demo-2d-euler.json');
+    });
+
+    // WebSocket
+    document.getElementById('btn-ws').addEventListener('click', wsToggle);
+    document.getElementById('ws-url').addEventListener('change', (e) => {
+        Store.set({ wsUrl: e.target.value });
+    });
+
+    // Solution controls
+    document.getElementById('sol-var').addEventListener('change', (e) => {
+        Store.set({ selectedVariable: parseInt(e.target.value) });
+    });
+    document.getElementById('sol-cmap').addEventListener('change', (e) => {
+        Store.set({ colormap: e.target.value });
+    });
+    document.getElementById('sol-autorange').addEventListener('change', (e) => {
+        Store.set({ autoRange: e.target.checked });
+        document.getElementById('range-inputs').style.display = e.target.checked ? 'none' : 'flex';
+    });
+    document.getElementById('sol-min').addEventListener('change', (e) => {
+        Store.set({ manualMin: parseFloat(e.target.value) || 0 });
+    });
+    document.getElementById('sol-max').addEventListener('change', (e) => {
+        Store.set({ manualMax: parseFloat(e.target.value) || 1 });
+    });
+    document.getElementById('sol-snap').addEventListener('input', (e) => {
+        Store.set({ selectedSnapshot: parseInt(e.target.value), autoAdvance: false });
+    });
+    document.getElementById('sol-zslice').addEventListener('input', (e) => {
+        Store.set({ zSlice: parseInt(e.target.value) });
+    });
+    document.getElementById('btn-prev').addEventListener('click', () => {
+        const idx = Store.get('selectedSnapshot');
+        if (idx > 0) Store.set({ selectedSnapshot: idx - 1, autoAdvance: false });
+    });
+    document.getElementById('btn-next').addEventListener('click', () => {
+        const session = getActiveSession();
+        if (!session) return;
+        const idx = Store.get('selectedSnapshot');
+        if (idx < session.snapshots.length - 1) Store.set({ selectedSnapshot: idx + 1, autoAdvance: false });
+    });
+    document.getElementById('btn-play').addEventListener('click', togglePlay);
+
+    // Compare panel
+    document.getElementById('btn-compare-load').addEventListener('click', () => {
+        document.getElementById('compare-file-input').click();
+    });
+    document.getElementById('compare-file-input').addEventListener('change', (e) => {
+        addCompareFiles(e.target.files);
+        e.target.value = '';
+    });
+
+    // Drag-and-drop on compare zone
+    const compareDrop = document.getElementById('compare-drop');
+    compareDrop.addEventListener('dragover', (e) => { e.preventDefault(); compareDrop.classList.add('drag-over'); });
+    compareDrop.addEventListener('dragleave', () => compareDrop.classList.remove('drag-over'));
+    compareDrop.addEventListener('drop', (e) => {
+        e.preventDefault(); compareDrop.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) addCompareFiles(e.dataTransfer.files);
+    });
+
+    // Global drag-and-drop on content area
+    const dropTarget = document.getElementById('drop-target');
+    dropTarget.addEventListener('dragover', (e) => e.preventDefault());
+    dropTarget.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) {
+            if (Store.get('activePanel') === 'compare') {
+                addCompareFiles(e.dataTransfer.files);
+            } else {
+                handleFiles(e.dataTransfer.files);
+            }
+        }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        switch (e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                document.getElementById('btn-prev').click();
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                document.getElementById('btn-next').click();
+                break;
+            case ' ':
+                e.preventDefault();
+                togglePlay();
+                break;
+            case '1': Store.set({ activePanel: 'solution' }); break;
+            case '2': Store.set({ activePanel: 'monitor' }); break;
+            case '3': Store.set({ activePanel: 'compare' }); break;
+            case '4': Store.set({ activePanel: 'profiles' }); break;
+            case 'e': case 'E':
+                exportCurrentSnapshot();
+                break;
+        }
+    });
+}
+
+function exportCurrentSnapshot() {
+    const snap = getActiveSnapshot();
+    const session = getActiveSession();
+    if (!snap || !session) { toast('No snapshot to export', 'error'); return; }
+    const blob = new Blob([JSON.stringify({ session_info: { law: session.law, mesh: session.mesh, variables: session.variables }, snapshot: snap }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snapshot_step${snap.step}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Snapshot exported', 'success');
+}
+
+/* ════════════════════════════════════════════════════════════
+   Reactive Updates
+   ════════════════════════════════════════════════════════════ */
+Store.subscribe((state, prev) => {
+    // Panel switching
+    if (state.activePanel !== prev.activePanel) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-' + state.activePanel).classList.add('active');
+        document.querySelectorAll('.sidebar-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.panel === state.activePanel);
+        });
+        // Trigger chart resize on panel switch
+        if (state.activePanel === 'monitor') {
+            requestAnimationFrame(() => {
+                chartResidual?.resize(); chartConserved?.resize();
+                chartDt?.resize(); chartWalltime?.resize();
+            });
+        }
+    }
+
+    // Session changed → update variable dropdown, snapshot slider, meta
+    const sessionChanged = state.activeSessionIdx !== prev.activeSessionIdx ||
+        state.sessions !== prev.sessions;
+    if (sessionChanged) {
+        const session = state.sessions[state.activeSessionIdx];
+        const metaEl = document.getElementById('session-meta');
+        const varSelect = document.getElementById('sol-var');
+        const snapSlider = document.getElementById('sol-snap');
+
+        if (session) {
+            metaEl.textContent = `${session.law || session.problem_type || '?'} | ${meshSize(session.mesh)} | ${session.snapshots.length} snaps`;
+
+            // Variable dropdown
+            varSelect.innerHTML = '';
+            (session.variables || []).forEach((v, i) => {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = v;
+                if (i === state.selectedVariable) opt.selected = true;
+                varSelect.appendChild(opt);
+            });
+
+            // Snapshot slider
+            snapSlider.max = Math.max(0, session.snapshots.length - 1);
+            snapSlider.value = state.selectedSnapshot >= 0 ? state.selectedSnapshot : 0;
+        } else {
+            metaEl.textContent = 'No session loaded';
+            varSelect.innerHTML = '';
+            snapSlider.max = 0;
+        }
+    }
+
+    // Snapshot slider sync
+    if (state.selectedSnapshot !== prev.selectedSnapshot) {
+        document.getElementById('sol-snap').value = state.selectedSnapshot;
+    }
+
+    // Solution render triggers
+    const solChanged = state.selectedSnapshot !== prev.selectedSnapshot ||
+        state.selectedVariable !== prev.selectedVariable ||
+        state.colormap !== prev.colormap ||
+        state.autoRange !== prev.autoRange ||
+        state.manualMin !== prev.manualMin ||
+        state.manualMax !== prev.manualMax ||
+        state.zSlice !== prev.zSlice ||
+        sessionChanged;
+    if (solChanged && state.activePanel === 'solution') {
+        renderSolution();
+    }
+    // Always re-render when switching to solution panel
+    if (state.activePanel === 'solution' && state.activePanel !== prev.activePanel) {
+        renderSolution();
+    }
+
+    // Monitor updates
+    if (state.activePanel === 'monitor' && (sessionChanged || state.activePanel !== prev.activePanel)) {
+        updateMonitorCharts();
+    }
+    // Live monitor: update when new snapshots come in
+    if (state.sessions !== prev.sessions && state.activePanel === 'monitor') {
+        updateMonitorCharts();
+    }
+
+    // WebSocket UI
+    if (state.wsStatus !== prev.wsStatus) {
+        const dot = document.getElementById('ws-dot');
+        dot.className = 'ws-dot ' + (state.wsStatus === 'connected' ? 'connected' : state.wsStatus === 'connecting' ? 'connecting' : state.wsStatus === 'error' ? 'error' : '');
+        const btn = document.getElementById('btn-ws');
+        btn.textContent = state.wsStatus === 'connected' ? 'Disconnect' : state.wsStatus === 'connecting' ? 'Connecting...' : 'Connect';
+        btn.classList.toggle('active', state.wsStatus === 'connected');
+    }
+
+    // Play/pause icon
+    if (state.playing !== prev.playing) {
+        const icon = document.getElementById('play-icon');
+        if (state.playing) {
+            icon.innerHTML = '<rect x="4" y="2" width="3" height="12"/><rect x="9" y="2" width="3" height="12"/>';
+        } else {
+            icon.innerHTML = '<path d="M4 2l10 6-10 6z"/>';
+        }
+        document.getElementById('btn-play').classList.toggle('active', state.playing);
+    }
+});
+
+/* ════════════════════════════════════════════════════════════
+   Species Profiles Panel
+   ════════════════════════════════════════════════════════════ */
+let profChart = null;
+
+function getSpeciesVarIndices(session) {
+    if (!session || !session.variables) return [];
+    const indices = [];
+    session.variables.forEach((v, i) => {
+        if (v.startsWith('rho_Y_')) indices.push(i);
+    });
+    return indices;
+}
+
+function speciesLabel(varName) {
+    return varName.replace('rho_Y_', 'Y_');
+}
+
+function initProfilesPanel() {
+    document.getElementById('prof-species').addEventListener('change', () => renderProfiles());
+    document.getElementById('prof-cut-dir').addEventListener('change', () => renderProfiles());
+    document.getElementById('prof-cut-pos').addEventListener('input', (e) => {
+        document.getElementById('prof-pos-readout').textContent = e.target.value;
+        renderProfiles();
+    });
+    document.getElementById('prof-snap').addEventListener('input', (e) => {
+        Store.set({ selectedSnapshot: parseInt(e.target.value), autoAdvance: false });
+    });
+}
+
+function updateProfilesControls() {
+    const session = getActiveSession();
+    const speciesIdx = getSpeciesVarIndices(session);
+    const sel = document.getElementById('prof-species');
+    const prevVal = sel.value;
+    sel.innerHTML = '';
+
+    if (speciesIdx.length === 0) {
+        document.getElementById('prof-empty').classList.remove('hidden');
+        document.getElementById('prof-chart-canvas').classList.add('hidden');
+        return;
+    }
+
+    // "All species" option
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all'; allOpt.textContent = 'All species';
+    sel.appendChild(allOpt);
+
+    speciesIdx.forEach(idx => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = speciesLabel(session.variables[idx]);
+        sel.appendChild(opt);
+    });
+    if (prevVal && sel.querySelector(`option[value="${prevVal}"]`)) sel.value = prevVal;
+
+    // Show/hide 2D cut controls
+    const is2d = session.mesh.type === 'StructuredMesh2D' || session.mesh.type === 'StructuredMesh3D';
+    document.getElementById('prof-cut-label').classList.toggle('hidden', !is2d);
+    document.getElementById('prof-cut-dir').classList.toggle('hidden', !is2d);
+    document.getElementById('prof-pos-label').classList.toggle('hidden', !is2d);
+    document.getElementById('prof-cut-pos').classList.toggle('hidden', !is2d);
+    document.getElementById('prof-pos-readout').classList.toggle('hidden', !is2d);
+    if (is2d) {
+        const ny = session.mesh.ny || 1;
+        const nx = session.mesh.nx || 1;
+        const cutDir = document.getElementById('prof-cut-dir').value;
+        const maxPos = cutDir === 'x' ? ny - 1 : nx - 1;
+        const slider = document.getElementById('prof-cut-pos');
+        slider.max = maxPos;
+        if (parseInt(slider.value) > maxPos) slider.value = Math.floor(maxPos / 2);
+        document.getElementById('prof-pos-readout').textContent = slider.value;
+    }
+
+    // Sync snapshot slider
+    if (session.snapshots.length > 0) {
+        const snapSlider = document.getElementById('prof-snap');
+        snapSlider.max = session.snapshots.length - 1;
+        snapSlider.value = Store.get('selectedSnapshot');
+    }
+
+    document.getElementById('prof-empty').classList.add('hidden');
+}
+
+function renderProfiles() {
+    const session = getActiveSession();
+    const snap = getActiveSnapshot();
+    if (!session || !snap) return;
+
+    const speciesIdx = getSpeciesVarIndices(session);
+    if (speciesIdx.length === 0) return;
+
+    const mesh = session.mesh;
+    const sol = snap.solution;
+    const selVal = document.getElementById('prof-species').value;
+    const indicesToPlot = selVal === 'all' ? speciesIdx : [parseInt(selVal)];
+
+    const canvas = document.getElementById('prof-chart-canvas');
+    canvas.classList.remove('hidden');
+
+    // Update snap readout
+    const readout = document.getElementById('prof-snap-readout');
+    readout.textContent = `step ${snap.step} | t=${snap.time.toFixed(4)}`;
+    document.getElementById('prof-snap').value = Store.get('selectedSnapshot');
+
+    let xVals = [];
+    const datasets = [];
+
+    if (mesh.type === 'StructuredMesh1D') {
+        const nx = sol.length;
+        const dx = mesh.dx || (mesh.xmax - mesh.xmin) / nx;
+        const xmin = mesh.xmin || 0;
+        for (let i = 0; i < nx; i++) xVals.push(xmin + (i + 0.5) * dx);
+
+        indicesToPlot.forEach((varIdx, di) => {
+            const data = xVals.map((x, i) => {
+                const rho = sol[i][0];
+                const rhoY = sol[i][varIdx];
+                return { x, y: rho > 1e-30 ? rhoY / rho : 0 };
+            });
+            datasets.push({
+                label: speciesLabel(session.variables[varIdx]),
+                data,
+                borderColor: CHART_COLORS[di % CHART_COLORS.length],
+                borderWidth: 2,
+                pointRadius: nx < 80 ? 2 : 0,
+                fill: false,
+            });
+        });
+    } else if (mesh.type === 'StructuredMesh2D') {
+        const ny = sol.length;
+        const nx = sol[0].length;
+        const cutDir = document.getElementById('prof-cut-dir').value;
+        const cutPos = parseInt(document.getElementById('prof-cut-pos').value);
+
+        if (cutDir === 'x') {
+            // Cut along x at fixed y = cutPos
+            const j = Math.min(cutPos, ny - 1);
+            const dx = mesh.dx || (mesh.xmax - mesh.xmin) / nx;
+            const xmin = mesh.xmin || 0;
+            for (let i = 0; i < nx; i++) xVals.push(xmin + (i + 0.5) * dx);
+            indicesToPlot.forEach((varIdx, di) => {
+                const data = xVals.map((x, i) => {
+                    const rho = sol[j][i][0];
+                    const rhoY = sol[j][i][varIdx];
+                    return { x, y: rho > 1e-30 ? rhoY / rho : 0 };
+                });
+                datasets.push({
+                    label: speciesLabel(session.variables[varIdx]),
+                    data,
+                    borderColor: CHART_COLORS[di % CHART_COLORS.length],
+                    borderWidth: 2, pointRadius: nx < 80 ? 2 : 0, fill: false,
+                });
+            });
+        } else {
+            // Cut along y at fixed x = cutPos
+            const i = Math.min(cutPos, nx - 1);
+            const dy = mesh.dy || (mesh.ymax - mesh.ymin) / ny;
+            const ymin = mesh.ymin || 0;
+            for (let j = 0; j < ny; j++) xVals.push(ymin + (j + 0.5) * dy);
+            indicesToPlot.forEach((varIdx, di) => {
+                const data = xVals.map((y, j) => {
+                    const rho = sol[j][i][0];
+                    const rhoY = sol[j][i][varIdx];
+                    return { x: y, y: rho > 1e-30 ? rhoY / rho : 0 };
+                });
+                datasets.push({
+                    label: speciesLabel(session.variables[varIdx]),
+                    data,
+                    borderColor: CHART_COLORS[di % CHART_COLORS.length],
+                    borderWidth: 2, pointRadius: ny < 80 ? 2 : 0, fill: false,
+                });
+            });
+        }
+    }
+
+    const xLabel = (mesh.type === 'StructuredMesh2D' && document.getElementById('prof-cut-dir').value === 'y') ? 'y' : 'x';
+
+    if (profChart) {
+        profChart.data.datasets = datasets;
+        profChart.options.scales.x.title.text = xLabel;
+        profChart.update('none');
+    } else {
+        profChart = new Chart(canvas, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: xLabel } },
+                    y: { title: { display: true, text: 'Mass fraction Y' }, min: -0.05, suggestedMax: 1.05 },
+                },
+                plugins: {
+                    zoom: zoomOpts(),
+                    legend: { display: true, position: 'top' },
+                },
+            },
+        });
+    }
+}
+
+// Subscribe to Store changes for profiles panel
+Store.subscribe((state, prev) => {
+    if (state.activePanel === 'profiles') {
+        const sessionChanged = state.activeSessionIdx !== prev.activeSessionIdx || state.sessions !== prev.sessions;
+        if (sessionChanged || state.activePanel !== prev.activePanel) {
+            updateProfilesControls();
+        }
+        if (state.selectedSnapshot !== prev.selectedSnapshot || sessionChanged || state.activePanel !== prev.activePanel) {
+            renderProfiles();
+        }
+    }
+});
+
+/* ════════════════════════════════════════════════════════════
+   Init
+   ════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+    initUI();
+    initMonitorCharts();
+    initCompareCharts();
+    initHoverReadout();
+    initProfilesPanel();
+});
+</script>
+</body>
+</html>
