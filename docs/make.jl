@@ -92,6 +92,11 @@ if RUN_EXAMPLES
         "hyperbolic/tutorials/mhd_rotor.jl",
         "hyperbolic/tutorials/grmhd_flat_space_shock.jl",
         "hyperbolic/tutorials/srmhd_cylindrical_blast.jl",
+        "hyperbolic/tutorials/shallow_water_dam_break.jl",
+        "hyperbolic/tutorials/srhydro_blast_wave.jl",
+        "hyperbolic/tutorials/resistive_mhd_current_sheet.jl",
+        "hyperbolic/tutorials/hall_mhd_whistler.jl",
+        "hyperbolic/tutorials/two_fluid_sod.jl",
     ]
     mkpath(joinpath(@__DIR__, "src", "hyperbolic", "tutorials"))
     mkpath(joinpath(@__DIR__, "src", "verification"))
@@ -232,6 +237,11 @@ _PAGES = [
             "MHD Rotor" => "hyperbolic/tutorials/mhd_rotor.md",
             "GRMHD in Flat Spacetime" => "hyperbolic/tutorials/grmhd_flat_space_shock.md",
             "SRMHD Cylindrical Blast" => "hyperbolic/tutorials/srmhd_cylindrical_blast.md",
+            "Shallow Water Dam Break" => "hyperbolic/tutorials/shallow_water_dam_break.md",
+            "SR Hydro Blast Wave" => "hyperbolic/tutorials/srhydro_blast_wave.md",
+            "Resistive MHD Current Sheet" => "hyperbolic/tutorials/resistive_mhd_current_sheet.md",
+            "Hall MHD Whistler Waves" => "hyperbolic/tutorials/hall_mhd_whistler.md",
+            "Two-Fluid Plasma Sod" => "hyperbolic/tutorials/two_fluid_sod.md",
         ],
     ],
     "Solvers for Specific Problems, and Writing Your Own" => [

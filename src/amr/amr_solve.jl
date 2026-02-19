@@ -40,6 +40,16 @@ struct AMRProblem{Grid, RS, Rec, BCs, FT}
     regrid_interval::Int
 end
 
+function Base.show(io::IO, ::MIME"text/plain", prob::AMRProblem)
+    nblocks = length(prob.grid.blocks)
+    maxlvl = prob.grid.max_level
+    t0 = prob.initial_time
+    tf = prob.final_time
+    law_name = nameof(typeof(prob.grid.law))
+    rs_name = nameof(typeof(prob.riemann_solver))
+    return print(io, "AMRProblem: $law_name with $rs_name, $nblocks blocks (max level $maxlvl), t ∈ ($t0, $tf)")
+end
+
 function AMRProblem(
         grid, riemann_solver, reconstruction, boundary_conditions;
         initial_time = 0.0, final_time, cfl = 0.4, regrid_interval = 4

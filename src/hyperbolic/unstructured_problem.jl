@@ -76,6 +76,15 @@ function UnstructuredHyperbolicProblem(
     )
 end
 
+function Base.show(io::IO, ::MIME"text/plain", prob::UnstructuredHyperbolicProblem)
+    nc = prob.mesh.ntri
+    t0 = prob.initial_time
+    tf = prob.final_time
+    law_name = nameof(typeof(prob.law))
+    rs_name = nameof(typeof(prob.riemann_solver))
+    return print(io, "UnstructuredHyperbolicProblem: $law_name with $rs_name on $nc cells, t ∈ ($t0, $tf)")
+end
+
 """
     get_bc(prob::UnstructuredHyperbolicProblem, segment::Int)
 

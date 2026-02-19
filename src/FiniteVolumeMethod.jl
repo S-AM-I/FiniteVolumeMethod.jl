@@ -16,7 +16,7 @@ using DelaunayTriangulation: DelaunayTriangulation, Triangulation,
 using LinearAlgebra: LinearAlgebra, norm
 using PreallocationTools: PreallocationTools, DiffCache, get_tmp
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, LinearProblem,
-    MatrixOperator, ODEFunction, ODEProblem, SteadyStateProblem
+    MatrixOperator, ODEFunction, ODEProblem, SteadyStateProblem, remake
 using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
@@ -184,6 +184,9 @@ include("coupling/operators.jl")
 include("coupling/data_transfer.jl")
 include("coupling/coupled_solve.jl")
 
+# SciMLBase.remake for all problem types
+include("remake.jl")
+
 # Dashboard data export and monitoring
 include("dashboard/fvm_export.jl")
 include("dashboard/hyperbolic_callbacks.jl")
@@ -202,6 +205,7 @@ export FVMGeometry,
     Constrained,
     Robin,
     solve,
+    remake,
     compute_flux,
     pl_interpolate,
     # Coordinate systems
