@@ -33,7 +33,6 @@ services:
   # Full test suite — mirrors CI.yml test job
   test:
     <<: *common
-    mem_limit: 10g
     environment:
       <<: *env
       JULIA_REFERENCETESTS_UPDATE: "true"
