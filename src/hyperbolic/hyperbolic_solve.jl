@@ -191,7 +191,11 @@ Solve the 1D hyperbolic problem using explicit time integration.
 - `U_final::Vector{SVector{N}}`: Final conserved variable vectors at cell centers.
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic(prob::HyperbolicProblem; method::Symbol = :ssprk3)
+function solve_hyperbolic(
+        prob::HyperbolicProblem;
+        method::Symbol = :ssprk3,
+        callback::Union{Nothing, Function} = nothing,
+    )
     mesh = prob.mesh
     nc = ncells(mesh)
     N = nvariables(prob.law)
@@ -205,6 +209,7 @@ function solve_hyperbolic(prob::HyperbolicProblem; method::Symbol = :ssprk3)
     end
 
     t = prob.initial_time
+    step = 0
 
     if method == :euler
         while t < prob.final_time - eps(typeof(t))
@@ -217,6 +222,10 @@ function solve_hyperbolic(prob::HyperbolicProblem; method::Symbol = :ssprk3)
                 U[i] = U[i] + dt * dU[i]
             end
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     elseif method == :ssprk3
         U1 = similar(U)
@@ -253,6 +262,10 @@ function solve_hyperbolic(prob::HyperbolicProblem; method::Symbol = :ssprk3)
             end
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     else
         error("Unknown time integration method: $method. Use :euler or :ssprk3.")

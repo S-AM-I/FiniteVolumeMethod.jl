@@ -221,7 +221,9 @@ Solve the 2D MHD problem using constrained transport for ∇·B = 0.
 """
 function solve_hyperbolic(
         prob::HyperbolicProblem2D{<:IdealMHDEquations{2}};
-        method::Symbol = :ssprk3, vector_potential = nothing
+        method::Symbol = :ssprk3,
+        vector_potential = nothing,
+        callback::Union{Nothing, Function} = nothing,
     )
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -257,6 +259,7 @@ function solve_hyperbolic(
     end
 
     t = prob.initial_time
+    step = 0
 
     if method == :euler
         while t < prob.final_time - eps(typeof(t))
@@ -283,6 +286,10 @@ function solve_hyperbolic(
             face_to_cell_B!(U, ct, nx, ny)
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
 
     elseif method == :ssprk3
@@ -345,6 +352,10 @@ function solve_hyperbolic(
             face_to_cell_B!(U, ct, nx, ny)
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     else
         error("Unknown time integration method: $method. Use :euler or :ssprk3.")

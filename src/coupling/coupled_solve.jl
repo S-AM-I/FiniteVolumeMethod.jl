@@ -25,7 +25,8 @@ Solve a 1D hyperbolic problem with stiff source terms using operator splitting.
 function solve_coupled(
         prob::HyperbolicProblem, source::AbstractStiffSource;
         splitting::AbstractSplittingScheme = StrangSplitting(),
-        newton_tol = 1.0e-10, newton_maxiter = 10
+        newton_tol = 1.0e-10, newton_maxiter = 10,
+        callback::Union{Nothing, Function} = nothing,
     )
     hyp_op = HyperbolicOperator(prob)
     src_op = SourceOperator(prob.law, source; newton_tol, newton_maxiter)
@@ -33,7 +34,7 @@ function solve_coupled(
         (hyp_op, src_op), splitting,
         prob.initial_time, prob.final_time
     )
-    return _solve_coupled_1d(coupled)
+    return _solve_coupled_1d(coupled, callback)
 end
 
 """
@@ -49,7 +50,8 @@ Solve a 2D hyperbolic problem with stiff source terms using operator splitting.
 function solve_coupled(
         prob::HyperbolicProblem2D, source::AbstractStiffSource;
         splitting::AbstractSplittingScheme = StrangSplitting(),
-        newton_tol = 1.0e-10, newton_maxiter = 10
+        newton_tol = 1.0e-10, newton_maxiter = 10,
+        callback::Union{Nothing, Function} = nothing,
     )
     hyp_op = HyperbolicOperator(prob)
     src_op = SourceOperator(prob.law, source; newton_tol, newton_maxiter)
@@ -57,7 +59,7 @@ function solve_coupled(
         (hyp_op, src_op), splitting,
         prob.initial_time, prob.final_time
     )
-    return _solve_coupled_2d(coupled)
+    return _solve_coupled_2d(coupled, callback)
 end
 
 """
@@ -66,12 +68,12 @@ end
 Solve a general coupled problem using operator splitting.
 Dispatches to 1D or 2D solver based on the HyperbolicOperator type.
 """
-function solve_coupled(coupled::CoupledProblem)
+function solve_coupled(coupled::CoupledProblem; callback::Union{Nothing, Function} = nothing)
     for op in coupled.operators
         if op isa HyperbolicOperator{<:HyperbolicProblem}
-            return _solve_coupled_1d(coupled)
+            return _solve_coupled_1d(coupled, callback)
         elseif op isa HyperbolicOperator{<:HyperbolicProblem2D}
-            return _solve_coupled_2d(coupled)
+            return _solve_coupled_2d(coupled, callback)
         end
     end
     error("CoupledProblem must contain at least one HyperbolicOperator")
@@ -81,7 +83,7 @@ end
 # 1D Solver
 # ============================================================
 
-function _solve_coupled_1d(coupled::CoupledProblem)
+function _solve_coupled_1d(coupled::CoupledProblem, callback::Union{Nothing, Function} = nothing)
     hyp_op = _find_hyperbolic_op(coupled.operators, HyperbolicProblem)
     prob = hyp_op.problem
     mesh = prob.mesh
@@ -105,6 +107,7 @@ function _solve_coupled_1d(coupled::CoupledProblem)
     workspace = (; dU_vec = dU, U1_vec = U1, U2_vec = U2, nc = nc)
 
     t = coupled.initial_time
+    step = 0
 
     while t < coupled.final_time - eps(typeof(t))
         # Compute dt as minimum over all operators
@@ -126,6 +129,10 @@ function _solve_coupled_1d(coupled::CoupledProblem)
         _apply_splitting!(U, coupled.operators, coupled.splitting, dt, t, workspace)
 
         t += dt
+        step += 1
+        if callback !== nothing
+            callback(U, t, step, dt)
+        end
     end
 
     # Extract interior solution
@@ -139,7 +146,7 @@ end
 # 2D Solver
 # ============================================================
 
-function _solve_coupled_2d(coupled::CoupledProblem)
+function _solve_coupled_2d(coupled::CoupledProblem, callback::Union{Nothing, Function} = nothing)
     hyp_op = _find_hyperbolic_op(coupled.operators, HyperbolicProblem2D)
     prob = hyp_op.problem
     mesh = prob.mesh
@@ -163,6 +170,7 @@ function _solve_coupled_2d(coupled::CoupledProblem)
     workspace = (; dU_mat = dU, U1_mat = U1, U2_mat = U2, nx = nx, ny = ny)
 
     t = coupled.initial_time
+    step = 0
 
     while t < coupled.final_time - eps(typeof(t))
         dt = typemax(FT)
@@ -181,6 +189,10 @@ function _solve_coupled_2d(coupled::CoupledProblem)
         _apply_splitting!(U, coupled.operators, coupled.splitting, dt, t, workspace)
 
         t += dt
+        step += 1
+        if callback !== nothing
+            callback(U, t, step, dt)
+        end
     end
 
     # Extract interior solution

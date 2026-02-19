@@ -98,6 +98,10 @@ end
         safe_include("README.jl")
     end
 
+    @testset verbose = true "Dashboard" begin
+        safe_include("test_dashboard.jl")
+    end
+
     @testset verbose = true "Tutorials" begin
         dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_tutorials")
         files = readdir(dir)

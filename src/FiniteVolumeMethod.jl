@@ -180,6 +180,11 @@ include("coupling/operators.jl")
 include("coupling/data_transfer.jl")
 include("coupling/coupled_solve.jl")
 
+# Dashboard data export and monitoring
+include("dashboard/fvm_export.jl")
+include("dashboard/hyperbolic_callbacks.jl")
+include("dashboard/parabolic_callbacks.jl")
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,
@@ -514,7 +519,21 @@ export FVMGeometry,
     compute_operator_dt,
     solve_coupled,
     cell_to_vertex,
-    vertex_to_cell
+    vertex_to_cell,
+    # Dashboard data export
+    FVMSnapshot,
+    FVMSessionData,
+    variable_names,
+    mesh_to_dict,
+    conserved_totals,
+    snapshot_to_dict,
+    session_to_dict,
+    hyperbolic_monitor,
+    create_session_data,
+    FVMMonitorCallback,
+    export_session,
+    import_session,
+    serve_dashboard
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin

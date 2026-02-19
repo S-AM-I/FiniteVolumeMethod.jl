@@ -238,7 +238,12 @@ Solve the 2D hyperbolic problem using explicit time integration.
 - `U_final::Matrix{SVector{N}}`: Final conserved variable matrix (nx × ny, interior only).
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3, parallel::Bool = false)
+function solve_hyperbolic(
+        prob::HyperbolicProblem2D;
+        method::Symbol = :ssprk3,
+        parallel::Bool = false,
+        callback::Union{Nothing, Function} = nothing,
+    )
     # Select serial or threaded functions
     _rhs! = parallel ? _hyperbolic_rhs_2d_threaded! : hyperbolic_rhs_2d!
     _compute_dt = parallel ? _compute_dt_2d_threaded : compute_dt_2d
@@ -257,6 +262,7 @@ function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3, p
     end
 
     t = prob.initial_time
+    step = 0
 
     if method == :euler
         while t < prob.final_time - eps(typeof(t))
@@ -269,6 +275,10 @@ function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3, p
                 U[ix + 2, iy + 2] = U[ix + 2, iy + 2] + dt * dU[ix + 2, iy + 2]
             end
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     elseif method == :ssprk3
         U1 = similar(U)
@@ -308,6 +318,10 @@ function solve_hyperbolic(prob::HyperbolicProblem2D; method::Symbol = :ssprk3, p
             end
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     else
         error("Unknown time integration method: $method. Use :euler or :ssprk3.")

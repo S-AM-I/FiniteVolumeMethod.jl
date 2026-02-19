@@ -172,7 +172,8 @@ function solve_hyperbolic(
         method::Symbol = :ssprk3,
         vector_potential_x = nothing,
         vector_potential_y = nothing,
-        vector_potential_z = nothing
+        vector_potential_z = nothing,
+        callback::Union{Nothing, Function} = nothing,
     )
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
@@ -209,6 +210,7 @@ function solve_hyperbolic(
     end
 
     t = prob.initial_time
+    step = 0
 
     if method == :euler
         while t < prob.final_time - eps(typeof(t))
@@ -235,6 +237,10 @@ function solve_hyperbolic(
             face_to_cell_B_3d!(U, ct, nx, ny, nz)
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
 
     elseif method == :ssprk3
@@ -297,6 +303,10 @@ function solve_hyperbolic(
             face_to_cell_B_3d!(U, ct, nx, ny, nz)
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     else
         error("Unknown time integration method: $method. Use :euler or :ssprk3.")

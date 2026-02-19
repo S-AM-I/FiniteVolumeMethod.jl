@@ -506,7 +506,8 @@ After all levels are advanced, the grid is periodically regridded according to
 function solve_amr_subcycled(
         prob::AMRProblem;
         subcycling::SubcyclingScheme = SubcyclingScheme(),
-        method::Symbol = :ssprk3
+        method::Symbol = :ssprk3,
+        callback::Union{Nothing, Function} = nothing,
     )
     grid = prob.grid
     t = prob.initial_time
@@ -531,6 +532,9 @@ function solve_amr_subcycled(
 
         t += dt
         step += 1
+        if callback !== nothing
+            callback(prob.grid, t, step, dt)
+        end
 
         # Regrid periodically
         if prob.regrid_interval > 0 && mod(step, prob.regrid_interval) == 0

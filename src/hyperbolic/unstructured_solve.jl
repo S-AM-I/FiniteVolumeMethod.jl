@@ -304,7 +304,11 @@ Solve the hyperbolic conservation law on an unstructured mesh.
 - `U_final::Vector{SVector{N,FT}}`: Final conserved variable vector per cell.
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic(prob::UnstructuredHyperbolicProblem; method::Symbol = :ssprk3)
+function solve_hyperbolic(
+        prob::UnstructuredHyperbolicProblem;
+        method::Symbol = :ssprk3,
+        callback::Union{Nothing, Function} = nothing,
+    )
     mesh = prob.mesh
     ntri = mesh.ntri
     N = nvariables(prob.law)
@@ -319,6 +323,7 @@ function solve_hyperbolic(prob::UnstructuredHyperbolicProblem; method::Symbol = 
     end
 
     t = prob.initial_time
+    step = 0
 
     if method == :euler
         while t < prob.final_time - eps(typeof(t))
@@ -331,6 +336,10 @@ function solve_hyperbolic(prob::UnstructuredHyperbolicProblem; method::Symbol = 
                 U[i] = U[i] + dt * dU[i]
             end
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     elseif method == :ssprk3
         U1 = similar(U)
@@ -365,6 +374,10 @@ function solve_hyperbolic(prob::UnstructuredHyperbolicProblem; method::Symbol = 
             end
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     else
         error("Unknown time integration method: $method. Use :euler or :ssprk3.")

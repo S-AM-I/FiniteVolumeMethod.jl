@@ -287,7 +287,11 @@ Solve the 3D hyperbolic problem using explicit time integration.
 - `U_final::Array{SVector{N},3}`: Final conserved variable array (nx x ny x nz, interior only).
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic(prob::HyperbolicProblem3D; method::Symbol = :ssprk3)
+function solve_hyperbolic(
+        prob::HyperbolicProblem3D;
+        method::Symbol = :ssprk3,
+        callback::Union{Nothing, Function} = nothing,
+    )
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     N = nvariables(prob.law)
@@ -302,6 +306,7 @@ function solve_hyperbolic(prob::HyperbolicProblem3D; method::Symbol = :ssprk3)
     end
 
     t = prob.initial_time
+    step = 0
 
     if method == :euler
         while t < prob.final_time - eps(typeof(t))
@@ -314,6 +319,10 @@ function solve_hyperbolic(prob::HyperbolicProblem3D; method::Symbol = :ssprk3)
                 U[ix + 2, iy + 2, iz + 2] = U[ix + 2, iy + 2, iz + 2] + dt * dU[ix + 2, iy + 2, iz + 2]
             end
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     elseif method == :ssprk3
         U1 = similar(U)
@@ -353,6 +362,10 @@ function solve_hyperbolic(prob::HyperbolicProblem3D; method::Symbol = :ssprk3)
             end
 
             t += dt
+            step += 1
+            if callback !== nothing
+                callback(U, t, step, dt)
+            end
         end
     else
         error("Unknown time integration method: $method. Use :euler or :ssprk3.")

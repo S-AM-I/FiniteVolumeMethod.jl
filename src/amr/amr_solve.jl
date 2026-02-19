@@ -370,7 +370,11 @@ Solve an AMR problem with Berger-Oliger subcycling time integration.
 - `grid`: The final AMR grid with solution data.
 - `t_final`: The final time reached.
 """
-function solve_amr(prob::AMRProblem; method::Symbol = :subcycling)
+function solve_amr(
+        prob::AMRProblem;
+        method::Symbol = :subcycling,
+        callback::Union{Nothing, Function} = nothing,
+    )
     grid = prob.grid
     t = prob.initial_time
     step = 0
@@ -393,6 +397,9 @@ function solve_amr(prob::AMRProblem; method::Symbol = :subcycling)
 
         t += dt
         step += 1
+        if callback !== nothing
+            callback(prob.grid, t, step, dt)
+        end
 
         # Regrid periodically
         if prob.regrid_interval > 0 && mod(step, prob.regrid_interval) == 0

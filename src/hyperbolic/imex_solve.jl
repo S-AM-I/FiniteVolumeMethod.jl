@@ -42,7 +42,8 @@ function solve_hyperbolic_imex(
         prob::HyperbolicProblem, stiff_source::AbstractStiffSource;
         scheme::AbstractIMEXScheme = IMEX_SSP3_433(),
         newton_tol = 1.0e-10,
-        newton_maxiter::Int = 5
+        newton_maxiter::Int = 5,
+        callback::Union{Nothing, Function} = nothing,
     )
     mesh = prob.mesh
     nc = ncells(mesh)
@@ -78,6 +79,7 @@ function solve_hyperbolic_imex(
     end
 
     t = prob.initial_time
+    step = 0
 
     while t < prob.final_time - eps(typeof(t))
         dt = compute_dt(prob, U, t)
@@ -140,6 +142,10 @@ function solve_hyperbolic_imex(
         end
 
         t += dt
+        step += 1
+        if callback !== nothing
+            callback(U, t, step, dt)
+        end
     end
 
     # Extract interior solution
@@ -232,7 +238,8 @@ function solve_hyperbolic_imex(
         scheme::AbstractIMEXScheme = IMEX_SSP3_433(),
         newton_tol = 1.0e-10,
         newton_maxiter::Int = 5,
-        parallel::Bool = false
+        parallel::Bool = false,
+        callback::Union{Nothing, Function} = nothing,
     )
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -273,6 +280,7 @@ function solve_hyperbolic_imex(
     _implicit_solve! = parallel ? _implicit_solve_2d_threaded! : _implicit_solve_2d!
 
     t = prob.initial_time
+    step = 0
 
     while t < prob.final_time - eps(typeof(t))
         dt = _compute_dt(prob, U, t)
@@ -320,6 +328,10 @@ function solve_hyperbolic_imex(
         end
 
         t += dt
+        step += 1
+        if callback !== nothing
+            callback(U, t, step, dt)
+        end
     end
 
     # Extract interior solution
