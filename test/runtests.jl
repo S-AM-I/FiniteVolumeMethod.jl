@@ -98,6 +98,10 @@ end
         safe_include("README.jl")
     end
 
+    @testset verbose = true "Coordinate Systems" begin
+        safe_include("test_coordinate_systems.jl")
+    end
+
     @testset verbose = true "Dashboard" begin
         safe_include("test_dashboard.jl")
     end
@@ -168,20 +172,27 @@ end
         dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_verification")
         files = readdir(dir)
         file_names = [
+            "amr_convergence.jl",
+            "brio_wu_verification.jl",
             "conservation_verification.jl",
+            "flux_balance_verification.jl",
+            "grmhd_convergence.jl",
+            "mhd_convergence.jl",
             "mhd_divb_verification.jl",
             "mms_convergence.jl",
+            "ns_convergence.jl",
+            "orszag_tang_verification.jl",
             "poisson_convergence.jl",
             "smooth_advection_convergence.jl",
+            "source_term_convergence.jl",
             "sod_grid_convergence.jl",
+            "srmhd_convergence.jl",
+            "toro_riemann_tests.jl",
         ]
         @test length(files) == length(file_names)
-        safe_include(joinpath(dir, file_names[1]); name = file_names[1])
-        safe_include(joinpath(dir, file_names[2]); name = file_names[2])
-        safe_include(joinpath(dir, file_names[3]); name = file_names[3])
-        safe_include(joinpath(dir, file_names[4]); name = file_names[4])
-        safe_include(joinpath(dir, file_names[5]); name = file_names[5])
-        safe_include(joinpath(dir, file_names[6]); name = file_names[6])
+        for i in eachindex(file_names)
+            safe_include(joinpath(dir, file_names[i]); name = file_names[i])
+        end
     end
 
     @testset verbose = true "Aqua" begin

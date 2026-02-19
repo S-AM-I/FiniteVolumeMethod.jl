@@ -1,0 +1,58 @@
+{
+  "description": "MHD Riemann problem initial conditions from Balsara (2001). These are standard test problems for MHD solvers. The 1D problems are solved in the x-direction with Bx = const.",
+  "reference": "Balsara, D.S. (2001). Total Variation Diminishing Scheme for Adiabatic and Isothermal Magnetohydrodynamics. J. Comput. Phys., 174, 614-648. DOI: 10.1006/jcph.2001.6918",
+  "gamma": 2.0,
+  "note": "Balsara MHD tests use gamma=2.0 unless otherwise noted. State vectors: [rho, vx, vy, vz, p, Bx, By, Bz]. Bx is constant across the interface.",
+  "tests": {
+    "test1": {
+      "name": "Brio-Wu shock tube (modified)",
+      "gamma": 2.0,
+      "Bx": 0.75,
+      "left":  {"rho": 1.0, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 1.0, "By": 1.0, "Bz": 0.0},
+      "right": {"rho": 0.125, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 0.1, "By": -1.0, "Bz": 0.0},
+      "x0": 0.5, "t_final": 0.1,
+      "domain": [0.0, 1.0],
+      "description": "Modified Brio-Wu problem. Produces fast rarefaction, slow compound wave, contact, slow shock, fast rarefaction."
+    },
+    "test2": {
+      "name": "Balsara Test 2",
+      "gamma": 1.6666666666666667,
+      "Bx": 5.0,
+      "left":  {"rho": 1.0, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 30.0, "By": 6.0, "Bz": 0.0},
+      "right": {"rho": 0.1, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 1.0, "By": 1.0, "Bz": 0.0},
+      "x0": 0.5, "t_final": 0.08,
+      "domain": [0.0, 1.0],
+      "description": "Strong MHD discontinuities with gamma=5/3."
+    },
+    "test3": {
+      "name": "Balsara Test 3",
+      "gamma": 1.6666666666666667,
+      "Bx": 10.0,
+      "left":  {"rho": 1.0, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 1000.0, "By": 7.0, "Bz": 0.0},
+      "right": {"rho": 1.0, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 0.1, "By": 0.7, "Bz": 0.0},
+      "x0": 0.5, "t_final": 0.01,
+      "domain": [0.0, 1.0],
+      "description": "Strong blast in magnetized medium. Tests strong shock capturing."
+    },
+    "test4": {
+      "name": "Balsara Test 4",
+      "gamma": 1.6666666666666667,
+      "Bx": 0.0,
+      "left":  {"rho": 1.0, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 1.0, "By": 1.0, "Bz": 0.0},
+      "right": {"rho": 0.2, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 0.1, "By": 0.0, "Bz": 0.0},
+      "x0": 0.5, "t_final": 0.15,
+      "domain": [0.0, 1.0],
+      "description": "Bx=0 reduces to hydrodynamic + transverse B. Tests degenerate cases."
+    },
+    "test5": {
+      "name": "Balsara Test 5",
+      "gamma": 1.6666666666666667,
+      "Bx": 0.75,
+      "left":  {"rho": 1.08, "vx": 1.2, "vy": 0.01, "vz": 0.5, "p": 0.95, "By": 3.6, "Bz": 2.0},
+      "right": {"rho": 1.0, "vx": 0.0, "vy": 0.0, "vz": 0.0, "p": 1.0, "By": 4.0, "Bz": 2.0},
+      "x0": 0.5, "t_final": 0.2,
+      "domain": [0.0, 1.0],
+      "description": "General oblique MHD Riemann problem with all wave families present."
+    }
+  }
+}

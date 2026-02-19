@@ -1,0 +1,77 @@
+{
+  "description": "Exact Riemann problem initial conditions and reference parameters from Toro (2009), Chapter 4, Table 4.1. Solutions are computed analytically via the exact Riemann solver.",
+  "reference": "Toro, E.F. (2009). Riemann Solvers and Numerical Methods for Fluid Dynamics, 3rd ed., Springer. DOI: 10.1007/b79761",
+  "gamma": 1.4,
+  "tests": {
+    "test1": {
+      "name": "Sod shock tube",
+      "rhoL": 1.0, "uL": 0.0, "pL": 1.0,
+      "rhoR": 0.125, "uR": 0.0, "pR": 0.1,
+      "x0": 0.5, "t_final": 0.2,
+      "domain": [0.0, 1.0],
+      "description": "Classic Sod (1978) problem. Produces right-moving shock, contact, and left-moving rarefaction.",
+      "reference_solution": {
+        "p_star": 0.30313,
+        "u_star": 0.92745,
+        "rho_starL": 0.42632,
+        "rho_starR": 0.26557
+      }
+    },
+    "test2": {
+      "name": "123 problem (two rarefactions)",
+      "rhoL": 1.0, "uL": -2.0, "pL": 0.4,
+      "rhoR": 1.0, "uR": 2.0, "pR": 0.4,
+      "x0": 0.5, "t_final": 0.15,
+      "domain": [0.0, 1.0],
+      "description": "Symmetric expansion producing near-vacuum. Tests solver robustness near vacuum.",
+      "reference_solution": {
+        "p_star": 0.00189,
+        "u_star": 0.0,
+        "rho_starL": 0.02185,
+        "rho_starR": 0.02185
+      }
+    },
+    "test3": {
+      "name": "Left Woodward & Colella blast",
+      "rhoL": 1.0, "uL": 0.0, "pL": 1000.0,
+      "rhoR": 1.0, "uR": 0.0, "pR": 0.01,
+      "x0": 0.5, "t_final": 0.012,
+      "domain": [0.0, 1.0],
+      "description": "Strong shock and contact. Tests resolution of strong discontinuities.",
+      "reference_solution": {
+        "p_star": 460.894,
+        "u_star": 19.5975,
+        "rho_starL": 5.99924,
+        "rho_starR": 5.99242
+      }
+    },
+    "test4": {
+      "name": "Collision of two shocks",
+      "rhoL": 5.99924, "uL": 19.5975, "pL": 460.894,
+      "rhoR": 5.99242, "uR": -6.19633, "pR": 46.0950,
+      "x0": 0.4, "t_final": 0.035,
+      "domain": [0.0, 1.0],
+      "description": "Two strong shocks collide. Tests correct shock speed computation.",
+      "reference_solution": {
+        "p_star": 1691.64,
+        "u_star": 8.68975,
+        "rho_starL": 14.2823,
+        "rho_starR": 31.0426
+      }
+    },
+    "test5": {
+      "name": "Stationary contact",
+      "rhoL": 1.0, "uL": -19.5975, "pL": 1000.0,
+      "rhoR": 1.0, "uR": -19.5975, "pR": 0.01,
+      "x0": 0.8, "t_final": 0.012,
+      "domain": [0.0, 1.0],
+      "description": "Nearly stationary contact with large pressure ratio. Tests contact resolution and entropy fix.",
+      "reference_solution": {
+        "p_star": 460.894,
+        "u_star": 0.00,
+        "rho_starL": 5.99924,
+        "rho_starR": 5.99242
+      }
+    }
+  }
+}
