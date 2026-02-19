@@ -189,7 +189,7 @@ fig
 using ReferenceTests #src
 @test_reference joinpath(@__DIR__, "../figures", "mean_exit_time_template_1.png") fig #src
 using Test #src
-ind = findall(i -> DelaunayTriangulation.has_vertex(tri, i), DelaunayTriangulation.each_point_index(tri))
+ind = findall(i -> DelaunayTriangulation.has_vertex(tri, i), DelaunayTriangulation.each_point_index(tri)) #src
 @test fvm_sol.u[ind] ≈ sol.u[ind] rtol = 1.0e-2 #src
 
 # ## Using the Provided Template

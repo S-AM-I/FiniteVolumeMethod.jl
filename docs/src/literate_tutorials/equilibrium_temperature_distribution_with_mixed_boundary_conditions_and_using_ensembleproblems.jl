@@ -106,8 +106,8 @@ sol |> tc #hide
 fig, ax, sc = tricontourf(tri, sol.u, levels = 40:70, axis = (xlabel = "x", ylabel = "y"))
 fig
 using ReferenceTests #src
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.png"
+@test_reference joinpath( #src
+    @__DIR__, #src
+    "../figures", #src
+    "equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.png" #src
 ) fig #src

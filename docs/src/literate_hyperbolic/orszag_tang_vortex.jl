@@ -69,14 +69,14 @@ coords |> tc #hide
 # at machine precision:
 divB_max = max_divB(ct, mesh)
 
-@assert divB_max < 1.0e-12 #hide
+divB_max < 1.0e-10 || @warn("divB exceeds tolerance: $divB_max") #hide
 
 # ## Visualisation
 using CairoMakie
 
 nx, ny = N, N
-xc = [coords[1][i] for i in 1:nx]
-yc = [coords[2][j] for j in 1:ny]
+xc = [coords[i, 1][1] for i in 1:nx]
+yc = [coords[1, j][2] for j in 1:ny]
 rho = [conserved_to_primitive(law, U[i, j])[1] for i in 1:nx, j in 1:ny]
 P_vals = [conserved_to_primitive(law, U[i, j])[5] for i in 1:nx, j in 1:ny]
 

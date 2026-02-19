@@ -82,7 +82,7 @@ function exact_solution(x, y, t) #src
         for m in 1:2:50 #src
             mterm = 2 / m * sin(m * π * x / 2) * exp(-π^2 * m^2 * t / 36) #src
             for n in 1:50 #src
-                nterm = (1 - cos(n * π / 2)) / n * sin(n * π * y / 2) *
+                nterm = (1 - cos(n * π / 2)) / n * sin(n * π * y / 2) * #src
                     exp(-π^2 * n^2 * t / 36) #src
                 s += mterm * nterm #src
             end #src

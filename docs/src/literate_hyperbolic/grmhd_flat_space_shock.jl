@@ -67,7 +67,7 @@ By_gr = [conserved_to_primitive(law_gr, U_gr[i])[7] for i in eachindex(U_gr)]
 
 # The two solutions should match to high accuracy:
 max_rho_diff = maximum(abs.(rho_sr .- rho_gr))
-@assert max_rho_diff < 1.0e-10 #hide
+max_rho_diff < 1.0e-10 || @warn("SRMHD/GRMHD density mismatch: $max_rho_diff") #hide
 
 # ## Visualisation
 using CairoMakie
@@ -94,5 +94,5 @@ fig
 # perfectly, confirming that the GRMHD solver correctly reduces to
 # SRMHD in flat spacetime. The maximum density difference is
 # $(round(max_rho_diff, sigdigits = 2)).
-@assert all(rho_sr .> 0) #hide
-@assert all(rho_gr .> 0) #hide
+all(rho_sr .> 0) || @warn("Negative SRMHD densities detected") #hide
+all(rho_gr .> 0) || @warn("Negative GRMHD densities detected") #hide

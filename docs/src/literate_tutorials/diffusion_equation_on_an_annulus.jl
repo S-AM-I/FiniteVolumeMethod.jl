@@ -156,9 +156,9 @@ fig, ax,
     x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
 )
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours_bad.png"
+@test_reference joinpath( #src
+    @__DIR__, "../figures", #src
+    "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours_bad.png" #src
 ) fig #src
 
 # The issue here is that the interpolant is trying to extrapolate inside the hole and
@@ -173,6 +173,6 @@ fig, ax,
 )
 fig
 tricontourf!(Axis(fig[1, 2]), tri, u, levels = -10:2:40, colormap = :matter) #src
-@test_reference joinpath(
-    @__DIR__, "../figures", "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours.png"
+@test_reference joinpath( #src
+    @__DIR__, "../figures", "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours.png" #src
 ) fig #src

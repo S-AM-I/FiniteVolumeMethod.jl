@@ -292,10 +292,18 @@ DocMeta.setdocmeta!(
     FiniteVolumeMethod, :DocTestSetup, :(using FiniteVolumeMethod, Test);
     recursive = true
 )
+# In Docker containers, git may fail due to ownership mismatch on bind mounts.
+# Detect this and disable remote source links gracefully.
+_git_works = try
+    success(`git -C $(joinpath(@__DIR__, "..")) rev-parse --show-toplevel`)
+catch
+    false
+end
 makedocs(;
     modules = [FiniteVolumeMethod],
     authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>",
     sitename = "FiniteVolumeMethod.jl",
+    (_git_works ? () : (remotes = nothing,))...,
     format = Documenter.HTML(;
         canonical = "https://cx-xd.github.io/FiniteVolumeMethod.jl",
         edit_link = "main",

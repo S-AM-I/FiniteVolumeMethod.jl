@@ -87,10 +87,10 @@ fig
 
 function exact_solution(x, y, t, m, M, D) #src
     if x^2 + y^2 < RmM * (D * t)^(1 / m) #src
-        u_exact = (D * t)^(-1 / m) *
-            (
-            (M / (4π))^((m - 1) / m) -
-                (m - 1) / (4m) * (x^2 + y^2) * (D * t)^(-1 / m)
+        u_exact = (D * t)^(-1 / m) * #src
+            ( #src
+            (M / (4π))^((m - 1) / m) - #src
+                (m - 1) / (4m) * (x^2 + y^2) * (D * t)^(-1 / m) #src
         )^(1 / (m - 1)) #src
     else #src
         u_exact = 0.0 #src
@@ -202,7 +202,7 @@ fig
 @test_reference joinpath(@__DIR__, "../figures", "porous_medium_equation_linear_source.png") fig #src
 
 function exact_solution(x, y, t, m, M, D, λ) #src
-    return exp(λ * t) *
+    return exp(λ * t) * #src
         exact_solution(x, y, D / (λ * (m - 1)) * (exp(λ * (m - 1) * t) - 1), m, M, 1.0) #src
 end #src
 function compare_solutions(sol, tri, m, M, D, λ) #src
@@ -222,14 +222,14 @@ x, y, u = compare_solutions(sol, tri, m, M, D, λ) #src
 fig = Figure(fontsize = 64) #src
 for i in eachindex(sol) #src
     ax = Axis(fig[1, i], width = 600, height = 600) #src
-    tricontourf!(
-        ax, tri, sol.u[i], levels = 0:0.05:1, extendlow = :auto,
-        colormap = :matter, extendhigh = :auto
+    tricontourf!( #src
+        ax, tri, sol.u[i], levels = 0:0.05:1, extendlow = :auto, #src
+        colormap = :matter, extendhigh = :auto #src
     ) #src
     ax = Axis(fig[2, i], width = 600, height = 600) #src
-    tricontourf!(
-        ax, tri, u[:, i], levels = 0:0.05:1, extendlow = :auto,
-        extendhigh = :auto, colormap = :matter
+    tricontourf!( #src
+        ax, tri, u[:, i], levels = 0:0.05:1, extendlow = :auto, #src
+        extendhigh = :auto, colormap = :matter #src
     ) #src
 end #src
 resize_to_layout!(fig) #src

@@ -110,9 +110,9 @@ fig, ax,
 tightlimits!(ax)
 fig
 using Test #src
-@test sol.u ≈ [
-    1 / (2π^2) * sin(π * x) * sin(π * y)
-        for (x, y) in DelaunayTriangulation.each_point(tri)
+@test sol.u ≈ [ #src
+    1 / (2π^2) * sin(π * x) * sin(π * y) #src
+        for (x, y) in DelaunayTriangulation.each_point(tri) #src
 ] rtol = 1.0e-4 #src
 
 # If we wanted to turn this into a `SteadyFVMProblem`, we use a similar call to `poissons_equation`
@@ -138,9 +138,9 @@ fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 fvm_sol |> tc #hide
 using ReferenceTests #src
 ax = Axis(fig[1, 2]) #src
-tricontourf!(
-    ax, tri, fvm_sol.u, levels = LinRange(0, 0.05, 10),
-    colormap = :matter, extendhigh = :auto
+tricontourf!( #src
+    ax, tri, fvm_sol.u, levels = LinRange(0, 0.05, 10), #src
+    colormap = :matter, extendhigh = :auto #src
 ) #src
 tightlimits!(ax) #src
 resize_to_layout!(fig) #src
@@ -156,9 +156,9 @@ prob = PoissonsEquation(mesh, BCs; source_function = source_function)
 #-
 sol = solve(prob, KLUFactorization())
 sol |> tc #hide
-@test sol.u ≈ [
-    1 / (2π^2) * sin(π * x) * sin(π * y)
-        for (x, y) in DelaunayTriangulation.each_point(tri)
+@test sol.u ≈ [ #src
+    1 / (2π^2) * sin(π * x) * sin(π * y) #src
+        for (x, y) in DelaunayTriangulation.each_point(tri) #src
 ] rtol = 1.0e-4 #src
 @test sol.u ≈ fvm_sol.u rtol = 1.0e-4 #src
 

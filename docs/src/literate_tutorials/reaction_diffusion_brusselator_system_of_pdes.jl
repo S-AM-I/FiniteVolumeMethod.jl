@@ -181,21 +181,21 @@ using ReferenceTests #src
 x = getx.(get_points(tri)) #src
 y = gety.(get_points(tri)) #src
 for i in eachindex(sol) #src
-    ax3 = Axis(
+    ax3 = Axis( #src
         fig[3, i], xlabel = L"x", ylabel = L"y", #src
         width = 400, height = 400, #src
-        title = L"Exact $\Phi: t = %$(sol.t[i])$", titlealign = :left
+        title = L"Exact $\Phi: t = %$(sol.t[i])$", titlealign = :left #src
     ) #src
-    ax4 = Axis(
+    ax4 = Axis( #src
         fig[4, i], xlabel = L"x", ylabel = L"y", #src
         width = 400, height = 400, #src
-        title = L"Exact $\Psi: t = %$(sol.t[i])$", titlealign = :left
+        title = L"Exact $\Psi: t = %$(sol.t[i])$", titlealign = :left #src
     ) #src
     tricontourf!(ax3, tri, Φ_exact.(x, y, sol.t[i]), levels = 0:0.1:1, colormap = :matter) #src
     tricontourf!(ax4, tri, Ψ_exact.(x, y, sol.t[i]), levels = 1:10:100, colormap = :matter) #src
 end  #src
 resize_to_layout!(fig) #src
 fig #src
-@test_reference joinpath(
-    @__DIR__, "../figures", "reaction_diffusion_brusselator_system_of_pdes_exact_comparisons.png"
+@test_reference joinpath( #src
+    @__DIR__, "../figures", "reaction_diffusion_brusselator_system_of_pdes_exact_comparisons.png" #src
 ) fig #src

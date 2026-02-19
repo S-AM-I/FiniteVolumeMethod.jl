@@ -104,8 +104,8 @@ for (i, j) in zip(1:3, (1, 6, 11))
 end
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.png"
+@test_reference joinpath( #src
+    @__DIR__, "../figures", "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.png" #src
 ) fig #src
 
 function get_ζ_terms(M, N, α) #src
@@ -122,9 +122,9 @@ function get_sum_coefficients(M, N, α, ζ) #src
     for n in 0:N #src
         order = n * π / α #src
         for m in 1:M #src
-            integrand = rθ -> _f(rθ[2], rθ[1]) * besselj(order, ζ[m, n + 1] * rθ[2]) *
+            integrand = rθ -> _f(rθ[2], rθ[1]) * besselj(order, ζ[m, n + 1] * rθ[2]) * #src
                 cos(order * rθ[1]) * rθ[2] #src
-            A[m, n + 1] = 4.0 / (α * besselj(order + 1, ζ[m, n + 1])^2) *
+            A[m, n + 1] = 4.0 / (α * besselj(order + 1, ζ[m, n + 1])^2) * #src
                 hcubature(integrand, [0.0, 0.0], [α, 1.0]; abstol = 1.0e-8)[1] #src
         end #src
     end #src
@@ -143,7 +143,7 @@ function exact_solution(x, y, t, A, ζ, f, α) #src
     for n in 1:N #src
         order = n * π / α #src
         for m in 1:M #src
-            s += +A[m, n + 1] * exp(-ζ[m, n + 1]^2 * t) * besselj(order, ζ[m, n + 1] * r) *
+            s += +A[m, n + 1] * exp(-ζ[m, n + 1]^2 * t) * besselj(order, ζ[m, n + 1] * r) * #src
                 cos(order * θ) #src
         end #src
     end #src
@@ -175,7 +175,7 @@ for i in eachindex(sol) #src
 end #src
 resize_to_layout!(fig) #src
 fig #src
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions_exact_comparisons.png"
+@test_reference joinpath( #src
+    @__DIR__, "../figures", #src
+    "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions_exact_comparisons.png" #src
 ) fig #src

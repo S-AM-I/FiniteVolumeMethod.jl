@@ -121,10 +121,10 @@ for i in eachindex(sol)
 end
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.png"
+@test_reference joinpath( #src
+    @__DIR__, #src
+    "../figures", #src
+    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.png" #src
 ) fig #src
 
 using StatsBase, Test #src
@@ -154,30 +154,30 @@ t = [10, 25, 50, 100, 200, 250] #src
 t_idx = [findlast(≤(τ), _sol.t) for τ in t] #src
 for (i, j) in enumerate(t_idx) #src
     ax = Axis(fig[1, i], width = 400, height = 400) #src
-    tricontourf!(
-        ax, tri, _sol.u[j], levels = 0:0.00001:0.001,
-        extendhigh = :auto, extendlow = :auto, colormap = :matter
+    tricontourf!( #src
+        ax, tri, _sol.u[j], levels = 0:0.00001:0.001, #src
+        extendhigh = :auto, extendlow = :auto, colormap = :matter #src
     ) #src
     ax = Axis(fig[2, i], width = 400, height = 400) #src
-    tricontourf!(
-        ax,
-        tri,
-        [
-            exact_solution(x, y, _sol.t[j], flux_parameters.D, flux_parameters.ν)
-                for (x, y) in DelaunayTriangulation.each_point(tri)
-        ],
-        levels = 0:0.00001:0.001,
-        extendhigh = :auto,
-        extendlow = :auto,
-        colormap = :matter
+    tricontourf!( #src
+        ax, #src
+        tri, #src
+        [ #src
+            exact_solution(x, y, _sol.t[j], flux_parameters.D, flux_parameters.ν) #src
+                for (x, y) in DelaunayTriangulation.each_point(tri) #src
+        ], #src
+        levels = 0:0.00001:0.001, #src
+        extendhigh = :auto, #src
+        extendlow = :auto, #src
+        colormap = :matter #src
     ) #src
 end #src
 resize_to_layout!(fig) #src
 fig #src
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation_exact_comparisons.png"
+@test_reference joinpath( #src
+    @__DIR__, #src
+    "../figures", #src
+    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation_exact_comparisons.png" #src
 ) fig #src
 
 # ## Piecewise linear interpolation
@@ -236,10 +236,10 @@ for i in eachindex(sol)
 end
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation_piecewise_linear_interpolation.png"
+@test_reference joinpath( #src
+    @__DIR__, #src
+    "../figures", #src
+    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation_piecewise_linear_interpolation.png" #src
 ) fig #src
 
 # ## Natural neighbour interpolation
@@ -332,10 +332,10 @@ for (i, (vals, title)) in enumerate(zip(all_vals, titles))
     end
 end
 fig
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation_natural_neighbour_interpolation.png"
+@test_reference joinpath( #src
+    @__DIR__, #src
+    "../figures", #src
+    "piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation_natural_neighbour_interpolation.png" #src
 ) fig #src
 
 # We note that natural neighbour interpolation is not technically well defined

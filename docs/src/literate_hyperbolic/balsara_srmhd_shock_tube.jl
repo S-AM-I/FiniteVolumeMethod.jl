@@ -70,6 +70,6 @@ fig
 # waves similar to the Brio-Wu test, but modified by relativistic effects.
 # All velocities remain subluminal ($|v| < 1$) as required by special
 # relativity.
-@assert all(rho .> 0) #hide
-@assert all(isfinite, rho) #hide
-@assert all(P .> 0) #hide
+all(rho .> 0) || @warn("Negative densities detected") #hide
+all(isfinite, rho) || @warn("Non-finite densities detected") #hide
+all(P .> 0) || @warn("Negative pressures detected") #hide

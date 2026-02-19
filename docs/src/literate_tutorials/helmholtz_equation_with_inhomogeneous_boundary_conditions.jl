@@ -75,8 +75,8 @@ using CairoMakie
 using ReferenceTests #src
 fig, ax, sc = tricontourf(tri, sol.u, levels = -2.5:0.15:-1.0, colormap = :matter)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "helmholtz_equation_with_inhomogeneous_boundary_conditions.png"
+@test_reference joinpath( #src
+    @__DIR__, "../figures", "helmholtz_equation_with_inhomogeneous_boundary_conditions.png" #src
 ) fig #src
 
 function exact_solution(x, y) #src
@@ -101,7 +101,7 @@ ax = Axis(fig[1, 2], width = 400, height = 400) #src
 tricontourf!(ax, tri, u, levels = -2.5:0.15:-1.0, colormap = :matter) #src
 resize_to_layout!(fig) #src
 fig #src
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "helmholtz_equation_with_inhomogeneous_boundary_conditions_exact_comparisons.png"
+@test_reference joinpath( #src
+    @__DIR__, "../figures", #src
+    "helmholtz_equation_with_inhomogeneous_boundary_conditions_exact_comparisons.png" #src
 ) fig #src

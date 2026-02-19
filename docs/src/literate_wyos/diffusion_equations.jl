@@ -404,6 +404,7 @@ fig
 # defined in terms of $\vb q = -D(\vb x)\grad u$ rather than $\grad u \vdot \vu n$. So,
 # since $\grad u \vdot \vu n = 2$, we have $-D\grad u \vdot \vu n = -2D = -4$, so
 # $\vb q \vdot \vu n = -4$. Here is a comparison of the two solutions.
+using LinearSolve
 BCs_prob = BoundaryConditions(mesh, (x, y, t, u, p) -> -4, Neumann)
 fvm_prob = FVMProblem(
     mesh, BCs_prob;
@@ -460,5 +461,5 @@ q = (30.0, 45.0)
 T = jump_and_march(tri, q)
 val = pl_interpolate(prob, T, sol.u[3], q[1], q[2])
 using Test #src
-@test pl_interpolate(prob, T, sol.u[3], q[1], q[2]) ≈
+@test pl_interpolate(prob, T, sol.u[3], q[1], q[2]) ≈ #src
     pl_interpolate(fvm_prob, T, fvm_sol.u[3], q[1], q[2]) rtol = 1.0e-3 #src
