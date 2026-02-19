@@ -44,14 +44,13 @@ services:
   # Usage: TEST_FILE=test/geometry.jl docker-compose run --rm test-file
   test-file:
     <<: *common
-    mem_limit: 8g
     environment:
       <<: *env
       JULIA_REFERENCETESTS_UPDATE: "true"
       TEST_FILE: ${TEST_FILE:-test/geometry.jl}
     command: >-
       bash -c 'julia --project=test -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
-      julia --project=test -e "using FiniteVolumeMethod, Test; include(\"$$TEST_FILE\")"'
+      julia --project=test -e "using FiniteVolumeMethod, Test; @testset \"$$TEST_FILE\" begin include(\"$$TEST_FILE\") end"'
 
   # Runic format check — mirrors FormatCheck.yml
   format:
