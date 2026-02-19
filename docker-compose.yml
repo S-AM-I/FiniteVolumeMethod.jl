@@ -1,0 +1,114 @@
+# Docker Compose for local CI — FiniteVolumeMethod.jl
+#
+# Usage:
+#   docker-compose build base          # Build base image (first time / after Project.toml changes)
+#   docker-compose run --rm test       # Full test suite
+#   docker-compose run --rm format     # Check formatting
+#   docker-compose run --rm repl       # Interactive REPL
+#
+# Override locally via docker-compose.override.yml (gitignored).
+
+x-common: &common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.base
+    args:
+      JULIA_VERSION: "1.11"
+  image: fvm-base:latest
+  volumes:
+    - .:/workspace
+    - fvm-julia-depot:/julia-depot
+  environment: &env
+    JULIA_DEPOT_PATH: /julia-depot
+    JULIA_NUM_THREADS: auto
+  working_dir: /workspace
+
+services:
+  # Build the base image (pre-compiled deps)
+  base:
+    <<: *common
+    profiles: [build]
+    command: julia --project -e 'println("Base image ready.")'
+
+  # Full test suite — mirrors CI.yml test job
+  test:
+    <<: *common
+    mem_limit: 10g
+    environment:
+      <<: *env
+      JULIA_REFERENCETESTS_UPDATE: "true"
+    command: >-
+      bash -c 'julia --project -e "using Pkg; Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project -e "using Pkg; Pkg.test()"'
+
+  # Single test file — fast iteration
+  # Usage: TEST_FILE=test/geometry.jl docker-compose run --rm test-file
+  test-file:
+    <<: *common
+    mem_limit: 8g
+    environment:
+      <<: *env
+      JULIA_REFERENCETESTS_UPDATE: "true"
+      TEST_FILE: ${TEST_FILE:-test/geometry.jl}
+    command: >-
+      bash -c 'julia --project=test -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project=test -e "using FiniteVolumeMethod, Test; include(\"$$TEST_FILE\")"'
+
+  # Runic format check — mirrors FormatCheck.yml
+  format:
+    <<: *common
+    mem_limit: 2g
+    command: >-
+      julia -e '
+        using Pkg;
+        Pkg.activate("runic"; shared=true);
+        using Runic;
+        exit(Runic.main(["--check", "."]))'
+
+  # Runic auto-fix formatting
+  format-fix:
+    <<: *common
+    mem_limit: 2g
+    command: >-
+      julia -e '
+        using Pkg;
+        Pkg.activate("runic"; shared=true);
+        using Runic;
+        exit(Runic.main(["--inplace", "."]))'
+
+  # Full docs build with executed examples
+  docs:
+    <<: *common
+    mem_limit: 10g
+    environment:
+      <<: *env
+      CI: "false"
+    command: >-
+      bash -c 'julia --project -e "using Pkg; Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project=docs -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project=docs docs/make.jl'
+
+  # Fast docs build — no executed examples (mirrors CI docs job)
+  docs-ci:
+    <<: *common
+    mem_limit: 4g
+    environment:
+      <<: *env
+      CI: "true"
+    command: >-
+      bash -c 'julia --project -e "using Pkg; Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project=docs -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project=docs docs/make.jl'
+
+  # Interactive Julia REPL
+  repl:
+    <<: *common
+    mem_limit: 8g
+    stdin_open: true
+    tty: true
+    command: >-
+      bash -c 'julia --project -e "using Pkg; Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project'
+
+volumes:
+  fvm-julia-depot:

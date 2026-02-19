@@ -1,0 +1,25 @@
+# Version control
+.git/
+
+# Build artifacts
+docs/build/
+docs/site/
+
+# Manifest files (may be from a different Julia version)
+Manifest.toml
+test/Manifest.toml
+docs/Manifest.toml
+
+# Claude Code
+.claude/
+
+# Editor / OS files
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Docker compose overrides
+docker-compose.override.yml

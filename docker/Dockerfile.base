@@ -1,0 +1,93 @@
+# Base image for local CI of FiniteVolumeMethod.jl
+# Mirrors ubuntu-latest / x64 used in GitHub Actions CI.yml
+#
+# Build:  docker compose build base
+# Or:     docker build -f docker/Dockerfile.base -t fvm-base .
+
+ARG JULIA_VERSION=1.11
+FROM julia:${JULIA_VERSION}-bookworm
+
+# ── System dependencies for CairoMakie / GLMakie headless ──
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libcairo2 \
+        libfontconfig1 \
+        libfreetype6 \
+        libglib2.0-0 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libpixman-1-0 \
+        libpng16-16 \
+        libx11-6 \
+        libxext6 \
+        libxrender1 \
+        xvfb \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Environment ──
+# JULIA_PKG_SERVER is left unset during build so the registry auto-downloads.
+# It is set to "" at runtime via docker-compose.yml to match CI.
+ENV JULIA_DEPOT_PATH=/julia-depot \
+    JULIA_NUM_THREADS=auto
+
+RUN mkdir -p /julia-depot /workspace
+
+WORKDIR /workspace
+
+# ── Seed the General registry ──
+RUN julia -e 'using Pkg; Pkg.Registry.add("General")'
+
+# ── Copy Project.toml files only (Manifests are gitignored and may be ──
+# ── from a different Julia version, so we resolve fresh)               ──
+# Root environment
+COPY Project.toml /workspace/Project.toml
+
+# Test environment
+COPY test/Project.toml /workspace/test/Project.toml
+
+# Docs environment
+COPY docs/Project.toml /workspace/docs/Project.toml
+
+# ── Copy full source tree for Pkg.develop and precompilation ──
+COPY src/ /workspace/src/
+
+# ── Instantiate main project ──
+RUN julia --project=/workspace -e ' \
+    using Pkg; \
+    Pkg.resolve(); \
+    Pkg.instantiate(); \
+    Pkg.precompile()'
+
+# ── Instantiate test environment ──
+# Develop the main package into the test env so FiniteVolumeMethod resolves
+RUN julia --project=/workspace/test -e ' \
+    using Pkg; \
+    Pkg.develop(PackageSpec(path="/workspace")); \
+    Pkg.resolve(); \
+    Pkg.instantiate(); \
+    Pkg.precompile()'
+
+# ── Instantiate docs environment ──
+RUN julia --project=/workspace/docs -e ' \
+    using Pkg; \
+    Pkg.develop(PackageSpec(path="/workspace")); \
+    Pkg.resolve(); \
+    Pkg.instantiate(); \
+    Pkg.precompile()'
+
+# ── Install Runic in shared @runic environment ──
+RUN julia -e ' \
+    using Pkg; \
+    Pkg.activate("runic"; shared=true); \
+    Pkg.add("Runic"); \
+    Pkg.precompile()'
+
+# ── Copy full source tree (uses .dockerignore) ──
+COPY . /workspace
+
+# ── Entrypoint removes stale host Manifests before running commands ──
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+CMD ["julia", "--project"]

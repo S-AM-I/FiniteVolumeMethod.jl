@@ -10,3 +10,4 @@ docs/build/
 docs/site/
 docs/Manifest.toml
 .gitignore
+docker-compose.override.yml
