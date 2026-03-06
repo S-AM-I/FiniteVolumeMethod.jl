@@ -9,19 +9,25 @@ FiniteVolumeMethod.jl is a Julia package for solving partial differential equati
 1. **Triangular (vertex-centered) FVM** for parabolic/elliptic PDEs on unstructured meshes via DelaunayTriangulation.jl
 2. **Cell-centered FVM** for hyperbolic conservation laws on structured/unstructured grids
 
-Version: `1.2.0`. Codebase: ~109 source files (~23k lines), 32 test files (~15k lines).
+Version: `1.2.0`.
 
 ## Commands
 
 ```bash
-# Run all tests
+# Run all tests (memory-intensive; CI adds 8 GB swap)
 julia --project -e 'using Pkg; Pkg.test()'
 
 # Run a specific test file
 julia --project test/geometry.jl
 
-# Format code (uses Runic)
-julia --project -e 'using Runic; Runic.format(".")'
+# Run a Literate tutorial test
+julia --project docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl
+
+# Format code in-place (uses Runic — must be installed globally)
+julia --project -e 'using Runic; Runic.main(["--inplace", "."])'
+
+# Check formatting without modifying files
+julia --project -e 'using Runic; Runic.main(["--check", "."])'
 
 # Build documentation locally
 julia --project=docs docs/make.jl
@@ -29,6 +35,21 @@ julia --project=docs docs/make.jl
 # Run quality checks
 julia --project -e 'using Aqua; Aqua.test_all(FiniteVolumeMethod)'
 ```
+
+## Formatting: Runic
+
+- **CI blocks PRs** that fail the Runic check (`fredrikekre/runic-action@v1` in `FormatCheck.yml`).
+- A local pre-commit hook at `.git/hooks/pre-commit` runs `Runic.main(["--check", ...])` on staged `.jl` files.
+- Runic is **not** in `Project.toml` — it must be installed in your global Julia environment (`]add Runic` from the default env).
+- Always run `julia --project -e 'using Runic; Runic.main(["--inplace", "."])'` before committing.
+- Key style rules enforced: spaces around `=` in keyword args (`atol = 0.01`), 4-space continuation indent (not aligned to `(`), spaces around `/` in arithmetic.
+
+## CI
+
+- **Julia versions**: stable (`'1'`), LTS (`'lts'`), nightly (`'pre'`, allowed to fail) — all on `ubuntu-latest` x64.
+- Tests require significant memory; CI adds an 8 GB swapfile before running.
+- Reference tests run with `JULIA_REFERENCETESTS_UPDATE=true` in CI (images regenerated, not checked against fixed baselines).
+- `dependabot.yml` monitors Julia package deps (daily) and GitHub Actions (weekly).
 
 ## Architecture
 
@@ -60,7 +81,7 @@ julia --project -e 'using Aqua; Aqua.test_all(FiniteVolumeMethod)'
 
 ```
 src/
-├── FiniteVolumeMethod.jl   # Main module, exports
+├── FiniteVolumeMethod.jl   # Main module, exports (~250 symbols), precompile workload
 ├── coordinate_systems.jl   # AbstractCoordinateSystem hierarchy
 ├── geometry.jl             # FVMGeometry mesh wrapper
 ├── conditions.jl           # Core BC types
@@ -89,7 +110,8 @@ src/
 ├── constrained_transport/  # CT for div(B)=0 (2D and 3D)
 ├── metric/                 # Spacetime metrics (Minkowski, Schwarzschild, Kerr)
 ├── amr/                    # Block-structured AMR with Berger-Colella flux correction
-└── coupling/               # Multi-physics operator splitting
+├── coupling/               # Multi-physics operator splitting
+└── dashboard/              # Export + callbacks (served via FVMDashboardExt extension, requires HTTP + JSON3)
 ```
 
 ### Key Function Signatures
@@ -161,16 +183,24 @@ A separate cell-centered finite volume solver for hyperbolic conservation laws o
 
 ## Test Organization
 
-Tests run via `test/runtests.jl` with 30+ testsets covering: Geometry, Conditions, Robin BCs, Problem, Equations, Schemes, Advanced BCs, Physics Models, Hyperbolic (1D/2D/3D), MHD (1D/2D/3D + CT), Navier-Stokes, SRMHD (1D/2D), GRMHD (1D/2D), AMR, WENO, IMEX, Unstructured Hyperbolic, Multi-Physics Coupling, Performance & Threading, Advanced Numerics, Extended Physics, README, Tutorials (14 Literate scripts), Custom Templates (5 wyos scripts), Aqua, Explicit Imports.
+Tests run via `test/runtests.jl` using the `safe_include` pattern: each test file runs in a fresh anonymous module (`gensym()`) to prevent name collisions and allow independent failure.
 
-**Note**: `test/test_coordinate_systems.jl` exists (11 tests) but is not yet included in `runtests.jl`.
+**Test categories**:
+- Unit tests (in `test/`): geometry, conditions, robin, problem, equations, schemes, advanced_bcs, physics, coordinate_systems, dashboard, remake, reactive_euler, and all hyperbolic solver tests (1D/2D/3D Euler, MHD, Navier-Stokes, SRMHD, GRMHD, AMR, WENO, IMEX, unstructured, coupling, performance, advanced_numerics, extended_physics)
+- Literate tutorials (14 scripts from `docs/src/literate_tutorials/`)
+- Custom templates (5 scripts from `docs/src/literate_wyos/`)
+- Verification suite (19 scripts from `docs/src/literate_verification/`)
+- Quality: Aqua (with `ambiguities=false, project_extras=false, unbound_args=false`) and Explicit Imports
+
+Known pre-existing failures are documented in `test/KNOWN_FAILURES.md`.
 
 ## Key Integration Points
 
 - **DelaunayTriangulation.jl** - Mesh representation
-- **SciMLBase.jl/DifferentialEquations.jl** - Problem types and solvers
+- **SciMLBase.jl/DifferentialEquations.jl** - Problem types and solvers (`SciMLBase.remake` supported)
 - **NonlinearSolve.jl** - Steady-state solvers
 - **LinearSolve.jl** - Linear system solvers for templates
 - **StaticArrays.jl** - SVector for conserved variable tuples in hyperbolic solver
 - **PreallocationTools.jl** - DiffCache for AD compatibility
 - **ChunkSplitters.jl** - Thread-parallel loop decomposition
+- **HTTP.jl + JSON3.jl** - Weak deps for `FVMDashboardExt` package extension (`serve_dashboard`)
