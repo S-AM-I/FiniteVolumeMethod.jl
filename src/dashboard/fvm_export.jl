@@ -315,6 +315,28 @@ function session_to_dict(session::FVMSessionData)
 end
 
 # ============================================================
+# Convergence study helpers
+# ============================================================
+
+"""
+    add_convergence_point!(session::FVMSessionData, grid_size::Int, errors::Dict{String,Float64})
+
+Append a convergence data point to the session. Each entry records the grid size
+and one or more named error norms, for use in the Compare panel's log-log plot.
+
+# Example
+```julia
+add_convergence_point!(session, 100, Dict("L1" => 1.2e-3, "L2" => 3.4e-4))
+```
+"""
+function add_convergence_point!(session::FVMSessionData, grid_size::Int, errors::Dict{String, Float64})
+    entry = Dict{String, Any}("grid_size" => grid_size)
+    merge!(entry, errors)
+    push!(session.convergence_data, entry)
+    return nothing
+end
+
+# ============================================================
 # Stubs for extension-provided functions
 # ============================================================
 
