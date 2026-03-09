@@ -13,13 +13,44 @@ using DelaunayTriangulation: DelaunayTriangulation, Triangulation,
     num_solid_triangles, refine!, statistics,
     triangle_vertices, triangulate,
     triangulate_rectangle, unlock_convex_hull!
-using LinearAlgebra: LinearAlgebra, norm
+using LinearAlgebra: LinearAlgebra, I, dot, norm
 using PreallocationTools: PreallocationTools, DiffCache, get_tmp
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, LinearProblem,
     MatrixOperator, ODEFunction, ODEProblem, SteadyStateProblem, remake
 using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
+
+# --- Parabolic Types & Mesh (from Simu.jl migration) ---
+include("parabolic/types.jl")
+include("parabolic/mesh/types.jl")
+include("parabolic/mesh/structured.jl")
+include("parabolic/mesh/curvilinear.jl")
+include("parabolic/mesh/unstructured.jl")
+include("parabolic/mesh/fvm_mesh.jl")
+include("parabolic/mesh/io.jl")
+include("parabolic/mesh/partitioning.jl")
+
+# --- Parabolic Solver (from Simu.jl SimuFVM migration) ---
+include("parabolic/models.jl")
+include("parabolic/utils.jl")
+include("parabolic/boundary_conditions.jl")
+include("parabolic/gradients.jl")
+include("parabolic/limiters.jl")
+include("parabolic/schemes.jl")
+include("parabolic/compressible_fluxes.jl")
+include("parabolic/turbulence.jl")
+include("parabolic/particles.jl")
+include("parabolic/fsi.jl")
+include("parabolic/kernels.jl")
+include("parabolic/assembly/assembly_1d.jl")
+include("parabolic/assembly/assembly_2d.jl")
+include("parabolic/assembly/assembly_3d.jl")
+include("parabolic/assembly/assembly_cylindrical.jl")
+include("parabolic/assembly/assembly_spherical.jl")
+include("parabolic/assembly/assembly_unstructured.jl")
+include("parabolic/assembly/assembly_curvilinear.jl")
+include("parabolic/assembly/assembly_system.jl")
 
 include("coordinate_systems.jl")
 include("geometry.jl")
@@ -191,6 +222,283 @@ include("remake.jl")
 include("dashboard/fvm_export.jl")
 include("dashboard/hyperbolic_callbacks.jl")
 include("dashboard/parabolic_callbacks.jl")
+
+# --- Engine (from Simu.jl SimuEngine migration) ---
+include("engine/orchestration.jl")
+include("engine/steppers.jl")
+include("engine/newton.jl")
+include("engine/solvers.jl")
+include("engine/coloring.jl")
+include("engine/adjoint.jl")
+include("engine/estimation.jl")
+
+# --- I/O (from Simu.jl SimuIO migration) ---
+include("io/utils.jl")
+include("io/manager.jl")
+include("io/diagnostics.jl")
+include("io/vtk.jl")
+include("io/insitu.jl")
+include("io/registry.jl")
+include("io/hdf5.jl")
+include("io/checkpointing.jl")
+
+# --- Parabolic Core Types (from Simu.jl migration) ---
+export
+    # Tags
+    AbstractTag,
+    AbstractTagSpatial,
+    AbstractTagTime,
+    AbstractTagSteady,
+    AbstractTagIVP,
+    # Simulation, Problem, Solution
+    AbstractSimulation,
+    AbstractProblem,
+    AbstractSolution,
+    AbstractProblemIVP,
+    AbstractProblemSteady,
+    AbstractProblemPDE,
+    # Geometry and Mesh
+    AbstractGeometry,
+    AbstractGeometryComponent,
+    AbstractParabolicMesh,
+    AbstractNode,
+    AbstractCell,
+    AbstractFace,
+    CellType,
+    CT_Tetrahedron,
+    CT_Hexahedron,
+    CT_Prism,
+    CT_Pyramid,
+    CT_Polyhedron,
+    # Physics and Discretization
+    AbstractField,
+    AbstractPhysicsOperator,
+    AbstractBoundaryCondition,
+    AbstractInitialCondition,
+    ParabolicDirichlet,
+    ParabolicNeumann,
+    ParabolicRobin,
+    # Variables and Fields
+    AbstractVariable,
+    VariableRole,
+    STATEVAR,
+    Variable,
+    CellField,
+    SimulationState,
+    validate_state,
+    update_field,
+    # Materials
+    AbstractMaterialProperty,
+    AbstractMaterial,
+    AbstractMaterialModel,
+    # Discretization
+    AbstractDiscretization,
+    AbstractSemidiscretization,
+    AbstractFluxCalculator,
+    AbstractReconstruction,
+    # Solvers and Algorithms
+    AbstractAlgorithm,
+    AbstractTimeIntegrator,
+    AbstractNonlinearSolver,
+    AbstractLinearSolver,
+    # Callbacks and Diagnostics
+    AbstractCallback,
+    AbstractDiagnostic,
+    # Control and Events
+    AbstractTimeGrid,
+    AbstractController,
+    AbstractEvent,
+    # Post-processing and I/O
+    AbstractOutputManager,
+    AbstractConfig,
+    # Structured Mesh Types (Parabolic)
+    Node1D,
+    Cell1D,
+    Face1D,
+    Mesh1D,
+    Node2D,
+    Cell2D,
+    Face2D,
+    Mesh2D,
+    Node3D,
+    Cell3D,
+    Face3D,
+    Mesh3D,
+    # Structured Mesh Generation
+    generate_mesh_1d,
+    generate_mesh_1d_nonuniform,
+    generate_mesh_2d,
+    generate_mesh_2d_nonuniform,
+    generate_mesh_3d,
+    generate_mesh_3d_nonuniform,
+    # Curvilinear Mesh
+    CurvilinearMesh2D,
+    CurvilinearMesh3D,
+    get_cell_center,
+    get_face_geo,
+    # Unstructured Mesh (Parabolic)
+    UnstructuredFace2D,
+    UnstructuredCell2D,
+    UnstructuredMesh2D,
+    UnstructuredFace3D,
+    UnstructuredCell3D,
+    UnstructuredMesh3D,
+    convert_to_unstructured,
+    check_mesh_quality,
+    refine_uniform,
+    # FVM Mesh Wrappers
+    AbstractFVMMesh,
+    StructuredFVMMesh,
+    CurvilinearFVMMesh,
+    UnstructuredFVMMesh,
+    validate_mesh,
+    build_structured_mesh3d,
+    build_axisymmetric_rz_mesh,
+    structured_boundary_tags,
+    build_curvilinear_mesh,
+    polygon_area,
+    parse_ply,
+    parse_vtk,
+    tag_unstructured_faces_by_bounds,
+    build_unstructured_from_polygons,
+    load_unstructured_mesh,
+    # Mesh I/O
+    read_gmsh,
+    volume_tet,
+    volume_hex,
+    build_faces_from_cells,
+    get_cell_faces,
+    write_vtk_unstructured,
+    # Mesh Partitioning
+    PartitionedMesh,
+    partition_mesh_rcb,
+    recursive_bisection,
+    extract_submesh
+
+# --- Parabolic Solver (from Simu.jl SimuFVM migration) ---
+export
+    # Equation Models
+    AbstractEquationModel,
+    AbstractDiffusion,
+    AbstractAdvection,
+    AbstractAdvectionDiffusion,
+    Diffusion1D,
+    Diffusion2D,
+    Diffusion3D,
+    VariableDiffusion1D,
+    VariableDiffusion2D,
+    VariableDiffusion3D,
+    AnisotropicDiffusion1D,
+    AnisotropicDiffusion2D,
+    AnisotropicDiffusion3D,
+    CylindricalDiffusion1D,
+    CylindricalDiffusion2D,
+    SphericalDiffusion1D,
+    SphericalAdvection1D,
+    SphericalAdvectionDiffusion1D,
+    CylindricalAdvection1D,
+    CylindricalAdvection2D,
+    Advection1D,
+    Advection2D,
+    Advection3D,
+    VariableAdvection1D,
+    VariableAdvection2D,
+    VariableAdvection3D,
+    AdvectionDiffusion1D,
+    AdvectionDiffusion2D,
+    AdvectionDiffusion3D,
+    VariableAdvectionDiffusion1D,
+    VariableAdvectionDiffusion2D,
+    VariableAdvectionDiffusion3D,
+    CylindricalAdvectionDiffusion1D,
+    CylindricalAdvectionDiffusion2D,
+    # Source Terms
+    AbstractSourceTerm,
+    ConstantSource,
+    SpatialSource,
+    FunctionSource,
+    LinearizedSource,
+    evaluate_source,
+    # Turbulence (Parabolic)
+    AbstractTurbulenceModel,
+    ParabolicKEpsilon,
+    update_turbulent_viscosity!,
+    compute_production_k,
+    assemble_k_source,
+    assemble_epsilon_source,
+    parabolic_compute_friction_velocity,
+    update_wall_bcs!,
+    ParabolicTurbulentWall,
+    # Assembly
+    assemble_system,
+    assemble_mass_matrix,
+    assemble_deferred_correction,
+    # Coupled System Assembly
+    AbstractCoupling,
+    LinearCoupling,
+    assemble_coupled_system,
+    build_linear_coupling_block,
+    # Boundary Conditions (Parabolic Solver)
+    InterfaceBC,
+    ParabolicPeriodicBC,
+    ParabolicNonlinearDirichlet,
+    ParabolicNonlinearNeumann,
+    ParabolicCoupledBC,
+    OutflowBC,
+    # Gradients (Parabolic)
+    reconstruct_gradient_green_gauss_2d,
+    reconstruct_gradient_green_gauss_3d,
+    reconstruct_gradient_least_squares_1d,
+    reconstruct_gradient_least_squares_2d,
+    # Limiters (Parabolic submodule)
+    ParabolicLimiters,
+    # Schemes (Parabolic)
+    muscl_reconstruction_1d,
+    quick_reconstruction_1d,
+    second_order_diffusion_flux_1d,
+    muscl_advection_flux_1d,
+    quick_advection_flux_1d,
+    weno5_reconstruction_1d,
+    weno5_advection_flux_1d,
+    weno5_reconstruction_right_biased,
+    muscl_reconstruction_2d,
+    quick_reconstruction_2d,
+    muscl_advection_flux_2d,
+    quick_advection_flux_2d,
+    # Compressible Fluxes (Parabolic)
+    ideal_gas_pressure,
+    parabolic_sound_speed,
+    hllc_flux_1d,
+    # Particles (Parabolic)
+    AbstractParticle,
+    LagrangianParticle,
+    ParticleTracker,
+    inject_particles!,
+    find_cell_index,
+    is_point_in_cell,
+    advect_particles!,
+    # FSI (Parabolic)
+    AbstractStructuralModel,
+    SpringMassSystem,
+    update_structure!,
+    deform_mesh!,
+    update_mesh_geometry!,
+    # Kernels
+    compute_fluxes_cpu!,
+    # Utils (Parabolic)
+    add_entry!,
+    apply_source_term!,
+    get_diffusion_coefficient_at_face_2d,
+    get_velocity_at_face_1d,
+    get_velocity_at_face_2d,
+    compute_cfl_1d,
+    compute_cfl_2d,
+    assemble_mass_matrix_1d,
+    assemble_mass_matrix_2d,
+    assemble_mass_matrix_3d,
+    TimeDependentDirichlet,
+    TimeDependentNeumann,
+    TimeDependentRobin
 
 export FVMGeometry,
     FVMProblem,
@@ -553,6 +861,106 @@ export FVMGeometry,
     export_session,
     import_session,
     serve_dashboard
+
+# --- Engine (from Simu.jl SimuEngine migration) ---
+export
+    # Orchestration
+    Simulation,
+    TimeGrid,
+    TimeStepHistory,
+    TimeController,
+    EventType,
+    ROOT_EVENT,
+    TIME_EVENT,
+    Event,
+    ControllerWithEvents,
+    propose_step,
+    accept_step!,
+    fire_events!,
+    # Time Steppers
+    AbstractTimeStepper,
+    ForwardEuler,
+    RK2,
+    ImplicitEuler,
+    Rosenbrock23,
+    CrankNicolson,
+    step!,
+    # Newton / Nonlinear Solvers
+    newton_raphson,
+    JacobianOperator,
+    newton_krylov,
+    anderson_acceleration,
+    # Steady-State & Transient Solvers
+    solve_steady_state,
+    solve_transient,
+    solve_adaptive,
+    solve_steady_state_gmres,
+    solve_steady_state_bicgstab,
+    solve_transient_rk2,
+    solve_transient_crank_nicolson,
+    compute_numerical_jacobian!,
+    step_nonlinear,
+    # Graph Coloring
+    color_graph_greedy,
+    compute_colored_jacobian!,
+    # Adjoint Sensitivity
+    compute_adjoint,
+    compute_sensitivity,
+    # Parameter Estimation
+    InverseProblem,
+    calibrate_model
+
+# --- I/O (from Simu.jl SimuIO migration) ---
+export
+    # Output Manager
+    OutputSchedule,
+    OutputTarget,
+    Diagnostic,
+    SimulationConfig,
+    Provenance,
+    OutputManager,
+    validate_schedule,
+    next_write_time,
+    run_diagnostics,
+    # Diagnostics
+    volume_integral,
+    conservation_summary,
+    boundary_fluxes,
+    flux_inout,
+    write_boundary_flux_csv,
+    write_operator_splits_csv,
+    # VTK
+    write_line_vtk,
+    write_structured_vtk_3d,
+    # Utils
+    ensure_output_dirs,
+    write_csv,
+    stringify_keys,
+    write_metadata_toml,
+    print_scientific,
+    print_with_units,
+    print_table_header,
+    print_table_row,
+    print_progress,
+    ensure_extension,
+    safe_filename,
+    # In-situ monitoring
+    AbstractMonitor,
+    Probe,
+    IntegralMonitor,
+    find_cell_containing,
+    sample_probe,
+    compute_integral,
+    # Registry
+    save_model_package,
+    load_model_package,
+    # HDF5 stubs
+    write_solution_hdf5,
+    read_solution_hdf5,
+    # Checkpointing
+    CheckpointManager,
+    save_checkpoint,
+    load_checkpoint
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin
