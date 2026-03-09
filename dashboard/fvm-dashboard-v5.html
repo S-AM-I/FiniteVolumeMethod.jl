@@ -622,11 +622,19 @@ function updateMonitorCharts() {
     if (!s) return;
     const snaps = s.snapshots;
 
-    // Residual
+    // Residual — handle all-zero (explicit solvers don't compute residuals)
+    const allZeroResidual = snaps.every(sn => sn.residual_norm === 0 || sn.residual_norm == null);
     chartResidual.data.datasets = [{
         label: 'Residual', data: snaps.map(sn => ({ x: sn.step, y: sn.residual_norm })),
         borderColor: CHART_COLORS[0], backgroundColor: CHART_COLORS[0] + '33',
     }];
+    if (allZeroResidual) {
+        chartResidual.options.scales.y.type = 'linear';
+        chartResidual.options.scales.y.title.text = 'Residual Norm (N/A for explicit solvers)';
+    } else {
+        chartResidual.options.scales.y.type = 'logarithmic';
+        chartResidual.options.scales.y.title.text = 'Residual Norm';
+    }
     chartResidual.update('none');
 
     // Conserved totals
@@ -978,12 +986,21 @@ function addCompareFiles(files) {
 function updateComparePanel() {
     const sessions = Store.get('compareSessions');
 
-    // Overlay residual curves
+    // Overlay residual curves — handle all-zero residuals gracefully
     chartCompare.data.datasets = sessions.map((s, i) => ({
         label: sessionLabel(s, i),
         data: s.snapshots.map(sn => ({ x: sn.step, y: sn.residual_norm })),
         borderColor: CHART_COLORS[i % CHART_COLORS.length],
     }));
+    const allZeroCompare = sessions.every(s =>
+        s.snapshots.every(sn => sn.residual_norm === 0 || sn.residual_norm == null));
+    if (allZeroCompare) {
+        chartCompare.options.scales.y.type = 'linear';
+        chartCompare.options.scales.y.title.text = 'Residual Norm (N/A for explicit solvers)';
+    } else {
+        chartCompare.options.scales.y.type = 'logarithmic';
+        chartCompare.options.scales.y.title.text = 'Residual Norm';
+    }
     chartCompare.update('none');
 
     // Error norm table
@@ -1579,9 +1596,56 @@ function renderProfiles() {
                 });
             });
         }
+    } else if (mesh.type === 'StructuredMesh3D') {
+        // 3D: take z-slice first, then apply 2D cut logic
+        const nz = sol.length;
+        const ny = sol[0].length;
+        const nx = sol[0][0].length;
+        const zSlice = Math.min(Store.get('zSlice') || 0, nz - 1);
+        const cutDir = document.getElementById('prof-cut-dir').value;
+        const cutPos = parseInt(document.getElementById('prof-cut-pos').value);
+
+        if (cutDir === 'x') {
+            const j = Math.min(cutPos, ny - 1);
+            const dx = mesh.dx || (mesh.xmax - mesh.xmin) / nx;
+            const xmin = mesh.xmin || 0;
+            for (let i = 0; i < nx; i++) xVals.push(xmin + (i + 0.5) * dx);
+            indicesToPlot.forEach((varIdx, di) => {
+                const data = xVals.map((x, i) => {
+                    const rho = sol[zSlice][j][i][0];
+                    const rhoY = sol[zSlice][j][i][varIdx];
+                    return { x, y: rho > 1e-30 ? rhoY / rho : 0 };
+                });
+                datasets.push({
+                    label: speciesLabel(session.variables[varIdx]),
+                    data,
+                    borderColor: CHART_COLORS[di % CHART_COLORS.length],
+                    borderWidth: 2, pointRadius: nx < 80 ? 2 : 0, fill: false,
+                });
+            });
+        } else {
+            const i = Math.min(cutPos, nx - 1);
+            const dy = mesh.dy || (mesh.ymax - mesh.ymin) / ny;
+            const ymin = mesh.ymin || 0;
+            for (let j = 0; j < ny; j++) xVals.push(ymin + (j + 0.5) * dy);
+            indicesToPlot.forEach((varIdx, di) => {
+                const data = xVals.map((y, j) => {
+                    const rho = sol[zSlice][j][i][0];
+                    const rhoY = sol[zSlice][j][i][varIdx];
+                    return { x: y, y: rho > 1e-30 ? rhoY / rho : 0 };
+                });
+                datasets.push({
+                    label: speciesLabel(session.variables[varIdx]),
+                    data,
+                    borderColor: CHART_COLORS[di % CHART_COLORS.length],
+                    borderWidth: 2, pointRadius: ny < 80 ? 2 : 0, fill: false,
+                });
+            });
+        }
     }
 
-    const xLabel = (mesh.type === 'StructuredMesh2D' && document.getElementById('prof-cut-dir').value === 'y') ? 'y' : 'x';
+    const is2dOr3d = mesh.type === 'StructuredMesh2D' || mesh.type === 'StructuredMesh3D';
+    const xLabel = (is2dOr3d && document.getElementById('prof-cut-dir').value === 'y') ? 'y' : 'x';
 
     if (profChart) {
         profChart.data.datasets = datasets;
