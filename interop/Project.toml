@@ -1,0 +1,10 @@
+[deps]
+DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
+FiniteVolumeMethod = "d4f04ab7-4f65-4d72-8a28-7087bc7f46f4"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[sources]
+FiniteVolumeMethod = {path = ".."}
