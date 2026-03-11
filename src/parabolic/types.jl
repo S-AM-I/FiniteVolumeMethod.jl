@@ -348,26 +348,6 @@ Base type for all numerical algorithms.
 """
 abstract type AbstractAlgorithm end
 
-"""
-    AbstractTimeIntegrator <: AbstractAlgorithm
-
-Solver for time-stepping (ODEs).
-"""
-abstract type AbstractTimeIntegrator <: AbstractAlgorithm end
-
-"""
-    AbstractNonlinearSolver <: AbstractAlgorithm
-
-Solver for nonlinear algebraic systems (e.g., Newton-Raphson).
-"""
-abstract type AbstractNonlinearSolver <: AbstractAlgorithm end
-
-"""
-    AbstractLinearSolver <: AbstractAlgorithm
-
-Solver for linear algebraic systems Ax = b.
-"""
-abstract type AbstractLinearSolver <: AbstractAlgorithm end
 
 # --- Callbacks and Diagnostics ---
 
@@ -385,28 +365,6 @@ Abstract base for physics-based diagnostics.
 """
 abstract type AbstractDiagnostic end
 
-# --- Control and Events ---
-
-"""
-    AbstractTimeGrid
-
-Abstract representation of a sequence of simulation times.
-"""
-abstract type AbstractTimeGrid end
-
-"""
-    AbstractController
-
-Abstract base for simulation execution controllers.
-"""
-abstract type AbstractController end
-
-"""
-    AbstractEvent
-
-Abstract base for discrete events in simulation flow.
-"""
-abstract type AbstractEvent end
 
 # --- Post-processing and I/O ---
 
