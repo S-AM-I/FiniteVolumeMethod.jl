@@ -31,12 +31,15 @@ include("parabolic/mesh/fvm_mesh.jl")
 include("parabolic/mesh/io.jl")
 include("parabolic/mesh/partitioning.jl")
 
+# Flux limiters (canonical implementations — used by both vertex-centered and parabolic solvers)
+include("schemes/limiters.jl")
+
 # --- Parabolic Solver (from Simu.jl SimuFVM migration) ---
 include("parabolic/models.jl")
 include("parabolic/utils.jl")
 include("parabolic/boundary_conditions.jl")
 include("parabolic/gradients.jl")
-include("parabolic/limiters.jl")
+include("parabolic/limiters.jl")   # ParabolicLimiters delegates to schemes/limiters.jl
 include("parabolic/schemes.jl")
 include("parabolic/compressible_fluxes.jl")
 include("parabolic/turbulence.jl")
@@ -67,8 +70,7 @@ include("equations/triangle_contributions.jl")
 include("solve.jl")
 include("utils.jl")
 
-# Schemes for higher-order methods
-include("schemes/limiters.jl")
+# Schemes for higher-order methods (limiters moved earlier, before parabolic/limiters.jl)
 include("schemes/gradients.jl")
 include("schemes/muscl.jl")
 
@@ -223,14 +225,11 @@ include("dashboard/fvm_export.jl")
 include("dashboard/hyperbolic_callbacks.jl")
 include("dashboard/parabolic_callbacks.jl")
 
-# --- Engine (from Simu.jl SimuEngine migration) ---
-include("engine/orchestration.jl")
-include("engine/steppers.jl")
-include("engine/newton.jl")
-include("engine/solvers.jl")
-include("engine/coloring.jl")
-include("engine/adjoint.jl")
-include("engine/estimation.jl")
+# --- SciML Bridge (parabolic assembly → SciMLBase problem types) ---
+# Use OrdinaryDiffEq.jl for time stepping, LinearSolve.jl for linear systems,
+# NonlinearSolve.jl for Newton/JFNK, SparseDiffTools.jl for colored Jacobians,
+# and SciMLSensitivity.jl for adjoint analysis.
+include("parabolic/sciml_bridge.jl")
 
 # --- I/O (from Simu.jl SimuIO migration) ---
 include("io/utils.jl")
@@ -298,16 +297,9 @@ export
     AbstractReconstruction,
     # Solvers and Algorithms
     AbstractAlgorithm,
-    AbstractTimeIntegrator,
-    AbstractNonlinearSolver,
-    AbstractLinearSolver,
     # Callbacks and Diagnostics
     AbstractCallback,
     AbstractDiagnostic,
-    # Control and Events
-    AbstractTimeGrid,
-    AbstractController,
-    AbstractEvent,
     # Post-processing and I/O
     AbstractOutputManager,
     AbstractConfig,
@@ -862,54 +854,6 @@ export FVMGeometry,
     import_session,
     serve_dashboard
 
-# --- Engine (from Simu.jl SimuEngine migration) ---
-export
-    # Orchestration
-    Simulation,
-    TimeGrid,
-    TimeStepHistory,
-    TimeController,
-    EventType,
-    ROOT_EVENT,
-    TIME_EVENT,
-    Event,
-    ControllerWithEvents,
-    propose_step,
-    accept_step!,
-    fire_events!,
-    # Time Steppers
-    AbstractTimeStepper,
-    ForwardEuler,
-    RK2,
-    ImplicitEuler,
-    Rosenbrock23,
-    CrankNicolson,
-    step!,
-    # Newton / Nonlinear Solvers
-    newton_raphson,
-    JacobianOperator,
-    newton_krylov,
-    anderson_acceleration,
-    # Steady-State & Transient Solvers
-    solve_steady_state,
-    solve_transient,
-    solve_adaptive,
-    solve_steady_state_gmres,
-    solve_steady_state_bicgstab,
-    solve_transient_rk2,
-    solve_transient_crank_nicolson,
-    compute_numerical_jacobian!,
-    step_nonlinear,
-    # Graph Coloring
-    color_graph_greedy,
-    compute_colored_jacobian!,
-    # Adjoint Sensitivity
-    compute_adjoint,
-    compute_sensitivity,
-    # Parameter Estimation
-    InverseProblem,
-    calibrate_model
-
 # --- I/O (from Simu.jl SimuIO migration) ---
 export
     # Output Manager
@@ -961,6 +905,11 @@ export
     CheckpointManager,
     save_checkpoint,
     load_checkpoint
+
+# --- SciML Bridge (parabolic assembly → SciMLBase) ---
+export
+    parabolic_to_odefunction,
+    parabolic_to_linearproblem
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin

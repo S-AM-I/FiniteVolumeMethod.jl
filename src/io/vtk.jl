@@ -1,11 +1,27 @@
 # VTK output — migrated from Simu.jl SimuIO
 # Provides VTK file writing for 1D polyline data and 3D structured grids.
+#
+# DEPRECATION NOTE: These functions write minimal ASCII VTK only.
+# For production use, prefer WriteVTK.jl which provides:
+#   - Binary and XML VTK formats (much smaller files, faster I/O)
+#   - Structured, unstructured, multiblock, and time-series VTK
+#   - Proper cell/point data with multiple fields
+#   - ParaView-compatible .vtu/.vts/.pvd output
+#
+# Example migration:
+#   using WriteVTK
+#   vtk_grid("output", xcoords, ycoords, zcoords) do vtk
+#       vtk["temperature"] = data
+#   end
 
 """
     write_line_vtk(path, xcoords, scalars; label="value")
 
 Write a simple 1D VTK polyline with scalar point data.
 `path` is the full file path for the output .vtk file.
+
+!!! warning "Deprecated"
+    Use `WriteVTK.jl` for production VTK output.
 """
 function write_line_vtk(path::AbstractString, xcoords::AbstractVector{<:Real}, scalars::AbstractVector{<:Real}; label::AbstractString = "value")
     length(xcoords) == length(scalars) || error("xcoords and scalars length mismatch")
@@ -39,6 +55,9 @@ end
 
 Write a 1D mesh and scalar cell data to VTK polyline format.
 Uses cell center coordinates from the mesh.
+
+!!! warning "Deprecated"
+    Use `WriteVTK.jl` for production VTK output.
 """
 function write_line_vtk(path::AbstractString, mesh::Mesh1D, data::AbstractVector{<:Real}, label::AbstractString = "value")
     xcoords = [c.center for c in mesh.cells]
@@ -49,8 +68,17 @@ end
     write_structured_vtk_3d()
 
 Placeholder for 3D structured VTK output.
+
+!!! warning "Deprecated"
+    Use `WriteVTK.jl` for production VTK output:
+    ```julia
+    using WriteVTK
+    vtk_grid("output", x, y, z) do vtk
+        vtk["field"] = data
+    end
+    ```
 """
 function write_structured_vtk_3d()
-    # Implementation pending
+    # Implementation pending — use WriteVTK.jl instead
     return nothing
 end

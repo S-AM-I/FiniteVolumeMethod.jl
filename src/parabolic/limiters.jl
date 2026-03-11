@@ -1,125 +1,31 @@
-# Flux limiters for higher-order advection schemes
+# Flux limiters for higher-order advection schemes (parabolic solver)
 # Migrated from Simu.jl SimuFVM/limiters.jl
-# Wrapped in module ParabolicLimiters to avoid name collisions with existing FVM.jl limiter exports
+#
+# Core limiter functions (minmod, superbee, van_leer, venkatakrishnan,
+# barth_jespersen, koren, ospre) are now delegated to the canonical
+# implementations in src/schemes/limiters.jl.
+#
+# This module provides parabolic-solver-specific utilities:
+#   - Symbol-based limiter dispatch (apply_limiter(:minmod, r))
+#   - Slope ratio computation for 1D MUSCL reconstruction
+#   - Limited slope computation for 1D reconstruction
+#   - Automatic limiter selection heuristics
 
 module ParabolicLimiters
 
-"""
-    minmod(a, b)
+# Import canonical limiter functions from the parent module (src/schemes/limiters.jl)
+using ..FiniteVolumeMethod: minmod, superbee, van_leer, venkatakrishnan,
+    barth_jespersen, koren, ospre
 
-Minmod limiter: returns 0 if a and b have opposite signs, otherwise returns the one with smaller magnitude.
-"""
-function minmod(a::Float64, b::Float64)
-    if a * b <= 0.0
-        return 0.0
-    else
-        return abs(a) < abs(b) ? a : b
-    end
-end
-
-"""
-    superbee(a, b)
-
-Superbee limiter: returns the maximum of minmod(2a, b) and minmod(a, 2b).
-"""
-function superbee(a::Float64, b::Float64)
-    if a * b <= 0.0
-        return 0.0
-    else
-        return max(minmod(2.0 * a, b), minmod(a, 2.0 * b))
-    end
-end
-
-"""
-    van_leer(a, b)
-
-Van Leer limiter: harmonic mean of a and b.
-"""
-function van_leer(a::Float64, b::Float64)
-    if a * b <= 0.0
-        return 0.0
-    else
-        return 2.0 * a * b / (a + b)
-    end
-end
-
-"""
-    venkatakrishnan(r, eps=1e-6)
-
-Venkatakrishnan limiter for unstructured meshes.
-r is the ratio of consecutive gradients.
-"""
-function venkatakrishnan(r::Float64; eps = 1.0e-6)
-    if r <= 0.0
-        return 0.0
-    else
-        numerator = (r^2 + 2.0 * r) / (r^2 + r + 2.0)
-        return numerator
-    end
-end
-
-"""
-    barth_jespersen(phi, phi_min, phi_max, phi_face)
-
-Barth-Jespersen limiter for preserving local extrema.
-Returns limiting factor in [0, 1] to ensure phi_face is between phi_min and phi_max.
-"""
-function barth_jespersen(phi_center::Float64, phi_min::Float64, phi_max::Float64, phi_face::Float64)
-    if abs(phi_face - phi_center) < 1.0e-12
-        return 1.0
-    end
-
-    return if phi_face > phi_center
-        # Need to limit from above
-        if phi_max - phi_center > 1.0e-12
-            return min(1.0, (phi_max - phi_center) / (phi_face - phi_center))
-        else
-            return 0.0
-        end
-    else
-        # Need to limit from below
-        if phi_center - phi_min > 1.0e-12
-            return min(1.0, (phi_center - phi_min) / (phi_center - phi_face))
-        else
-            return 0.0
-        end
-    end
-end
-
-"""
-    koren(r, beta=1.0/3.0)
-
-Koren limiter: smooth limiter that is third-order accurate.
-r is the ratio of consecutive gradients.
-beta controls the limiter behavior (typically 1/3).
-"""
-function koren(r::Float64; beta = 1.0 / 3.0)
-    if r <= 0.0
-        return 0.0
-    else
-        return max(0.0, min(2.0 * r, min((1.0 + 2.0 * r) / 3.0, 2.0)))
-    end
-end
-
-"""
-    ospre(r)
-
-OSPRE (Optimized Second-order Polynomial for Recovery Enhancement) limiter.
-Compromise between accuracy and monotonicity.
-"""
-function ospre(r::Float64)
-    if r <= 0.0
-        return 0.0
-    else
-        return 1.5 * (r^2 + r) / (r^2 + r + 1.0)
-    end
-end
+# Re-export so existing `using .ParabolicLimiters: minmod` still works
+export minmod, superbee, van_leer, venkatakrishnan, barth_jespersen, koren, ospre
 
 """
     apply_limiter(limiter_type, r)
 
-Apply a limiter function to ratio r.
-limiter_type can be :minmod, :superbee, :van_leer, or :venkatakrishnan.
+Apply a limiter function to ratio `r`.
+`limiter_type` can be `:minmod`, `:superbee`, `:van_leer`, `:venkatakrishnan`,
+`:koren`, or `:ospre`.
 """
 function apply_limiter(limiter_type::Symbol, r::Float64; kwargs...)
     if limiter_type == :minmod
@@ -130,10 +36,10 @@ function apply_limiter(limiter_type::Symbol, r::Float64; kwargs...)
         return van_leer(r, 1.0)
     elseif limiter_type == :venkatakrishnan
         eps = get(kwargs, :eps, 1.0e-6)
-        return venkatakrishnan(r; eps = eps)
+        return venkatakrishnan(r, eps)
     elseif limiter_type == :koren
         beta = get(kwargs, :beta, 1.0 / 3.0)
-        return koren(r; beta = beta)
+        return koren(r, beta)
     elseif limiter_type == :ospre
         return ospre(r)
     else
@@ -164,8 +70,7 @@ end
     compute_slope_ratio_1d(phi, i, direction)
 
 Compute slope ratio for limiter in 1D.
-direction can be :left or :right.
-r = (phi[i] - phi[neighbor]) / (phi[neighbor] - phi[far_neighbor])
+`direction` can be `:left` or `:right`.
 """
 function compute_slope_ratio_1d(phi, i::Int, direction::Symbol)
     nx = length(phi)
@@ -174,7 +79,7 @@ function compute_slope_ratio_1d(phi, i::Int, direction::Symbol)
         if i <= 1
             return 1.0
         elseif i == 2
-            return 1.0  # Can't compute ratio with only one neighbor
+            return 1.0
         else
             num = phi[i] - phi[i - 1]
             den = phi[i - 1] - phi[i - 2]
@@ -203,7 +108,7 @@ end
     limit_slope_1d(phi, i, direction, limiter_type)
 
 Compute limited slope for MUSCL reconstruction in 1D.
-Returns the limited slope (gradient) at cell i.
+Returns the limited slope (gradient) at cell `i`.
 """
 function limit_slope_1d(phi, i::Int, direction::Symbol, limiter_type::Symbol)
     nx = length(phi)

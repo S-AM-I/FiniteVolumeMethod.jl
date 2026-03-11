@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package Overview
 
-FiniteVolumeMethod.jl is a Julia package for solving partial differential equations using the finite volume method. It provides two solver families:
+FiniteVolumeMethod.jl is a Julia package for solving partial differential equations using the finite volume method. It provides three solver families:
 
 1. **Triangular (vertex-centered) FVM** for parabolic/elliptic PDEs on unstructured meshes via DelaunayTriangulation.jl
 2. **Cell-centered FVM** for hyperbolic conservation laws on structured/unstructured grids
+3. **Parabolic solver** (migrated from Simu.jl) for diffusion/advection-diffusion on structured, curvilinear, and unstructured meshes with a full simulation engine and I/O stack
 
 Version: `1.2.0`.
 
@@ -81,7 +82,7 @@ julia --project -e 'using Aqua; Aqua.test_all(FiniteVolumeMethod)'
 
 ```
 src/
-├── FiniteVolumeMethod.jl   # Main module, exports (~250 symbols), precompile workload
+├── FiniteVolumeMethod.jl   # Main module, exports (~500 symbols), precompile workload
 ├── coordinate_systems.jl   # AbstractCoordinateSystem hierarchy
 ├── geometry.jl             # FVMGeometry mesh wrapper
 ├── conditions.jl           # Core BC types
@@ -89,15 +90,8 @@ src/
 ├── problem.jl              # Problem definitions
 ├── solve.jl                # fvm_eqs!, jacobian_sparsity, threading
 ├── utils.jl                # Utilities
-├── equations/              # Core FVM discretization
-│   ├── main_equations.jl
-│   ├── triangle_contributions.jl
-│   ├── boundary_edge_contributions.jl
-│   ├── individual_flux_contributions.jl
-│   ├── control_volumes.jl
-│   ├── shape_functions.jl
-│   ├── source_contributions.jl
-│   └── dirichlet.jl
+├── remake.jl               # SciMLBase.remake for all problem types
+├── equations/              # Core FVM discretization (shape functions, triangle/boundary contributions)
 ├── schemes/                # MUSCL, gradient reconstruction, limiters
 ├── specific_problems/      # Templates (abstract_templates, advection_diffusion, anisotropic_diffusion)
 │                           # NOTE: diffusion_equation, laplaces_equation, mean_exit_time,
@@ -111,8 +105,51 @@ src/
 ├── metric/                 # Spacetime metrics (Minkowski, Schwarzschild, Kerr)
 ├── amr/                    # Block-structured AMR with Berger-Colella flux correction
 ├── coupling/               # Multi-physics operator splitting
-└── dashboard/              # Export + callbacks (served via FVMDashboardExt extension, requires HTTP + JSON3)
+├── dashboard/              # Export + callbacks (served via FVMDashboardExt extension)
+├── parabolic/              # Simu.jl migration — parabolic PDE solver (see below)
+│   ├── types.jl            # Core abstract types (tags, simulation, problem, solution)
+│   ├── models.jl           # Equation models (Diffusion, Advection, AdvectionDiffusion per dim)
+│   ├── mesh/               # Structured, curvilinear, unstructured mesh types + I/O + partitioning
+│   ├── assembly/           # FVM matrix assembly per geometry (1D, 2D, 3D, cylindrical, spherical, ...)
+│   ├── boundary_conditions.jl, gradients.jl, limiters.jl, schemes.jl
+│   ├── compressible_fluxes.jl, turbulence.jl, particles.jl, fsi.jl, kernels.jl
+│   └── utils.jl
+├── engine/                 # Simu.jl migration — simulation engine
+│   ├── orchestration.jl    # Simulation container, TimeGrid, TimeController, events
+│   ├── steppers.jl         # ForwardEuler, RK2, ImplicitEuler, Rosenbrock23, CrankNicolson
+│   ├── newton.jl           # Newton-Raphson, Newton-Krylov, Anderson acceleration
+│   ├── solvers.jl          # solve_steady_state, solve_transient, solve_adaptive
+│   ├── coloring.jl         # Graph coloring for Jacobian computation
+│   ├── adjoint.jl          # Adjoint sensitivity analysis
+│   └── estimation.jl       # InverseProblem / calibrate_model
+└── io/                     # Simu.jl migration — I/O and diagnostics
+    ├── manager.jl          # OutputManager, scheduling
+    ├── diagnostics.jl      # volume_integral, conservation_summary, boundary_fluxes
+    ├── vtk.jl              # VTK output
+    ├── hdf5.jl             # HDF5 stubs
+    ├── checkpointing.jl    # Save/load checkpoints
+    ├── insitu.jl           # Probes, integral monitors
+    ├── registry.jl         # Model package save/load
+    └── utils.jl            # CSV, TOML, formatting helpers
+ext/
+└── FVMDashboardExt.jl      # Package extension (weak deps: HTTP + JSON3) — serve_dashboard, export/import_session
 ```
+
+### Simu.jl Migration (Parabolic / Engine / I/O)
+
+Three subsystems migrated from Simu.jl live alongside the original FVM code. They share the same Julia module but use **prefixed names** to avoid collisions with the original types:
+
+| Original FVM type | Simu.jl migration type |
+|---|---|
+| `Dirichlet`, `Neumann`, `Robin` | `ParabolicDirichlet`, `ParabolicNeumann`, `ParabolicRobin` |
+| `AbstractMesh` | `AbstractParabolicMesh` |
+| `AbstractOperator` (coupling) | `AbstractPhysicsOperator` |
+
+**Parabolic solver** (`src/parabolic/`): Cell-centered FVM for diffusion/advection-diffusion on structured, curvilinear, and unstructured meshes (1D/2D/3D, cylindrical, spherical). Includes MUSCL/QUICK/WENO5 reconstruction, Green-Gauss and least-squares gradient methods, parabolic k-epsilon turbulence, Lagrangian particle tracking, and FSI.
+
+**Engine** (`src/engine/`): Simulation orchestration with `Simulation` container, time steppers (ForwardEuler through CrankNicolson), Newton/Krylov nonlinear solvers, graph-colored Jacobian computation, adjoint sensitivity, and parameter estimation.
+
+**I/O** (`src/io/`): `OutputManager` with scheduled writes, VTK/HDF5 output, diagnostics (conservation, boundary fluxes), in-situ probes, and checkpointing.
 
 ### Key Function Signatures
 
@@ -193,6 +230,10 @@ Tests run via `test/runtests.jl` using the `safe_include` pattern: each test fil
 - Quality: Aqua (with `ambiguities=false, project_extras=false, unbound_args=false`) and Explicit Imports
 
 Known pre-existing failures are documented in `test/KNOWN_FAILURES.md`.
+
+## Package Extension
+
+`FVMDashboardExt` (in `ext/FVMDashboardExt.jl`) is a Julia package extension triggered by weak deps `HTTP` and `JSON3`. It implements `serve_dashboard`, `export_session`, and `import_session`. The dashboard data types and callbacks live in `src/dashboard/`; the extension provides the HTTP server and JSON serialization.
 
 ## Key Integration Points
 

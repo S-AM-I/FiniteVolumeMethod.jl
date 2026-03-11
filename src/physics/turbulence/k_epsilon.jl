@@ -459,3 +459,35 @@ function KappaOmegaSST(;
         T(sigma_omega1), T(sigma_omega2), T(beta1), T(beta2), T(kappa)
     )
 end
+
+# --- Interop with ParabolicKEpsilon (parabolic solver) ---
+# Both StandardKEpsilon and ParabolicKEpsilon represent the same physics model
+# (standard k-ε) but serve different solver families. These constructors
+# allow converting between them to share coefficients.
+
+"""
+    StandardKEpsilon(model::ParabolicKEpsilon)
+
+Construct a `StandardKEpsilon` from a `ParabolicKEpsilon`, using its coefficients.
+"""
+function StandardKEpsilon(model::ParabolicKEpsilon)
+    return StandardKEpsilon(;
+        C_mu = model.C_mu,
+        sigma_k = model.sigma_k,
+        sigma_epsilon = model.sigma_epsilon,
+        C1_epsilon = model.C1_epsilon,
+        C2_epsilon = model.C2_epsilon,
+    )
+end
+
+"""
+    ParabolicKEpsilon(model::StandardKEpsilon)
+
+Construct a `ParabolicKEpsilon` from a `StandardKEpsilon`, using its coefficients.
+"""
+function ParabolicKEpsilon(model::StandardKEpsilon)
+    return ParabolicKEpsilon(
+        model.C_mu, model.sigma_k, model.sigma_epsilon,
+        model.C1_epsilon, model.C2_epsilon,
+    )
+end
