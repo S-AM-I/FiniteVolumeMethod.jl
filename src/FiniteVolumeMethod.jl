@@ -221,9 +221,7 @@ include("coupling/coupled_solve.jl")
 include("remake.jl")
 
 # Dashboard data export and monitoring
-include("dashboard/fvm_export.jl")
-include("dashboard/hyperbolic_callbacks.jl")
-include("dashboard/parabolic_callbacks.jl")
+include("dashboard_types.jl")
 
 # --- SciML Bridge (parabolic assembly → SciMLBase problem types) ---
 # Use OrdinaryDiffEq.jl for time stepping, LinearSolve.jl for linear systems,

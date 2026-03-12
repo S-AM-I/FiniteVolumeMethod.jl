@@ -341,17 +341,42 @@ end
 # ============================================================
 
 """
+    hyperbolic_monitor(; interval=1, session_data, law, mesh)
+
+Create a callback function for injection into `solve_hyperbolic` and related
+cell-centered solvers. Requires JSON3 to be loaded (provided by FVMDashboardExt).
+"""
+function hyperbolic_monitor end
+
+"""
+    create_session_data(prob) -> FVMSessionData
+
+Convenience constructor: populate an `FVMSessionData` from a hyperbolic problem.
+Requires JSON3 to be loaded (provided by FVMDashboardExt).
+"""
+function create_session_data end
+
+"""
+    FVMMonitorCallback(; interval=1, session_data)
+
+Create a `DiscreteCallback` that records snapshots of the parabolic solver state.
+Requires JSON3 to be loaded (provided by FVMDashboardExt).
+"""
+function FVMMonitorCallback end
+
+"""
     export_session(session::FVMSessionData, filename::AbstractString)
 
 Write the session data to a JSON file. Requires JSON3 to be loaded
-(install via `using JSON3`).
+(provided by FVMDashboardExt).
 """
 function export_session end
 
 """
     import_session(filename::AbstractString) -> Dict
 
-Read a `.fvm-session.json` file. Requires JSON3 to be loaded.
+Read a `.fvm-session.json` file. Requires JSON3 to be loaded
+(provided by FVMDashboardExt).
 """
 function import_session end
 
@@ -359,6 +384,6 @@ function import_session end
     serve_dashboard(; port=8765, session_data=nothing)
 
 Start a WebSocket server for live dashboard updates.
-Requires HTTP and JSON3 to be loaded.
+Requires HTTP and JSON3 to be loaded (provided by FVMDashboardServerExt).
 """
 function serve_dashboard end
