@@ -1,208 +1,87 @@
+include(joinpath(@__DIR__, "..", "validation", "manifest.jl"))
+using .RepoValidationManifest
+
+const REPO_ROOT = normpath(joinpath(@__DIR__, ".."))
+const VALIDATION_MANIFEST = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation", "manifest.toml"))
+
 IS_CI = get(ENV, "CI", "false") == "true"
 IS_LIVESERVER = get(ENV, "LIVESERVER_ACTIVE", "false") == "true"
-RUN_EXAMPLES = !IS_CI
+DOCS_EXECUTION_MODE = get(ENV, "FVM_DOCS_EXECUTION", IS_CI ? "subset" : "all")
+DOCS_EXECUTION_MODE in ("all", "subset", "none") || error("FVM_DOCS_EXECUTION must be one of: all, subset, none")
 
-if RUN_EXAMPLES
-    using FiniteVolumeMethod
-    using Documenter
-    using Literate
-    using Dates
-    ct() = Dates.format(now(), "HH:MM:SS")
+should_execute_example(entry) = !IS_LIVESERVER && (
+    DOCS_EXECUTION_MODE == "all" ? entry.run_locally :
+        DOCS_EXECUTION_MODE == "subset" ? entry.run_in_ci :
+        false
+)
+
+if any(should_execute_example(entry) for entry in VALIDATION_MANIFEST.generated_pages)
     using CairoMakie
     CairoMakie.activate!()
-
-    # When running docs locally, the EditURL is incorrect. For example, we might get
-    #   ```@meta
-    #   EditURL = "<unknown>/docs/src/literate_tutorials/name.jl"
-    #   ```
-    # We need to replace this EditURL if we are running the docs locally. The last case is more complicated because,
-    # after changing to use temporary directories, it can now look like...
-    #   ```@meta
-    #   EditURL = "../../../../../../../AppData/Local/Temp/jl_8nsMGu/name_just_the_code.jl"
-    #   ```
-    function update_edit_url(content, file, folder)
-        content = replace(content, "<unknown>" => "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main")
-        content = replace(content, "temp/" => "") # as of Literate 2.14.1
-        content = replace(
-            content,
-            r"EditURL\s*=\s*\"[^\"]*\"" => "EditURL = \"https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_$(folder)/$file\""
-        )
-        return content
-    end
-    # We can add the code to the end of each file in its uncommented form programatically.
-    function add_just_the_code_section(dir, file)
-        file_name, file_ext = splitext(file)
-        file_path = joinpath(dir, file)
-        new_file_path = joinpath(session_tmp, file_name * "_just_the_code" * file_ext)
-        cp(file_path, new_file_path, force = true)
-        folder = splitpath(dir)[end] # literate_tutorials or literate_applications
-        open(new_file_path, "a") do io
-            write(io, "\n")
-            write(io, "# ## Just the code\n")
-            write(io, "# An uncommented version of this example is given below.\n")
-            write(
-                io,
-                "# You can view the source code for this file [here](<unknown>/docs/src/$folder/@__NAME__.jl).\n"
-            )
-            write(io, "\n")
-            write(io, "# ```julia\n")
-            write(io, "# @__CODE__\n")
-            write(io, "# ```\n")
-        end
-        return new_file_path
-    end
-
-    tutorial_files = [
-        "tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl",
-        "tutorials/mean_exit_time.jl",
-        "tutorials/solving_mazes_with_laplaces_equation.jl",
-        "tutorials/porous_medium_equation.jl",
-        "tutorials/equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.jl",
-        "tutorials/reaction_diffusion_brusselator_system_of_pdes.jl",
-        "tutorials/diffusion_equation_on_a_square_plate.jl",
-        "tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl",
-        "tutorials/reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.jl",
-        "tutorials/porous_fisher_equation_and_travelling_waves.jl",
-        "tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.jl",
-        "tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.jl",
-        "tutorials/laplaces_equation_with_internal_dirichlet_conditions.jl",
-        "tutorials/diffusion_equation_on_an_annulus.jl",
-    ]
-    wyos_files = [
-        "wyos/diffusion_equations.jl",
-        "wyos/laplaces_equation.jl",
-        "wyos/mean_exit_time.jl",
-        "wyos/poissons_equation.jl",
-        "wyos/linear_reaction_diffusion_equations.jl",
-    ]
-    hyperbolic_tutorial_files = [
-        "hyperbolic/tutorials/sod_shock_tube.jl",
-        "hyperbolic/tutorials/sedov_blast_wave.jl",
-        "hyperbolic/tutorials/brio_wu_shock_tube.jl",
-        "hyperbolic/tutorials/orszag_tang_vortex.jl",
-        "hyperbolic/tutorials/taylor_green_vortex.jl",
-        "hyperbolic/tutorials/field_loop_advection.jl",
-        "hyperbolic/tutorials/kelvin_helmholtz_instability.jl",
-        "hyperbolic/tutorials/balsara_srmhd_shock_tube.jl",
-        "hyperbolic/tutorials/weno_convergence.jl",
-        "hyperbolic/tutorials/couette_flow.jl",
-        "hyperbolic/tutorials/imex_stiff_relaxation.jl",
-        "hyperbolic/tutorials/amr_sedov_blast.jl",
-        "hyperbolic/tutorials/limiter_comparison.jl",
-        "hyperbolic/tutorials/mhd_rotor.jl",
-        "hyperbolic/tutorials/grmhd_flat_space_shock.jl",
-        "hyperbolic/tutorials/srmhd_cylindrical_blast.jl",
-        "hyperbolic/tutorials/shallow_water_dam_break.jl",
-        "hyperbolic/tutorials/srhydro_blast_wave.jl",
-        "hyperbolic/tutorials/resistive_mhd_current_sheet.jl",
-        "hyperbolic/tutorials/hall_mhd_whistler.jl",
-        "hyperbolic/tutorials/two_fluid_sod.jl",
-    ]
-    mkpath(joinpath(@__DIR__, "src", "hyperbolic", "tutorials"))
-    mkpath(joinpath(@__DIR__, "src", "verification"))
-    verification_files = [
-        "verification/mms_convergence.jl",
-        "verification/poisson_convergence.jl",
-        "verification/smooth_advection_convergence.jl",
-        "verification/sod_grid_convergence.jl",
-        "verification/conservation_verification.jl",
-        "verification/mhd_divb_verification.jl",
-        "verification/amr_convergence.jl",
-        "verification/brio_wu_verification.jl",
-        "verification/flux_balance_verification.jl",
-        "verification/grmhd_convergence.jl",
-        "verification/mhd_convergence.jl",
-        "verification/ns_convergence.jl",
-        "verification/orszag_tang_verification.jl",
-        "verification/passive_scalar_convergence.jl",
-        "verification/premixed_flame_1d.jl",
-        "verification/source_term_convergence.jl",
-        "verification/species_conservation.jl",
-        "verification/srmhd_convergence.jl",
-        "verification/toro_riemann_tests.jl",
-    ]
-    example_files = vcat(tutorial_files, wyos_files, hyperbolic_tutorial_files, verification_files)
-    session_tmp = mktempdir()
-
-    map(1:length(example_files)) do n
-        example = example_files[n]
-        # Hyperbolic tutorials live in literate_hyperbolic/ but output to hyperbolic/tutorials/
-        if startswith(example, "hyperbolic/tutorials/")
-            file = basename(example)
-            dir = joinpath(@__DIR__, "src", "literate_hyperbolic")
-            outputdir = joinpath(@__DIR__, "src", "hyperbolic", "tutorials")
-            folder = "hyperbolic"  # for EditURL
-        else
-            folder, file = splitpath(example)
-            dir = joinpath(@__DIR__, "src", "literate_" * folder)
-            outputdir = joinpath(@__DIR__, "src", folder)
-        end
-        file_path = joinpath(dir, file)
-        # See also https://github.com/Ferrite-FEM/Ferrite.jl/blob/d474caf357c696cdb80d7c5e1edcbc7b4c91af6b/docs/generate.jl for some of this
-        new_file_path = add_just_the_code_section(dir, file)
-        script = Literate.script(
-            file_path, session_tmp, name = splitext(file)[1] *
-                "_just_the_code_cleaned"
-        )
-        code = strip(read(script, String))
-        @info "[$(ct())] Processing $file: Converting markdown script"
-        line_ending_symbol = occursin(code, "\r\n") ? "\r\n" : "\n"
-        code_clean = join(filter(x -> !endswith(x, "#hide"), split(code, r"\n|\r\n")), line_ending_symbol)
-        code_clean = replace(code_clean, r"^# This file was generated .*$"m => "")
-        code_clean = strip(code_clean)
-        post_strip = content -> replace(content, "@__CODE__" => code_clean)
-        editurl_update = content -> update_edit_url(content, file, folder)
-        IS_LIVESERVER = get(ENV, "LIVESERVER_ACTIVE", "false") == "true"
-        Literate.markdown(
-            new_file_path,
-            outputdir;
-            documenter = true,
-            postprocess = editurl_update ∘ post_strip,
-            credit = true,
-            execute = !IS_LIVESERVER,
-            flavor = Literate.DocumenterFlavor(),
-            name = splitext(file)[1]
-        )
-    end
 end
 
-# In CI, generate Literate markdown for hyperbolic tutorials without execution.
-# These .md files are not committed to the repo and are normally only generated
-# during local builds with RUN_EXAMPLES=true.
-if !RUN_EXAMPLES
-    using Literate
-    outputdir = joinpath(@__DIR__, "src", "hyperbolic", "tutorials")
+using Literate
+using Dates
+ct() = Dates.format(now(), "HH:MM:SS")
+
+function update_edit_url(content, source_relpath)
+    content = replace(content, "<unknown>" => "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main")
+    content = replace(content, "temp/" => "") # as of Literate 2.14.1
+    content = replace(
+        content,
+        r"EditURL\s*=\s*\"[^\"]*\"" => "EditURL = \"https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/$source_relpath\""
+    )
+    return content
+end
+
+function add_just_the_code_section(file_path, source_relpath)
+    file_name, file_ext = splitext(basename(file_path))
+    new_file_path = joinpath(session_tmp, file_name * "_just_the_code" * file_ext)
+    cp(file_path, new_file_path, force = true)
+    open(new_file_path, "a") do io
+        write(io, "\n")
+        write(io, "# ## Just the code\n")
+        write(io, "# An uncommented version of this example is given below.\n")
+        write(io, "# You can view the source code for this file [here](<unknown>/$source_relpath).\n")
+        write(io, "\n")
+        write(io, "# ```julia\n")
+        write(io, "# @__CODE__\n")
+        write(io, "# ```\n")
+    end
+    return new_file_path
+end
+
+session_tmp = mktempdir()
+
+for entry in VALIDATION_MANIFEST.generated_pages
+    file_path = joinpath(REPO_ROOT, entry.source)
+    outputdir = joinpath(@__DIR__, "src", dirname(entry.page))
+    file = basename(file_path)
     mkpath(outputdir)
-    srcdir = joinpath(@__DIR__, "src", "literate_hyperbolic")
-    if isdir(srcdir)
-        for file in readdir(srcdir)
-            endswith(file, ".jl") || continue
-            Literate.markdown(
-                joinpath(srcdir, file),
-                outputdir;
-                documenter = true,
-                execute = false,
-                flavor = Literate.DocumenterFlavor(),
-                name = splitext(file)[1]
-            )
-        end
-    end
-    outputdir_ver = joinpath(@__DIR__, "src", "verification")
-    mkpath(outputdir_ver)
-    srcdir_ver = joinpath(@__DIR__, "src", "literate_verification")
-    if isdir(srcdir_ver)
-        for file in readdir(srcdir_ver)
-            endswith(file, ".jl") || continue
-            Literate.markdown(
-                joinpath(srcdir_ver, file),
-                outputdir_ver;
-                documenter = true,
-                execute = false,
-                flavor = Literate.DocumenterFlavor(),
-                name = splitext(file)[1]
-            )
-        end
-    end
+    new_file_path = add_just_the_code_section(file_path, entry.source)
+    script = Literate.script(
+        file_path,
+        session_tmp;
+        name = splitext(file)[1] * "_just_the_code_cleaned",
+    )
+    code = strip(read(script, String))
+    @info "[$(ct())] Processing $file: Converting markdown script"
+    line_ending_symbol = occursin(code, "\r\n") ? "\r\n" : "\n"
+    code_clean = join(filter(x -> !endswith(x, "#hide"), split(code, r"\n|\r\n")), line_ending_symbol)
+    code_clean = replace(code_clean, r"^# This file was generated .*$"m => "")
+    code_clean = strip(code_clean)
+    post_strip = content -> replace(content, "@__CODE__" => code_clean)
+    editurl_update = content -> update_edit_url(content, entry.source)
+    Literate.markdown(
+        new_file_path,
+        outputdir;
+        documenter = true,
+        postprocess = editurl_update ∘ post_strip,
+        credit = true,
+        execute = should_execute_example(entry),
+        flavor = Literate.DocumenterFlavor(),
+        name = splitext(file)[1],
+    )
 end
 
 using FiniteVolumeMethod
@@ -213,6 +92,9 @@ using Dates
 # All the pages to be included
 _PAGES = [
     "Introduction" => "index.md",
+    "Scientific Governance" => [
+        "Capability Matrix" => "capability_matrix.md",
+    ],
     "Tutorials" => [
         "Parabolic and Elliptic PDEs" => [
             "Overview" => "tutorials/overview.md",
@@ -311,6 +193,10 @@ function _collect_pages!(set, pages)
     return
 end
 _collect_pages!(set, _PAGES)
+missing_generated_pages = RepoValidationManifest.missing_generated_pages(VALIDATION_MANIFEST, set)
+!isempty(missing_generated_pages) && error("Generated pages missing from docs navigation: $missing_generated_pages")
+unexpected_generated_pages = RepoValidationManifest.unexpected_generated_navigation_pages(VALIDATION_MANIFEST, set)
+!isempty(unexpected_generated_pages) && error("Docs navigation contains generated pages with no manifest entry: $unexpected_generated_pages")
 missing_set = String[]
 doc_dir = joinpath(@__DIR__, "src", "")
 for (root, dir, files) in walkdir(doc_dir)
@@ -358,7 +244,7 @@ makedocs(;
     ),
     draft = IS_LIVESERVER,
     pages = _PAGES,
-    warnonly = true
+    warnonly = IS_LIVESERVER
 )
 
 # Only run deploydocs for local/non-Actions deployment (e.g. TagBot).

@@ -67,6 +67,31 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: lcov.info
+  scientific-evidence:
+    name: Scientific Evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Increase swapfile
+        run: |
+          sudo swapoff -a
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          sudo swapon --show
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Instantiate test environment
+        run: |
+          julia --project=test -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - name: Run scientific evidence suite
+        run: julia --project=test test/scientific_evidence.jl
   docs:
     name: Documentation
     runs-on: ubuntu-latest
@@ -102,6 +127,7 @@ jobs:
       - name: Build documentation
         run: julia --project=docs docs/make.jl
         env:
+          FVM_DOCS_EXECUTION: subset
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Configure Pages
         uses: actions/configure-pages@v5

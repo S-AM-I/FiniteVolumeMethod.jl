@@ -240,6 +240,7 @@ include("io/insitu.jl")
 include("io/registry.jl")
 include("io/hdf5.jl")
 include("io/checkpointing.jl")
+include("capabilities.jl")
 
 # --- Parabolic Core Types (from Simu.jl migration) ---
 export
@@ -905,6 +906,12 @@ export
     CheckpointManager,
     save_checkpoint,
     load_checkpoint
+
+export
+    supported_features,
+    feature_maturity,
+    feature_validation_status,
+    capability_matrix
 
 # --- SciML Bridge (parabolic assembly → SciMLBase) ---
 export

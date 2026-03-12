@@ -80,21 +80,30 @@ services:
     environment:
       <<: *env
       CI: "false"
+      FVM_DOCS_EXECUTION: "all"
     command: >-
       bash -c 'julia --project -e "using Pkg; Pkg.resolve(); Pkg.instantiate()" &&
       julia --project=docs -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
       julia --project=docs docs/make.jl'
 
-  # Fast docs build — no executed examples (mirrors CI docs job)
+  # CI-like docs build — executes the curated subset used in CI
   docs-ci:
     <<: *common
     environment:
       <<: *env
       CI: "true"
+      FVM_DOCS_EXECUTION: "subset"
     command: >-
       bash -c 'julia --project -e "using Pkg; Pkg.resolve(); Pkg.instantiate()" &&
       julia --project=docs -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
       julia --project=docs docs/make.jl'
+
+  # Curated scientific-evidence suite — mirrors CI evidence lane
+  evidence:
+    <<: *common
+    command: >-
+      bash -c 'julia --project=test -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
+      julia --project=test test/scientific_evidence.jl'
 
   # Interactive Julia REPL
   repl:
