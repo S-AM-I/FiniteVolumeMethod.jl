@@ -5,7 +5,7 @@
 # First run:  make ci-build   (15-30 min, downloads + precompiles all deps)
 # Then:       make ci-test    (uses cached depot volume)
 
-.PHONY: help ci-build ci-test ci-test-file ci-format ci-format-fix \
+.PHONY: help ci-build ci-test ci-test-file ci-evidence ci-format ci-format-fix \
         ci-docs ci-docs-ci ci-repl ci-all ci-clean ci-depot-clean
 
 COMPOSE := docker-compose
@@ -27,6 +27,9 @@ ci-test: ## Run full test suite (mirrors CI.yml)
 ci-test-file: ## Run single test file (TEST_FILE=test/geometry.jl make ci-test-file)
 	$(COMPOSE) run --rm test-file
 
+ci-evidence: ## Run curated scientific-evidence suite (mirrors CI scientific-evidence lane)
+	$(COMPOSE) run --rm evidence
+
 ci-format: ## Check Runic formatting (mirrors FormatCheck.yml)
 	$(COMPOSE) run --rm format
 
@@ -36,13 +39,13 @@ ci-format-fix: ## Auto-fix Runic formatting
 ci-docs: ## Build docs with executed examples (slow)
 	$(COMPOSE) run --rm docs
 
-ci-docs-ci: ## Build docs without examples (fast, mirrors CI)
+ci-docs-ci: ## Build docs with the curated CI subset of executed examples
 	$(COMPOSE) run --rm docs-ci
 
 ci-repl: ## Interactive Julia REPL in container
 	$(COMPOSE) run --rm repl
 
-ci-all: ci-format ci-test ci-docs-ci ## Run format + test + docs-ci
+ci-all: ci-format ci-test ci-evidence ci-docs-ci ## Run format + test + evidence + docs-ci
 
 ci-clean: ## Remove containers (keeps depot volume)
 	$(COMPOSE) down --remove-orphans

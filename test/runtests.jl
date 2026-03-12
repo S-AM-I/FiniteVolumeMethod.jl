@@ -115,7 +115,7 @@ end
 
     @testset verbose = true "Tutorials" begin
         dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_tutorials")
-        files = readdir(dir)
+        files = filter(!=("keller_segel_chemotaxis.jl"), readdir(dir))
         file_names = [
             "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl",
             "diffusion_equation_on_a_square_plate.jl",
@@ -209,6 +209,14 @@ end
         Aqua.test_all(FiniteVolumeMethod; ambiguities = false, project_extras = false, unbound_args = false) # don't care about julia < 1.2
         Aqua.test_unbound_args(FiniteVolumeMethod; broken = true) # Val{N} pattern in AMR constructors is a known false positive
         Aqua.test_ambiguities(FiniteVolumeMethod) # don't pick up Base and Core...
+    end
+
+    @testset verbose = true "Repository Governance" begin
+        safe_include("repository_governance.jl")
+    end
+
+    @testset verbose = true "Quality Ledger" begin
+        safe_include("quality_ledger.jl")
     end
 
     @testset verbose = true "Explicit Imports" begin

@@ -1,0 +1,619 @@
+manifest_version = 1
+
+[[features]]
+feature = "parabolic"
+maturity = "stable"
+validation = "executed_examples"
+summary = "Cell-vertex parabolic and elliptic solvers with executed tutorials and convergence checks."
+
+[[features]]
+feature = "hyperbolic"
+maturity = "stable"
+validation = "executed_examples"
+summary = "1D and 2D cell-centered hyperbolic solvers validated with shock-tube and conservation-law examples."
+
+[[features]]
+feature = "mhd_ct"
+maturity = "stable"
+validation = "executed_examples"
+summary = "2D MHD with constrained transport and divergence-preservation checks."
+
+[[features]]
+feature = "amr"
+maturity = "provisional"
+validation = "targeted_tests"
+summary = "Block-structured AMR with dedicated tests and representative evidence coverage."
+
+[[features]]
+feature = "relativistic"
+maturity = "provisional"
+validation = "targeted_tests"
+summary = "SR/GR hydro and MHD solvers covered by focused tests and verification examples."
+
+[[features]]
+feature = "coupling"
+maturity = "provisional"
+validation = "targeted_tests"
+summary = "Operator-split multiphysics coupling APIs with focused regression tests."
+
+[[features]]
+feature = "dashboard"
+maturity = "experimental"
+validation = "smoke_tests"
+summary = "Dashboard export and WebSocket monitoring utilities with compatibility and smoke tests."
+
+[[features]]
+feature = "io_extensions"
+maturity = "experimental"
+validation = "smoke_tests"
+summary = "Optional HDF5 and related I/O extensions that require explicit opt-in dependencies."
+
+[[generated_pages]]
+id = "tutorial-diffusion-square"
+page = "tutorials/diffusion_equation_on_a_square_plate.md"
+source = "docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl"
+feature = "parabolic"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+
+[[generated_pages]]
+id = "tutorial-diffusion-wedge"
+page = "tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.md"
+source = "docs/src/literate_tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-diffusion-annulus"
+page = "tutorials/diffusion_equation_on_an_annulus.md"
+source = "docs/src/literate_tutorials/diffusion_equation_on_an_annulus.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-equilibrium-temperature"
+page = "tutorials/equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.md"
+source = "docs/src/literate_tutorials/equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-gray-scott"
+page = "tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.md"
+source = "docs/src/literate_tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-helmholtz"
+page = "tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.md"
+source = "docs/src/literate_tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-keller-segel"
+page = "tutorials/keller_segel_chemotaxis.md"
+source = "docs/src/literate_tutorials/keller_segel_chemotaxis.jl"
+feature = "parabolic"
+validation_tier = "manual_review"
+run_locally = false
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-laplace-internal-dirichlet"
+page = "tutorials/laplaces_equation_with_internal_dirichlet_conditions.md"
+source = "docs/src/literate_tutorials/laplaces_equation_with_internal_dirichlet_conditions.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-mean-exit-time"
+page = "tutorials/mean_exit_time.md"
+source = "docs/src/literate_tutorials/mean_exit_time.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-natural-neighbours"
+page = "tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.md"
+source = "docs/src/literate_tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-porous-fisher"
+page = "tutorials/porous_fisher_equation_and_travelling_waves.md"
+source = "docs/src/literate_tutorials/porous_fisher_equation_and_travelling_waves.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-porous-medium"
+page = "tutorials/porous_medium_equation.md"
+source = "docs/src/literate_tutorials/porous_medium_equation.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-brusselator"
+page = "tutorials/reaction_diffusion_brusselator_system_of_pdes.md"
+source = "docs/src/literate_tutorials/reaction_diffusion_brusselator_system_of_pdes.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-time-dependent-dirichlet-disk"
+page = "tutorials/reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.md"
+source = "docs/src/literate_tutorials/reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "tutorial-solving-mazes"
+page = "tutorials/solving_mazes_with_laplaces_equation.md"
+source = "docs/src/literate_tutorials/solving_mazes_with_laplaces_equation.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "wyos-diffusion-equations"
+page = "wyos/diffusion_equations.md"
+source = "docs/src/literate_wyos/diffusion_equations.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "wyos-laplaces-equation"
+page = "wyos/laplaces_equation.md"
+source = "docs/src/literate_wyos/laplaces_equation.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "wyos-linear-reaction-diffusion"
+page = "wyos/linear_reaction_diffusion_equations.md"
+source = "docs/src/literate_wyos/linear_reaction_diffusion_equations.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "wyos-mean-exit-time"
+page = "wyos/mean_exit_time.md"
+source = "docs/src/literate_wyos/mean_exit_time.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "wyos-poissons-equation"
+page = "wyos/poissons_equation.md"
+source = "docs/src/literate_wyos/poissons_equation.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-sod"
+page = "hyperbolic/tutorials/sod_shock_tube.md"
+source = "docs/src/literate_hyperbolic/sod_shock_tube.jl"
+feature = "hyperbolic"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+
+[[generated_pages]]
+id = "hyperbolic-sedov"
+page = "hyperbolic/tutorials/sedov_blast_wave.md"
+source = "docs/src/literate_hyperbolic/sedov_blast_wave.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-brio-wu"
+page = "hyperbolic/tutorials/brio_wu_shock_tube.md"
+source = "docs/src/literate_hyperbolic/brio_wu_shock_tube.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-orszag-tang"
+page = "hyperbolic/tutorials/orszag_tang_vortex.md"
+source = "docs/src/literate_hyperbolic/orszag_tang_vortex.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-taylor-green"
+page = "hyperbolic/tutorials/taylor_green_vortex.md"
+source = "docs/src/literate_hyperbolic/taylor_green_vortex.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-field-loop"
+page = "hyperbolic/tutorials/field_loop_advection.md"
+source = "docs/src/literate_hyperbolic/field_loop_advection.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-kelvin-helmholtz"
+page = "hyperbolic/tutorials/kelvin_helmholtz_instability.md"
+source = "docs/src/literate_hyperbolic/kelvin_helmholtz_instability.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-balsara-srmhd"
+page = "hyperbolic/tutorials/balsara_srmhd_shock_tube.md"
+source = "docs/src/literate_hyperbolic/balsara_srmhd_shock_tube.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-weno-convergence"
+page = "hyperbolic/tutorials/weno_convergence.md"
+source = "docs/src/literate_hyperbolic/weno_convergence.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-couette-flow"
+page = "hyperbolic/tutorials/couette_flow.md"
+source = "docs/src/literate_hyperbolic/couette_flow.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-imex-stiff-relaxation"
+page = "hyperbolic/tutorials/imex_stiff_relaxation.md"
+source = "docs/src/literate_hyperbolic/imex_stiff_relaxation.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-amr-sedov"
+page = "hyperbolic/tutorials/amr_sedov_blast.md"
+source = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
+feature = "amr"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-limiter-comparison"
+page = "hyperbolic/tutorials/limiter_comparison.md"
+source = "docs/src/literate_hyperbolic/limiter_comparison.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-mhd-rotor"
+page = "hyperbolic/tutorials/mhd_rotor.md"
+source = "docs/src/literate_hyperbolic/mhd_rotor.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-grmhd-flat-space"
+page = "hyperbolic/tutorials/grmhd_flat_space_shock.md"
+source = "docs/src/literate_hyperbolic/grmhd_flat_space_shock.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-srmhd-cylindrical-blast"
+page = "hyperbolic/tutorials/srmhd_cylindrical_blast.md"
+source = "docs/src/literate_hyperbolic/srmhd_cylindrical_blast.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-shallow-water"
+page = "hyperbolic/tutorials/shallow_water_dam_break.md"
+source = "docs/src/literate_hyperbolic/shallow_water_dam_break.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-srhydro-blast"
+page = "hyperbolic/tutorials/srhydro_blast_wave.md"
+source = "docs/src/literate_hyperbolic/srhydro_blast_wave.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-resistive-mhd-current-sheet"
+page = "hyperbolic/tutorials/resistive_mhd_current_sheet.md"
+source = "docs/src/literate_hyperbolic/resistive_mhd_current_sheet.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-hall-mhd-whistler"
+page = "hyperbolic/tutorials/hall_mhd_whistler.md"
+source = "docs/src/literate_hyperbolic/hall_mhd_whistler.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "hyperbolic-two-fluid-sod"
+page = "hyperbolic/tutorials/two_fluid_sod.md"
+source = "docs/src/literate_hyperbolic/two_fluid_sod.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-amr-convergence"
+page = "verification/amr_convergence.md"
+source = "docs/src/literate_verification/amr_convergence.jl"
+feature = "amr"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-brio-wu"
+page = "verification/brio_wu_verification.md"
+source = "docs/src/literate_verification/brio_wu_verification.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-conservation"
+page = "verification/conservation_verification.md"
+source = "docs/src/literate_verification/conservation_verification.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-flux-balance"
+page = "verification/flux_balance_verification.md"
+source = "docs/src/literate_verification/flux_balance_verification.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-grmhd-convergence"
+page = "verification/grmhd_convergence.md"
+source = "docs/src/literate_verification/grmhd_convergence.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-mhd-convergence"
+page = "verification/mhd_convergence.md"
+source = "docs/src/literate_verification/mhd_convergence.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-mhd-divb"
+page = "verification/mhd_divb_verification.md"
+source = "docs/src/literate_verification/mhd_divb_verification.jl"
+feature = "mhd_ct"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+
+[[generated_pages]]
+id = "verification-mms-convergence"
+page = "verification/mms_convergence.md"
+source = "docs/src/literate_verification/mms_convergence.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-navier-stokes"
+page = "verification/ns_convergence.md"
+source = "docs/src/literate_verification/ns_convergence.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-orszag-tang"
+page = "verification/orszag_tang_verification.md"
+source = "docs/src/literate_verification/orszag_tang_verification.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-passive-scalar"
+page = "verification/passive_scalar_convergence.md"
+source = "docs/src/literate_verification/passive_scalar_convergence.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-poisson-convergence"
+page = "verification/poisson_convergence.md"
+source = "docs/src/literate_verification/poisson_convergence.jl"
+feature = "parabolic"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+
+[[generated_pages]]
+id = "verification-premixed-flame"
+page = "verification/premixed_flame_1d.md"
+source = "docs/src/literate_verification/premixed_flame_1d.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-smooth-advection"
+page = "verification/smooth_advection_convergence.md"
+source = "docs/src/literate_verification/smooth_advection_convergence.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-source-term"
+page = "verification/source_term_convergence.md"
+source = "docs/src/literate_verification/source_term_convergence.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-species-conservation"
+page = "verification/species_conservation.md"
+source = "docs/src/literate_verification/species_conservation.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-sod-grid"
+page = "verification/sod_grid_convergence.md"
+source = "docs/src/literate_verification/sod_grid_convergence.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-srmhd-convergence"
+page = "verification/srmhd_convergence.md"
+source = "docs/src/literate_verification/srmhd_convergence.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-toro-riemann"
+page = "verification/toro_riemann_tests.md"
+source = "docs/src/literate_verification/toro_riemann_tests.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[scientific_evidence]]
+id = "evidence-poisson-convergence"
+path = "docs/src/literate_verification/poisson_convergence.jl"
+feature = "parabolic"
+rationale = "Steady-state convergence evidence for the parabolic solver family."
+
+[[scientific_evidence]]
+id = "evidence-sod-shock-tube"
+path = "docs/src/literate_hyperbolic/sod_shock_tube.jl"
+feature = "hyperbolic"
+rationale = "Executable shock-tube benchmark for the hyperbolic solver."
+
+[[scientific_evidence]]
+id = "evidence-mhd-divb"
+path = "test/mhd_2d.jl"
+feature = "mhd_ct"
+rationale = "Constraint transport preservation checks for 2D MHD."
+
+[[scientific_evidence]]
+id = "evidence-amr"
+path = "test/amr.jl"
+feature = "amr"
+rationale = "Representative AMR refinement and grid-management coverage."
+
+[[scientific_evidence]]
+id = "evidence-docs-smoke"
+path = "docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl"
+feature = "parabolic"
+rationale = "Docs-backed tutorial that is required to stay executable."

@@ -156,7 +156,6 @@ using SciMLBase
         @test contains(content, "SCALARS temperature float")
         rm(path)
 
-        # 3D stub returns nothing
-        @test write_structured_vtk_3d() === nothing
+        @test_throws ArgumentError write_structured_vtk_3d()
     end
 end

@@ -1,0 +1,9 @@
+schema_version = 1
+
+[[allowlists]]
+id = "aqua-unbound-args-amr-val"
+kind = "quality_exception"
+owner = "maintainers"
+scope = "Aqua.test_unbound_args"
+reason = "AMR constructors use Val{N} patterns that currently trigger a known false positive."
+expiry_review = "2026-06-30"

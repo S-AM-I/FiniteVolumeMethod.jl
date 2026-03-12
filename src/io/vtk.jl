@@ -65,9 +65,9 @@ function write_line_vtk(path::AbstractString, mesh::Mesh1D, data::AbstractVector
 end
 
 """
-    write_structured_vtk_3d()
+    write_structured_vtk_3d(args...; kwargs...)
 
-Placeholder for 3D structured VTK output.
+3D structured VTK output is not implemented in this package.
 
 !!! warning "Deprecated"
     Use `WriteVTK.jl` for production VTK output:
@@ -77,8 +77,10 @@ Placeholder for 3D structured VTK output.
         vtk["field"] = data
     end
     ```
+!!! compat "Behaviour change"
+    This function now throws an `ArgumentError` instead of silently returning
+    `nothing`, so callers cannot mistake the placeholder for a successful write.
 """
-function write_structured_vtk_3d()
-    # Implementation pending — use WriteVTK.jl instead
-    return nothing
+function write_structured_vtk_3d(args...; kwargs...)
+    throw(ArgumentError("3D structured VTK output is not implemented. Use WriteVTK.jl for structured-grid exports instead."))
 end
