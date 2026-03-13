@@ -120,6 +120,39 @@ struct MHDCTCache2D{N, FT, Prob} <: AbstractSemidiscreteCache
 end
 
 # ============================================================
+# MHD/CT Cache (3D)
+# ============================================================
+
+"""
+    MHDCTCache3D{N, FT, Prob}
+
+Pre-allocated workspace for a 3D MHD problem with constrained transport.
+
+The augmented ODE state appends all face-centered magnetic-field components
+to the cell-centered conserved state.
+
+State layout:
+`[cell_conserved | Bx_face | By_face | Bz_face]`
+"""
+struct MHDCTCache3D{N, FT, Prob} <: AbstractSemidiscreteCache
+    prob::Prob
+    padded_U::Array{SVector{N, FT}, 3}
+    padded_dU::Array{SVector{N, FT}, 3}
+    nx::Int
+    ny::Int
+    nz::Int
+    ng::Int
+    Fx_all::Array{SVector{N, FT}, 3}
+    Fy_all::Array{SVector{N, FT}, 3}
+    Fz_all::Array{SVector{N, FT}, 3}
+    ct::CTData3D{FT}
+    n_cell_vars::Int
+    n_bx_face::Int
+    n_by_face::Int
+    n_bz_face::Int
+end
+
+# ============================================================
 # GRMHD/CT Cache (2D)
 # ============================================================
 
@@ -305,6 +338,42 @@ function build_mhd_ct_cache(prob::HyperbolicProblem2D, backend::AbstractBackend 
     return MHDCTCache2D{N, FT, typeof(prob)}(
         prob, padded_U, padded_dU, nx, ny, ng,
         Fx_all, Fy_all, emf_z, n_cell_vars, n_bx_face, n_by_face
+    )
+end
+
+function build_mhd_ct_cache(
+        prob::HyperbolicProblem3D{<:IdealMHDEquations{3}},
+        backend::AbstractBackend = CPUBackend(),
+    )
+    _cpu_backend_only("build_mhd_ct_cache", backend)
+    nx, ny, nz = prob.mesh.nx, prob.mesh.ny, prob.mesh.nz
+    N = nvariables(prob.law)
+    ng = 2
+    FT = _determine_ft_3d(prob)
+
+    padded_U = Array{SVector{N, FT}, 3}(undef, nx + 2 * ng, ny + 2 * ng, nz + 2 * ng)
+    padded_dU = Array{SVector{N, FT}, 3}(undef, nx + 2 * ng, ny + 2 * ng, nz + 2 * ng)
+    zero_state = zero(SVector{N, FT})
+    for k in axes(padded_U, 3), j in axes(padded_U, 2), i in axes(padded_U, 1)
+        padded_U[i, j, k] = zero_state
+        padded_dU[i, j, k] = zero_state
+    end
+
+    zero_flux = zero(SVector{N, FT})
+    Fx_all = fill(zero_flux, nx + 1, ny + 2, nz + 2)
+    Fy_all = fill(zero_flux, nx + 2, ny + 1, nz + 2)
+    Fz_all = fill(zero_flux, nx + 2, ny + 2, nz + 1)
+    ct = CTData3D(nx, ny, nz, FT)
+
+    n_cell_vars = nx * ny * nz * N
+    n_bx_face = (nx + 1) * ny * nz
+    n_by_face = nx * (ny + 1) * nz
+    n_bz_face = nx * ny * (nz + 1)
+
+    return MHDCTCache3D{N, FT, typeof(prob)}(
+        prob, padded_U, padded_dU, nx, ny, nz, ng,
+        Fx_all, Fy_all, Fz_all, ct,
+        n_cell_vars, n_bx_face, n_by_face, n_bz_face
     )
 end
 

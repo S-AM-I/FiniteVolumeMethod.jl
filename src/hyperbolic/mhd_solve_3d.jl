@@ -176,6 +176,10 @@ function solve_hyperbolic(
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
+    _legacy_api_depwarn(
+        :solve_hyperbolic,
+        "`sciml_problem(prob; vector_potential_x = ..., vector_potential_y = ..., vector_potential_z = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
+    )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem3D{<:IdealMHDEquations{3}})", backend)
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz

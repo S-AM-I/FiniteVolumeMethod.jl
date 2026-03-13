@@ -18,7 +18,9 @@ The typical workflow is:
 4. Choose a Riemann solver and reconstruction scheme.
 5. Specify boundary conditions.
 6. Construct a `HyperbolicProblem` (1D), `HyperbolicProblem2D`, or `HyperbolicProblem3D`.
-7. Solve with `solve_hyperbolic`.
+7. Solve with `solve(prob, alg; ...)` or build `sciml_problem(prob)` explicitly.
+
+The legacy `solve_hyperbolic`, `solve_hyperbolic_imex`, and `solve_amr` helpers remain available during the v2 transition, but they are now compatibility wrappers rather than the canonical interface.
 
 ## Meshes
 
@@ -108,11 +110,16 @@ PeriodicHyperbolicBC
 HyperbolicProblem
 HyperbolicProblem2D
 HyperbolicProblem3D
-solve_hyperbolic
+sciml_problem
+solution_accessor
+solution_snapshot
+mhd_stage_limiter
 compute_dt
 compute_dt_2d
 compute_dt_3d
 ```
+
+For direct `solve(prob, alg; ...)` calls, SciML callbacks supplied via the `callback` keyword are merged with the package's internal CFL controller. For constrained-transport MHD, pass a stage limiter such as `SSPRK33(; stage_limiter! = mhd_stage_limiter(sciml_problem(prob).p))`.
 
 ## Navier-Stokes (Viscous)
 
@@ -147,7 +154,6 @@ IMEX_ARS222
 IMEX_Midpoint
 imex_tableau
 imex_nstages
-solve_hyperbolic_imex
 ```
 
 ## Stiff Sources
@@ -170,7 +176,6 @@ AbstractRefinementCriterion
 GradientRefinement
 CurrentSheetRefinement
 AMRProblem
-solve_amr
 compute_dt_amr
 is_leaf
 active_blocks
@@ -187,6 +192,14 @@ accumulate_fine_flux!
 store_coarse_flux!
 apply_flux_correction_2d!
 apply_flux_correction_3d!
+```
+
+## Legacy Convenience Wrappers
+
+```@docs
+solve_hyperbolic
+solve_hyperbolic_imex
+solve_amr
 ```
 
 ## Spacetime Metrics (GRMHD)

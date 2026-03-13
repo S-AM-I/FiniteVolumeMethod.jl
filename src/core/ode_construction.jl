@@ -26,7 +26,9 @@ sol = solve(ode_prob, SSPRK33(); adaptive = false, dt = 1e-3)
 """
 function SciMLBase.ODEProblem(
         prob::HyperbolicProblem;
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     cache = build_cache(prob, backend)
     u0 = initial_state_flat(prob, cache)
@@ -40,7 +42,8 @@ function SciMLBase.ODEProblem(
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 # ============================================================
@@ -56,7 +59,9 @@ The ODE state is a flat `Vector{FT}` of length `nx * ny * N`.
 """
 function SciMLBase.ODEProblem(
         prob::HyperbolicProblem2D;
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     cache = build_cache(prob, backend)
     u0 = initial_state_flat(prob, cache)
@@ -70,7 +75,8 @@ function SciMLBase.ODEProblem(
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 # ============================================================
@@ -84,7 +90,9 @@ Create an `ODEProblem` from a 3D hyperbolic problem.
 """
 function SciMLBase.ODEProblem(
         prob::HyperbolicProblem3D;
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     cache = build_cache(prob, backend)
     u0 = initial_state_flat(prob, cache)
@@ -98,7 +106,8 @@ function SciMLBase.ODEProblem(
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 # ============================================================
@@ -112,7 +121,9 @@ Create an `ODEProblem` from an unstructured hyperbolic problem.
 """
 function SciMLBase.ODEProblem(
         prob::UnstructuredHyperbolicProblem;
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     cache = build_cache(prob, backend)
     u0 = initial_state_flat(prob, cache)
@@ -126,7 +137,8 @@ function SciMLBase.ODEProblem(
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 # ============================================================
@@ -154,7 +166,9 @@ sol = solve(ode_prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt 
 function SciMLBase.ODEProblem(
         prob::HyperbolicProblem2D{<:IdealMHDEquations{2}};
         vector_potential = nothing,
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     cache = build_mhd_ct_cache(prob, backend)
     u0 = initial_mhd_augmented_state(prob, cache; vector_potential = vector_potential)
@@ -169,7 +183,8 @@ function SciMLBase.ODEProblem(
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 # ============================================================
@@ -186,7 +201,9 @@ Same augmented-state approach as IdealMHD.
 function SciMLBase.ODEProblem(
         prob::HyperbolicProblem2D{<:SRMHDEquations{2}};
         vector_potential = nothing,
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     cache = build_mhd_ct_cache(prob, backend)
     u0 = initial_mhd_augmented_state(prob, cache; vector_potential = vector_potential)
@@ -201,7 +218,8 @@ function SciMLBase.ODEProblem(
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 # ============================================================
@@ -218,7 +236,9 @@ and geometric source terms.
 function SciMLBase.ODEProblem(
         prob::HyperbolicProblem2D{<:GRMHDEquations{2}};
         vector_potential = nothing,
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     cache = build_grmhd_ct_cache(prob, backend)
     u0 = initial_mhd_augmented_state(prob, cache; vector_potential = vector_potential)
@@ -237,7 +257,46 @@ function SciMLBase.ODEProblem(
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
+end
+
+"""
+    SciMLBase.ODEProblem(prob::HyperbolicProblem3D{<:IdealMHDEquations{3}};
+                         vector_potential_x=nothing, vector_potential_y=nothing,
+                         vector_potential_z=nothing, backend=CPUBackend(), kwargs...)
+
+Create an augmented-state `ODEProblem` for 3D MHD with constrained transport.
+"""
+function SciMLBase.ODEProblem(
+        prob::HyperbolicProblem3D{<:IdealMHDEquations{3}};
+        vector_potential_x = nothing,
+        vector_potential_y = nothing,
+        vector_potential_z = nothing,
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
+    )
+    cache = build_mhd_ct_cache(prob, backend)
+    u0 = initial_mhd_augmented_state(
+        prob, cache;
+        vector_potential_x = vector_potential_x,
+        vector_potential_y = vector_potential_y,
+        vector_potential_z = vector_potential_z,
+    )
+    tspan = (prob.initial_time, prob.final_time)
+
+    function rhs!(du, u, p, t)
+        unfold_mhd_augmented!(p, u)
+        _mhd_compute_fluxes_3d!(p.Fx_all, p.Fy_all, p.Fz_all, p.padded_dU, p.padded_U, p.prob, t)
+        _compute_emf_3d_from_extended!(p.ct, p.Fx_all, p.Fy_all, p.Fz_all, p.nx, p.ny, p.nz)
+        return fold_mhd_augmented!(du, p)
+    end
+
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    cfl_cb = cfl_stepsize_callback(cache)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 """
@@ -271,7 +330,7 @@ All active block interiors are flattened into a single state vector.
 Uses finest-level CFL as the global dt (no subcycling).
 For subcycled AMR, use `solve_amr` or `solve_amr_subcycled` directly.
 """
-function SciMLBase.ODEProblem(prob::AMRProblem; kwargs...)
+function SciMLBase.ODEProblem(prob::AMRProblem; callback = nothing, kwargs...)
     cache = build_amr_cache(prob)
     u0 = flatten_amr_state(cache)
     tspan = (prob.initial_time, prob.final_time)
@@ -301,7 +360,8 @@ function SciMLBase.ODEProblem(prob::AMRProblem; kwargs...)
 
     f = ODEFunction{true}(rhs!)
     cfl_cb = cfl_stepsize_callback(cache)
-    return ODEProblem{true}(f, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 """

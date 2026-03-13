@@ -658,6 +658,7 @@ export
     HyperbolicCache3D,
     UnstructuredCache,
     MHDCTCache2D,
+    MHDCTCache3D,
     GRMHDCTCache2D,
     AMRCache,
     # Cache construction
@@ -684,6 +685,7 @@ export
     FVMSolutionAccessor,
     HyperbolicSolutionAccessor,
     MHDSolutionAccessor,
+    MHD3DSolutionAccessor,
     AMRODESolutionAccessor,
     AMRSolution,
     get_conserved,

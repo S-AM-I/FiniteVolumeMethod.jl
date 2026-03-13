@@ -8,6 +8,7 @@
 include("../core/cache.jl")
 include("../core/state_mapping.jl")
 include("../core/cfl_callback.jl")
+include("../core/callback_merge.jl")
 include("../core/ode_construction.jl")
 include("../core/split_construction.jl")
 include("../core/sciml_contract.jl")

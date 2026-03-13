@@ -46,6 +46,10 @@ function solve_hyperbolic_imex(
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
+    _legacy_api_depwarn(
+        :solve_hyperbolic_imex,
+        "`sciml_problem(prob, stiff_source)` with a SciML IMEX algorithm",
+    )
     _cpu_backend_only("solve_hyperbolic_imex(::HyperbolicProblem, ...)", backend)
     mesh = prob.mesh
     nc = ncells(mesh)
@@ -243,6 +247,10 @@ function solve_hyperbolic_imex(
         parallel::Bool = false,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
+    )
+    _legacy_api_depwarn(
+        :solve_hyperbolic_imex,
+        "`sciml_problem(prob, stiff_source)` with a SciML IMEX algorithm",
     )
     _cpu_backend_only("solve_hyperbolic_imex(::HyperbolicProblem2D, ...)", backend)
     mesh = prob.mesh

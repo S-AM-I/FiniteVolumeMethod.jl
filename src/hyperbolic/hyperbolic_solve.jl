@@ -197,6 +197,7 @@ function solve_hyperbolic(
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
+    _legacy_api_depwarn(:solve_hyperbolic, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem)", backend)
     mesh = prob.mesh
     nc = ncells(mesh)

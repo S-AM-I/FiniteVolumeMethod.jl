@@ -1,7 +1,7 @@
 using DelaunayTriangulation
 using FiniteVolumeMethod
 using OrdinaryDiffEq
-using SciMLBase: ODEProblem, ReturnCode, SteadyStateProblem
+using SciMLBase: DiscreteCallback, ODEProblem, ReturnCode, SteadyStateProblem, remake
 using StaticArrays
 using Test
 
@@ -160,4 +160,106 @@ end
     @test Set(keys(snapshot.conserved)) == Set([1])
     @test size(snapshot.conserved[1]) == (4, 4)
     @test size(snapshot.coordinates[1]) == (4, 4)
+end
+
+@testset "Semidiscrete callback merging stays SciML-compatible" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{1}(eos)
+    mesh = StructuredMesh1D(0.0, 1.0, 32)
+
+    prob = HyperbolicProblem(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        x -> x < 0.5 ? SVector(1.0, 0.0, 1.0) : SVector(0.125, 0.0, 0.1);
+        final_time = 0.02, cfl = 0.4
+    )
+
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+
+    callback_hits = Ref(0)
+    cb = DiscreteCallback(
+        (u, t, integrator) -> true,
+        integrator -> (callback_hits[] += 1),
+        save_positions = (false, false),
+    )
+
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0, callback = cb)
+    @test sol.retcode == ReturnCode.Success
+    @test callback_hits[] > 0
+    @test sol.t[end] ≈ prob.final_time atol = 1.0e-12
+end
+
+@testset "Split semidiscrete callback merging stays SciML-compatible" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{1}(eos)
+    mesh = StructuredMesh1D(0.0, 1.0, 24)
+
+    prob = HyperbolicProblem(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(),
+        x -> x < 0.5 ? SVector(1.0, 0.0, 1.0) : SVector(0.125, 0.0, 0.1);
+        final_time = 0.02, cfl = 0.35
+    )
+
+    split_prob = sciml_problem(prob, NullSource())
+    dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+
+    callback_hits = Ref(0)
+    cb = DiscreteCallback(
+        (u, t, integrator) -> true,
+        integrator -> (callback_hits[] += 1),
+        save_positions = (false, false),
+    )
+
+    sol = solve(prob, NullSource(), SSPRK33(); adaptive = false, dt = dt0, callback = cb)
+    @test sol.retcode == ReturnCode.Success
+    @test callback_hits[] > 0
+end
+
+@testset "3D MHD canonical SciML contract and remake" begin
+    eos = IdealGasEOS(5.0 / 3.0)
+    law = IdealMHDEquations{3}(eos)
+    nx, ny, nz = 4, 3, 2
+    mesh = StructuredMesh3D(0.0, 1.0, 0.0, 0.75, 0.0, 0.5, nx, ny, nz)
+
+    function uniform_mhd_ic(x, y, z)
+        return SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.2, -0.1, 0.05)
+    end
+
+    prob = HyperbolicProblem3D(
+        law, mesh, HLLDSolver(), NoReconstruction(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        uniform_mhd_ic; final_time = 0.01, cfl = 0.25
+    )
+
+    ode_prob = sciml_problem(prob)
+    @test ode_prob isa ODEProblem
+    @test ode_prob.p isa MHDCTCache3D
+
+    expected_len = nx * ny * nz * 8 + (nx + 1) * ny * nz + nx * (ny + 1) * nz + nx * ny * (nz + 1)
+    @test length(ode_prob.u0) == expected_len
+
+    remade = remake(ode_prob; final_time = 0.02)
+    @test remade.tspan == (0.0, 0.02)
+    @test remade.p isa MHDCTCache3D
+
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    @test sol.retcode == ReturnCode.Success
+
+    accessor = solution_accessor(prob)
+    @test accessor isa MHD3DSolutionAccessor
+    @test solution_state_layout(accessor) == :cell_centered_conserved_with_ct
+    @test solution_variables(accessor) == ["rho", "rho_vx", "rho_vy", "rho_vz", "E", "Bx", "By", "Bz"]
+
+    snapshot = solution_snapshot(prob, sol, length(sol.t))
+    @test size(snapshot.conserved) == (nx, ny, nz)
+    @test size(snapshot.primitive) == (nx, ny, nz)
+    @test size(snapshot.coordinates) == (nx, ny, nz)
+    @test snapshot.ct_state isa CTData3D
+    @test max_divB_3d(snapshot.ct_state, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz) < 1.0e-12
 end

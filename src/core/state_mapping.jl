@@ -224,6 +224,58 @@ function fold_mhd_augmented!(du::AbstractVector, cache::GRMHDCTCache2D{N, FT}) w
     return nothing
 end
 
+function unfold_mhd_augmented!(cache::MHDCTCache3D{N, FT}, u::AbstractVector) where {N, FT}
+    ng = cache.ng
+    nx, ny, nz = cache.nx, cache.ny, cache.nz
+    u_sv = reinterpret(SVector{N, FT}, @view u[1:(cache.n_cell_vars)])
+    @inbounds for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        flat_idx = ((iz - 1) * ny + (iy - 1)) * nx + ix
+        cache.padded_U[ix + ng, iy + ng, iz + ng] = u_sv[flat_idx]
+    end
+    return nothing
+end
+
+function fold_mhd_augmented!(du::AbstractVector, cache::MHDCTCache3D{N, FT}) where {N, FT}
+    ng = cache.ng
+    nx, ny, nz = cache.nx, cache.ny, cache.nz
+
+    du_sv = reinterpret(SVector{N, FT}, @view du[1:(cache.n_cell_vars)])
+    @inbounds for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        flat_idx = ((iz - 1) * ny + (iy - 1)) * nx + ix
+        du_sv[flat_idx] = cache.padded_dU[ix + ng, iy + ng, iz + ng]
+    end
+
+    dx = cache.prob.mesh.dx
+    dy = cache.prob.mesh.dy
+    dz = cache.prob.mesh.dz
+    Ex = cache.ct.emf_x
+    Ey = cache.ct.emf_y
+    Ez = cache.ct.emf_z
+
+    bx_offset = cache.n_cell_vars
+    @inbounds for iz in 1:nz, iy in 1:ny, ix in 1:(nx + 1)
+        bx_idx = bx_offset + ((iz - 1) * ny + (iy - 1)) * (nx + 1) + ix
+        du[bx_idx] = -(Ez[ix, iy + 1, iz] - Ez[ix, iy, iz]) / dy
+        du[bx_idx] += (Ey[ix, iy, iz + 1] - Ey[ix, iy, iz]) / dz
+    end
+
+    by_offset = cache.n_cell_vars + cache.n_bx_face
+    @inbounds for iz in 1:nz, iy in 1:(ny + 1), ix in 1:nx
+        by_idx = by_offset + ((iz - 1) * (ny + 1) + (iy - 1)) * nx + ix
+        du[by_idx] = (Ez[ix + 1, iy, iz] - Ez[ix, iy, iz]) / dx
+        du[by_idx] -= (Ex[ix, iy, iz + 1] - Ex[ix, iy, iz]) / dz
+    end
+
+    bz_offset = cache.n_cell_vars + cache.n_bx_face + cache.n_by_face
+    @inbounds for iz in 1:(nz + 1), iy in 1:ny, ix in 1:nx
+        bz_idx = bz_offset + ((iz - 1) * ny + (iy - 1)) * nx + ix
+        du[bz_idx] = -(Ey[ix + 1, iy, iz] - Ey[ix, iy, iz]) / dx
+        du[bz_idx] += (Ex[ix, iy + 1, iz] - Ex[ix, iy, iz]) / dy
+    end
+
+    return nothing
+end
+
 # ============================================================
 # AMR State Mapping
 # ============================================================
@@ -424,6 +476,111 @@ function initial_mhd_augmented_state(
     return initial_mhd_augmented_state(prob, temp_cache; vector_potential = vector_potential)
 end
 
+function initial_mhd_augmented_state(
+        prob::HyperbolicProblem3D{<:IdealMHDEquations{3}}, cache::MHDCTCache3D{N, FT};
+        vector_potential_x = nothing,
+        vector_potential_y = nothing,
+        vector_potential_z = nothing,
+    ) where {N, FT}
+    nx, ny, nz = cache.nx, cache.ny, cache.nz
+    mesh = prob.mesh
+
+    total_len = cache.n_cell_vars + cache.n_bx_face + cache.n_by_face + cache.n_bz_face
+    u0 = zeros(FT, total_len)
+
+    u0_sv = reinterpret(SVector{N, FT}, @view u0[1:(cache.n_cell_vars)])
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        x, y, z = cell_center(mesh, cell_idx_3d(mesh, ix, iy, iz))
+        w = prob.initial_condition(x, y, z)
+        flat_idx = ((iz - 1) * ny + (iy - 1)) * nx + ix
+        u0_sv[flat_idx] = primitive_to_conserved(prob.law, w)
+    end
+
+    dx, dy, dz = mesh.dx, mesh.dy, mesh.dz
+    bx_offset = cache.n_cell_vars
+    by_offset = cache.n_cell_vars + cache.n_bx_face
+    bz_offset = cache.n_cell_vars + cache.n_bx_face + cache.n_by_face
+    has_vector_potential =
+        vector_potential_x !== nothing &&
+        vector_potential_y !== nothing &&
+        vector_potential_z !== nothing
+
+    if has_vector_potential
+        for iz in 1:nz, iy in 1:ny, ix in 1:(nx + 1)
+            x = mesh.xmin + (ix - 1) * dx
+            y_lo = mesh.ymin + (iy - 1) * dy
+            y_hi = mesh.ymin + iy * dy
+            z_lo = mesh.zmin + (iz - 1) * dz
+            z_hi = mesh.zmin + iz * dz
+            y_mid = 0.5 * (y_lo + y_hi)
+            z_mid = 0.5 * (z_lo + z_hi)
+            bx_idx = bx_offset + ((iz - 1) * ny + (iy - 1)) * (nx + 1) + ix
+            dAz_dy = (vector_potential_z(x, y_hi, z_mid) - vector_potential_z(x, y_lo, z_mid)) / dy
+            dAy_dz = (vector_potential_y(x, y_mid, z_hi) - vector_potential_y(x, y_mid, z_lo)) / dz
+            u0[bx_idx] = dAz_dy - dAy_dz
+        end
+
+        for iz in 1:nz, iy in 1:(ny + 1), ix in 1:nx
+            x_lo = mesh.xmin + (ix - 1) * dx
+            x_hi = mesh.xmin + ix * dx
+            y = mesh.ymin + (iy - 1) * dy
+            z_lo = mesh.zmin + (iz - 1) * dz
+            z_hi = mesh.zmin + iz * dz
+            x_mid = 0.5 * (x_lo + x_hi)
+            z_mid = 0.5 * (z_lo + z_hi)
+            by_idx = by_offset + ((iz - 1) * (ny + 1) + (iy - 1)) * nx + ix
+            dAx_dz = (vector_potential_x(x_mid, y, z_hi) - vector_potential_x(x_mid, y, z_lo)) / dz
+            dAz_dx = (vector_potential_z(x_hi, y, z_mid) - vector_potential_z(x_lo, y, z_mid)) / dx
+            u0[by_idx] = dAx_dz - dAz_dx
+        end
+
+        for iz in 1:(nz + 1), iy in 1:ny, ix in 1:nx
+            x_lo = mesh.xmin + (ix - 1) * dx
+            x_hi = mesh.xmin + ix * dx
+            y_lo = mesh.ymin + (iy - 1) * dy
+            y_hi = mesh.ymin + iy * dy
+            z = mesh.zmin + (iz - 1) * dz
+            x_mid = 0.5 * (x_lo + x_hi)
+            y_mid = 0.5 * (y_lo + y_hi)
+            bz_idx = bz_offset + ((iz - 1) * ny + (iy - 1)) * nx + ix
+            dAy_dx = (vector_potential_y(x_hi, y_mid, z) - vector_potential_y(x_lo, y_mid, z)) / dx
+            dAx_dy = (vector_potential_x(x_mid, y_hi, z) - vector_potential_x(x_mid, y_lo, z)) / dy
+            u0[bz_idx] = dAy_dx - dAx_dy
+        end
+    else
+        for iz in 1:nz, iy in 1:ny, ix in 1:(nx + 1)
+            x_face = mesh.xmin + (ix - 1) * dx
+            y_face = mesh.ymin + (iy - 0.5) * dy
+            z_face = mesh.zmin + (iz - 0.5) * dz
+            w = prob.initial_condition(x_face, y_face, z_face)
+            bx_idx = bx_offset + ((iz - 1) * ny + (iy - 1)) * (nx + 1) + ix
+            u0[bx_idx] = w[6]
+        end
+
+        for iz in 1:nz, iy in 1:(ny + 1), ix in 1:nx
+            x_face = mesh.xmin + (ix - 0.5) * dx
+            y_face = mesh.ymin + (iy - 1) * dy
+            z_face = mesh.zmin + (iz - 0.5) * dz
+            w = prob.initial_condition(x_face, y_face, z_face)
+            by_idx = by_offset + ((iz - 1) * (ny + 1) + (iy - 1)) * nx + ix
+            u0[by_idx] = w[7]
+        end
+
+        for iz in 1:(nz + 1), iy in 1:ny, ix in 1:nx
+            x_face = mesh.xmin + (ix - 0.5) * dx
+            y_face = mesh.ymin + (iy - 0.5) * dy
+            z_face = mesh.zmin + (iz - 1) * dz
+            w = prob.initial_condition(x_face, y_face, z_face)
+            bz_idx = bz_offset + ((iz - 1) * ny + (iy - 1)) * nx + ix
+            u0[bz_idx] = w[8]
+        end
+    end
+
+    _sync_cell_B_from_faces!(u0, cache)
+
+    return u0
+end
+
 """
     _sync_cell_B_from_faces!(u, cache)
 
@@ -452,6 +609,35 @@ function _sync_cell_B_from_faces!(u::AbstractVector{FT}, cache) where {FT}
         u[cell_base + 6] = Bx_cell
         u[cell_base + 7] = By_cell
     end
+    return nothing
+end
+
+function _sync_cell_B_from_faces!(u::AbstractVector{FT}, cache::MHDCTCache3D) where {FT}
+    nx, ny, nz = cache.nx, cache.ny, cache.nz
+    N_var = div(cache.n_cell_vars, nx * ny * nz)
+    bx_offset = cache.n_cell_vars
+    by_offset = cache.n_cell_vars + cache.n_bx_face
+    bz_offset = cache.n_cell_vars + cache.n_bx_face + cache.n_by_face
+
+    for iz in 1:nz, iy in 1:ny, ix in 1:nx
+        bx_left_idx = bx_offset + ((iz - 1) * ny + (iy - 1)) * (nx + 1) + ix
+        bx_right_idx = bx_offset + ((iz - 1) * ny + (iy - 1)) * (nx + 1) + (ix + 1)
+        bx_cell = 0.5 * (u[bx_left_idx] + u[bx_right_idx])
+
+        by_lower_idx = by_offset + ((iz - 1) * (ny + 1) + (iy - 1)) * nx + ix
+        by_upper_idx = by_offset + ((iz - 1) * (ny + 1) + iy) * nx + ix
+        by_cell = 0.5 * (u[by_lower_idx] + u[by_upper_idx])
+
+        bz_back_idx = bz_offset + ((iz - 1) * ny + (iy - 1)) * nx + ix
+        bz_front_idx = bz_offset + (iz * ny + (iy - 1)) * nx + ix
+        bz_cell = 0.5 * (u[bz_back_idx] + u[bz_front_idx])
+
+        cell_base = (((iz - 1) * ny + (iy - 1)) * nx + (ix - 1)) * N_var
+        u[cell_base + 6] = bx_cell
+        u[cell_base + 7] = by_cell
+        u[cell_base + 8] = bz_cell
+    end
+
     return nothing
 end
 
