@@ -12,26 +12,28 @@ FVM.to_host(x::CUDA.AbstractGPUArray) = Array(x)
 
 function FVM.supports_backend(prob::FVM.HyperbolicProblem2D, ::FVM.CUDASolverBackend)
     return prob.law isa FVM.EulerEquations{2} &&
-           prob.riemann_solver isa Union{FVM.LaxFriedrichsSolver, FVM.HLLSolver, FVM.HLLCSolver} &&
-           prob.reconstruction isa Union{FVM.NoReconstruction, FVM.CellCenteredMUSCL} &&
-           _supported_bc_2d(prob.bc_left, prob.bc_right, prob.bc_bottom, prob.bc_top)
+        prob.riemann_solver isa Union{FVM.LaxFriedrichsSolver, FVM.HLLSolver, FVM.HLLCSolver} &&
+        prob.reconstruction isa Union{FVM.NoReconstruction, FVM.CellCenteredMUSCL} &&
+        _supported_bc_2d(prob.bc_left, prob.bc_right, prob.bc_bottom, prob.bc_top)
 end
 
 function FVM.backend_summary(backend::FVM.CUDASolverBackend)
     status = CUDA.functional() ? "ready" : "unavailable"
     return isnothing(backend.device) ?
-           "CUDA backend ($status, default device)" :
-           "CUDA backend ($status, device $(backend.device))"
+        "CUDA backend ($status, default device)" :
+        "CUDA backend ($status, device $(backend.device))"
 end
 
 @inline _supported_bc_2d(bcs...) = all(_supported_bc_2d, bcs)
-@inline _supported_bc_2d(::Union{
-    FVM.TransmissiveBC,
-    FVM.ReflectiveBC,
-    FVM.InflowBC,
-    FVM.DirichletHyperbolicBC,
-    FVM.PeriodicHyperbolicBC,
-}) = true
+@inline _supported_bc_2d(
+    ::Union{
+        FVM.TransmissiveBC,
+        FVM.ReflectiveBC,
+        FVM.InflowBC,
+        FVM.DirichletHyperbolicBC,
+        FVM.PeriodicHyperbolicBC,
+    }
+) = true
 @inline _supported_bc_2d(::Any) = false
 
 function FVM._solve_hyperbolic(
@@ -402,6 +404,78 @@ function periodic_y_kernel!(U, nx, ny)
         U[i, 1] = U[i, ny + 1]
         U[i, ny + 3] = U[i, 3]
         U[i, ny + 4] = U[i, 4]
+    end
+    return
+end
+
+# ============================================================
+# Semidiscrete CUDA support: build_cache for GPU
+# ============================================================
+
+"""
+    FVM.build_cache(prob::FVM.HyperbolicProblem2D, backend::FVM.CUDASolverBackend)
+
+Build a 2D semidiscrete cache with CuArray storage for GPU execution.
+
+Only supported for 2D Euler with compatible Riemann solvers and BCs.
+"""
+function FVM.build_cache(prob::FVM.HyperbolicProblem2D, backend::FVM.CUDASolverBackend)
+    CUDA.functional() || error("CUDA.jl is loaded but not functional on this machine.")
+    FVM.supports_backend(prob, backend) || FVM._unsupported_backend("build_cache(::HyperbolicProblem2D)", backend)
+
+    if !isnothing(backend.device)
+        CUDA.device!(backend.device)
+    end
+
+    nx, ny = prob.mesh.nx, prob.mesh.ny
+    N = FVM.nvariables(prob.law)
+    ng = 2
+    FT = typeof(prob.mesh.dx)
+
+    padded_U = CUDA.zeros(SVector{N, FT}, nx + 2 * ng, ny + 2 * ng)
+    padded_dU = CUDA.zeros(SVector{N, FT}, nx + 2 * ng, ny + 2 * ng)
+
+    return FVM.HyperbolicCache2D{N, FT, typeof(prob)}(prob, padded_U, padded_dU, nx, ny, ng)
+end
+
+function FVM.unfold_to_padded!(cache::FVM.HyperbolicCache2D{N, FT, <:Any}, u::CUDA.CuArray) where {N, FT}
+    ng = cache.ng
+    nx, ny = cache.nx, cache.ny
+    threads = (16, 16)
+    blocks = (cld(nx, threads[1]), cld(ny, threads[2]))
+    @cuda threads = threads blocks = blocks _unfold_kernel_2d!(cache.padded_U, u, nx, ny, ng, Val(N))
+    return nothing
+end
+
+function FVM.fold_from_padded!(du::CUDA.CuArray, cache::FVM.HyperbolicCache2D{N, FT, <:Any}) where {N, FT}
+    ng = cache.ng
+    nx, ny = cache.nx, cache.ny
+    threads = (16, 16)
+    blocks = (cld(nx, threads[1]), cld(ny, threads[2]))
+    @cuda threads = threads blocks = blocks _fold_kernel_2d!(du, cache.padded_dU, nx, ny, ng, Val(N))
+    return nothing
+end
+
+function _unfold_kernel_2d!(padded_U, u, nx, ny, ng, ::Val{N}) where {N}
+    ix = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    iy = (blockIdx().y - 1) * blockDim().y + threadIdx().y
+    (1 <= ix <= nx && 1 <= iy <= ny) || return
+    flat_idx = (iy - 1) * nx + ix
+    base = (flat_idx - 1) * N
+    sv = SVector{N}(ntuple(k -> @inbounds(u[base + k]), Val(N)))
+    @inbounds padded_U[ix + ng, iy + ng] = sv
+    return
+end
+
+function _fold_kernel_2d!(du, padded_dU, nx, ny, ng, ::Val{N}) where {N}
+    ix = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    iy = (blockIdx().y - 1) * blockDim().y + threadIdx().y
+    (1 <= ix <= nx && 1 <= iy <= ny) || return
+    flat_idx = (iy - 1) * nx + ix
+    base = (flat_idx - 1) * N
+    sv = @inbounds padded_dU[ix + ng, iy + ng]
+    for k in 1:N
+        @inbounds du[base + k] = sv[k]
     end
     return
 end

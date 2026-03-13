@@ -897,6 +897,8 @@ export
     initial_state_flat,
     initial_mhd_augmented_state,
     flatten_amr_state,
+    unfold_amr!,
+    fold_amr!,
     # CFL callback
     cfl_stepsize_callback,
     compute_initial_dt,
