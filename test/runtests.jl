@@ -3,6 +3,9 @@ using Test
 using Dates
 using Aqua
 
+include(joinpath(dirname(@__DIR__), "validation", "manifest.jl"))
+using .RepoValidationManifest
+
 ct() = Dates.format(now(), "HH:MM:SS")
 function safe_include(filename; name = filename) # Workaround for not being able to interpolate into SafeTestset test names
     mod = @eval module $(gensym()) end
@@ -177,44 +180,14 @@ end
 
     @testset verbose = true "Verification" begin
         dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_verification")
-        files = readdir(dir)
-        file_names = [
-            "amr_convergence.jl",
-            "balsara_mhd_suite.jl",
-            "bondi_accretion_schwarzschild.jl",
-            "brio_wu_verification.jl",
-            "conservation_verification.jl",
-            "euler_mms_convergence.jl",
-            "fishbone_moncrief_torus.jl",
-            "flux_balance_verification.jl",
-            "grmhd_asymptotic_flat.jl",
-            "grmhd_convergence.jl",
-            "grmhd_newtonian_limit.jl",
-            "heated_cavity.jl",
-            "lid_driven_cavity.jl",
-            "mhd_convergence.jl",
-            "mhd_divb_verification.jl",
-            "mhd_solver_comparison.jl",
-            "mms_convergence.jl",
-            "mms_spatial_temporal_decoupled.jl",
-            "ns_convergence.jl",
-            "orszag_tang_verification.jl",
-            "passive_scalar_convergence.jl",
-            "poisson_convergence.jl",
-            "porous_medium_barenblatt.jl",
-            "premixed_flame_1d.jl",
-            "smooth_advection_convergence.jl",
-            "source_term_convergence.jl",
-            "species_conservation.jl",
-            "sod_grid_convergence.jl",
-            "srmhd_convergence.jl",
-            "srmhd_eigenmode_convergence.jl",
-            "tgv_kinetic_energy_decay.jl",
-            "toro_riemann_tests.jl",
-        ]
-        @test length(files) == length(file_names)
-        for i in eachindex(file_names)
-            safe_include(joinpath(dir, file_names[i]); name = file_names[i])
+        manifest = RepoValidationManifest.load_manifest(joinpath(dirname(@__DIR__), "validation", "manifest.toml"))
+        file_names = sort!(
+            [basename(entry.source) for entry in RepoValidationManifest.verification_pages(manifest)];
+            by = identity,
+        )
+        @test !isempty(file_names)
+        for file_name in file_names
+            safe_include(joinpath(dir, file_name); name = file_name)
         end
     end
 

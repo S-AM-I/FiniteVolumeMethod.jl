@@ -1,99 +1,61 @@
 # Verification & Validation
 
+This section only includes cases that are currently treated as scientific verification evidence in this repository.
+Examples that are merely smoke tests, qualitative regressions, or surrogate setups are intentionally excluded from the
+tables below even if related scripts still exist elsewhere in the tree.
+
 ## Verification vs. Validation
 
-**Verification** asks: *"Are we solving the equations correctly?"* It checks that the numerical
-implementation converges at the expected rate to a known exact or manufactured solution.
+**Verification** asks whether the discretisation and implementation solve the intended equations correctly.
+These cases use manufactured solutions, exact solutions, or discrete invariants.
 
-**Validation** asks: *"Are we solving the correct equations?"* It compares simulation results
-against experimental data or benchmark results from the literature.
-
-This section is organised following the ASME V&V 20-2009 framework into three tiers:
-
-1. **Code Verification** — manufactured-solution convergence, operator consistency, and
-   asymptotic-reduction checks that prove the discretisation is implemented correctly.
-2. **Analytical Benchmarks** — comparison against exact, semi-analytical, or literature-grade
-   reference solutions for the physical models the package implements.
-3. **Experimental Validation** — comparison against published experimental data (stretch goals).
+**Validation** asks whether the chosen equations reproduce external physical measurements.
+No experimental validation claims are currently made in this section, because the available cavity/torus surrogate
+examples are not yet rigorous literature-backed reproductions.
 
 ## Code Verification
 
-| Example | Solver | Property Verified | Expected Order |
-|:--------|:-------|:-------------------|:---------------|
-| [MMS Convergence](@ref) | Parabolic (vertex-centred) | Code correctness via manufactured solution | ``O(h^2)`` |
-| [Decoupled MMS Convergence](@ref) | Parabolic (vertex-centred) | Spatial vs temporal error separation | ``O(h^2)`` spatial, ``O(\Delta t^{4\text{--}5})`` temporal |
-| [Euler MMS Convergence](@ref) | Hyperbolic (cell-centred) | Cell-centred Euler MMS convergence | ``O(h^{1.5+})`` |
-| [Poisson Convergence](@ref) | Parabolic (steady-state) | Steady-state solver accuracy | ``O(h^2)`` |
-| [Smooth Advection](@ref) | Hyperbolic (cell-centred) | Reconstruction scheme accuracy | ``O(h^1)`` to ``O(h^5)`` |
-| [Source Term Convergence](@ref) | Hyperbolic (cell-centred) | Source term integration accuracy | ``O(h^2)`` |
-| [Flux Balance](@ref) | Parabolic (vertex-centred) | Discrete flux balance verification | Machine epsilon |
-| [Conservation Verification](@ref) | Hyperbolic (cell-centred) | Discrete conservation properties | Machine epsilon |
-| [Species Conservation](@ref) | Hyperbolic (cell-centred) | Multi-species conservation | Machine epsilon |
-| [Passive Scalar Convergence](@ref) | Hyperbolic (cell-centred) | Passive scalar transport accuracy | ``O(h^2)`` |
-| [MHD Solver Comparison](@ref) | Hyperbolic (MHD) | HLL vs HLLD accuracy comparison | HLLD < HLL in L1 |
-| [GRMHD Flat-Space Reduction](@ref) | Hyperbolic (GRMHD) | GRMHD → SRMHD asymptotic limit | Machine epsilon |
-| [GRMHD Newtonian Limit](@ref) | Hyperbolic (GRMHD) | Low-velocity Con2Prim stability | Machine epsilon |
+| Example | Evidence Basis | Metric | Acceptance |
+|:--------|:---------------|:-------|:-----------|
+| [MMS Convergence](@ref) | Manufactured solution | Observed convergence rates in multiple norms | Meets script tolerance for second-order behaviour |
+| [Decoupled MMS Convergence](@ref) | Manufactured solution | Separate spatial and temporal convergence rates | Meets script tolerances for each refinement study |
+| [Euler MMS Convergence](@ref) | Manufactured solution | L1 density error, pressure error, GCI ratio | Density rates and GCI remain within script tolerances |
+| [Poisson Convergence](@ref) | Exact solution | L2 error and observed convergence rate | Meets script convergence tolerance |
+| [Smooth Advection](@ref) | Exact solution | L1 transport error and observed convergence rate | Meets scheme-specific tolerance |
+| [Source Term Convergence](@ref) | Manufactured solution | Convergence with source forcing | Meets script tolerance |
+| [Flux Balance](@ref) | Discrete invariant | Residual in assembled flux balance | Machine-precision imbalance |
+| [Conservation Verification](@ref) | Discrete invariant | Drift in conserved totals | Remains within script tolerance |
+| [Species Conservation](@ref) | Discrete invariant | Drift in total and per-species quantities | Remains within script tolerance |
+| [Passive Scalar Convergence](@ref) | Exact solution | L1 passive-scalar error and observed rate | Meets script tolerance |
+| [GRMHD Flat-Space Reduction](@ref) | Asymptotic reduction | GRMHD/SRMHD flux mismatch and round-trip error | Remains below stated thresholds |
+| [GRMHD Newtonian Limit](@ref) | Asymptotic reduction | Primitive-recovery error and static-atmosphere drift | Remains below stated thresholds |
+| [MHD div(B) Preservation](@ref) | Discrete invariant | Maximum cellwise ``\nabla\cdot B`` | Remains below stated threshold |
 
 ## Analytical Benchmarks
 
-| Example | Solver | Property Verified | Expected Order |
-|:--------|:-------|:-------------------|:---------------|
-| [Sod Grid Convergence](@ref) | Hyperbolic (cell-centred) | Shock-capturing convergence | ``O(h^{0.5\text{--}1})`` |
-| [Toro Riemann Tests](@ref) | Hyperbolic (cell-centred) | All five Toro test problems | Reference profiles |
-| [Balsara MHD Suite](@ref) | Hyperbolic (MHD) | Full Balsara MHD test battery | Reference profiles |
-| [Brio-Wu Verification](@ref) | Hyperbolic (MHD) | MHD Riemann problem | Reference profiles |
-| [Orszag-Tang Verification](@ref) | Hyperbolic (MHD + CT) | MHD turbulence transition | Reference profiles |
-| [MHD div(B) Preservation](@ref) | Hyperbolic (MHD + CT) | Constraint preservation | Machine epsilon |
-| [MHD Convergence](@ref) | Hyperbolic (MHD + CT) | Circularly polarised Alfvén wave | ``O(h^2)`` |
-| [AMR Convergence](@ref) | Hyperbolic (AMR) | Refinement convergence | ``O(h^1)`` |
-| [Navier-Stokes Convergence](@ref) | Hyperbolic (NS) | Viscous flow convergence | ``O(h^2)`` |
-| [Taylor-Green KE Decay](@ref) | Hyperbolic (NS) | Viscous kinetic energy decay rate | Analytical ``e^{-4\nu k^2 t}`` |
-| [Porous Medium (Barenblatt)](@ref) | Parabolic (vertex-centred) | Self-similar Barenblatt solution | Compact support match |
-| [Premixed Flame 1D](@ref) | Hyperbolic (reactive) | Flame speed and profile | Reference profiles |
-| [SRMHD Convergence](@ref) | Hyperbolic (SRMHD) | Relativistic MHD convergence | ``O(h^2)`` |
-| [SRMHD Eigenmode Convergence](@ref) | Hyperbolic (SRMHD) | All SRMHD wave families | ``O(h^{0.8+})`` per mode |
-| [GRMHD Convergence](@ref) | Hyperbolic (GRMHD) | GR MHD convergence | ``O(h^2)`` |
-| [Bondi Accretion](@ref) | Hyperbolic (GRMHD) | Steady-state spherical accretion | Stationarity < 1% drift |
+| Example | Evidence Basis | Metric | Acceptance |
+|:--------|:---------------|:-------|:-----------|
+| [Sod Grid Convergence](@ref) | Exact Riemann solution | L1 density error and convergence trend | Errors decrease monotonically |
+| [Toro Riemann Tests](@ref) | Published star-state values | Star-region pressure error | Each case meets the script tolerance |
+| [MHD Convergence](@ref) | Exact Alfvén-wave solution | L1 magnetic-field error and observed rate | Rates exceed the script threshold |
+| [Navier-Stokes Convergence](@ref) | Exact Taylor-Green vortex | Linf velocity error and observed rate | Rates exceed the script threshold |
+| [Taylor-Green KE Decay](@ref) | Exact kinetic-energy decay law | Relative decay error | Meets the script tolerance |
+| [Porous Medium (Barenblatt)](@ref) | Exact self-similar solution | L2 error trend and minimum observed rate | Errors decrease monotonically |
+| [SRMHD Convergence](@ref) | Exact smooth-wave solution | L1 density error and observed rate | Rates exceed the script threshold |
+| [SRMHD Eigenmode Convergence](@ref) | Linearised exact eigenmodes | Self-convergence rate for each mode | All mode-wise rates exceed the script threshold |
+| [GRMHD Convergence](@ref) | Exact smooth-wave solution in Minkowski spacetime | L1 density error and observed rate | Rates exceed the script threshold |
 
-## Experimental Validation
+## Scope Notes
 
-| Example | Solver | Property Verified | Reference |
-|:--------|:-------|:-------------------|:----------|
-| [Lid-Driven Cavity](@ref) | Hyperbolic (NS) | Vortex centre and velocity profiles | Ghia et al. (1982) |
-| [Fishbone-Moncrief Torus](@ref) | Hyperbolic (GRMHD) | Hydrostatic equilibrium in Kerr spacetime | Fishbone & Moncrief (1976) |
-| [Heated Cavity](@ref) | Hyperbolic (NS) | Natural convection Nusselt number | De Vahl Davis (1983) |
-
-## Error Norms
-
-The following norms are used throughout:
-
-```math
-\|e\|_1 = \frac{1}{N}\sum_{i=1}^N |u_i - u_{\text{exact},i}|, \qquad
-\|e\|_2 = \sqrt{\frac{1}{N}\sum_{i=1}^N (u_i - u_{\text{exact},i})^2}, \qquad
-\|e\|_\infty = \max_{i} |u_i - u_{\text{exact},i}|.
-```
-
-The **convergence rate** between two meshes with ``N`` and ``2N`` cells is:
-
-```math
-p = \log_2\!\left(\frac{\|e\|_N}{\|e\|_{2N}}\right).
-```
-
-The **Grid Convergence Index** (GCI) follows the ASME V&V 20-2009 standard using three-grid
-Richardson extrapolation with a safety factor of 1.25 for three or more grids:
-
-```math
-\text{GCI}_{\text{fine}} = \frac{F_s \left| \frac{f_2 - f_1}{f_1} \right|}{r^p - 1}
-```
-
-where ``r`` is the refinement ratio, ``p`` is the observed order, and ``F_s = 1.25``.
-The asymptotic ratio ``\text{GCI}_{\text{coarse}} / (r^p \cdot \text{GCI}_{\text{fine}})``
-should approach 1.0 in the asymptotic convergence range.
+- Tutorials and smoke tests are validated separately as executable documentation, not as scientific evidence.
+- Regression-style scripts that compare one numerical method to another without an external truth model are not listed here.
+- Experimental validation will be added back only when the implementation reproduces the referenced benchmark physics and
+  compares against published data with explicit quantitative acceptance criteria.
 
 ## References
 
-- P. J. Roache, *Verification and Validation in Computational Science and Engineering*, Hermosa Publishers, 1998.
+- P. J. Roache, *Verification and Validation in Computational Science and Engineering*, 1998.
 - ASME V&V 20-2009, *Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer*, 2009.
-- W. L. Oberkampf and T. G. Trucano, "Verification and validation in computational fluid dynamics," *Progress in Aerospace Sciences*, 38(3):209–272, 2002.
-- C. J. Roy, "Review of code and solution verification procedures for computational simulation," *Journal of Computational Physics*, 205(1):131–156, 2005.
-- E. F. Toro, *Riemann Solvers and Numerical Methods for Fluid Dynamics*, 3rd ed., Springer, 2009.
+- W. L. Oberkampf and T. G. Trucano, "Verification and validation in computational fluid dynamics," *Progress in Aerospace Sciences*, 2002.
+- C. J. Roy, "Review of code and solution verification procedures for computational simulation," *Journal of Computational Physics*, 2005.
+- E. F. Toro, *Riemann Solvers and Numerical Methods for Fluid Dynamics*, 3rd ed., 2009.
