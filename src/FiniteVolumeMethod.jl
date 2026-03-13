@@ -16,12 +16,14 @@ using DelaunayTriangulation: DelaunayTriangulation, Triangulation,
 using LinearAlgebra: LinearAlgebra, I, dot, norm
 using PreallocationTools: PreallocationTools, DiffCache, get_tmp
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, LinearProblem,
-    MatrixOperator, ODEFunction, ODEProblem, SteadyStateProblem, remake
+    MatrixOperator, ODEFunction, ODEProblem, SplitODEProblem,
+    SteadyStateProblem, remake, set_proposed_dt!
 using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
-include("backends.jl")
+# Core shared infrastructure
+include("core/backends.jl")
 
 # --- Parabolic Types & Mesh (from Simu.jl migration) ---
 include("parabolic/types.jl")
@@ -218,6 +220,14 @@ include("coupling/abstract_coupling.jl")
 include("coupling/operators.jl")
 include("coupling/data_transfer.jl")
 include("coupling/coupled_solve.jl")
+
+# Core ODE construction layer (after all physics code is loaded)
+include("core/cache.jl")
+include("core/state_mapping.jl")
+include("core/cfl_callback.jl")
+include("core/ode_construction.jl")
+include("core/split_construction.jl")
+include("core/results.jl")
 
 # SciMLBase.remake for all problem types
 include("remake.jl")
@@ -862,6 +872,44 @@ export FVMGeometry,
     export_session,
     import_session,
     serve_dashboard
+
+# --- Semidiscrete Core (ODEProblem integration for hyperbolic solvers) ---
+export
+    # Cache types
+    AbstractSemidiscreteCache,
+    HyperbolicCache1D,
+    HyperbolicCache2D,
+    HyperbolicCache3D,
+    UnstructuredCache,
+    MHDCTCache2D,
+    GRMHDCTCache2D,
+    AMRCache,
+    # Cache construction
+    build_cache,
+    build_mhd_ct_cache,
+    build_grmhd_ct_cache,
+    build_amr_cache,
+    # State mapping
+    unfold_to_padded!,
+    fold_from_padded!,
+    unfold_mhd_augmented!,
+    fold_mhd_augmented!,
+    initial_state_flat,
+    initial_mhd_augmented_state,
+    flatten_amr_state,
+    # CFL callback
+    cfl_stepsize_callback,
+    compute_initial_dt,
+    # MHD stage limiter
+    mhd_stage_limiter,
+    # Solution accessors
+    HyperbolicSolutionAccessor,
+    MHDSolutionAccessor,
+    AMRSolution,
+    get_conserved,
+    get_primitive,
+    get_coordinates,
+    get_ct_state
 
 # --- I/O (from Simu.jl SimuIO migration) ---
 export
