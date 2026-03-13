@@ -18,6 +18,8 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # - **CFL**: 0.4
 
 using FiniteVolumeMethod
+using OrdinaryDiffEq
+using SciMLBase: ReturnCode, remake
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -37,87 +39,86 @@ function conservation_ic(x)
     return SVector(rho, v, P)
 end
 
-# ## Compute Initial Conserved Totals
-# We first solve for a very short time to establish the initial conserved state,
-# then run in sequential intervals collecting the totals.
+function conserved_totals(U, dx)
+    mass = 0.0
+    momentum = 0.0
+    energy = 0.0
+    for u in U
+        mass += u[1] * dx
+        momentum += u[2] * dx
+        energy += u[3] * dx
+    end
+    return mass, momentum, energy
+end
+
+# ## Sequential Canonical SciML Solves
 n_intervals = 20
 dt_interval = 0.025
 t_checkpoints = [i * dt_interval for i in 0:n_intervals]
 
+mesh = StructuredMesh1D(0.0, 1.0, N)
+prob = HyperbolicProblem(
+    law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
+    PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), conservation_ic;
+    final_time = t_checkpoints[end], cfl = 0.4
+)
+ode_prob = sciml_problem(prob)
+dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
 total_mass = Float64[]
 total_momentum = Float64[]
 total_energy = Float64[]
 
-# Compute initial totals
-mesh = StructuredMesh1D(0.0, 1.0, N)
-
-## Initial state: compute conserved quantities from IC
 let
-    m = 0.0
-    mom = 0.0
-    en = 0.0
+    mass = 0.0
+    momentum = 0.0
+    energy = 0.0
     for i in 1:N
         x = mesh.xmin + (i - 0.5) * dx
-        w = conservation_ic(x)
-        u = primitive_to_conserved(law, w)
-        m += u[1] * dx
-        mom += u[2] * dx
-        en += u[3] * dx
+        u = primitive_to_conserved(law, conservation_ic(x))
+        mass += u[1] * dx
+        momentum += u[2] * dx
+        energy += u[3] * dx
     end
-    push!(total_mass, m)
-    push!(total_momentum, mom)
-    push!(total_energy, en)
+    push!(total_mass, mass)
+    push!(total_momentum, momentum)
+    push!(total_energy, energy)
 end
 
-# ## Sequential Solve in Intervals
-# We solve in intervals, using the solution from the previous interval
-# as the initial condition for the next. To restart, we use a closure
-# over the previous solution vector.
-current_U = nothing  # will hold interior solution SVectors
+current_state = nothing
+current_dt = dt0
+let
+    local_state = current_state
+    local_dt = current_dt
+    for interval in 1:n_intervals
+        t_start = t_checkpoints[interval]
+        t_end = t_checkpoints[interval + 1]
 
-for interval in 1:n_intervals
-    t_start = (interval - 1) * dt_interval
-    t_end = interval * dt_interval
-
-    if interval == 1
-        ## First interval: use the original IC function
-        prob = HyperbolicProblem(
-            law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
-            PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), conservation_ic;
-            initial_time = t_start, final_time = t_end, cfl = 0.4
-        )
-    else
-        ## Subsequent intervals: create IC from previous solution
-        prev_U = current_U
-        restart_ic = let U_prev = prev_U, dx = mesh.dx, xmin = mesh.xmin
-            function (x)
-                ## Find the cell index for this x
-                i = clamp(Int(floor((x - xmin) / dx)) + 1, 1, N)
-                return conserved_to_primitive(law, U_prev[i])
+        interval_prob = if interval == 1
+            remake(prob; initial_time = t_start, final_time = t_end)
+        else
+            previous_state = local_state
+            restart_ic = let U_prev = previous_state, xmin = mesh.xmin
+                function (x)
+                    i = clamp(Int(floor((x - xmin) / dx)) + 1, 1, N)
+                    return conserved_to_primitive(law, U_prev[i])
+                end
             end
+            remake(prob; initial_condition = restart_ic, initial_time = t_start, final_time = t_end)
         end
-        prob = HyperbolicProblem(
-            law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
-            PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), restart_ic;
-            initial_time = t_start, final_time = t_end, cfl = 0.4
-        )
-    end
 
-    x, U, _ = solve_hyperbolic(prob)
-    global current_U = U
+        sol = solve(interval_prob, SSPRK33(); adaptive = false, dt = local_dt)
+        @test sol.retcode == ReturnCode.Success #src
+        accessor = solution_accessor(interval_prob)
+        local_state = get_conserved(accessor, sol, length(sol.t))
 
-    ## Compute conserved totals
-    m = 0.0
-    mom = 0.0
-    en = 0.0
-    for i in eachindex(U)
-        m += U[i][1] * dx
-        mom += U[i][2] * dx
-        en += U[i][3] * dx
+        mass, momentum, energy = conserved_totals(local_state, dx)
+        push!(total_mass, mass)
+        push!(total_momentum, momentum)
+        push!(total_energy, energy)
+
+        interval_sciml = sciml_problem(interval_prob)
+        local_dt = compute_initial_dt(interval_sciml.p, sol.u[end])
     end
-    push!(total_mass, m)
-    push!(total_momentum, mom)
-    push!(total_energy, en)
 end
 
 # ## Relative Conservation Error
@@ -125,7 +126,6 @@ mass_err = [abs(total_mass[i] - total_mass[1]) / abs(total_mass[1]) for i in eac
 momentum_err = [abs(total_momentum[i] - total_momentum[1]) / abs(total_momentum[1]) for i in eachindex(total_momentum)]
 energy_err = [abs(total_energy[i] - total_energy[1]) / abs(total_energy[1]) for i in eachindex(total_energy)]
 
-## Replace exact zeros with a small value for log-scale plotting
 eps_floor = 1.0e-16
 mass_err_plot = max.(mass_err, eps_floor)
 momentum_err_plot = max.(momentum_err, eps_floor)
@@ -156,3 +156,24 @@ fig
 @assert maximum(mass_err) < 1.0e-10 #hide
 @assert maximum(momentum_err) < 1.0e-10 #hide
 @assert maximum(energy_err) < 1.0e-10 #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "max_mass_drift" => maximum(mass_err),
+            "max_momentum_drift" => maximum(momentum_err),
+            "max_energy_drift" => maximum(energy_err),
+        ),
+        artifacts = ["conservation_verification.png"],
+        notes = [
+            "Canonical SciML execution path via sciml_problem(prob), remake(prob; ...), and solve(prob, SSPRK33()).",
+            "This evidence entry is the hyperbolic invariant-stage conservation case.",
+        ],
+        summary = Dict(
+            "times" => t_checkpoints,
+            "mass_error" => mass_err,
+            "momentum_error" => momentum_err,
+            "energy_error" => energy_err,
+        ),
+    )
+end

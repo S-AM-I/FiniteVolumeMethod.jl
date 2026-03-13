@@ -1,25 +1,24 @@
-using Dates
 using FiniteVolumeMethod
 using Test
 
 include(joinpath(dirname(@__DIR__), "validation", "manifest.jl"))
+include(joinpath(dirname(@__DIR__), "validation", "evidence_runner.jl"))
+using .RepoEvidenceRunner
 using .RepoValidationManifest
-
-ct() = Dates.format(now(), "HH:MM:SS")
-
-function safe_include(path; name = basename(path))
-    mod = @eval module $(gensym()) end
-    @info "[$(ct())] Scientific evidence: $name"
-    return @testset verbose = true "Evidence: $name" begin
-        Base.include(mod, path)
-    end
-end
 
 const REPO_ROOT = dirname(@__DIR__)
 manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation", "manifest.toml"))
 
 @testset verbose = true "Scientific Evidence Suite" begin
-    for entry in manifest.scientific_evidence
-        safe_include(joinpath(REPO_ROOT, entry.path); name = entry.id)
+    mktempdir() do output_dir
+        summaries = RepoEvidenceRunner.run_evidence_suite(manifest; repo_root = REPO_ROOT, output_dir)
+        @test length(summaries) == length(manifest.scientific_evidence)
+        for (entry, summary) in zip(manifest.scientific_evidence, summaries)
+            @test summary["status"] == "pass"
+            @test isfile(RepoEvidenceRunner.evidence_summary_path(entry.id; output_dir))
+            if entry.summary_required
+                @test summary["recorded_result_count"] > 0
+            end
+        end
     end
 end

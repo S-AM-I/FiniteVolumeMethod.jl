@@ -9,6 +9,10 @@ claims. Stable claim-bearing solver features must have automated evidence in thi
 still appear elsewhere in the repository, but they are not elevated to the same claim status until their evidence ladder
 is complete.
 
+Evidence cases in the validation manifest may also declare an explicit ladder stage, canonical entrypoint, and
+machine-readable summary requirement. The scientific evidence runner executes those entrypoints directly and records the
+resulting metadata for release reporting.
+
 ## Verification vs. Validation
 
 **Verification** asks whether the discretisation and implementation solve the intended equations correctly.

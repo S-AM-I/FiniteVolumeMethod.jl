@@ -758,6 +758,7 @@ export
     feature_validation_status,
     feature_role,
     feature_solver_family,
+    feature_required_ladder_stages,
     feature_claim_policy,
     feature_limitations,
     capability_matrix
