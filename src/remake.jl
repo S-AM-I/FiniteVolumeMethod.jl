@@ -245,3 +245,111 @@ function SciMLBase.remake(
         _replace(regrid_interval, prob.regrid_interval),
     )
 end
+
+# ============================================================
+# Semidiscrete ODEProblem remake
+# ============================================================
+#
+# Rebuild the underlying physics problem, then re-create the ODEProblem.
+# Accepts keyword args for the physics problem fields (cfl, final_time, etc.)
+# as well as `vector_potential` for MHD/CT problems.
+#
+# NOTE: SciML's `solve` internally calls `remake(prob; f=..., u0=..., p=..., tspan=...)`
+# to specialize the ODEFunction. We must accept and ignore these standard ODEProblem
+# kwargs so they don't get forwarded to the inner physics problem's `remake`.
+
+# Standard ODEProblem kwargs that SciML may pass during solve specialization
+const _ODE_REMAKE_KEYS = (:f, :u0, :p, :tspan, :prob_type, :problem_type, :kwargs)
+
+function _filter_physics_kwargs(; kwargs...)
+    return pairs(NamedTuple(filter(kv -> kv.first ∉ _ODE_REMAKE_KEYS, pairs(kwargs))))
+end
+
+"""
+    SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache1D}; kwargs...)
+
+Remake a semidiscrete 1D ODEProblem. Accepts any keyword argument valid for
+`remake(::HyperbolicProblem; ...)` (e.g. `cfl`, `final_time`, `initial_condition`).
+"""
+function SciMLBase.remake(
+        ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache1D};
+        kwargs...
+    )
+    physics_kwargs = _filter_physics_kwargs(; kwargs...)
+    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
+    return ODEProblem(physics_prob)
+end
+
+"""
+    SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache2D}; kwargs...)
+
+Remake a semidiscrete 2D ODEProblem.
+"""
+function SciMLBase.remake(
+        ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache2D};
+        kwargs...
+    )
+    physics_kwargs = _filter_physics_kwargs(; kwargs...)
+    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
+    return ODEProblem(physics_prob)
+end
+
+"""
+    SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache3D}; kwargs...)
+
+Remake a semidiscrete 3D ODEProblem.
+"""
+function SciMLBase.remake(
+        ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache3D};
+        kwargs...
+    )
+    physics_kwargs = _filter_physics_kwargs(; kwargs...)
+    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
+    return ODEProblem(physics_prob)
+end
+
+"""
+    SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:UnstructuredCache}; kwargs...)
+
+Remake a semidiscrete unstructured ODEProblem.
+"""
+function SciMLBase.remake(
+        ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:UnstructuredCache};
+        kwargs...
+    )
+    physics_kwargs = _filter_physics_kwargs(; kwargs...)
+    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
+    return ODEProblem(physics_prob)
+end
+
+"""
+    SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache2D};
+                     vector_potential=nothing, kwargs...)
+
+Remake a semidiscrete MHD/CT ODEProblem.
+"""
+function SciMLBase.remake(
+        ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache2D};
+        vector_potential = nothing,
+        kwargs...
+    )
+    physics_kwargs = _filter_physics_kwargs(; kwargs...)
+    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
+    return ODEProblem(physics_prob; vector_potential = vector_potential)
+end
+
+"""
+    SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:GRMHDCTCache2D};
+                     vector_potential=nothing, kwargs...)
+
+Remake a semidiscrete GRMHD/CT ODEProblem.
+"""
+function SciMLBase.remake(
+        ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:GRMHDCTCache2D};
+        vector_potential = nothing,
+        kwargs...
+    )
+    physics_kwargs = _filter_physics_kwargs(; kwargs...)
+    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
+    return ODEProblem(physics_prob; vector_potential = vector_potential)
+end

@@ -120,6 +120,18 @@ end
         safe_include("semidiscrete.jl")
     end
 
+    @testset verbose = true "Semidiscrete MHD" begin
+        safe_include("semidiscrete_mhd.jl")
+    end
+
+    @testset verbose = true "Semidiscrete AMR" begin
+        safe_include("semidiscrete_amr.jl")
+    end
+
+    @testset verbose = true "Semidiscrete IMEX" begin
+        safe_include("semidiscrete_imex.jl")
+    end
+
     @testset verbose = true "Tutorials" begin
         dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_tutorials")
         files = filter(!=("keller_segel_chemotaxis.jl"), readdir(dir))
