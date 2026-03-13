@@ -20,12 +20,15 @@ env:
 #                               (runs in the 'test' job below)
 # Lane 2 — scientific-evidence: Fast representative V&V cases
 #                               (runs in the 'scientific-evidence' job)
-# Lane 3 — nightly (future):   Broader convergence sweeps, heavy
-#                               MHD/AMR/GRMHD cases. See manifest.toml
-#                               runtime_tier = "nightly".
-# Lane 4 — release (future):   Full evidence suite + generated
-#                               validation report artifact. See
-#                               manifest.toml runtime_tier = "release".
+#                               Generates validation report artifact.
+# Lane 3 — nightly:            Broader convergence sweeps, heavy
+#                               MHD/AMR/GRMHD cases.
+#                               (runs in Nightly.yml on schedule)
+# Lane 4 — release:            Full evidence suite + generated
+#                               validation report artifact.
+#                               (runs in Release.yml on tag push)
+#
+# The docs job depends on both test and scientific-evidence completing.
 #
 # Reference Test Baseline Policy:
 #   JULIA_REFERENCETESTS_UPDATE=true is acceptable for IMAGE regression
@@ -114,8 +117,25 @@ jobs:
             Pkg.instantiate()'
       - name: Run scientific evidence suite
         run: julia --project=test test/scientific_evidence.jl
+      - name: Generate validation report
+        if: always()
+        run: |
+          julia --project=test -e '
+            include("validation/generate_report.jl")
+            ValidationReport.generate(
+              joinpath("validation", "manifest.toml"),
+              "validation_report.md",
+            )'
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation_report.md
   docs:
     name: Documentation
+    needs: [test, scientific-evidence]
+    if: always() && !cancelled()
     runs-on: ubuntu-latest
     permissions:
       contents: read

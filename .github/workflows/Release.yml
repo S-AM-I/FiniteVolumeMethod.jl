@@ -1,0 +1,81 @@
+name: Release V&V
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+concurrency:
+  group: release-vv
+  cancel-in-progress: false
+env:
+  JULIA_PKG_SERVER: ""
+# =====================================================================
+# Lane 4 — Release V&V
+# Full evidence suite + generated validation report artifact.
+# A release is blocked if any stable feature lacks a passing evidence
+# case, a missing source page, or a stale acceptance criterion.
+# =====================================================================
+jobs:
+  release-evidence:
+    name: Full Evidence Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Increase swapfile
+        run: |
+          sudo swapoff -a
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          sudo swapon --show
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Instantiate test environment
+        run: |
+          julia --project=test -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - name: Run scientific evidence suite
+        run: julia --project=test test/scientific_evidence.jl
+      - name: Run full verification suite
+        run: |
+          julia --project=test -e '
+            using Dates, Test
+            ct() = Dates.format(now(), "HH:MM:SS")
+            function safe_include(path; name = basename(path))
+                mod = @eval module $(gensym()) end
+                @info "[$(ct())] Release verification: $name"
+                return @testset verbose = true "Release: $name" begin
+                    Base.include(mod, path)
+                end
+            end
+            dir = joinpath(pwd(), "docs", "src", "literate_verification")
+            @testset verbose = true "Release Verification Suite" begin
+                for file in sort(readdir(dir))
+                    endswith(file, ".jl") || continue
+                    safe_include(joinpath(dir, file); name = file)
+                end
+            end'
+      - name: Run repository governance
+        run: |
+          julia --project=test -e '
+            using Pkg
+            Pkg.test(; test_args=["Repository Governance"])'
+      - name: Generate release validation report
+        if: always()
+        run: |
+          julia --project=test -e '
+            include("validation/generate_report.jl")
+            ValidationReport.generate(
+              joinpath("validation", "manifest.toml"),
+              "release_validation_report.md",
+            )'
+      - name: Upload release validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-validation-report
+          path: release_validation_report.md

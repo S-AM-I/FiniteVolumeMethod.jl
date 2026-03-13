@@ -9,8 +9,8 @@ summary = "Cell-vertex parabolic and elliptic solvers with executed tutorials an
 [[features]]
 feature = "hyperbolic"
 maturity = "stable"
-validation = "executed_examples"
-summary = "1D and 2D cell-centered hyperbolic solvers validated with shock-tube and conservation-law examples."
+validation = "convergence_verified"
+summary = "1D and 2D cell-centered hyperbolic solvers with MMS convergence verification and analytical benchmarks."
 
 [[features]]
 feature = "mhd_ct"
@@ -26,9 +26,9 @@ summary = "Block-structured AMR with dedicated tests and representative evidence
 
 [[features]]
 feature = "relativistic"
-maturity = "provisional"
-validation = "targeted_tests"
-summary = "SR/GR hydro and MHD solvers covered by focused tests and verification examples."
+maturity = "stable"
+validation = "convergence_verified"
+summary = "SR/GR hydro and MHD solvers verified with eigenmode convergence, Bondi accretion, and asymptotic reduction tests."
 
 [[features]]
 feature = "coupling"
@@ -627,6 +627,16 @@ runtime_tier = "ci"
 quantity = "Refinement consistency"
 reference = "Berger & Colella (1989)"
 threshold = "runs_without_error"
+
+[[scientific_evidence]]
+id = "evidence-amr-conservation"
+path = "docs/src/literate_verification/amr_convergence.jl"
+feature = "amr"
+rationale = "AMR conservation and refluxing verification — total mass preserved across coarse/fine boundaries."
+runtime_tier = "nightly"
+quantity = "Total mass agreement (AMR vs uniform)"
+reference = "Berger & Colella (1989)"
+threshold = "relative_mass_diff < 0.1"
 
 [[scientific_evidence]]
 id = "evidence-docs-smoke"

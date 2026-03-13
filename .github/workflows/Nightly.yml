@@ -1,0 +1,74 @@
+name: Nightly V&V
+on:
+  schedule:
+    # Run at 03:00 UTC every day
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+concurrency:
+  group: nightly-vv
+  cancel-in-progress: true
+env:
+  JULIA_PKG_SERVER: ""
+# =====================================================================
+# Lane 3 — Nightly V&V
+# Broader convergence sweeps, heavier MHD/AMR/GRMHD cases.
+# Runs all literate_verification scripts with run_locally=true.
+# =====================================================================
+jobs:
+  nightly-verification:
+    name: Nightly Verification Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Increase swapfile
+        run: |
+          sudo swapoff -a
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          sudo swapon --show
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Instantiate test environment
+        run: |
+          julia --project=test -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - name: Run full verification suite
+        run: |
+          julia --project=test -e '
+            using Dates, Test
+            ct() = Dates.format(now(), "HH:MM:SS")
+            function safe_include(path; name = basename(path))
+                mod = @eval module $(gensym()) end
+                @info "[$(ct())] Nightly verification: $name"
+                return @testset verbose = true "Nightly: $name" begin
+                    Base.include(mod, path)
+                end
+            end
+            dir = joinpath(pwd(), "docs", "src", "literate_verification")
+            @testset verbose = true "Nightly Verification Suite" begin
+                for file in sort(readdir(dir))
+                    endswith(file, ".jl") || continue
+                    safe_include(joinpath(dir, file); name = file)
+                end
+            end'
+      - name: Generate nightly validation report
+        if: always()
+        run: |
+          julia --project=test -e '
+            include("validation/generate_report.jl")
+            ValidationReport.generate(
+              joinpath("validation", "manifest.toml"),
+              "nightly_validation_report.md",
+            )'
+      - name: Upload nightly validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-validation-report
+          path: nightly_validation_report.md
