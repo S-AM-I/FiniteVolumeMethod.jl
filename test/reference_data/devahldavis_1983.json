@@ -1,0 +1,32 @@
+{
+  "reference": "De Vahl Davis (1983), Int. J. Numer. Methods Fluids, 3, 249-264",
+  "description": "Natural convection in a square cavity benchmark — average Nusselt numbers",
+  "Ra_1e3": {
+    "Nu_avg": 1.118,
+    "Nu_max": 1.505,
+    "Nu_min": 0.692,
+    "v_max_midplane": 3.649,
+    "u_max_midplane": 3.697
+  },
+  "Ra_1e4": {
+    "Nu_avg": 2.243,
+    "Nu_max": 3.528,
+    "Nu_min": 0.586,
+    "v_max_midplane": 19.617,
+    "u_max_midplane": 16.178
+  },
+  "Ra_1e5": {
+    "Nu_avg": 4.519,
+    "Nu_max": 7.717,
+    "Nu_min": 0.729,
+    "v_max_midplane": 68.59,
+    "u_max_midplane": 34.73
+  },
+  "Ra_1e6": {
+    "Nu_avg": 8.800,
+    "Nu_max": 17.925,
+    "Nu_min": 0.989,
+    "v_max_midplane": 219.36,
+    "u_max_midplane": 64.63
+  }
+}

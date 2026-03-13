@@ -593,27 +593,210 @@ id = "evidence-poisson-convergence"
 path = "docs/src/literate_verification/poisson_convergence.jl"
 feature = "parabolic"
 rationale = "Steady-state convergence evidence for the parabolic solver family."
+runtime_tier = "ci"
+quantity = "L2 convergence rate"
+reference = "Roache (1998)"
+threshold = "p_obs >= 1.5"
 
 [[scientific_evidence]]
 id = "evidence-sod-shock-tube"
 path = "docs/src/literate_hyperbolic/sod_shock_tube.jl"
 feature = "hyperbolic"
 rationale = "Executable shock-tube benchmark for the hyperbolic solver."
+runtime_tier = "ci"
+quantity = "Density profile at t_final"
+reference = "Toro (2009), Chapter 4"
+threshold = "runs_without_error"
 
 [[scientific_evidence]]
 id = "evidence-mhd-divb"
 path = "test/mhd_2d.jl"
 feature = "mhd_ct"
 rationale = "Constraint transport preservation checks for 2D MHD."
+runtime_tier = "ci"
+quantity = "max(div(B))"
+reference = "Toth (2000)"
+threshold = "divB < 1e-15"
 
 [[scientific_evidence]]
 id = "evidence-amr"
 path = "test/amr.jl"
 feature = "amr"
 rationale = "Representative AMR refinement and grid-management coverage."
+runtime_tier = "ci"
+quantity = "Refinement consistency"
+reference = "Berger & Colella (1989)"
+threshold = "runs_without_error"
 
 [[scientific_evidence]]
 id = "evidence-docs-smoke"
 path = "docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl"
 feature = "parabolic"
 rationale = "Docs-backed tutorial that is required to stay executable."
+runtime_tier = "ci"
+quantity = "Solution at t_final"
+reference = "Analytical diffusion on square"
+threshold = "runs_without_error"
+
+# =====================================================================
+# New V&V Suite — Phase 1: Code Verification
+# =====================================================================
+
+[[generated_pages]]
+id = "verification-euler-mms"
+page = "verification/euler_mms_convergence.md"
+source = "docs/src/literate_verification/euler_mms_convergence.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-mms-decoupled"
+page = "verification/mms_spatial_temporal_decoupled.md"
+source = "docs/src/literate_verification/mms_spatial_temporal_decoupled.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-mhd-solver-comparison"
+page = "verification/mhd_solver_comparison.md"
+source = "docs/src/literate_verification/mhd_solver_comparison.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-balsara-suite"
+page = "verification/balsara_mhd_suite.md"
+source = "docs/src/literate_verification/balsara_mhd_suite.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-grmhd-flat"
+page = "verification/grmhd_asymptotic_flat.md"
+source = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-grmhd-newtonian"
+page = "verification/grmhd_newtonian_limit.md"
+source = "docs/src/literate_verification/grmhd_newtonian_limit.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+# =====================================================================
+# New V&V Suite — Phase 2: Analytical Benchmarks
+# =====================================================================
+
+[[generated_pages]]
+id = "verification-barenblatt"
+page = "verification/porous_medium_barenblatt.md"
+source = "docs/src/literate_verification/porous_medium_barenblatt.jl"
+feature = "parabolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-tgv-ke-decay"
+page = "verification/tgv_kinetic_energy_decay.md"
+source = "docs/src/literate_verification/tgv_kinetic_energy_decay.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-srmhd-eigenmodes"
+page = "verification/srmhd_eigenmode_convergence.md"
+source = "docs/src/literate_verification/srmhd_eigenmode_convergence.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-bondi"
+page = "verification/bondi_accretion_schwarzschild.md"
+source = "docs/src/literate_verification/bondi_accretion_schwarzschild.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+# =====================================================================
+# New V&V Suite — Phase 3: Experimental Validation (Stretch Goals)
+# =====================================================================
+
+[[generated_pages]]
+id = "verification-lid-cavity"
+page = "verification/lid_driven_cavity.md"
+source = "docs/src/literate_verification/lid_driven_cavity.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-fm-torus"
+page = "verification/fishbone_moncrief_torus.md"
+source = "docs/src/literate_verification/fishbone_moncrief_torus.jl"
+feature = "relativistic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "verification-heated-cavity"
+page = "verification/heated_cavity.md"
+source = "docs/src/literate_verification/heated_cavity.jl"
+feature = "hyperbolic"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+# =====================================================================
+# New Scientific Evidence — Promoted V&V Cases
+# =====================================================================
+
+[[scientific_evidence]]
+id = "evidence-euler-mms"
+path = "docs/src/literate_verification/euler_mms_convergence.jl"
+feature = "hyperbolic"
+rationale = "MMS convergence for the cell-centered Euler solver — fills biggest hyperbolic verification gap."
+runtime_tier = "ci"
+quantity = "L1 convergence rate (density)"
+reference = "Roache (1998), ASME V&V 20-2009"
+threshold = "p_obs >= 1.0, GCI asymptotic ratio within 0.5 of 1.0"
+
+[[scientific_evidence]]
+id = "evidence-grmhd-flat"
+path = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
+feature = "relativistic"
+rationale = "GRMHD → SRMHD asymptotic reduction in flat spacetime — validates tier-1 physics hierarchy."
+runtime_tier = "ci"
+quantity = "Max flux difference (GRMHD vs SRMHD)"
+reference = "Del Zanna et al. (2007)"
+threshold = "max_flux_diff < 1e-12, roundtrip_diff < 1e-10"
+
+[[scientific_evidence]]
+id = "evidence-srmhd-eigenmodes"
+path = "docs/src/literate_verification/srmhd_eigenmode_convergence.jl"
+feature = "relativistic"
+rationale = "All SRMHD wave families (fast, slow, Alfven, entropy) converge — validates wave propagation."
+runtime_tier = "ci"
+quantity = "L1 convergence rate per eigenmode"
+reference = "Anile (1989), Balsara (2001)"
+threshold = "p_obs >= 0.5 for all modes"

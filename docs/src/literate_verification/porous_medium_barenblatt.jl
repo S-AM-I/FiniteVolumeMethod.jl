@@ -1,0 +1,136 @@
+using DisplayAs #hide
+tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
+# # Barenblatt-Pattle Self-Similar Solution (Porous Medium Equation)
+# This example verifies the parabolic solver on the porous medium equation
+# (PME) using the Barenblatt-Pattle self-similar solution. The PME has a
+# nonlinear diffusion coefficient $D(u) = m u^{m-1}$ and admits an exact
+# compactly-supported self-similar solution.
+#
+# ## Mathematical Setup
+# The porous medium equation in 2D:
+# ```math
+# \pdv{u}{t} = \nabla \cdot (m\,u^{m-1}\,\nabla u)
+# ```
+# with $m = 2$. The Barenblatt-Pattle solution at time $t > 0$ is:
+# ```math
+# u(r,t) = t^{-\alpha}\left(C - \frac{\alpha(m-1)}{2md}\,\frac{r^2}{t^{2\alpha/d}}\right)_+^{1/(m-1)}
+# ```
+# where $d = 2$ is the spatial dimension, $\alpha = d/(d(m-1)+2)$, and
+# $C$ is determined by the initial mass.
+#
+# ## Reference
+# - Barenblatt, G.I. (1952). On some unsteady motions of a liquid or a
+#   gas in a porous medium. Prikl. Mat. Mekh., 16, 67-78.
+# - Vázquez, J.L. (2007). The Porous Medium Equation. Oxford University Press.
+
+using FiniteVolumeMethod, DelaunayTriangulation
+using OrdinaryDiffEq
+using Test #src
+using ReferenceTests #src
+using CairoMakie
+
+# ## Barenblatt-Pattle Exact Solution
+m_pme = 2
+d_dim = 2
+alpha_bp = d_dim / (d_dim * (m_pme - 1) + 2)  # = 1/2 for m=2, d=2
+
+## Choose C so the support is comfortably inside the domain at t_start
+C_bp = 0.5
+t_start = 1.0
+t_final = 2.0
+
+function barenblatt(x, y, t)
+    r2 = x^2 + y^2
+    coeff = alpha_bp * (m_pme - 1) / (2 * m_pme * d_dim)
+    inner = C_bp - coeff * r2 / t^(2 * alpha_bp / d_dim)
+    return inner > 0 ? t^(-alpha_bp) * inner^(1 / (m_pme - 1)) : 0.0
+end
+
+# ## Nonlinear Diffusion Coefficient
+# For PME: flux = D(u)∇u where D(u) = m·u^(m-1)
+function D_pme(x, y, t, u, p)
+    return m_pme * max(u, 0.0)^(m_pme - 1)
+end
+
+bc_pme(x, y, t, u, p) = zero(u)
+
+# ## Grid Refinement Study
+mesh_sizes = [10, 20, 40]
+errors_L2 = Float64[]
+errors_Linf = Float64[]
+
+for N in mesh_sizes
+    R = 3.0
+    tri = triangulate_rectangle(-R, R, -R, R, N, N; single_boundary = true)
+    mesh = FVMGeometry(tri)
+    BCs = BoundaryConditions(mesh, bc_pme, Dirichlet)
+
+    initial_condition = [barenblatt(x, y, t_start) for (x, y) in DelaunayTriangulation.each_point(tri)]
+
+    prob = FVMProblem(
+        mesh, BCs;
+        diffusion_function = D_pme,
+        initial_condition = initial_condition,
+        initial_time = t_start,
+        final_time = t_final,
+    )
+    sol = solve(prob, Tsit5(); saveat = [t_final])
+
+    err_inf = 0.0
+    err_l2 = 0.0
+    n_pts = 0
+    for (j, (x, y)) in enumerate(DelaunayTriangulation.each_point(tri))
+        e = abs(sol.u[end][j] - barenblatt(x, y, t_final))
+        err_inf = max(err_inf, e)
+        err_l2 += e^2
+        n_pts += 1
+    end
+    push!(errors_Linf, err_inf)
+    push!(errors_L2, sqrt(err_l2 / n_pts))
+end
+
+# ## Convergence Rates
+function convergence_rates(errs)
+    return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
+end
+
+rates_L2 = convergence_rates(errors_L2)
+
+# ## Visualisation — Solution at Finest Mesh
+R = 3.0
+N_vis = mesh_sizes[end]
+tri_vis = triangulate_rectangle(-R, R, -R, R, N_vis, N_vis; single_boundary = true)
+mesh_vis = FVMGeometry(tri_vis)
+BCs_vis = BoundaryConditions(mesh_vis, bc_pme, Dirichlet)
+ic_vis = [barenblatt(x, y, t_start) for (x, y) in DelaunayTriangulation.each_point(tri_vis)]
+
+prob_vis = FVMProblem(
+    mesh_vis, BCs_vis;
+    diffusion_function = D_pme,
+    initial_condition = ic_vis,
+    initial_time = t_start,
+    final_time = t_final,
+)
+sol_vis = solve(prob_vis, Tsit5(); saveat = [t_final])
+
+u_num = sol_vis.u[end]
+u_exact = [barenblatt(x, y, t_final) for (x, y) in DelaunayTriangulation.each_point(tri_vis)]
+
+fig = Figure(fontsize = 24, size = (1500, 450))
+ax1 = Axis(fig[1, 1], xlabel = "x", ylabel = "y", title = "Numerical", aspect = DataAspect())
+tricontourf!(ax1, tri_vis, u_num, colormap = :viridis)
+ax2 = Axis(fig[1, 2], xlabel = "x", ylabel = "y", title = "Exact (Barenblatt)", aspect = DataAspect())
+tricontourf!(ax2, tri_vis, u_exact, colormap = :viridis)
+ax3 = Axis(fig[1, 3], xlabel = "x", ylabel = "y", title = "Error", aspect = DataAspect())
+tricontourf!(ax3, tri_vis, abs.(u_num .- u_exact), colormap = :hot)
+resize_to_layout!(fig)
+fig
+@test_reference joinpath(@__DIR__, "../figures", "barenblatt_pattle_solution.png") fig #src
+
+# ## Test Assertions
+# L2 errors should decrease monotonically with mesh refinement.
+@test all(errors_L2[i] > errors_L2[i + 1] for i in 1:(length(errors_L2) - 1)) #src
+# Convergence rate should be positive. The degenerate front limits order.
+@test minimum(rates_L2) > 0.3 #src
+@assert all(errors_L2[i] > errors_L2[i + 1] for i in 1:(length(errors_L2) - 1)) #hide
+@assert minimum(rates_L2) > 0.3 #hide
