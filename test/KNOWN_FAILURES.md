@@ -1,6 +1,8 @@
 # Known Failures
 
 This file documents known test failures and their status.
+The authoritative machine-readable source of truth for exclusions and demotions
+is `validation/manifest.toml`; this document is a human-readable companion.
 
 ## Pre-existing
 

@@ -1,0 +1,47 @@
+# Research Governance
+
+FiniteVolumeMethod.jl distinguishes between solver capabilities that may support
+publication-grade scientific claims and features that exist primarily to support
+research workflow, visualization, or data handling.
+
+## Capability Roles
+
+- `claim_bearing_solver`: a solver family that may eventually support
+  publication-grade claims once it is both `stable` and backed by automated
+  evidence.
+- `research_support_tooling`: reproducibility or workflow infrastructure such as
+  reporting, dashboards, checkpointing, or export utilities. These features are
+  important to research practice but do not themselves constitute solver
+  validation.
+- `experimental_sandbox`: opt-in work that is intentionally outside the stable
+  research contract.
+
+## Claim Policy
+
+- `stable` claim-bearing solver features are the only ones that may support
+  publication-grade scientific claims.
+- `provisional` claim-bearing solver features may be used for internal research
+  and method development, but their evidence ladder is incomplete.
+- `experimental` features are engineering-only unless promoted later.
+
+## Support Policy
+
+- Release-supported Julia targets are the current stable Julia release and the
+  current Julia LTS release.
+- CPU `Float64` runs are the scientific reference baseline unless a feature's
+  evidence explicitly states otherwise.
+- GPU execution is treated as an extension path that must demonstrate parity
+  against the CPU reference baseline before it can inherit the same claim level.
+
+## Release Discipline
+
+Stable claim-bearing solver features must have:
+
+- a declared capability entry in the validation manifest
+- automated scientific evidence
+- documented limitations
+- at least one maintained generated tutorial or example page
+
+Demoted, excluded, or manually reviewed cases remain in the repository only when
+their status is declared explicitly in the validation manifest and generated
+report.

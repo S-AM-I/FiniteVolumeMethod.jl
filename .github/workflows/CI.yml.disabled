@@ -6,54 +6,65 @@ on:
     tags: ['*']
   pull_request:
 concurrency:
-  # Skip intermediate builds: always.
-  # Cancel intermediate builds: only if it is a pull request build.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 env:
-  # Bypass Julia Pkg server to avoid transient 404 errors
   JULIA_PKG_SERVER: ""
 # =====================================================================
-# CI Lane Structure (ASME V&V 20-2009 Alignment)
+# Research CI Lane Structure
 # =====================================================================
-# Lane 1 — core:               Unit tests, Aqua, imports, governance
-#                               (runs in the 'test' job below)
-# Lane 2 — scientific-evidence: Fast representative V&V cases
-#                               (runs in the 'scientific-evidence' job)
-#                               Generates validation report artifact.
-# Lane 3 — nightly:            Broader convergence sweeps, heavy
-#                               MHD/AMR/GRMHD cases.
-#                               (runs in Nightly.yml on schedule)
-# Lane 4 — release:            Full evidence suite + generated
-#                               validation report artifact.
-#                               (runs in Release.yml on tag push)
-#
-# The docs job depends on both test and scientific-evidence completing.
-#
-# Reference Test Baseline Policy:
-#   JULIA_REFERENCETESTS_UPDATE=true is acceptable for IMAGE regression
-#   tests (visual aids that are not part of the scientific contract).
-#   All NUMERICAL acceptance criteria (convergence rates, error norms,
-#   conservation residuals) must use fixed @test assertions that cannot
-#   be auto-updated. Evidence-tier cases declared in manifest.toml with
-#   explicit thresholds are the authoritative acceptance criteria.
+# Lane 1 — environment-integrity: direct dependency declarations and
+#                                 project hygiene for test/docs
+# Lane 2 — unit-interop:         package tests, Aqua, explicit imports,
+#                                 SciML interoperability smoke coverage
+# Lane 3 — scientific-smoke:     fast representative scientific evidence
+#                                 plus validation report artifact
+# Lane 4 — nightly/release:      broader evidence in dedicated workflows
 # =====================================================================
 jobs:
-  test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+  environment-integrity:
+    name: Environment Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - name: Cache artifacts, etc.
+        uses: julia-actions/cache@v2
+      - name: Instantiate test environment
+        run: |
+          julia --project=test -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - name: Check test project integrity
+        run: julia --project=test test/environment_integrity.jl
+      - name: Instantiate docs environment
+        run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - name: Check docs project integrity
+        run: julia --project=docs docs/environment_integrity.jl
+
+  unit-interop:
+    name: Unit / API / Interop - Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    needs: [environment-integrity]
     strategy:
       fail-fast: false
       matrix:
         version:
           - '1'
-          - 'pre'
           - 'lts'
         os:
           - ubuntu-latest
         arch:
           - x64
-    continue-on-error: ${{ matrix.version == 'pre' }}
     steps:
       - name: Increase swapfile
         run: |
@@ -63,38 +74,34 @@ jobs:
           sudo mkswap /swapfile
           sudo swapon /swapfile
           sudo swapon --show
-      - name: Checkout repository for access
+      - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Julia
         uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-
       - name: Cache artifacts, etc.
         uses: julia-actions/cache@v2
-
       - name: Build the package
         uses: julia-actions/julia-buildpkg@v1
-
       - name: Run the tests
         uses: julia-actions/julia-runtest@v1
         env:
           JULIA_REFERENCETESTS_UPDATE: true
-
       - name: Process the coverage
-        if: always()
+        if: matrix.version == '1' && always()
         uses: julia-actions/julia-processcoverage@v1
-
-      - name: Upload the resutls
-        if: always()
+      - name: Upload coverage results
+        if: matrix.version == '1' && always()
         uses: codecov/codecov-action@v5
         with:
           files: lcov.info
-  scientific-evidence:
-    name: Scientific Evidence
+
+  scientific-smoke:
+    name: Scientific Smoke
     runs-on: ubuntu-latest
+    needs: [environment-integrity]
     steps:
       - name: Increase swapfile
         run: |
@@ -132,10 +139,11 @@ jobs:
         with:
           name: validation-report
           path: validation_report.md
+
   docs:
     name: Documentation
-    needs: [test, scientific-evidence]
-    if: always() && !cancelled()
+    needs: [environment-integrity, unit-interop, scientific-smoke]
+    if: success()
     runs-on: ubuntu-latest
     permissions:
       contents: read

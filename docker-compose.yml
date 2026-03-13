@@ -30,7 +30,7 @@ services:
     profiles: [build]
     command: julia --project -e 'println("Base image ready.")'
 
-  # Full test suite — mirrors CI.yml test job
+  # Full test suite — mirrors the disabled GitHub CI template in .github/workflows/CI.yml.disabled
   test:
     <<: *common
     environment:
@@ -52,7 +52,7 @@ services:
       bash -c 'julia --project=test -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
       julia --project=test -e "using FiniteVolumeMethod, Test; @testset \"$$TEST_FILE\" begin include(\"$$TEST_FILE\") end"'
 
-  # Runic format check — mirrors FormatCheck.yml
+  # Runic format check — mirrors the disabled GitHub format template in .github/workflows/FormatCheck.yml.disabled
   format:
     <<: *common
     mem_limit: 2g

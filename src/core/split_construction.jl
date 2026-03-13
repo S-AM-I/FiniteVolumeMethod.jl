@@ -41,7 +41,7 @@ function SciMLBase.SplitODEProblem(
     function f1!(du, u, p, t)
         unfold_to_padded!(p, u)
         hyperbolic_rhs!(p.padded_dU, p.padded_U, p.prob, t)
-        fold_from_padded!(du, p)
+        return fold_from_padded!(du, p)
     end
 
     # f2: implicit stiff source
@@ -49,7 +49,7 @@ function SciMLBase.SplitODEProblem(
         law = p.prob.law
         u_sv = reinterpret(SVector{N, FT}, u)
         du_sv = reinterpret(SVector{N, FT}, du)
-        @inbounds for i in 1:nc
+        return @inbounds for i in 1:nc
             w = conserved_to_primitive(law, u_sv[i])
             du_sv[i] = evaluate_stiff_source(stiff_source, law, w, u_sv[i])
         end
@@ -81,14 +81,14 @@ function SciMLBase.SplitODEProblem(
     function f1!(du, u, p, t)
         unfold_to_padded!(p, u)
         hyperbolic_rhs_2d!(p.padded_dU, p.padded_U, p.prob, t)
-        fold_from_padded!(du, p)
+        return fold_from_padded!(du, p)
     end
 
     function f2!(du, u, p, t)
         law = p.prob.law
         u_sv = reinterpret(SVector{N, FT}, u)
         du_sv = reinterpret(SVector{N, FT}, du)
-        @inbounds for iy in 1:ny, ix in 1:nx
+        return @inbounds for iy in 1:ny, ix in 1:nx
             idx = (iy - 1) * nx + ix
             w = conserved_to_primitive(law, u_sv[idx])
             du_sv[idx] = evaluate_stiff_source(stiff_source, law, w, u_sv[idx])

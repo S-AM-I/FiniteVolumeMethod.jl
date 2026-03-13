@@ -28,6 +28,10 @@ struct ScientificEvidenceEntry
     reference_source::String
     metric::String
     acceptance::String
+    solver_family::Symbol
+    precision_policy::Symbol
+    random_seed_policy::Symbol
+    expected_artifacts::Vector{String}
 end
 
 struct FeatureEntry
@@ -35,10 +39,39 @@ struct FeatureEntry
     maturity::Symbol
     validation::Symbol
     summary::String
+    role::Symbol
+    solver_family::Union{Nothing, Symbol}
+    precision_policy::Union{Nothing, Symbol}
+    random_seed_policy::Union{Nothing, Symbol}
+    backend_policy::Union{Nothing, Symbol}
+    limitations::Vector{String}
+end
+
+struct ExclusionEntry
+    id::String
+    path::String
+    feature::Union{Nothing, Symbol}
+    status::Symbol
+    reason::String
 end
 
 function load_manifest(path::AbstractString = joinpath(@__DIR__, "manifest.toml"))
     raw = TOML.parsefile(path)
+    support_policy = Symbol(get(raw, "support_policy", "current_lts_and_stable"))
+    features = Dict(
+        Symbol(entry["feature"]) => FeatureEntry(
+                Symbol(entry["feature"]),
+                Symbol(entry["maturity"]),
+                Symbol(entry["validation"]),
+                entry["summary"],
+                Symbol(entry["role"]),
+                _optional_symbol(entry, "solver_family"),
+                _optional_symbol(entry, "precision_policy"),
+                _optional_symbol(entry, "random_seed_policy"),
+                _optional_symbol(entry, "backend_policy"),
+                _optional_string_vector(entry, "limitations"),
+            ) for entry in get(raw, "features", [])
+    )
     generated_pages = [
         GeneratedPageEntry(
                 entry["id"],
@@ -67,19 +100,26 @@ function load_manifest(path::AbstractString = joinpath(@__DIR__, "manifest.toml"
                 entry["reference_source"],
                 entry["metric"],
                 entry["acceptance"],
+                Symbol(entry["solver_family"]),
+                Symbol(entry["precision_policy"]),
+                Symbol(entry["random_seed_policy"]),
+                _optional_string_vector(entry, "expected_artifacts"),
             ) for entry in get(raw, "scientific_evidence", [])
     ]
-    features = Dict(
-        Symbol(entry["feature"]) => FeatureEntry(
-                Symbol(entry["feature"]),
-                Symbol(entry["maturity"]),
-                Symbol(entry["validation"]),
-                entry["summary"],
-            ) for entry in get(raw, "features", [])
-    )
+    exclusions = [
+        ExclusionEntry(
+                entry["id"],
+                _repo_relpath(entry["path"]),
+                _optional_symbol(entry, "feature"),
+                Symbol(entry["status"]),
+                entry["reason"],
+            ) for entry in get(raw, "exclusions", [])
+    ]
     return (;
+        support_policy,
         generated_pages = sort(generated_pages; by = entry -> entry.page),
-        scientific_evidence = scientific_evidence,
+        scientific_evidence = sort(scientific_evidence; by = entry -> entry.id),
+        exclusions = sort(exclusions; by = entry -> entry.id),
         features,
     )
 end
@@ -87,6 +127,22 @@ end
 ci_generated_pages(manifest) = filter(entry -> entry.run_in_ci, manifest.generated_pages)
 generated_page_paths(manifest) = Set(entry.page for entry in manifest.generated_pages)
 verification_pages(manifest) = filter(entry -> startswith(entry.page, "verification/"), manifest.generated_pages)
+
+function feature_claim_policy(entry::FeatureEntry)
+    return if entry.role == :claim_bearing_solver
+        if entry.maturity == :stable
+            :publishable_scientific_claim
+        elseif entry.maturity == :provisional
+            :internal_research_only
+        else
+            :engineering_only
+        end
+    elseif entry.role == :research_support_tooling
+        :reproducibility_infrastructure_only
+    else
+        :engineering_only
+    end
+end
 
 function flatten_pages(pages)
     out = Set{String}()
@@ -130,7 +186,11 @@ function capability_rows(manifest)
                 feature = feature,
                 maturity = entry.maturity,
                 validation = entry.validation,
+                role = entry.role,
+                solver_family = something(entry.solver_family, :n_a),
+                claim_policy = feature_claim_policy(entry),
                 summary = entry.summary,
+                limitations = join(entry.limitations, "; "),
             )
         )
     end
@@ -149,6 +209,7 @@ function _flatten_pages!(out, pages)
 end
 
 _optional_symbol(entry, key) = haskey(entry, key) ? Symbol(entry[key]) : nothing
+_optional_string_vector(entry, key) = haskey(entry, key) ? String.(entry[key]) : String[]
 _repo_relpath(path::AbstractString) = replace(path, '\\' => '/')
 
 end

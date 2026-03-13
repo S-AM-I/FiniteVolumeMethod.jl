@@ -4,9 +4,20 @@ CurrentModule = FiniteVolumeMethod
 
 # Introduction
 
-This is the documentation for FiniteVolumeMethod.jl. [Click here to go back to the GitHub repository](https://github.com/SciML/FiniteVolumeMethod.jl).
+This is the documentation for FiniteVolumeMethod.jl. [Click here to go back to the GitHub repository](https://github.com/cx-xd/FiniteVolumeMethod.jl).
 
-FiniteVolumeMethod.jl is a Julia package for solving partial differential equations (PDEs) using the finite volume method. The package provides two complementary solvers for different classes of PDEs.
+FiniteVolumeMethod.jl is a Julia package for solving partial differential equations (PDEs) using the finite volume method. The package provides two complementary solvers for different classes of PDEs, together with research-support tooling such as validation reporting, dashboard export, and optional archival I/O.
+
+## Research Contract
+
+This repository publishes an explicit scientific contract:
+
+- the [Capability Matrix](capability_matrix.md) is the authoritative statement of feature maturity and claim policy
+- the [Verification & Validation](verification/overview.md) section is the authoritative statement of automated scientific evidence
+- only `stable` claim-bearing solver features should be treated as publication-grade
+- provisional and experimental features remain available for development and internal research, but they are not covered by the same scientific claim policy
+
+The repository's release-supported Julia targets are the current Julia stable release and the current Julia LTS release.
 
 ## Parabolic and Elliptic PDEs (Cell-Vertex Solver)
 

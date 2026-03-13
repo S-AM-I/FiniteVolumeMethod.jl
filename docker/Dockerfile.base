@@ -1,5 +1,5 @@
 # Base image for local CI of FiniteVolumeMethod.jl
-# Mirrors ubuntu-latest / x64 used in GitHub Actions CI.yml
+# Mirrors ubuntu-latest / x64 used in the disabled GitHub CI template (.github/workflows/CI.yml.disabled)
 #
 # Build:  docker compose build base
 # Or:     docker build -f docker/Dockerfile.base -t fvm-base .

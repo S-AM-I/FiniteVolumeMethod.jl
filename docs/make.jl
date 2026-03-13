@@ -93,6 +93,7 @@ using Dates
 _PAGES = [
     "Introduction" => "index.md",
     "Scientific Governance" => [
+        "Research Governance" => "research_governance.md",
         "Capability Matrix" => "capability_matrix.md",
     ],
     "Tutorials" => [

@@ -167,6 +167,7 @@ struct AMRCache{N, FT, Grid} <: AbstractSemidiscreteCache
     riemann_solver_ref::Any
     reconstruction_ref::Any
     cfl::FT
+    initial_time::FT
     final_time::FT
 end
 
@@ -377,6 +378,6 @@ function build_amr_cache(prob::AMRProblem)
         grid, offsets, ids, cumulative,
         per_block_padded, per_block_dU,
         law, prob.riemann_solver, prob.reconstruction,
-        prob.cfl, prob.final_time
+        prob.cfl, prob.initial_time, prob.final_time
     )
 end

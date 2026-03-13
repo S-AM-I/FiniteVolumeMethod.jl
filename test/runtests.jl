@@ -132,6 +132,10 @@ end
         safe_include("semidiscrete_imex.jl")
     end
 
+    @testset verbose = true "SciML Contract" begin
+        safe_include("sciml_contract.jl")
+    end
+
     @testset verbose = true "Tutorials" begin
         dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_tutorials")
         files = filter(!=("keller_segel_chemotaxis.jl"), readdir(dir))
@@ -211,6 +215,14 @@ end
         Aqua.test_all(FiniteVolumeMethod; ambiguities = false, project_extras = false, unbound_args = false) # don't care about julia < 1.2
         Aqua.test_unbound_args(FiniteVolumeMethod; broken = true) # Val{N} pattern in AMR constructors is a known false positive
         Aqua.test_ambiguities(FiniteVolumeMethod) # don't pick up Base and Core...
+    end
+
+    @testset verbose = true "Environment Integrity" begin
+        safe_include("environment_integrity.jl")
+    end
+
+    @testset verbose = true "SciML Audit" begin
+        safe_include("sciml_audit.jl")
     end
 
     @testset verbose = true "Repository Governance" begin

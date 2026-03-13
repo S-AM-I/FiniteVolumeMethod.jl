@@ -1,52 +1,125 @@
-manifest_version = 1
+manifest_version = 2
+support_policy = "current_lts_and_stable"
 
 [[features]]
 feature = "parabolic"
 maturity = "stable"
-validation = "executed_examples"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
+solver_family = "parabolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference_gpu_experimental"
 summary = "Cell-vertex parabolic and elliptic solvers with executed tutorials and convergence checks."
+limitations = [
+  "Publication-grade claims are limited to cases explicitly covered by the validation manifest.",
+  "Reference evidence is established on CPU Float64 runs; other execution modes require separate parity checks.",
+]
 
 [[features]]
 feature = "hyperbolic"
 maturity = "stable"
 validation = "convergence_verified"
+role = "claim_bearing_solver"
+solver_family = "hyperbolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference_gpu_experimental"
 summary = "1D and 2D cell-centered hyperbolic solvers with MMS convergence verification and analytical benchmarks."
+limitations = [
+  "Publication-grade claims are limited to solver configurations and benchmarks listed in the validation manifest.",
+  "Advanced reconstruction, stiff-source, and multidimensional options outside the evidence ladder remain configuration-sensitive.",
+]
 
 [[features]]
 feature = "mhd_ct"
 maturity = "stable"
-validation = "executed_examples"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
+solver_family = "mhd_ct"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference_gpu_experimental"
 summary = "2D MHD with constrained transport and divergence-preservation checks."
+limitations = [
+  "Publication-grade claims are restricted to constrained-transport configurations covered by automated evidence.",
+  "Resistive, Hall, and other extended MHD variants require additional feature-specific validation before strong claims.",
+]
 
 [[features]]
 feature = "amr"
 maturity = "provisional"
 validation = "targeted_tests"
+role = "claim_bearing_solver"
+solver_family = "amr"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
 summary = "Block-structured AMR with dedicated tests and representative evidence coverage."
+limitations = [
+  "AMR remains provisional until a full convergence ladder and reference-comparison suite are automated.",
+  "Current AMR evidence is suitable for development guidance, not strong publication-grade scientific claims.",
+]
 
 [[features]]
 feature = "relativistic"
 maturity = "stable"
 validation = "convergence_verified"
-summary = "SR/GR hydro and MHD solvers verified with eigenmode convergence, Bondi accretion, and asymptotic reduction tests."
+role = "claim_bearing_solver"
+solver_family = "relativistic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference_gpu_experimental"
+summary = "SR/GR hydro and MHD solvers verified with eigenmode convergence and asymptotic reduction tests."
+limitations = [
+  "Publication-grade claims are limited to relativistic cases explicitly listed in the validation manifest.",
+  "Metric choices, recovery procedures, and problem setups outside the evidence ladder remain research-use-only until separately validated.",
+]
 
 [[features]]
 feature = "coupling"
 maturity = "provisional"
 validation = "targeted_tests"
+role = "claim_bearing_solver"
+solver_family = "coupling"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
 summary = "Operator-split multiphysics coupling APIs with focused regression tests."
+limitations = [
+  "Coupled workflows remain provisional until order, stability, and benchmark evidence are automated.",
+  "Current coupling tests support engineering development but not publication-grade scientific claims.",
+]
 
 [[features]]
 feature = "dashboard"
 maturity = "experimental"
 validation = "smoke_tests"
+role = "research_support_tooling"
+solver_family = "research_tooling"
+precision_policy = "not_applicable"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
 summary = "Dashboard export and WebSocket monitoring utilities with compatibility and smoke tests."
+limitations = [
+  "Dashboard functionality is reproducibility infrastructure and does not constitute scientific solver validation.",
+  "Web UI behavior remains experimental and should not be treated as a stable research interface contract.",
+]
 
 [[features]]
 feature = "io_extensions"
 maturity = "experimental"
 validation = "smoke_tests"
+role = "research_support_tooling"
+solver_family = "research_tooling"
+precision_policy = "not_applicable"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
 summary = "Optional HDF5 and related I/O extensions that require explicit opt-in dependencies."
+limitations = [
+  "I/O extensions are treated as reproducibility tooling; they do not expand the package's scientific validation claims.",
+  "Optional extensions require explicit dependency opt-in and format-compatibility checks before use in archival workflows.",
+]
 
 [[generated_pages]]
 id = "tutorial-diffusion-square"
@@ -736,6 +809,10 @@ reference_kind = "exact_solution"
 reference_source = "Analytical Poisson solution"
 metric = "L2 solution error and observed convergence rate"
 acceptance = "Observed rates satisfy the script's stated tolerance."
+solver_family = "parabolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
 
 [[scientific_evidence]]
 id = "evidence-mhd-divb"
@@ -748,6 +825,10 @@ reference_kind = "discrete_invariant"
 reference_source = "Divergence-free magnetic field constraint"
 metric = "Maximum cellwise div(B)"
 acceptance = "Maximum div(B) remains below 1e-12."
+solver_family = "mhd_ct"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
 
 [[scientific_evidence]]
 id = "evidence-euler-mms"
@@ -760,6 +841,10 @@ reference_kind = "manufactured_solution"
 reference_source = "Smooth periodic Euler transport manufactured solution"
 metric = "L1 density error, pressure error, and GCI asymptotic ratio"
 acceptance = "Density rates exceed 0.8, pressure error remains near machine precision, and GCI ratio stays within the script tolerance."
+solver_family = "hyperbolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
 
 [[scientific_evidence]]
 id = "evidence-grmhd-flat"
@@ -772,6 +857,10 @@ reference_kind = "discrete_invariant"
 reference_source = "Minkowski-space reduction of GRMHD to SRMHD"
 metric = "Maximum GRMHD/SRMHD flux mismatch and primitive round-trip error"
 acceptance = "Flux mismatch remains below 1e-12 and round-trip error remains below 1e-10."
+solver_family = "relativistic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
 
 [[scientific_evidence]]
 id = "evidence-srmhd-eigenmodes"
@@ -784,3 +873,63 @@ reference_kind = "exact_solution"
 reference_source = "Linearised SRMHD eigenmode propagation"
 metric = "Self-convergence rate for fast, slow, Alfven, and entropy modes"
 acceptance = "All mode-wise self-convergence rates remain greater than 0.5."
+solver_family = "relativistic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+
+[[exclusions]]
+id = "demoted-amr-convergence"
+path = "docs/src/literate_verification/amr_convergence.jl"
+feature = "amr"
+status = "demoted"
+reason = "Current assertions are regression and smoke checks, not a rigorous AMR convergence study."
+
+[[exclusions]]
+id = "demoted-bondi-accretion"
+path = "docs/src/literate_verification/bondi_accretion_schwarzschild.jl"
+feature = "relativistic"
+status = "demoted"
+reason = "The current setup is not an actual Bondi solution and cannot support a Bondi validation claim."
+
+[[exclusions]]
+id = "demoted-fishbone-moncrief-torus"
+path = "docs/src/literate_verification/fishbone_moncrief_torus.jl"
+feature = "relativistic"
+status = "demoted"
+reason = "The current torus setup is approximate and is not treated as a validated Fishbone-Moncrief equilibrium."
+
+[[exclusions]]
+id = "demoted-heated-cavity"
+path = "docs/src/literate_verification/heated_cavity.jl"
+feature = "hyperbolic"
+status = "demoted"
+reason = "The current case uses a simplified compressible surrogate rather than a literature-backed heated-cavity validation benchmark."
+
+[[exclusions]]
+id = "demoted-lid-driven-cavity"
+path = "docs/src/literate_verification/lid_driven_cavity.jl"
+feature = "hyperbolic"
+status = "demoted"
+reason = "The current implementation does not reproduce the published benchmark boundary treatment or profile comparisons quantitatively."
+
+[[exclusions]]
+id = "demoted-mhd-solver-comparison"
+path = "docs/src/literate_verification/mhd_solver_comparison.jl"
+feature = "mhd_ct"
+status = "demoted"
+reason = "Relative solver comparisons without external truth are retained as regressions, not scientific evidence."
+
+[[exclusions]]
+id = "demoted-premixed-flame"
+path = "docs/src/literate_verification/premixed_flame_1d.jl"
+feature = "hyperbolic"
+status = "demoted"
+reason = "Current combustion checks are qualitative regressions and not literature-backed validation cases."
+
+[[exclusions]]
+id = "manual-review-keller-segel"
+path = "docs/src/literate_tutorials/keller_segel_chemotaxis.jl"
+feature = "parabolic"
+status = "manual_review"
+reason = "This tutorial remains excluded from automated CI and is not part of the scientific evidence contract."

@@ -23,7 +23,7 @@ function cfl_stepsize_callback(cache::AbstractSemidiscreteCache)
         if dt_cfl > t_remaining && t_remaining > zero(t_remaining)
             dt_cfl = t_remaining
         end
-        set_proposed_dt!(integrator, dt_cfl)
+        return set_proposed_dt!(integrator, dt_cfl)
     end
     return DiscreteCallback(condition, affect!; save_positions = (false, false))
 end
@@ -103,4 +103,7 @@ function _get_prob(cache::MHDCTCache2D)
 end
 function _get_prob(cache::GRMHDCTCache2D)
     return cache.prob
+end
+function _get_prob(cache::AMRCache)
+    return (; initial_time = cache.initial_time)
 end
