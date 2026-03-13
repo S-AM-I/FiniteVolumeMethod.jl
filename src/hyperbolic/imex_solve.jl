@@ -44,7 +44,9 @@ function solve_hyperbolic_imex(
         newton_tol = 1.0e-10,
         newton_maxiter::Int = 5,
         callback::Union{Nothing, Function} = nothing,
+        backend::AbstractBackend = CPUBackend(),
     )
+    _cpu_backend_only("solve_hyperbolic_imex(::HyperbolicProblem, ...)", backend)
     mesh = prob.mesh
     nc = ncells(mesh)
     law = prob.law
@@ -240,7 +242,9 @@ function solve_hyperbolic_imex(
         newton_maxiter::Int = 5,
         parallel::Bool = false,
         callback::Union{Nothing, Function} = nothing,
+        backend::AbstractBackend = CPUBackend(),
     )
+    _cpu_backend_only("solve_hyperbolic_imex(::HyperbolicProblem2D, ...)", backend)
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     law = prob.law

@@ -13,12 +13,12 @@
 # Interior cell (ix, iy) (1-based) maps to U[ix+2, iy+2].
 
 """
-    initialize_2d(prob::HyperbolicProblem2D) -> Matrix{SVector{N,FT}}
+    initialize_2d(prob::HyperbolicProblem2D; backend=CPUBackend()) -> Matrix{SVector{N,FT}}
 
 Create the padded 2D solution array from the initial condition.
-Returns a matrix of size `(nx+4) × (ny+4)`.
+Returns a matrix of size `(nx+4) × (ny+4)`, optionally transferred to `backend`.
 """
-function initialize_2d(prob::HyperbolicProblem2D)
+function initialize_2d(prob::HyperbolicProblem2D; backend::AbstractBackend = CPUBackend())
     law = prob.law
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -46,7 +46,7 @@ function initialize_2d(prob::HyperbolicProblem2D)
         U[ix + 2, iy + 2] = primitive_to_conserved(law, w)
     end
 
-    return U
+    return to_backend(U, backend)
 end
 
 """
@@ -238,11 +238,20 @@ Solve the 2D hyperbolic problem using explicit time integration.
 - `U_final::Matrix{SVector{N}}`: Final conserved variable matrix (nx × ny, interior only).
 - `t_final::Real`: Final time reached.
 """
-function solve_hyperbolic(
-        prob::HyperbolicProblem2D;
+function _extract_2d_interior(U, nx::Int, ny::Int)
+    return copy(@view U[3:(nx + 2), 3:(ny + 2)])
+end
+
+function _cell_center_coords_2d(mesh::StructuredMesh2D)
+    return [(cell_center(mesh, cell_idx(mesh, ix, iy))) for ix in 1:(mesh.nx), iy in 1:(mesh.ny)]
+end
+
+function _solve_hyperbolic(
+        prob::HyperbolicProblem2D, ::CPUBackend;
         method::Symbol = :ssprk3,
         parallel::Bool = false,
         callback::Union{Nothing, Function} = nothing,
+        return_device_state::Bool = false,
     )
     # Select serial or threaded functions
     _rhs! = parallel ? _hyperbolic_rhs_2d_threaded! : hyperbolic_rhs_2d!
@@ -327,16 +336,36 @@ function solve_hyperbolic(
         error("Unknown time integration method: $method. Use :euler or :ssprk3.")
     end
 
-    # Extract interior solution as nx × ny matrix
-    U_interior = Matrix{SVector{N, FT}}(undef, nx, ny)
-    for iy in 1:ny, ix in 1:nx
-        U_interior[ix, iy] = U[ix + 2, iy + 2]
-    end
-
-    # Cell center coordinates
-    coords = [(cell_center(mesh, cell_idx(mesh, ix, iy))) for ix in 1:nx, iy in 1:ny]
-
+    U_interior = _extract_2d_interior(U, nx, ny)
+    coords = _cell_center_coords_2d(mesh)
     return coords, U_interior, t
+end
+
+function _solve_hyperbolic(
+        prob::HyperbolicProblem2D, backend::AbstractBackend;
+        method::Symbol = :ssprk3,
+        parallel::Bool = false,
+        callback::Union{Nothing, Function} = nothing,
+        return_device_state::Bool = false,
+    )
+    _unsupported_backend("solve_hyperbolic(::HyperbolicProblem2D)", backend)
+end
+
+function solve_hyperbolic(
+        prob::HyperbolicProblem2D;
+        method::Symbol = :ssprk3,
+        parallel::Bool = false,
+        callback::Union{Nothing, Function} = nothing,
+        backend::AbstractBackend = CPUBackend(),
+        return_device_state::Bool = false,
+    )
+    return _solve_hyperbolic(
+        prob, backend;
+        method,
+        parallel,
+        callback,
+        return_device_state,
+    )
 end
 
 """

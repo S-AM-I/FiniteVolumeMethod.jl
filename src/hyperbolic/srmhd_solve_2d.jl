@@ -69,7 +69,9 @@ function solve_hyperbolic(
         method::Symbol = :ssprk3,
         vector_potential = nothing,
         callback::Union{Nothing, Function} = nothing,
+        backend::AbstractBackend = CPUBackend(),
     )
+    _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem2D{<:SRMHDEquations{2}})", backend)
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy
