@@ -308,7 +308,9 @@ function solve_hyperbolic(
         prob::UnstructuredHyperbolicProblem;
         method::Symbol = :ssprk3,
         callback::Union{Nothing, Function} = nothing,
+        backend::AbstractBackend = CPUBackend(),
     )
+    _cpu_backend_only("solve_hyperbolic(::UnstructuredHyperbolicProblem)", backend)
     mesh = prob.mesh
     ntri = mesh.ntri
     N = nvariables(prob.law)

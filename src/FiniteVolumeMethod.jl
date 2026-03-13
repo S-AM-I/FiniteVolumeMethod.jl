@@ -21,6 +21,8 @@ using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
+include("backends.jl")
+
 # --- Parabolic Types & Mesh (from Simu.jl migration) ---
 include("parabolic/types.jl")
 include("parabolic/mesh/types.jl")
@@ -591,6 +593,13 @@ export FVMGeometry,
     epsilon_wall_value,
     TurbulentWallBC,
     # Mesh abstractions
+    AbstractBackend,
+    CPUBackend,
+    CUDASolverBackend,
+    to_backend,
+    to_host,
+    supports_backend,
+    backend_summary,
     AbstractMesh,
     StructuredMesh1D,
     StructuredMesh2D,
@@ -660,6 +669,7 @@ export FVMGeometry,
     HyperbolicProblem2D,
     HyperbolicProblem3D,
     solve_hyperbolic,
+    initialize_2d,
     compute_dt,
     compute_dt_2d,
     compute_dt_3d,

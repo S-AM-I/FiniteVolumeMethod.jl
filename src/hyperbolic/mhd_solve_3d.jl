@@ -174,7 +174,9 @@ function solve_hyperbolic(
         vector_potential_y = nothing,
         vector_potential_z = nothing,
         callback::Union{Nothing, Function} = nothing,
+        backend::AbstractBackend = CPUBackend(),
     )
+    _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem3D{<:IdealMHDEquations{3}})", backend)
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     dx, dy, dz = mesh.dx, mesh.dy, mesh.dz

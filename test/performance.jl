@@ -223,3 +223,21 @@ end
         end
     end
 end
+
+@testset "CPU backend API: 2D solve_hyperbolic" begin
+    prob = make_2d_euler_problem(; final_time = 0.003)
+
+    coords_default, U_default, t_default = solve_hyperbolic(prob; method = :euler)
+    coords_cpu, U_cpu, t_cpu = solve_hyperbolic(prob; method = :euler, backend = CPUBackend())
+
+    @test coords_default == coords_cpu
+    @test t_default ≈ t_cpu atol = 1.0e-14
+
+    for iy in 1:(prob.mesh.ny), ix in 1:(prob.mesh.nx)
+        @test U_default[ix, iy] ≈ U_cpu[ix, iy] atol = 1.0e-14
+    end
+
+    U0 = initialize_2d(prob)
+    U0_cpu = initialize_2d(prob; backend = CPUBackend())
+    @test U0 == U0_cpu
+end
