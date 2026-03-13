@@ -116,6 +116,10 @@ end
         safe_include("test_remake.jl")
     end
 
+    @testset verbose = true "Semidiscrete Core" begin
+        safe_include("semidiscrete.jl")
+    end
+
     @testset verbose = true "Tutorials" begin
         dir = joinpath(dirname(@__DIR__), "docs", "src", "literate_tutorials")
         files = filter(!=("keller_segel_chemotaxis.jl"), readdir(dir))
