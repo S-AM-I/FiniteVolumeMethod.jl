@@ -59,7 +59,7 @@ end
 grid_sizes = [16, 32, 64]
 divB_max_values = Float64[]
 
-for N in grid_sizes
+function solve_divb_state(N)
     mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, N)
     prob = HyperbolicProblem2D(
         law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
@@ -68,20 +68,19 @@ for N in grid_sizes
         loop_ic; final_time = 1.0, cfl = 0.4
     )
     coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_loop)
+    W = [conserved_to_primitive(law, U[i, j]) for i in axes(U, 1), j in axes(U, 2)]
+    return coords, W, t_final, ct, mesh
+end
+
+for N in grid_sizes
+    coords, W, t_final, ct, mesh = solve_divb_state(N)
     divB = max_divB(ct, mesh)
     push!(divB_max_values, divB)
 end
 
 # ## Visualisation — Solution and div(B) Field at Finest Resolution
 N_fine = grid_sizes[end]
-mesh_fine = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N_fine, N_fine)
-prob_fine = HyperbolicProblem2D(
-    law, mesh_fine, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
-    PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-    PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-    loop_ic; final_time = 1.0, cfl = 0.4
-)
-coords_fine, U_fine, t_fine, ct_fine = solve_hyperbolic(prob_fine; vector_potential = Az_loop)
+coords_fine, W_fine, t_fine, ct_fine, mesh_fine = solve_divb_state(N_fine)
 
 nx, ny = N_fine, N_fine
 xc = [coords_fine[i, 1][1] for i in 1:nx]
@@ -89,7 +88,7 @@ yc = [coords_fine[1, j][2] for j in 1:ny]
 
 Bmag = [
     begin
-            w = conserved_to_primitive(law, U_fine[i, j])
+            w = W_fine[i, j]
             sqrt(w[6]^2 + w[7]^2)
         end for i in 1:nx, j in 1:ny
 ]
@@ -131,3 +130,22 @@ fig2
 # All max|div(B)| values should be at machine precision, independent of N.
 @test all(d -> d < 1.0e-12, divB_max_values) #src
 @assert all(d -> d < 1.0e-12, divB_max_values) #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "max_divb_values" => divB_max_values,
+            "worst_divb" => maximum(divB_max_values),
+        ),
+        artifacts = ["mhd_divb_solution.png", "mhd_divb_convergence.png"],
+        notes = [
+            "Maintained constrained-transport execution path via solve_hyperbolic(prob; vector_potential = ...).",
+            "This evidence entry is the mhd_ct invariant-stage constrained-transport div(B) case.",
+        ],
+        summary = Dict(
+            "grid_sizes" => grid_sizes,
+            "divb_max_values" => divB_max_values,
+            "final_time" => t_fine,
+        ),
+    )
+end

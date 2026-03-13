@@ -4,6 +4,8 @@
 using TOML
 using DelimitedFiles
 
+const MODEL_PACKAGE_SCHEMA_VERSION = 1
+
 """
     save_model_package(mesh, physics_config, ic, path)
 
@@ -19,14 +21,17 @@ function save_model_package(mesh, physics_config::Dict, ic::Vector, path::String
     end
 
     # Save a metadata file describing the mesh type.
-    mesh_meta = Dict("type" => string(typeof(mesh)))
+    mesh_meta = Dict(
+        "schema_version" => MODEL_PACKAGE_SCHEMA_VERSION,
+        "type" => string(typeof(mesh)),
+    )
     open(joinpath(path, "mesh_meta.toml"), "w") do io
-        TOML.print(io, mesh_meta)
+        TOML.print(io, stringify_keys(mesh_meta))
     end
 
     # Save Physics Config
     open(joinpath(path, "physics.toml"), "w") do io
-        TOML.print(io, physics_config)
+        TOML.print(io, stringify_keys(physics_config))
     end
 
     # Save IC

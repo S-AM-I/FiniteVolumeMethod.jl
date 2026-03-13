@@ -282,7 +282,7 @@ function snapshot_to_dict(snap::FVMSnapshot)
         "time" => snap.time,
         "step" => snap.step,
         "residual_norm" => snap.residual_norm,
-        "conserved_totals" => snap.conserved_totals,
+        "conserved_totals" => stringify_keys(snap.conserved_totals),
         "dt" => snap.dt,
         "wall_time" => snap.wall_time,
         "solution" => _solution_to_dict(snap.solution),
@@ -306,11 +306,11 @@ function session_to_dict(session::FVMSessionData)
         "version" => "1.0",
         "problem_type" => session.problem_type,
         "law" => session.law_name,
-        "mesh" => session.mesh_info,
+        "mesh" => stringify_keys(session.mesh_info),
         "variables" => session.variable_names,
-        "parameters" => session.parameters,
+        "parameters" => stringify_keys(session.parameters),
         "snapshots" => [snapshot_to_dict(s) for s in session.snapshots],
-        "convergence" => session.convergence_data,
+        "convergence" => stringify_keys(session.convergence_data),
     )
 end
 

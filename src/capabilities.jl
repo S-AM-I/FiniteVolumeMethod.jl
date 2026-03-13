@@ -1,7 +1,9 @@
 include(joinpath(@__DIR__, "..", "validation", "manifest.jl"))
 using .RepoValidationManifest
 
-const _FEATURE_MANIFEST = RepoValidationManifest.load_manifest(joinpath(@__DIR__, "..", "validation", "manifest.toml"))
+const _FEATURE_MANIFEST_PATH = joinpath(@__DIR__, "..", "validation", "manifest.toml")
+Base.include_dependency(_FEATURE_MANIFEST_PATH)
+const _FEATURE_MANIFEST = RepoValidationManifest.load_manifest(_FEATURE_MANIFEST_PATH)
 const _FEATURE_CAPABILITIES = Dict{
     Symbol,
     NamedTuple{

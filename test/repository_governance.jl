@@ -35,7 +35,12 @@ const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.m
         @test entry.ladder_stage in (:verification, :benchmark, :invariant, :validation)
         @test entry.category in (:code_verification, :analytical_benchmark, :experimental_validation)
         @test entry.reference_kind in (
-            :exact_solution, :manufactured_solution, :literature_table, :reference_dataset, :discrete_invariant,
+            :exact_solution,
+            :manufactured_solution,
+            :literature_table,
+            :reference_dataset,
+            :discrete_invariant,
+            :published_benchmark,
         )
         @test !isempty(entry.reference_source)
         @test !isempty(entry.metric)
@@ -72,7 +77,12 @@ const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.m
     for entry in verification_pages
         @test entry.category in (:code_verification, :analytical_benchmark, :experimental_validation)
         @test entry.reference_kind in (
-            :exact_solution, :manufactured_solution, :literature_table, :reference_dataset, :discrete_invariant,
+            :exact_solution,
+            :manufactured_solution,
+            :literature_table,
+            :reference_dataset,
+            :discrete_invariant,
+            :published_benchmark,
         )
         @test !isnothing(entry.reference_source)
         @test !isnothing(entry.metric)

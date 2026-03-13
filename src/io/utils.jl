@@ -44,7 +44,8 @@ Recursively stringify dict keys for TOML writing.
 function stringify_keys(x)
     if x isa Dict
         out = Dict{String, Any}()
-        for (k, v) in x
+        for k in sort!(collect(keys(x)); by = key -> string(key))
+            v = x[k]
             out[string(k)] = stringify_keys(v)
         end
         return out

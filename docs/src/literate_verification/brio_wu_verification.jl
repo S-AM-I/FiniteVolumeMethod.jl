@@ -23,6 +23,8 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   and Isothermal MHD. J. Comput. Phys., 174, 614-648.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEq
+using SciMLBase: ReturnCode
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -48,13 +50,19 @@ function solve_bw(N)
         TransmissiveBC(), TransmissiveBC(), bw_ic;
         final_time = t_final, cfl = 0.5,
     )
-    x, U, t = solve_hyperbolic(prob)
-    rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
-    return x, rho, t
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    @test sol.retcode == ReturnCode.Success #src
+    accessor = solution_accessor(prob)
+    x = solution_coordinates(accessor)
+    W = get_primitive(accessor, sol, length(sol.t))
+    rho = [W[i][1] for i in eachindex(W)]
+    return x, W, rho, sol.t[end]
 end
 
 # Reference solution at N=1600
-x_ref, rho_ref, _ = solve_bw(1600)
+x_ref, _, rho_ref, _ = solve_bw(1600)
 
 # Interpolate reference to coarse grid via nearest-neighbour
 function interp_nearest(x_coarse, x_fine, vals_fine)
@@ -64,7 +72,7 @@ end
 grid_sizes = [100, 200, 400, 800]
 errors_rho = Float64[]
 for N in grid_sizes
-    x_c, rho_c, _ = solve_bw(N)
+    x_c, _, rho_c, _ = solve_bw(N)
     rho_ref_interp = interp_nearest(x_c, x_ref, rho_ref)
     err = sum(abs(rho_c[i] - rho_ref_interp[i]) for i in eachindex(rho_c)) / N
     push!(errors_rho, err)
@@ -80,7 +88,7 @@ rates = convergence_rates(errors_rho)
 fig1 = Figure(fontsize = 20, size = (1400, 450))
 for (panel, N_idx) in enumerate([1, 2, 4])
     local Nv = grid_sizes[N_idx]
-    x_c, rho_c, _ = solve_bw(Nv)
+    x_c, _, rho_c, _ = solve_bw(Nv)
     ax = Axis(
         fig1[1, panel], xlabel = "x", ylabel = L"\rho",
         title = "N = $(Nv)"
@@ -117,17 +125,7 @@ fig2
 
 # ## Structural Verification
 # Check that the high-resolution solution has expected physical properties.
-x_hr, rho_hr, _ = solve_bw(800)
-W_hr = let
-    mesh = StructuredMesh1D(0.0, 1.0, 800)
-    prob = HyperbolicProblem(
-        law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
-        TransmissiveBC(), TransmissiveBC(), bw_ic;
-        final_time = t_final, cfl = 0.5,
-    )
-    _, U, _ = solve_hyperbolic(prob)
-    [conserved_to_primitive(law, U[i]) for i in eachindex(U)]
-end
+_, W_hr, rho_hr, _ = solve_bw(800)
 Bx_vals = [W_hr[i][6] for i in eachindex(W_hr)]
 By_vals = [W_hr[i][7] for i in eachindex(W_hr)]
 
@@ -146,3 +144,31 @@ By_vals = [W_hr[i][7] for i in eachindex(W_hr)]
 @assert minimum(By_vals) < -0.5 #hide
 @assert maximum(By_vals) > 0.5 #hide
 @assert all(rho_hr .> 0) #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "density_errors" => errors_rho,
+            "density_rates" => rates,
+            "min_density_rate" => minimum(rates),
+            "finest_density_error" => errors_rho[end],
+            "by_min" => minimum(By_vals),
+            "by_max" => maximum(By_vals),
+        ),
+        artifacts = [
+            "brio_wu_verification_solutions.png",
+            "brio_wu_verification_convergence.png",
+        ],
+        notes = [
+            "Canonical SciML execution path via sciml_problem(prob) and solve(prob, SSPRK33()).",
+            "This evidence entry is the mhd_ct benchmark-stage Brio-Wu reference comparison case.",
+        ],
+        summary = Dict(
+            "grid_sizes" => grid_sizes,
+            "density_errors" => errors_rho,
+            "density_rates" => rates,
+            "bx_constant" => all(b -> abs(b - Bx) < 1.0e-10, Bx_vals),
+            "density_positive" => all(rho_hr .> 0),
+        ),
+    )
+end

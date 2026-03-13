@@ -10,6 +10,7 @@ solver_family = "parabolic"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference_gpu_experimental"
+required_ladder_stages = ["verification", "benchmark", "invariant"]
 summary = "Cell-vertex parabolic and elliptic solvers with executed tutorials and convergence checks."
 limitations = [
   "Publication-grade claims are limited to cases explicitly covered by the validation manifest.",
@@ -41,6 +42,7 @@ solver_family = "mhd_ct"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference_gpu_experimental"
+required_ladder_stages = ["verification", "benchmark", "invariant"]
 summary = "2D MHD with constrained transport and divergence-preservation checks."
 limitations = [
   "Publication-grade claims are restricted to constrained-transport configurations covered by automated evidence.",
@@ -71,6 +73,7 @@ solver_family = "relativistic"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference_gpu_experimental"
+required_ladder_stages = ["verification", "benchmark", "invariant"]
 summary = "SR/GR hydro and MHD solvers verified with eigenmode convergence and asymptotic reduction tests."
 limitations = [
   "Publication-grade claims are limited to relativistic cases explicitly listed in the validation manifest.",
@@ -548,6 +551,20 @@ metric = "L1 magnetic-field error and observed convergence rate"
 acceptance = "All reported convergence rates remain greater than 0.8."
 
 [[generated_pages]]
+id = "verification-brio-wu"
+page = "verification/brio_wu_verification.md"
+source = "docs/src/literate_verification/brio_wu_verification.jl"
+feature = "mhd_ct"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "published_benchmark"
+reference_source = "Brio-Wu shock tube reference structure with refined internal baseline"
+metric = "L1 density error trend versus a refined reference solution plus key MHD structural checks"
+acceptance = "Density error decreases with refinement, normal B remains constant, sign-changing transverse field is preserved, and density stays positive."
+
+[[generated_pages]]
 id = "verification-mhd-divb"
 page = "verification/mhd_divb_verification.md"
 source = "docs/src/literate_verification/mhd_divb_verification.jl"
@@ -816,6 +833,83 @@ solver_family = "parabolic"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-barenblatt"
+path = "docs/src/literate_verification/porous_medium_barenblatt.jl"
+entrypoint = "docs/src/literate_verification/porous_medium_barenblatt.jl"
+feature = "parabolic"
+rationale = "Analytical self-similar porous-medium benchmark for the nonlinear parabolic solver path."
+runtime_tier = "local_full"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Barenblatt-Pattle self-similar porous-medium solution"
+metric = "L2 error trend and minimum observed refinement rate"
+acceptance = "L2 errors decrease monotonically and the minimum observed rate remains above the script tolerance."
+solver_family = "parabolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-flux-balance"
+path = "docs/src/literate_verification/flux_balance_verification.jl"
+entrypoint = "docs/src/literate_verification/flux_balance_verification.jl"
+feature = "parabolic"
+rationale = "Discrete control-volume balance check on the assembled parabolic operator."
+runtime_tier = "ci"
+ladder_stage = "invariant"
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Discrete control-volume flux balance"
+metric = "Infinity-norm residual of A*u - b for the solved discrete state"
+acceptance = "Residual remains at or below the script's machine-precision threshold."
+solver_family = "parabolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-mhd-alfven"
+path = "docs/src/literate_verification/mhd_convergence.jl"
+entrypoint = "docs/src/literate_verification/mhd_convergence.jl"
+feature = "mhd_ct"
+rationale = "Smooth Alfvén-wave convergence verifies the ideal-MHD update on an exact nonlinear solution."
+runtime_tier = "local_full"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Circularly polarised Alfvén wave exact solution (Toth 2000; Stone et al. 2008)"
+metric = "L1 By error under grid refinement and observed convergence rates"
+acceptance = "All reported convergence rates exceed the script threshold on the declared mesh family."
+solver_family = "mhd_ct"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-brio-wu"
+path = "docs/src/literate_verification/brio_wu_verification.jl"
+entrypoint = "docs/src/literate_verification/brio_wu_verification.jl"
+feature = "mhd_ct"
+rationale = "Brio-Wu shock tube provides the benchmark-stage literature test for nonlinear MHD wave structure."
+runtime_tier = "local_full"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "published_benchmark"
+reference_source = "Brio-Wu shock tube reference structure with refined internal baseline"
+metric = "L1 density error trend versus a refined reference solution plus key MHD structural checks"
+acceptance = "Density error decreases with refinement, normal B remains constant, sign-changing transverse field is preserved, and density stays positive."
+solver_family = "mhd_ct"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
 
 [[scientific_evidence]]
 id = "evidence-mhd-divb"
@@ -824,7 +918,7 @@ entrypoint = "docs/src/literate_verification/mhd_divb_verification.jl"
 feature = "mhd_ct"
 rationale = "Constraint-transport verification using explicit div(B) bounds."
 runtime_tier = "ci"
-ladder_stage = "verification"
+ladder_stage = "invariant"
 category = "code_verification"
 reference_kind = "discrete_invariant"
 reference_source = "Divergence-free magnetic field constraint"
@@ -834,6 +928,7 @@ solver_family = "mhd_ct"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
 
 [[scientific_evidence]]
 id = "evidence-euler-mms"
@@ -899,7 +994,7 @@ entrypoint = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
 feature = "relativistic"
 rationale = "GRMHD → SRMHD asymptotic reduction in flat spacetime — validates tier-1 physics hierarchy."
 runtime_tier = "ci"
-ladder_stage = "verification"
+ladder_stage = "invariant"
 category = "code_verification"
 reference_kind = "discrete_invariant"
 reference_source = "Minkowski-space reduction of GRMHD to SRMHD"
@@ -908,7 +1003,27 @@ acceptance = "Flux mismatch remains below 1e-12 and round-trip error remains bel
 solver_family = "relativistic"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-srmhd-smooth"
+path = "docs/src/literate_verification/srmhd_convergence.jl"
+entrypoint = "docs/src/literate_verification/srmhd_convergence.jl"
+feature = "relativistic"
+rationale = "Smooth SRMHD wave convergence verifies the relativistic finite-volume update against an exact advection solution."
+runtime_tier = "local_full"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Smooth periodic SRMHD density-wave transport solution"
+metric = "L1 density error under grid refinement and observed convergence rates"
+acceptance = "All reported convergence rates remain above the script threshold and the finest-grid error decreases monotonically."
+solver_family = "relativistic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
 
 [[scientific_evidence]]
 id = "evidence-srmhd-eigenmodes"
@@ -927,6 +1042,7 @@ solver_family = "relativistic"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
 
 [[exclusions]]
 id = "demoted-amr-convergence"

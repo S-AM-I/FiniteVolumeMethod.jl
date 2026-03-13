@@ -112,6 +112,10 @@ end
         safe_include("test_dashboard.jl")
     end
 
+    @testset verbose = true "I/O" begin
+        safe_include("io.jl")
+    end
+
     @testset verbose = true "Remake" begin
         safe_include("test_remake.jl")
     end

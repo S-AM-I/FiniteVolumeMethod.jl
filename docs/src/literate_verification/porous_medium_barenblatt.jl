@@ -134,3 +134,24 @@ fig
 @test minimum(rates_L2) > 0.3 #src
 @assert all(errors_L2[i] > errors_L2[i + 1] for i in 1:(length(errors_L2) - 1)) #hide
 @assert minimum(rates_L2) > 0.3 #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "linf_errors" => errors_Linf,
+            "l2_errors" => errors_L2,
+            "min_l2_rate" => minimum(rates_L2),
+            "finest_l2_error" => errors_L2[end],
+        ),
+        artifacts = ["barenblatt_pattle_solution.png"],
+        notes = [
+            "Canonical parabolic solve path via solve(prob, Tsit5()).",
+            "This evidence entry is the parabolic benchmark-stage self-similar exact-solution case.",
+        ],
+        summary = Dict(
+            "mesh_sizes" => mesh_sizes,
+            "l2_rates" => rates_L2,
+            "monotone_l2_decrease" => all(errors_L2[i] > errors_L2[i + 1] for i in 1:(length(errors_L2) - 1)),
+        ),
+    )
+end
