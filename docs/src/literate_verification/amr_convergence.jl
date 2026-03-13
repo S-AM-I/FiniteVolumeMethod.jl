@@ -1,158 +1,89 @@
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
-# # AMR vs Uniform Grid Comparison
-# This example verifies that the AMR solver with Berger-Colella flux
-# correction produces results consistent with uniform-grid simulations.
-# We compare a 2D blast wave (Sedov-like) solved on a uniform grid against
-# an AMR grid with equivalent effective resolution.
+# # AMR Smooth-Pulse Convergence
+# This example verifies the 2D AMR semidiscrete solve path on a fixed hierarchy.
+# A compact smooth entropy pulse is transported across the domain by a uniform
+# background velocity and compared against the exact solution after a short time.
+# The hierarchy is constructed once from the initial condition and then frozen so
+# the measured error reflects the AMR finite-volume update itself rather than
+# dynamic regridding effects.
 #
 # ## Mathematical Setup
-# A high-pressure region at the centre of a $[0,1]^2$ domain drives a
-# circular blast wave outward. We compare:
-# 1. Uniform grid at $32 \times 32$
-# 2. AMR grid: $8 \times 8$ base with up to 2 refinement levels
-#    (effective $32 \times 32$ at finest level)
+# We solve the 2D Euler equations on $[0,1]^2$ with
+# ```math
+# \rho(x,y,t) = 1 + A\exp\left(-\frac{(x-x_c-v_x t)^2 + (y-y_c-v_y t)^2}{2\sigma^2}\right),
+# \quad (v_x, v_y) = (0.25, 0.15), \quad P = 1,
+# ```
+# where $A = 0.35$, $\sigma = 0.08$, and $(x_c, y_c) = (0.35, 0.40)$.
 #
 # ## Reference
-# - Berger, M.J. & Colella, P. (1989). Local Adaptive Mesh Refinement
-#   for Shock Hydrodynamics. J. Comput. Phys., 82, 64-84.
+# - Berger, M.J. & Colella, P. (1989). Local Adaptive Mesh Refinement for
+#   Shock Hydrodynamics. *Journal of Computational Physics*, 82, 64-84.
 
-using FiniteVolumeMethod
-using StaticArrays
 using Test #src
-using ReferenceTests #src
 using CairoMakie
 
-gamma = 1.4
-eos = IdealGasEOS(gamma)
-law = EulerEquations{2}(eos)
+include("amr_common.jl")
 
-# Blast wave IC: high pressure in centre
-function blast_ic(x, y)
-    r = sqrt((x - 0.5)^2 + (y - 0.5)^2)
-    if r < 0.1
-        return SVector(1.0, 0.0, 0.0, 10.0)   # high pressure
-    else
-        return SVector(1.0, 0.0, 0.0, 0.1)    # low pressure
-    end
-end
+base_cells = [8, 16, 32]
+results = [fixed_hierarchy_exact_error(base; max_level = 1) for base in base_cells]
+errors = [result.density_error for result in results]
+rates = [log2(errors[i] / errors[i + 1]) for i in 1:(length(errors) - 1)]
+active_cells = [result.active_cells for result in results]
 
-t_final = 0.05
-
-# ## Uniform Grid Solution
-N_uniform = 32
-mesh_uni = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N_uniform, N_uniform)
-prob_uni = HyperbolicProblem2D(
-    law, mesh_uni, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
-    TransmissiveBC(), TransmissiveBC(),
-    TransmissiveBC(), TransmissiveBC(),
-    blast_ic; final_time = t_final, cfl = 0.3,
+fig = Figure(fontsize = 24, size = (750, 500))
+ax = Axis(
+    fig[1, 1],
+    xlabel = "Base block cells per side",
+    ylabel = L"L^1(\rho) \text{ error}",
+    xscale = log2,
+    yscale = log10,
+    title = "Fixed-Hierarchy AMR Convergence",
 )
-coords_uni, U_uni, t_uni = solve_hyperbolic(prob_uni)
-
-# ## AMR Grid Solution
-criterion = GradientRefinement(;
-    variable_index = 1, refine_threshold = 0.05, coarsen_threshold = 0.005,
+scatterlines!(
+    ax,
+    base_cells,
+    errors;
+    color = :steelblue,
+    marker = :circle,
+    linewidth = 2,
+    markersize = 12,
 )
-block_size = (8, 8)
-max_level = 2
-grid = AMRGrid(law, criterion, block_size, max_level, (0.0, 0.0), (1.0, 1.0), Val(4))
-
-# Initialize blocks with IC
-for block in values(grid.blocks)
-    for j in 1:block.dims[2], i in 1:block.dims[1]
-        xc, yc = block_cell_center(block, i, j)
-        w = blast_ic(xc, yc)
-        block.U[i, j] = primitive_to_conserved(law, w)
-    end
-end
-
-# Initial regrid to place refinement at the blast
-regrid!(grid)
-for block in values(grid.blocks)
-    if block.active
-        for j in 1:block.dims[2], i in 1:block.dims[1]
-            xc, yc = block_cell_center(block, i, j)
-            w = blast_ic(xc, yc)
-            block.U[i, j] = primitive_to_conserved(law, w)
-        end
-    end
-end
-
-bc_amr = (
-    left = TransmissiveBC(), right = TransmissiveBC(),
-    bottom = TransmissiveBC(), top = TransmissiveBC(),
-)
-prob_amr = AMRProblem(
-    grid, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()), bc_amr;
-    final_time = t_final, cfl = 0.3, regrid_interval = 4,
-)
-grid_amr, t_amr = solve_amr(prob_amr)
-U_amr = grid_amr.blocks  # keep reference for non-empty check
-
-# ## Comparison
-# Compare density at the centre line (y ≈ 0.5)
-rho_uni_midline = Float64[]
-x_uni_midline = Float64[]
-jmid = div(N_uniform, 2)
-for i in 1:N_uniform
-    push!(x_uni_midline, coords_uni[i, jmid][1])
-    push!(rho_uni_midline, conserved_to_primitive(law, U_uni[i, jmid])[1])
-end
-
-# ## Visualisation — Density Field
-xc_uni = [coords_uni[i, 1][1] for i in 1:N_uniform]
-yc_uni = [coords_uni[1, j][2] for j in 1:N_uniform]
-rho_uni = [conserved_to_primitive(law, U_uni[i, j])[1] for i in 1:N_uniform, j in 1:N_uniform]
-
-fig = Figure(fontsize = 24, size = (600, 550))
-ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y", title = "Uniform 32×32 density", aspect = DataAspect())
-hm = heatmap!(ax, xc_uni, yc_uni, rho_uni, colormap = :viridis)
-Colorbar(fig[1, 2], hm)
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(@__DIR__, "../figures", "amr_blast_uniform.png") fig #src
 
 # ## Test Assertions
-# The AMR solution should complete without errors and produce
-# a non-trivial result.
-@test t_amr ≈ t_final #src
-@test t_uni ≈ t_final #src
-@test !isempty(grid_amr.blocks) #src
-@assert t_amr ≈ t_final #hide
-@assert t_uni ≈ t_final #hide
-@assert !isempty(grid_amr.blocks) #hide
+# The fixed-hierarchy AMR solve should complete successfully, the error should
+# decrease monotonically, and the observed rates should be comfortably positive.
+@test all(result -> result.retcode == ReturnCode.Success, results) #src
+@test all(result -> isapprox(result.final_time, AMR_VERIFICATION_FINAL_TIME; atol = 1.0e-12), results) #src
+@test all(diff(errors) .< 0.0) #src
+@test all(rate -> rate > 0.65, rates) #src
+@test errors[end] < 8.0e-4 #src
+@assert all(result -> result.retcode == ReturnCode.Success, results) #hide
+@assert all(result -> isapprox(result.final_time, AMR_VERIFICATION_FINAL_TIME; atol = 1.0e-12), results) #hide
+@assert all(diff(errors) .< 0.0) #hide
+@assert all(rate -> rate > 0.65, rates) #hide
+@assert errors[end] < 8.0e-4 #hide
 
-# ## Conservation Verification
-# Berger-Colella flux correction at coarse/fine boundaries must preserve
-# total mass (and momentum/energy) to machine precision on a closed domain.
-# We compute initial and final total conserved quantities on the uniform
-# grid (transmissive BCs allow flux out, so we check the uniform solve is
-# self-consistent rather than exact conservation).
-
-# Compute total mass on uniform grid at final time
-dx_uni = 1.0 / N_uniform
-dy_uni = 1.0 / N_uniform
-total_mass_uni = sum(U_uni[i, j][1] * dx_uni * dy_uni for i in 1:N_uniform, j in 1:N_uniform)
-@test total_mass_uni > 0.0 #src
-@assert total_mass_uni > 0.0 #hide
-
-# The AMR grid should have a comparable total mass.  With transmissive
-# boundaries, mass can leave the domain, but the uniform and AMR
-# solutions should agree on total remaining mass within 10%.
-function total_mass_amr(grid, law)
-    total = 0.0
-    for block in values(grid.blocks)
-        block.active || continue
-        dV = prod(block.dx)  # dx is NTuple{Dim}; prod gives cell volume
-        for j in 1:block.dims[2], i in 1:block.dims[1]
-            total += block.U[i, j][1] * dV
-        end
-    end
-    return total
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "density_errors" => errors,
+            "density_rates" => rates,
+            "finest_density_error" => errors[end],
+            "active_cells" => active_cells,
+        ),
+        artifacts = ["amr_convergence.png"],
+        notes = [
+            "Canonical fixed-hierarchy AMR execution via sciml_problem(prob) and solve(prob, SSPRK33()).",
+            "Regridding is disabled after the initial hierarchy construction so the measured error isolates the semidiscrete AMR update.",
+        ],
+        summary = Dict(
+            "base_cells" => base_cells,
+            "active_cells" => active_cells,
+            "density_errors" => errors,
+            "density_rates" => rates,
+        ),
+    )
 end
-mass_amr = total_mass_amr(grid_amr, law)
-@test mass_amr > 0.0 #src
-@test abs(mass_amr - total_mass_uni) / total_mass_uni < 0.1 #src
-@assert mass_amr > 0.0 #hide
-@assert abs(mass_amr - total_mass_uni) / total_mass_uni < 0.1 #hide

@@ -52,16 +52,17 @@ limitations = [
 [[features]]
 feature = "amr"
 maturity = "provisional"
-validation = "targeted_tests"
+validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "amr"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
-summary = "Block-structured AMR with dedicated tests and representative evidence coverage."
+required_ladder_stages = ["verification", "benchmark", "invariant"]
+summary = "Block-structured AMR with smooth-transport convergence, adaptive reference tracking, and conservative regridding checks."
 limitations = [
-  "AMR remains provisional until a full convergence ladder and reference-comparison suite are automated.",
-  "Current AMR evidence is suitable for development guidance, not strong publication-grade scientific claims.",
+  "AMR remains provisional because shock-dominated AMR tutorials and broader nonlinear benchmark families are not yet promoted into the automated evidence ladder.",
+  "Current AMR claim scope is limited to the smooth transported-pulse and conservative regridding cases listed in the validation manifest.",
 ]
 
 [[features]]
@@ -733,6 +734,48 @@ metric = "L1 density error, pressure error, and GCI asymptotic ratio"
 acceptance = "Density rates exceed 0.8, pressure error remains near machine precision, and GCI ratio stays within the script tolerance."
 
 [[generated_pages]]
+id = "verification-amr-convergence"
+page = "verification/amr_convergence.md"
+source = "docs/src/literate_verification/amr_convergence.jl"
+feature = "amr"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Smooth transported entropy pulse exact solution on a fixed AMR hierarchy"
+metric = "L1 density error and observed refinement rate"
+acceptance = "Density error decreases monotonically, the observed rates remain above 0.65, and the finest-grid error satisfies the script tolerance."
+
+[[generated_pages]]
+id = "verification-amr-reference-tracking"
+page = "verification/amr_reference_tracking.md"
+source = "docs/src/literate_verification/amr_reference_tracking.jl"
+feature = "amr"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "reference_dataset"
+reference_source = "Uniform 128x128 canonical structured-grid reference for the transported entropy-pulse AMR tracking case"
+metric = "L1 density error versus the trusted uniform reference plus active-cell compression"
+acceptance = "Dynamic AMR reaches level 2, error decreases with AMR cell budget, compression remains below 0.2, and the finest-budget error stays below the script threshold."
+
+[[generated_pages]]
+id = "verification-amr-regridding-conservation"
+page = "verification/amr_regridding_conservation.md"
+source = "docs/src/literate_verification/amr_regridding_conservation.jl"
+feature = "amr"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Discrete conservation of mass, momentum, and energy under repeated AMR restriction and regridding"
+metric = "Maximum relative drift in the four Euler conserved quantities"
+acceptance = "Dynamic AMR reaches level 2, drift decreases with resolution, and all reported conserved drifts remain below 1e-3."
+
+[[generated_pages]]
 id = "verification-mms-decoupled"
 page = "verification/mms_spatial_temporal_decoupled.md"
 source = "docs/src/literate_verification/mms_spatial_temporal_decoupled.jl"
@@ -988,6 +1031,63 @@ expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
 [[scientific_evidence]]
+id = "evidence-amr-convergence"
+path = "docs/src/literate_verification/amr_convergence.jl"
+entrypoint = "docs/src/literate_verification/amr_convergence.jl"
+feature = "amr"
+rationale = "Exact-solution convergence evidence for the fixed-hierarchy AMR semidiscrete solve path."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Smooth transported entropy pulse exact solution on a fixed AMR hierarchy"
+metric = "L1 density error and observed refinement rate"
+acceptance = "Density error decreases monotonically, the observed rates remain above 0.65, and the finest-grid error satisfies the script tolerance."
+solver_family = "amr"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-amr-reference-tracking"
+path = "docs/src/literate_verification/amr_reference_tracking.jl"
+entrypoint = "docs/src/literate_verification/amr_reference_tracking.jl"
+feature = "amr"
+rationale = "Dynamic AMR reference-tracking benchmark against a trusted structured-grid baseline."
+runtime_tier = "local_full"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "reference_dataset"
+reference_source = "Uniform 128x128 canonical structured-grid reference for the transported entropy-pulse AMR tracking case"
+metric = "L1 density error versus the trusted uniform reference plus active-cell compression"
+acceptance = "Dynamic AMR reaches level 2, error decreases with AMR cell budget, compression remains below 0.2, and the finest-budget error stays below the script threshold."
+solver_family = "amr"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-amr-regridding-conservation"
+path = "docs/src/literate_verification/amr_regridding_conservation.jl"
+entrypoint = "docs/src/literate_verification/amr_regridding_conservation.jl"
+feature = "amr"
+rationale = "Discrete conservation invariant for the dynamic AMR regridding and restriction machinery."
+runtime_tier = "ci"
+ladder_stage = "invariant"
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Discrete conservation of mass, momentum, and energy under repeated AMR restriction and regridding"
+metric = "Maximum relative drift in the four Euler conserved quantities"
+acceptance = "Dynamic AMR reaches level 2, drift decreases with resolution, and all reported conserved drifts remain below 1e-3."
+solver_family = "amr"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
 id = "evidence-grmhd-flat"
 path = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
 entrypoint = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
@@ -1045,11 +1145,11 @@ expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
 [[exclusions]]
-id = "demoted-amr-convergence"
-path = "docs/src/literate_verification/amr_convergence.jl"
+id = "demoted-amr-sedov-benchmark"
+path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
 feature = "amr"
 status = "demoted"
-reason = "Current assertions are regression and smoke checks, not a rigorous AMR convergence study."
+reason = "The current Sedov-style AMR tutorial is a qualitative demonstration and is not treated as a rigorous shock-dominated AMR benchmark."
 
 [[exclusions]]
 id = "demoted-bondi-accretion"
