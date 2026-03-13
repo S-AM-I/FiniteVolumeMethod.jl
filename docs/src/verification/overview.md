@@ -39,6 +39,8 @@ examples are not yet rigorous literature-backed reproductions.
 | [GRMHD Flat-Space Reduction](@ref) | Asymptotic reduction | GRMHD/SRMHD flux mismatch and round-trip error | Remains below stated thresholds |
 | [GRMHD Newtonian Limit](@ref) | Asymptotic reduction | Primitive-recovery error and static-atmosphere drift | Remains below stated thresholds |
 | [MHD div(B) Preservation](@ref) | Discrete invariant | Maximum cellwise ``\nabla\cdot B`` | Remains below stated threshold |
+| [AMR Smooth-Pulse Convergence](@ref) | Exact solution | L1 density error and observed refinement rate | Error decreases monotonically and rates remain above the stated threshold |
+| [AMR Regridding Conservation](@ref) | Discrete invariant | Maximum relative drift in mass, momentum, and energy | Dynamic AMR reaches level 2 and all reported drifts remain below the stated threshold |
 
 ## Analytical Benchmarks
 
@@ -50,6 +52,7 @@ examples are not yet rigorous literature-backed reproductions.
 | [Navier-Stokes Convergence](@ref) | Exact Taylor-Green vortex | Linf velocity error and observed rate | Rates exceed the script threshold |
 | [Taylor-Green KE Decay](@ref) | Exact kinetic-energy decay law | Relative decay error | Meets the script tolerance |
 | [Porous Medium (Barenblatt)](@ref) | Exact self-similar solution | L2 error trend and minimum observed rate | Errors decrease monotonically |
+| [AMR Reference Tracking](@ref) | Trusted structured-grid reference dataset | L1 density error versus a uniform baseline plus compression ratio | Error decreases with AMR budget while active-cell compression stays below the stated threshold |
 | [SRMHD Convergence](@ref) | Exact smooth-wave solution | L1 density error and observed rate | Rates exceed the script threshold |
 | [SRMHD Eigenmode Convergence](@ref) | Linearised exact eigenmodes | Self-convergence rate for each mode | All mode-wise rates exceed the script threshold |
 | [GRMHD Convergence](@ref) | Exact smooth-wave solution in Minkowski spacetime | L1 density error and observed rate | Rates exceed the script threshold |
@@ -58,6 +61,7 @@ examples are not yet rigorous literature-backed reproductions.
 
 - Tutorials and smoke tests are validated separately as executable documentation, not as scientific evidence.
 - Regression-style scripts that compare one numerical method to another without an external truth model are not listed here.
+- The AMR evidence listed here is deliberately scoped to smooth transported-pulse and conservative regridding cases; shock-dominated AMR tutorials remain outside the automated evidence ladder for now.
 - Experimental validation will be added back only when the implementation reproduces the referenced benchmark physics and
   compares against published data with explicit quantitative acceptance criteria.
 - Demoted or manually reviewed cases are tracked in the validation manifest and release report rather than being silently

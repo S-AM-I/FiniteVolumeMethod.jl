@@ -164,6 +164,8 @@ _PAGES = [
             "GRMHD Flat-Space Reduction" => "verification/grmhd_asymptotic_flat.md",
             "GRMHD Newtonian Limit" => "verification/grmhd_newtonian_limit.md",
             "MHD div(B) Preservation" => "verification/mhd_divb_verification.md",
+            "AMR Smooth-Pulse Convergence" => "verification/amr_convergence.md",
+            "AMR Regridding Conservation" => "verification/amr_regridding_conservation.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
@@ -172,6 +174,7 @@ _PAGES = [
             "Navier-Stokes Convergence" => "verification/ns_convergence.md",
             "Taylor-Green KE Decay" => "verification/tgv_kinetic_energy_decay.md",
             "Porous Medium (Barenblatt)" => "verification/porous_medium_barenblatt.md",
+            "AMR Reference Tracking" => "verification/amr_reference_tracking.md",
             "SRMHD Convergence" => "verification/srmhd_convergence.md",
             "SRMHD Eigenmode Convergence" => "verification/srmhd_eigenmode_convergence.md",
             "GRMHD Convergence" => "verification/grmhd_convergence.md",
