@@ -148,6 +148,25 @@ For steady-state problems, the algorithms to use are those from [NonlinearSolve.
 solve(::SteadyFVMProblem, ::Any; kwargs...)
 ```
 
+# Canonical SciML problem construction
+
+For solver-family-generic code, reproducibility scripts, and verification harnesses, the preferred entry point is `sciml_problem`. It returns the canonical SciML problem corresponding to the package-level problem definition.
+
+Semidiscrete hyperbolic, IMEX, and AMR families also support direct `init`/`solve` through this same contract, so you can either build the SciML problem explicitly or call `solve(prob, alg; ...)` directly.
+
+```@docs
+sciml_problem
+```
+
+# Solution accessors
+
+Use `solution_accessor` and `solution_snapshot` to decode solver outputs in a family-agnostic way. This provides a stable path for recovering coordinates, raw state, conserved variables, primitive variables, and constrained-transport state where applicable.
+
+```@docs
+solution_accessor
+solution_snapshot
+```
+
 These `solve` functions rely on `fvm_eqs!` for evaluating the equations. You should never need to use `fvm_eqs!` directly, unless you are using a differential-algebraic equation. The docstring for `fvm_eqs!` is below; this function is public API.
 
 ```@docs

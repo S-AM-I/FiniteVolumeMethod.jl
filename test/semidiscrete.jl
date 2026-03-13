@@ -47,13 +47,13 @@ using Test
 
     # Compare with legacy solve_hyperbolic
     x_leg, U_leg, t_leg = solve_hyperbolic(prob; method = :ssprk3)
-    @test abs(sol.t[end] - t_leg) < 1e-10
+    @test abs(sol.t[end] - t_leg) < 1.0e-10
 
     # Solutions should be similar (not bitwise identical due to different
     # callback mechanics, but physically equivalent)
     U_sciml = reinterpret(SVector{3, Float64}, copy(sol.u[end]))
     max_diff = maximum(maximum(abs.(U_sciml[i] - U_leg[i])) for i in eachindex(U_leg))
-    @test max_diff < 1e-8
+    @test max_diff < 1.0e-8
 end
 
 # ============================================================
@@ -87,7 +87,7 @@ end
     # Uniform IC should remain uniform
     U_final = reinterpret(SVector{4, Float64}, copy(sol.u[end]))
     for u in U_final
-        @test abs(u[1] - 1.0) < 1e-12
+        @test abs(u[1] - 1.0) < 1.0e-12
     end
 end
 

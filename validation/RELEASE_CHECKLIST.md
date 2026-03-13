@@ -1,0 +1,15 @@
+# Research Release Checklist
+
+Use this checklist before cutting a release that will be presented as
+research-grade.
+
+- All stable claim-bearing features are present in `validation/manifest.toml`.
+- Each stable claim-bearing feature has automated scientific evidence.
+- Each stable claim-bearing feature has documented limitations.
+- Each stable claim-bearing feature has at least one maintained generated page.
+- Exclusions and demotions are declared explicitly in `validation/manifest.toml`.
+- `validation/generate_report.jl` produces the release validation report from a
+  clean environment.
+- `test/environment_integrity.jl` and `docs/environment_integrity.jl` pass.
+- Documentation and README language match the current capability matrix and
+  evidence status.

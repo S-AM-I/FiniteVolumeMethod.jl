@@ -21,7 +21,7 @@ help: ## Show this help
 ci-build: ## Build base image (run after Project.toml changes)
 	$(COMPOSE) build base
 
-ci-test: ## Run full test suite (mirrors CI.yml)
+ci-test: ## Run full test suite (mirrors .github/workflows/CI.yml.disabled)
 	$(COMPOSE) run --rm test
 
 ci-test-file: ## Run single test file (TEST_FILE=test/geometry.jl make ci-test-file)
@@ -30,7 +30,7 @@ ci-test-file: ## Run single test file (TEST_FILE=test/geometry.jl make ci-test-f
 ci-evidence: ## Run curated scientific-evidence suite (mirrors CI scientific-evidence lane)
 	$(COMPOSE) run --rm evidence
 
-ci-format: ## Check Runic formatting (mirrors FormatCheck.yml)
+ci-format: ## Check Runic formatting (mirrors .github/workflows/FormatCheck.yml.disabled)
 	$(COMPOSE) run --rm format
 
 ci-format-fix: ## Auto-fix Runic formatting

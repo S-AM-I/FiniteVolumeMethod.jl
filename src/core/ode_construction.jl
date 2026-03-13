@@ -35,7 +35,7 @@ function SciMLBase.ODEProblem(
     function rhs!(du, u, p, t)
         unfold_to_padded!(p, u)
         hyperbolic_rhs!(p.padded_dU, p.padded_U, p.prob, t)
-        fold_from_padded!(du, p)
+        return fold_from_padded!(du, p)
     end
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
@@ -65,7 +65,7 @@ function SciMLBase.ODEProblem(
     function rhs!(du, u, p, t)
         unfold_to_padded!(p, u)
         hyperbolic_rhs_2d!(p.padded_dU, p.padded_U, p.prob, t)
-        fold_from_padded!(du, p)
+        return fold_from_padded!(du, p)
     end
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
@@ -93,7 +93,7 @@ function SciMLBase.ODEProblem(
     function rhs!(du, u, p, t)
         unfold_to_padded!(p, u)
         hyperbolic_rhs_3d!(p.padded_dU, p.padded_U, p.prob, t)
-        fold_from_padded!(du, p)
+        return fold_from_padded!(du, p)
     end
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
@@ -121,7 +121,7 @@ function SciMLBase.ODEProblem(
     function rhs!(du, u, p, t)
         unfold_to_padded!(p, u)
         unstructured_rhs!(p.dU, p.U, p.prob, t)
-        fold_from_padded!(du, p)
+        return fold_from_padded!(du, p)
     end
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
@@ -164,7 +164,7 @@ function SciMLBase.ODEProblem(
         unfold_mhd_augmented!(p, u)
         _mhd_compute_fluxes_2d!(p.Fx_all, p.Fy_all, p.padded_dU, p.padded_U, p.prob, t)
         _compute_emf_from_extended!(p.emf_z, p.Fx_all, p.Fy_all, p.nx, p.ny)
-        fold_mhd_augmented!(du, p)
+        return fold_mhd_augmented!(du, p)
     end
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
@@ -196,7 +196,7 @@ function SciMLBase.ODEProblem(
         unfold_mhd_augmented!(p, u)
         _mhd_compute_fluxes_2d!(p.Fx_all, p.Fy_all, p.padded_dU, p.padded_U, p.prob, t)
         _compute_emf_from_extended!(p.emf_z, p.Fx_all, p.Fy_all, p.nx, p.ny)
-        fold_mhd_augmented!(du, p)
+        return fold_mhd_augmented!(du, p)
     end
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
@@ -232,7 +232,7 @@ function SciMLBase.ODEProblem(
         )
         _grmhd_add_source_terms!(p.padded_dU, p.padded_U, p.prob.law, p.metric_data, p.prob.mesh, p.nx, p.ny)
         _compute_emf_from_extended!(p.emf_z, p.Fx_all, p.Fy_all, p.nx, p.ny)
-        fold_mhd_augmented!(du, p)
+        return fold_mhd_augmented!(du, p)
     end
 
     f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
@@ -296,7 +296,7 @@ function SciMLBase.ODEProblem(prob::AMRProblem; kwargs...)
                 p.grid.blocks[bid], p.law_ref, p.riemann_solver_ref
             )
         end
-        fold_amr!(du, p)
+        return fold_amr!(du, p)
     end
 
     f = ODEFunction{true}(rhs!)

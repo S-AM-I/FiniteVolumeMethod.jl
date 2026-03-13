@@ -30,7 +30,7 @@ The V&V system should use the repository's existing control points:
 - `test/scientific_evidence.jl`: executes the curated evidence lane.
 - `test/repository_governance.jl`: enforces traceability and policy.
 - `docs/src/literate_*`: executable tutorials and verification cases.
-- `.github/workflows/CI.yml`: release-gating CI jobs.
+- `.github/workflows/CI.yml.disabled`: disabled cloud CI template retained for local parity during the overhaul.
 
 All new evidence cases must be declared in the manifest before they are considered part of the scientific contract.
 
@@ -109,7 +109,7 @@ Recommended minimum criteria:
 Thresholds must be numerical and justified in the benchmark description, not hidden in ad hoc scripts.
 
 ## CI and release gates
-The CI program should be split into strict lanes.
+The CI program should be split into strict lanes. During the v2 overhaul, the GitHub-hosted workflow files remain disabled and these lanes are expected to run locally until cloud automation is intentionally restored.
 
 - `core`: unit tests, Aqua, imports, governance checks
 - `scientific-evidence`: fast representative verification and validation cases from the manifest

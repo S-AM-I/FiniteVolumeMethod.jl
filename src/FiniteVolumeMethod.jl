@@ -22,235 +22,11 @@ using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
-# Core shared infrastructure
-include("core/backends.jl")
-
-# --- Parabolic Types & Mesh (from Simu.jl migration) ---
-include("parabolic/types.jl")
-include("parabolic/mesh/types.jl")
-include("parabolic/mesh/structured.jl")
-include("parabolic/mesh/curvilinear.jl")
-include("parabolic/mesh/unstructured.jl")
-include("parabolic/mesh/fvm_mesh.jl")
-include("parabolic/mesh/io.jl")
-include("parabolic/mesh/partitioning.jl")
-
-# Flux limiters (canonical implementations — used by both vertex-centered and parabolic solvers)
-include("schemes/limiters.jl")
-
-# --- Parabolic Solver (from Simu.jl SimuFVM migration) ---
-include("parabolic/models.jl")
-include("parabolic/utils.jl")
-include("parabolic/boundary_conditions.jl")
-include("parabolic/gradients.jl")
-include("parabolic/limiters.jl")   # ParabolicLimiters delegates to schemes/limiters.jl
-include("parabolic/schemes.jl")
-include("parabolic/compressible_fluxes.jl")
-include("parabolic/turbulence.jl")
-include("parabolic/particles.jl")
-include("parabolic/fsi.jl")
-include("parabolic/kernels.jl")
-include("parabolic/assembly/assembly_1d.jl")
-include("parabolic/assembly/assembly_2d.jl")
-include("parabolic/assembly/assembly_3d.jl")
-include("parabolic/assembly/assembly_cylindrical.jl")
-include("parabolic/assembly/assembly_spherical.jl")
-include("parabolic/assembly/assembly_unstructured.jl")
-include("parabolic/assembly/assembly_curvilinear.jl")
-include("parabolic/assembly/assembly_system.jl")
-
-include("coordinate_systems.jl")
-include("geometry.jl")
-include("conditions.jl")
-include("problem.jl")
-include("equations/boundary_edge_contributions.jl")
-include("equations/control_volumes.jl")
-include("equations/dirichlet.jl")
-include("equations/individual_flux_contributions.jl")
-include("equations/main_equations.jl")
-include("equations/shape_functions.jl")
-include("equations/source_contributions.jl")
-include("equations/triangle_contributions.jl")
-include("solve.jl")
-include("utils.jl")
-
-# Schemes for higher-order methods (limiters moved earlier, before parabolic/limiters.jl)
-include("schemes/gradients.jl")
-include("schemes/muscl.jl")
-
-# Advanced boundary conditions
-include("conditions/nonlinear.jl")
-include("conditions/periodic.jl")
-include("conditions/coupled.jl")
-
-include("specific_problems/abstract_templates.jl")
-include("specific_problems/advection_diffusion_equation.jl")
-include("specific_problems/anisotropic_diffusion.jl")
-
-# Physics models
-include("physics/turbulence/k_epsilon.jl")
-
-# Hyperbolic solver framework (cell-centered FVM)
-include("mesh/abstract_mesh.jl")
-include("mesh/structured_mesh.jl")
-include("eos/eos_interface.jl")
-include("eos/ideal_gas.jl")
-include("eos/stiffened_gas.jl")
-include("hyperbolic/conservation_laws.jl")
-include("hyperbolic/euler.jl")
-include("hyperbolic/riemann_solvers.jl")
-include("hyperbolic/reconstruction.jl")
-include("hyperbolic/boundary_conditions_hyp.jl")
-include("hyperbolic/hllc_solver.jl")
-include("hyperbolic/mhd.jl")
-include("hyperbolic/hlld_solver.jl")
-include("hyperbolic/hyperbolic_problem.jl")
-include("hyperbolic/hyperbolic_solve.jl")
-include("hyperbolic/hyperbolic_problem_2d.jl")
-include("hyperbolic/boundary_conditions_2d.jl")
-include("hyperbolic/hyperbolic_solve_2d.jl")
-
-# Constrained transport for MHD
-include("constrained_transport/ct_data.jl")
-include("constrained_transport/emf.jl")
-include("constrained_transport/ct_update.jl")
-include("constrained_transport/divb.jl")
-
-# 2D MHD solver with constrained transport
-include("hyperbolic/mhd_solve_2d.jl")
-
-# Navier-Stokes (viscous terms)
-include("hyperbolic/navier_stokes.jl")
-include("hyperbolic/viscous_flux.jl")
-include("hyperbolic/noslip_bc.jl")
-include("hyperbolic/navier_stokes_solve.jl")
-include("hyperbolic/navier_stokes_solve_2d.jl")
-
-# Resistive MHD (magnetic diffusivity)
-include("hyperbolic/resistive_mhd.jl")
-
-# Hall MHD (whistler waves, ion-scale dynamics)
-include("hyperbolic/hall_mhd.jl")
-
-# Shallow Water Equations
-include("hyperbolic/shallow_water.jl")
-
-# SR Hydro (relativistic hydro without B)
-include("hyperbolic/srhydro.jl")
-
-# Two-Fluid Plasma (separate ion/electron fluids)
-include("hyperbolic/two_fluid.jl")
-
-# SRMHD (Special Relativistic MHD)
-include("hyperbolic/con2prim.jl")
-include("hyperbolic/srmhd.jl")
-include("hyperbolic/srmhd_solve.jl")
-include("hyperbolic/srmhd_solve_2d.jl")
-
-# Spacetime metrics for GRMHD
-include("metric/abstract_metric.jl")
-include("metric/minkowski.jl")
-include("metric/schwarzschild.jl")
-include("metric/kerr.jl")
-include("metric/metric_data.jl")
-
-# GRMHD (General Relativistic MHD)
-include("hyperbolic/grmhd.jl")
-include("hyperbolic/grmhd_con2prim.jl")
-include("hyperbolic/grmhd_solve_2d.jl")
-
-# 3D mesh and Euler/MHD extensions
-include("mesh/structured_mesh_3d.jl")
-include("hyperbolic/euler_3d.jl")
-include("hyperbolic/mhd_3d.jl")
-
-# 3D Hyperbolic solver
-include("hyperbolic/hyperbolic_problem_3d.jl")
-include("hyperbolic/boundary_conditions_3d.jl")
-include("hyperbolic/hyperbolic_solve_3d.jl")
-
-# 3D Constrained transport for MHD
-include("constrained_transport/ct_data_3d.jl")
-include("constrained_transport/emf_3d.jl")
-include("constrained_transport/ct_update_3d.jl")
-include("constrained_transport/divb_3d.jl")
-
-# 3D MHD solver with constrained transport
-include("hyperbolic/mhd_solve_3d.jl")
-
-# Block-structured AMR
-include("amr/amr_grid.jl")
-include("amr/refinement.jl")
-include("amr/prolongation.jl")
-include("amr/restriction.jl")
-include("amr/flux_correction.jl")
-include("amr/amr_solve.jl")
-
-# Multi-rate (subcycling) time stepping for AMR
-include("hyperbolic/multirate.jl")
-
-# PPM reconstruction (Colella & Woodward 1984)
-include("hyperbolic/ppm.jl")
-
-# WENO reconstruction and IMEX time integration (Phase 8)
-include("hyperbolic/weno3.jl")
-include("hyperbolic/weno.jl")
-include("hyperbolic/characteristic_projection.jl")
-include("hyperbolic/stiff_sources.jl")
-include("hyperbolic/imex.jl")
-include("hyperbolic/imex_solve.jl")
-
-# Reactive Euler (multi-species with Arrhenius chemistry)
-include("hyperbolic/reactive_euler.jl")
-include("hyperbolic/chemistry.jl")
-
-# Positivity-preserving limiter (Zhang & Shu 2010)
-include("hyperbolic/positivity_limiter.jl")
-
-# Threading support for 2D solvers (Phase 12)
-include("hyperbolic/threading.jl")
-
-# Unstructured mesh hyperbolic solver (Phase 10)
-include("mesh/unstructured_hyperbolic_mesh.jl")
-include("hyperbolic/unstructured_problem.jl")
-include("hyperbolic/unstructured_solve.jl")
-
-# Multi-physics coupling via operator splitting (Phase 11)
-include("coupling/abstract_coupling.jl")
-include("coupling/operators.jl")
-include("coupling/data_transfer.jl")
-include("coupling/coupled_solve.jl")
-
-# Core ODE construction layer (after all physics code is loaded)
-include("core/cache.jl")
-include("core/state_mapping.jl")
-include("core/cfl_callback.jl")
-include("core/ode_construction.jl")
-include("core/split_construction.jl")
-include("core/results.jl")
-
-# SciMLBase.remake for all problem types
-include("remake.jl")
-
-# Dashboard data export and monitoring
-include("dashboard_types.jl")
-
-# --- SciML Bridge (parabolic assembly → SciMLBase problem types) ---
-# Use OrdinaryDiffEq.jl for time stepping, LinearSolve.jl for linear systems,
-# NonlinearSolve.jl for Newton/JFNK, SparseDiffTools.jl for colored Jacobians,
-# and SciMLSensitivity.jl for adjoint analysis.
-include("parabolic/sciml_bridge.jl")
-
-# --- I/O (from Simu.jl SimuIO migration) ---
-include("io/utils.jl")
-include("io/manager.jl")
-include("io/diagnostics.jl")
-include("io/vtk.jl")
-include("io/insitu.jl")
-include("io/registry.jl")
-include("io/hdf5.jl")
-include("io/checkpointing.jl")
-include("capabilities.jl")
+# Layered internal loading for the research-grade v2 refactor.
+include("layers/domain_problem_definitions.jl")
+include("layers/discretization_assembly_kernels.jl")
+include("layers/sciml_adapters_and_accessors.jl")
+include("layers/extensions_tooling_output.jl")
 
 # --- Parabolic Core Types (from Simu.jl migration) ---
 export
@@ -905,13 +681,22 @@ export
     # MHD stage limiter
     mhd_stage_limiter,
     # Solution accessors
+    FVMSolutionAccessor,
     HyperbolicSolutionAccessor,
     MHDSolutionAccessor,
+    AMRODESolutionAccessor,
     AMRSolution,
     get_conserved,
     get_primitive,
     get_coordinates,
-    get_ct_state
+    get_ct_state,
+    # Canonical SciML contract
+    sciml_problem,
+    solution_accessor,
+    solution_snapshot,
+    solution_coordinates,
+    solution_state_layout,
+    solution_variables
 
 # --- I/O (from Simu.jl SimuIO migration) ---
 export
@@ -969,6 +754,10 @@ export
     supported_features,
     feature_maturity,
     feature_validation_status,
+    feature_role,
+    feature_solver_family,
+    feature_claim_policy,
+    feature_limitations,
     capability_matrix
 
 # --- SciML Bridge (parabolic assembly → SciMLBase) ---

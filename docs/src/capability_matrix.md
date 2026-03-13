@@ -1,10 +1,10 @@
 # Capability Matrix
 
-The table below is the public capability contract for this repository. `stable`
-features are release-grade and must remain covered by automated scientific
-evidence. `provisional` features are supported but may change as the
-architecture matures. `experimental` features are opt-in and are not covered by
-the same compatibility guarantees.
+The table below is the public capability contract for this repository.
+
+- `stable` claim-bearing solver features are the only ones that may support publication-grade scientific claims.
+- `provisional` claim-bearing solver features are suitable for internal research and method development, but not strong external claims.
+- `research_support_tooling` features improve reproducibility and workflow quality, but they do not constitute solver validation on their own.
 
 ```@eval
 using FiniteVolumeMethod
@@ -14,10 +14,10 @@ using Markdown
 
 manifest = RepoValidationManifest.load_manifest(joinpath(dirname(pathof(FiniteVolumeMethod)), "..", "validation", "manifest.toml"))
 rows = RepoValidationManifest.capability_rows(manifest)
-header = "| Capability | Maturity | Validation | Notes |\n| --- | --- | --- | --- |\n"
+header = "| Capability | Role | Maturity | Claim Policy | Validation | Solver Family | Notes | Limitations |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n"
 body = join(
     [
-        "| `$(row.feature)` | `$(row.maturity)` | `$(row.validation)` | $(row.summary) |"
+        "| `$(row.feature)` | `$(row.role)` | `$(row.maturity)` | `$(row.claim_policy)` | `$(row.validation)` | `$(row.solver_family)` | $(row.summary) | $(row.limitations) |"
             for row in rows
     ],
     "\n",

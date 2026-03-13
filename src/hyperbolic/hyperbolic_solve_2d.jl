@@ -348,7 +348,7 @@ function _solve_hyperbolic(
         callback::Union{Nothing, Function} = nothing,
         return_device_state::Bool = false,
     )
-    _unsupported_backend("solve_hyperbolic(::HyperbolicProblem2D)", backend)
+    return _unsupported_backend("solve_hyperbolic(::HyperbolicProblem2D)", backend)
 end
 
 function solve_hyperbolic(

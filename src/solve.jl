@@ -201,11 +201,25 @@ function CommonSolve.init(
         parallel::Val{B} = Val(true),
         kwargs...
     ) where {S, B}
-    ode_prob = SciMLBase.ODEProblem(
+    ode_prob = sciml_problem(
         prob; specialization, jac_prototype, parallel, kwargs...
     )
     return CommonSolve.init(ode_prob, args...; kwargs...)
 end
+
+function CommonSolve.solve(
+        prob::Union{FVMProblem, FVMSystem}, args...;
+        specialization::Type{S} = SciMLBase.AutoSpecialize,
+        jac_prototype = jacobian_sparsity(prob),
+        parallel::Val{B} = Val(true),
+        kwargs...
+    ) where {S, B}
+    ode_prob = sciml_problem(
+        prob; specialization, jac_prototype, parallel, kwargs...
+    )
+    return CommonSolve.solve(ode_prob, args...; kwargs...)
+end
+
 function CommonSolve.solve(
         prob::SteadyFVMProblem, args...;
         specialization::Type{S} = SciMLBase.AutoSpecialize,
@@ -213,7 +227,7 @@ function CommonSolve.solve(
         parallel::Val{B} = Val(true),
         kwargs...
     ) where {S, B}
-    nl_prob = SciMLBase.SteadyStateProblem(
+    nl_prob = sciml_problem(
         prob; specialization, jac_prototype, parallel, kwargs...
     )
     return CommonSolve.solve(nl_prob, args...; kwargs...)

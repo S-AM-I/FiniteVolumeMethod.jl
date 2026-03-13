@@ -4,6 +4,11 @@ This section only includes cases that are currently treated as scientific verifi
 Examples that are merely smoke tests, qualitative regressions, or surrogate setups are intentionally excluded from the
 tables below even if related scripts still exist elsewhere in the tree.
 
+The repository's capability matrix determines which solver families are currently allowed to support publication-grade
+claims. Stable claim-bearing solver features must have automated evidence in this section; provisional features may
+still appear elsewhere in the repository, but they are not elevated to the same claim status until their evidence ladder
+is complete.
+
 ## Verification vs. Validation
 
 **Verification** asks whether the discretisation and implementation solve the intended equations correctly.
@@ -51,6 +56,8 @@ examples are not yet rigorous literature-backed reproductions.
 - Regression-style scripts that compare one numerical method to another without an external truth model are not listed here.
 - Experimental validation will be added back only when the implementation reproduces the referenced benchmark physics and
   compares against published data with explicit quantitative acceptance criteria.
+- Demoted or manually reviewed cases are tracked in the validation manifest and release report rather than being silently
+  left in the tree as implied evidence.
 
 ## References
 
