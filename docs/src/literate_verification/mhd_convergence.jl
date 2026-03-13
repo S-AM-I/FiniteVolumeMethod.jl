@@ -24,6 +24,8 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   ApJS, 178, 137-177. DOI: 10.1086/588755
 
 using FiniteVolumeMethod
+using OrdinaryDiffEq
+using SciMLBase: ReturnCode
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -51,7 +53,7 @@ end
 
 # ## Convergence Measurement
 # The L1 error in $B_y$ at each resolution:
-function compute_mhd_error(N)
+function solve_mhd_state(N)
     mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, 4)
     prob = HyperbolicProblem2D(
         law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
@@ -59,18 +61,26 @@ function compute_mhd_error(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         alfven_ic; final_time = t_final, cfl = 0.3,
     )
-    coords, U, t_end = solve_hyperbolic(prob)
-    nx = N
-    ny = 4
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    @test sol.retcode == ReturnCode.Success #src
+    accessor = solution_accessor(prob)
+    return solution_coordinates(accessor), get_primitive(accessor, sol, length(sol.t)), sol.t[end]
+end
+
+function compute_mhd_error(N)
+    coords, W, t_end = solve_mhd_state(N)
     err = 0.0
-    for ix in 1:nx
+    for ix in 1:N
         x = coords[ix, 1][1]
         x_shifted = mod(x - vA * t_end, 1.0)
         By_exact = amp * sin(2 * pi * x_shifted)
-        By_num = conserved_to_primitive(law, U[ix, 1])[7]
+        By_num = W[ix, 1][7]
         err += abs(By_num - By_exact)
     end
-    return err / nx
+    return err / N
 end
 
 resolutions = [16, 32, 64, 128]
@@ -112,3 +122,24 @@ fig
 # MUSCL with HLLD should achieve at least 1.5th-order convergence on smooth data.
 @test all(r -> r > 0.8, rates) #src
 @assert all(r -> r > 0.8, rates) #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "errors" => errors,
+            "rates" => rates,
+            "min_rate" => minimum(rates),
+            "finest_error" => errors[end],
+        ),
+        artifacts = ["mhd_alfven_convergence.png"],
+        notes = [
+            "Canonical MHD SciML execution path via sciml_problem(prob), mhd_stage_limiter, and solve(prob, SSPRK33()).",
+            "This evidence entry is the mhd_ct verification-stage smooth-wave convergence case.",
+        ],
+        summary = Dict(
+            "resolutions" => resolutions,
+            "errors" => errors,
+            "rates" => rates,
+        ),
+    )
+end

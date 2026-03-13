@@ -39,6 +39,21 @@ using FiniteVolumeMethod
         rm(tmpfile)
     end
 
+    @testset "VTK Output is deterministic" begin
+        mesh = generate_mesh_1d(10, 1.0)
+        data = collect(1.0:10.0)
+        tmpfile_a = tempname() * ".vtk"
+        tmpfile_b = tempname() * ".vtk"
+        try
+            write_line_vtk(tmpfile_a, mesh, data, "test_field")
+            write_line_vtk(tmpfile_b, mesh, data, "test_field")
+            @test read(tmpfile_a, String) == read(tmpfile_b, String)
+        finally
+            rm(tmpfile_a; force = true)
+            rm(tmpfile_b; force = true)
+        end
+    end
+
     @testset "Volume Integral" begin
         mesh = generate_mesh_1d(10, 1.0)
         field = ones(10)
@@ -110,9 +125,23 @@ using FiniteVolumeMethod
         ic = collect(1.0:5.0)
         save_model_package(mesh, physics, ic, tmpdir)
         mesh_meta, phys_loaded, ic_loaded = load_model_package(tmpdir)
+        @test mesh_meta["schema_version"] == 1
         @test haskey(mesh_meta, "type")
         @test phys_loaded["diffusion"]["gamma"] == "1.0"
         @test ic_loaded ≈ ic
+    end
+
+    @testset "Registry serialization is deterministic" begin
+        tmpdir_a = mktempdir()
+        tmpdir_b = mktempdir()
+        mesh = generate_mesh_1d(5, 1.0)
+        physics = Dict("diffusion" => Dict("gamma" => "1.0", "solver" => "cg"))
+        ic = collect(1.0:5.0)
+        save_model_package(mesh, physics, ic, tmpdir_a)
+        save_model_package(mesh, physics, ic, tmpdir_b)
+        @test read(joinpath(tmpdir_a, "mesh_meta.toml"), String) == read(joinpath(tmpdir_b, "mesh_meta.toml"), String)
+        @test read(joinpath(tmpdir_a, "physics.toml"), String) == read(joinpath(tmpdir_b, "physics.toml"), String)
+        @test read(joinpath(tmpdir_a, "ic.dat"), String) == read(joinpath(tmpdir_b, "ic.dat"), String)
     end
 
     @testset "Flux Inout" begin

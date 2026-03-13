@@ -136,3 +136,25 @@ fig2
 @test all(r -> r > 1.7, rates_L2) #src
 @assert all(r -> r > 1.7, rates_Linf) #hide
 @assert all(r -> r > 1.7, rates_L2) #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "linf_errors" => errors_Linf,
+            "l2_errors" => errors_L2,
+            "min_linf_rate" => minimum(rates_Linf),
+            "min_l2_rate" => minimum(rates_L2),
+        ),
+        artifacts = ["poisson_convergence_solution.png", "poisson_convergence_rates.png"],
+        notes = [
+            "Canonical steady-state SciML path via SteadyFVMProblem(prob) and solve(steady_prob, DynamicSS(Rosenbrock23())).",
+            "This evidence entry is the parabolic verification-stage exact-solution convergence case.",
+        ],
+        summary = Dict(
+            "mesh_sizes" => mesh_sizes,
+            "h_values" => h_vals,
+            "linf_rates" => rates_Linf,
+            "l2_rates" => rates_L2,
+        ),
+    )
+end

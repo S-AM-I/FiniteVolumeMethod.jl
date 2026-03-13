@@ -262,3 +262,46 @@ end
         rm(tmpfile; force = true)
     end
 end
+
+@testset "export_session is deterministic" begin
+    session = FVMSessionData(;
+        problem_type = "HyperbolicProblem",
+        law_name = "EulerEquations{1}",
+        mesh_info = Dict{String, Any}("ncells" => 50, "type" => "StructuredMesh1D"),
+        variable_names = ["rho", "rho_v", "E"],
+        parameters = Dict{String, Any}("solver" => "HLLC", "cfl" => 0.4),
+    )
+    push!(
+        session.snapshots, FVMSnapshot(
+            0.1,
+            10,
+            [1.0, 2.0, 3.0],
+            1.0e-5,
+            Dict("E" => 2.5, "rho" => 1.0),
+            0.002,
+            0.3,
+        )
+    )
+    add_convergence_point!(session, 50, Dict("L2" => 2.0e-3, "L1" => 1.0e-3))
+
+    tmpfile_a = tempname() * ".fvm-session.json"
+    tmpfile_b = tempname() * ".fvm-session.json"
+    try
+        export_session(session, tmpfile_a)
+        export_session(session, tmpfile_b)
+        @test read(tmpfile_a, String) == read(tmpfile_b, String)
+
+        exported = JSON3.read(read(tmpfile_a, String), Dict{String, Any})
+        @test exported["mesh"]["ncells"] == 50
+        @test exported["mesh"]["type"] == "StructuredMesh1D"
+        @test exported["parameters"]["cfl"] == 0.4
+        @test exported["parameters"]["solver"] == "HLLC"
+        @test exported["snapshots"][1]["conserved_totals"]["E"] == 2.5
+        @test exported["snapshots"][1]["conserved_totals"]["rho"] == 1.0
+        @test exported["convergence"][1]["L1"] == 1.0e-3
+        @test exported["convergence"][1]["L2"] == 2.0e-3
+    finally
+        rm(tmpfile_a; force = true)
+        rm(tmpfile_b; force = true)
+    end
+end

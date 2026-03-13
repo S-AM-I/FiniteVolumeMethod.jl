@@ -107,3 +107,23 @@ fig
 @test max_roundtrip_diff < 1.0e-10 #src
 @assert max_flux_diff < 1.0e-12 #hide
 @assert max_roundtrip_diff < 1.0e-10 #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "max_flux_diff" => max_flux_diff,
+            "max_roundtrip_diff" => max_roundtrip_diff,
+            "state_count" => length(test_states),
+        ),
+        notes = [
+            "Invariant-style algebraic reduction check for GRMHD -> SRMHD in Minkowski spacetime.",
+            "This evidence entry is the relativistic invariant-stage asymptotic flat-space consistency case.",
+        ],
+        summary = Dict(
+            "test_state_labels" => labels,
+            "flux_diffs" => flux_diffs,
+            "max_flux_diff" => max_flux_diff,
+            "max_roundtrip_diff" => max_roundtrip_diff,
+        ),
+    )
+end

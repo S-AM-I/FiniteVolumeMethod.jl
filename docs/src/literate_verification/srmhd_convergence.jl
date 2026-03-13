@@ -128,3 +128,25 @@ fig2
 # ## Test Assertions
 @test all(r -> r > 0.8, rates) #src
 @assert all(r -> r > 0.8, rates) #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "errors" => errors,
+            "rates" => rates,
+            "min_rate" => minimum(rates),
+            "finest_error" => errors[end],
+        ),
+        artifacts = ["srmhd_smooth_solutions.png", "srmhd_smooth_convergence.png"],
+        notes = [
+            "Relativistic smooth-wave convergence using the maintained SRMHD solve path.",
+            "This evidence entry is the relativistic verification-stage exact-solution convergence case.",
+        ],
+        summary = Dict(
+            "resolutions" => resolutions,
+            "errors" => errors,
+            "rates" => rates,
+            "final_time" => t_final,
+        ),
+    )
+end

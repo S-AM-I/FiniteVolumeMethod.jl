@@ -143,3 +143,24 @@ for mode in eigenmodes
     @test all(r -> r > 0.5, rates) #src
 end
 @assert all(all(r -> r > 0.5, all_rates[m.name]) for m in eigenmodes) #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "mode_errors" => all_errors,
+            "mode_rates" => all_rates,
+            "minimum_mode_rate" => minimum(vcat(values(all_rates)...)),
+        ),
+        artifacts = ["srmhd_eigenmode_convergence.png"],
+        notes = [
+            "Relativistic benchmark sweep across fast, slow, Alfven, and entropy SRMHD eigenmodes.",
+            "This evidence entry is the relativistic benchmark-stage eigenmode propagation case.",
+        ],
+        summary = Dict(
+            "resolutions" => resolutions,
+            "mode_errors" => all_errors,
+            "mode_rates" => all_rates,
+            "mode_names" => [mode.name for mode in eigenmodes],
+        ),
+    )
+end
