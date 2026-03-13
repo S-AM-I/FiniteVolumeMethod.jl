@@ -13,6 +13,28 @@ concurrency:
 env:
   # Bypass Julia Pkg server to avoid transient 404 errors
   JULIA_PKG_SERVER: ""
+# =====================================================================
+# CI Lane Structure (ASME V&V 20-2009 Alignment)
+# =====================================================================
+# Lane 1 — core:               Unit tests, Aqua, imports, governance
+#                               (runs in the 'test' job below)
+# Lane 2 — scientific-evidence: Fast representative V&V cases
+#                               (runs in the 'scientific-evidence' job)
+# Lane 3 — nightly (future):   Broader convergence sweeps, heavy
+#                               MHD/AMR/GRMHD cases. See manifest.toml
+#                               runtime_tier = "nightly".
+# Lane 4 — release (future):   Full evidence suite + generated
+#                               validation report artifact. See
+#                               manifest.toml runtime_tier = "release".
+#
+# Reference Test Baseline Policy:
+#   JULIA_REFERENCETESTS_UPDATE=true is acceptable for IMAGE regression
+#   tests (visual aids that are not part of the scientific contract).
+#   All NUMERICAL acceptance criteria (convergence rates, error norms,
+#   conservation residuals) must use fixed @test assertions that cannot
+#   be auto-updated. Evidence-tier cases declared in manifest.toml with
+#   explicit thresholds are the authoritative acceptance criteria.
+# =====================================================================
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}

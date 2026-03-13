@@ -147,3 +147,64 @@ function load_reference_data(filename)
     path = joinpath(@__DIR__, "reference_data", filename)
     return JSON3.read(read(path, String), Dict)
 end
+
+# ============================================================
+# Grid Convergence Index (ASME V&V 20-2009)
+# ============================================================
+
+"""
+    grid_convergence_index(e1, e2, e3, r; safety_factor=1.25)
+
+Compute the ASME V&V 20-2009 Grid Convergence Index from three error norms
+on successively coarsened grids with constant refinement ratio `r`.
+
+Arguments:
+- `e1`: error on finest grid
+- `e2`: error on medium grid
+- `e3`: error on coarsest grid
+- `r`: grid refinement ratio (e.g. 2.0 for doubling)
+- `safety_factor`: GCI safety factor (default 1.25 for 3+ grids)
+
+Returns a named tuple `(p, gci_fine, gci_coarse, asymptotic_ratio)`:
+- `p`: observed order of convergence via Richardson extrapolation
+- `gci_fine`: fine-grid GCI (uncertainty band on finest solution)
+- `gci_coarse`: coarse-grid GCI (uncertainty band on medium solution)
+- `asymptotic_ratio`: should be ≈ 1.0 when in asymptotic convergence range
+
+Reference: Roache (1998), ASME V&V 20-2009 Standard.
+"""
+function grid_convergence_index(e1, e2, e3, r; safety_factor = 1.25)
+    p = log(e3 / e2) / log(r)
+    gci_fine = safety_factor * abs(e2 - e1) / (r^p - 1)
+    gci_coarse = safety_factor * abs(e3 - e2) / (r^p - 1)
+    asymptotic_ratio = gci_coarse / (r^p * gci_fine)
+    return (; p, gci_fine, gci_coarse, asymptotic_ratio)
+end
+
+"""
+    assert_gci_asymptotic(ratio; tol=0.1)
+
+Assert that the GCI asymptotic ratio is within `tol` of 1.0, indicating
+the solution is in the asymptotic convergence range.
+"""
+function assert_gci_asymptotic(ratio; tol = 0.1)
+    @test abs(ratio - 1.0) < tol
+    return
+end
+
+"""
+    assert_conservation(initial, final; rtol=1e-10, labels=nothing)
+
+Assert that conserved quantities have not drifted beyond `rtol` relative
+tolerance between `initial` and `final` values. Both arguments should be
+vectors of the same length. Optional `labels` provides names for each
+quantity in failure messages.
+"""
+function assert_conservation(initial, final; rtol = 1.0e-10, labels = nothing)
+    @assert length(initial) == length(final)
+    for i in eachindex(initial)
+        rel_err = abs(final[i] - initial[i]) / (abs(initial[i]) + eps(Float64))
+        @test rel_err < rtol
+    end
+    return
+end
