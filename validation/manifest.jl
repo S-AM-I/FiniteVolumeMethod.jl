@@ -10,6 +10,11 @@ struct GeneratedPageEntry
     validation_tier::Symbol
     run_locally::Bool
     run_in_ci::Bool
+    category::Union{Nothing, Symbol}
+    reference_kind::Union{Nothing, Symbol}
+    reference_source::Union{Nothing, String}
+    metric::Union{Nothing, String}
+    acceptance::Union{Nothing, String}
 end
 
 struct ScientificEvidenceEntry
@@ -17,6 +22,12 @@ struct ScientificEvidenceEntry
     path::String
     feature::Symbol
     rationale::String
+    runtime_tier::Symbol
+    category::Symbol
+    reference_kind::Symbol
+    reference_source::String
+    metric::String
+    acceptance::String
 end
 
 struct FeatureEntry
@@ -37,6 +48,11 @@ function load_manifest(path::AbstractString = joinpath(@__DIR__, "manifest.toml"
                 Symbol(entry["validation_tier"]),
                 get(entry, "run_locally", true),
                 get(entry, "run_in_ci", false),
+                _optional_symbol(entry, "category"),
+                _optional_symbol(entry, "reference_kind"),
+                get(entry, "reference_source", nothing),
+                get(entry, "metric", nothing),
+                get(entry, "acceptance", nothing),
             ) for entry in get(raw, "generated_pages", [])
     ]
     scientific_evidence = [
@@ -45,6 +61,12 @@ function load_manifest(path::AbstractString = joinpath(@__DIR__, "manifest.toml"
                 _repo_relpath(entry["path"]),
                 Symbol(entry["feature"]),
                 entry["rationale"],
+                Symbol(entry["runtime_tier"]),
+                Symbol(entry["category"]),
+                Symbol(entry["reference_kind"]),
+                entry["reference_source"],
+                entry["metric"],
+                entry["acceptance"],
             ) for entry in get(raw, "scientific_evidence", [])
     ]
     features = Dict(
@@ -64,6 +86,7 @@ end
 
 ci_generated_pages(manifest) = filter(entry -> entry.run_in_ci, manifest.generated_pages)
 generated_page_paths(manifest) = Set(entry.page for entry in manifest.generated_pages)
+verification_pages(manifest) = filter(entry -> startswith(entry.page, "verification/"), manifest.generated_pages)
 
 function flatten_pages(pages)
     out = Set{String}()
@@ -125,6 +148,7 @@ function _flatten_pages!(out, pages)
     return out
 end
 
+_optional_symbol(entry, key) = haskey(entry, key) ? Symbol(entry[key]) : nothing
 _repo_relpath(path::AbstractString) = replace(path, '\\' => '/')
 
 end

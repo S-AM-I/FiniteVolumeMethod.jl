@@ -24,6 +24,15 @@ manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation"
     for entry in manifest.scientific_evidence
         @test isfile(joinpath(REPO_ROOT, entry.path))
         @test haskey(manifest.features, entry.feature)
+        @test startswith(entry.path, "docs/src/literate_verification/")
+        @test entry.runtime_tier in (:ci, :local_full, :manual)
+        @test entry.category in (:code_verification, :analytical_benchmark, :experimental_validation)
+        @test entry.reference_kind in (
+            :exact_solution, :manufactured_solution, :literature_table, :reference_dataset, :discrete_invariant
+        )
+        @test !isempty(entry.reference_source)
+        @test !isempty(entry.metric)
+        @test !isempty(entry.acceptance)
     end
 
     for entry in values(manifest.features)
@@ -31,6 +40,22 @@ manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation"
         @test entry.validation in (:executed_examples, :convergence_verified, :targeted_tests, :smoke_tests)
         @test !isempty(entry.summary)
     end
+
+    verification_pages = RepoValidationManifest.verification_pages(manifest)
+    @test !isempty(verification_pages)
+    for entry in verification_pages
+        @test entry.category in (:code_verification, :analytical_benchmark, :experimental_validation)
+        @test entry.reference_kind in (
+            :exact_solution, :manufactured_solution, :literature_table, :reference_dataset, :discrete_invariant
+        )
+        @test !isnothing(entry.reference_source)
+        @test !isnothing(entry.metric)
+        @test !isnothing(entry.acceptance)
+    end
+
+    evidence_paths = Set(entry.path for entry in manifest.scientific_evidence)
+    verification_sources = Set(entry.source for entry in verification_pages)
+    @test evidence_paths ⊆ verification_sources
 
     package_features = Set(FiniteVolumeMethod.supported_features())
     manifest_features = Set(keys(manifest.features))

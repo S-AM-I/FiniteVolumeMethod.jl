@@ -418,24 +418,6 @@ run_locally = true
 run_in_ci = false
 
 [[generated_pages]]
-id = "verification-amr-convergence"
-page = "verification/amr_convergence.md"
-source = "docs/src/literate_verification/amr_convergence.jl"
-feature = "amr"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
-
-[[generated_pages]]
-id = "verification-brio-wu"
-page = "verification/brio_wu_verification.md"
-source = "docs/src/literate_verification/brio_wu_verification.jl"
-feature = "mhd_ct"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
-
-[[generated_pages]]
 id = "verification-conservation"
 page = "verification/conservation_verification.md"
 source = "docs/src/literate_verification/conservation_verification.jl"
@@ -443,6 +425,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Finite-volume conservation law identity"
+metric = "Relative drift in total conserved quantities"
+acceptance = "All conserved quantities remain within the script's stated tolerance."
 
 [[generated_pages]]
 id = "verification-flux-balance"
@@ -452,6 +439,11 @@ feature = "parabolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Discrete control-volume flux balance"
+metric = "Residual in assembled flux balance"
+acceptance = "Flux imbalance remains at machine precision."
 
 [[generated_pages]]
 id = "verification-grmhd-convergence"
@@ -461,6 +453,11 @@ feature = "relativistic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Smooth advected density wave in Minkowski spacetime"
+metric = "L1 density error and observed convergence rate"
+acceptance = "All reported convergence rates remain greater than 1.0."
 
 [[generated_pages]]
 id = "verification-mhd-convergence"
@@ -470,6 +467,11 @@ feature = "mhd_ct"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Circularly polarised Alfvén wave"
+metric = "L1 magnetic-field error and observed convergence rate"
+acceptance = "All reported convergence rates remain greater than 0.8."
 
 [[generated_pages]]
 id = "verification-mhd-divb"
@@ -479,6 +481,11 @@ feature = "mhd_ct"
 validation_tier = "docs_smoke"
 run_locally = true
 run_in_ci = true
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Divergence-free magnetic field constraint"
+metric = "Maximum cellwise div(B)"
+acceptance = "Maximum div(B) remains below 1e-12."
 
 [[generated_pages]]
 id = "verification-mms-convergence"
@@ -488,6 +495,11 @@ feature = "parabolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "manufactured_solution"
+reference_source = "Parabolic manufactured solution"
+metric = "Observed convergence rates in L1/L2/Linf norms"
+acceptance = "Observed rates satisfy the script's stated second-order tolerance."
 
 [[generated_pages]]
 id = "verification-navier-stokes"
@@ -497,15 +509,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
-
-[[generated_pages]]
-id = "verification-orszag-tang"
-page = "verification/orszag_tang_verification.md"
-source = "docs/src/literate_verification/orszag_tang_verification.jl"
-feature = "mhd_ct"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Taylor-Green vortex"
+metric = "Linf velocity error and observed convergence rate"
+acceptance = "All reported convergence rates remain greater than 0.8."
 
 [[generated_pages]]
 id = "verification-passive-scalar"
@@ -515,6 +523,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Smooth passive-scalar advection solution"
+metric = "L1 passive-scalar error and observed convergence rate"
+acceptance = "Observed rates satisfy the script's stated tolerance."
 
 [[generated_pages]]
 id = "verification-poisson-convergence"
@@ -524,15 +537,11 @@ feature = "parabolic"
 validation_tier = "docs_smoke"
 run_locally = true
 run_in_ci = true
-
-[[generated_pages]]
-id = "verification-premixed-flame"
-page = "verification/premixed_flame_1d.md"
-source = "docs/src/literate_verification/premixed_flame_1d.jl"
-feature = "hyperbolic"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Analytical Poisson solution"
+metric = "L2 solution error and observed convergence rate"
+acceptance = "Observed rates satisfy the script's stated tolerance."
 
 [[generated_pages]]
 id = "verification-smooth-advection"
@@ -542,6 +551,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Smooth periodic advection solution"
+metric = "L1 density error and observed convergence rate"
+acceptance = "Observed rates satisfy the script's stated scheme-specific tolerance."
 
 [[generated_pages]]
 id = "verification-source-term"
@@ -551,6 +565,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "manufactured_solution"
+reference_source = "Source-term manufactured solution"
+metric = "Observed convergence rates with source forcing"
+acceptance = "Observed rates satisfy the script's stated tolerance."
 
 [[generated_pages]]
 id = "verification-species-conservation"
@@ -560,6 +579,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Stoichiometric species conservation identity"
+metric = "Relative drift in total and per-species conserved quantities"
+acceptance = "All reported conservation errors remain below the script's thresholds."
 
 [[generated_pages]]
 id = "verification-sod-grid"
@@ -569,6 +593,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Sod shock tube exact Riemann solution"
+metric = "L1 density error and observed convergence trend"
+acceptance = "Errors decrease monotonically and satisfy the script's tolerance."
 
 [[generated_pages]]
 id = "verification-srmhd-convergence"
@@ -578,6 +607,11 @@ feature = "relativistic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Smooth SRMHD wave solution"
+metric = "L1 density error and observed convergence rate"
+acceptance = "All reported convergence rates remain greater than 0.8."
 
 [[generated_pages]]
 id = "verification-toro-riemann"
@@ -587,70 +621,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
-
-[[scientific_evidence]]
-id = "evidence-poisson-convergence"
-path = "docs/src/literate_verification/poisson_convergence.jl"
-feature = "parabolic"
-rationale = "Steady-state convergence evidence for the parabolic solver family."
-runtime_tier = "ci"
-quantity = "L2 convergence rate"
-reference = "Roache (1998)"
-threshold = "p_obs >= 1.5"
-
-[[scientific_evidence]]
-id = "evidence-sod-shock-tube"
-path = "docs/src/literate_hyperbolic/sod_shock_tube.jl"
-feature = "hyperbolic"
-rationale = "Executable shock-tube benchmark for the hyperbolic solver."
-runtime_tier = "ci"
-quantity = "Density profile at t_final"
-reference = "Toro (2009), Chapter 4"
-threshold = "runs_without_error"
-
-[[scientific_evidence]]
-id = "evidence-mhd-divb"
-path = "test/mhd_2d.jl"
-feature = "mhd_ct"
-rationale = "Constraint transport preservation checks for 2D MHD."
-runtime_tier = "ci"
-quantity = "max(div(B))"
-reference = "Toth (2000)"
-threshold = "divB < 1e-15"
-
-[[scientific_evidence]]
-id = "evidence-amr"
-path = "test/amr.jl"
-feature = "amr"
-rationale = "Representative AMR refinement and grid-management coverage."
-runtime_tier = "ci"
-quantity = "Refinement consistency"
-reference = "Berger & Colella (1989)"
-threshold = "runs_without_error"
-
-[[scientific_evidence]]
-id = "evidence-amr-conservation"
-path = "docs/src/literate_verification/amr_convergence.jl"
-feature = "amr"
-rationale = "AMR conservation and refluxing verification — total mass preserved across coarse/fine boundaries."
-runtime_tier = "nightly"
-quantity = "Total mass agreement (AMR vs uniform)"
-reference = "Berger & Colella (1989)"
-threshold = "relative_mass_diff < 0.1"
-
-[[scientific_evidence]]
-id = "evidence-docs-smoke"
-path = "docs/src/literate_tutorials/diffusion_equation_on_a_square_plate.jl"
-feature = "parabolic"
-rationale = "Docs-backed tutorial that is required to stay executable."
-runtime_tier = "ci"
-quantity = "Solution at t_final"
-reference = "Analytical diffusion on square"
-threshold = "runs_without_error"
-
-# =====================================================================
-# New V&V Suite — Phase 1: Code Verification
-# =====================================================================
+category = "analytical_benchmark"
+reference_kind = "literature_table"
+reference_source = "Toro (2009), Table 4.1"
+metric = "Star-region pressure error in five standard Riemann problems"
+acceptance = "Each case satisfies the script's published pressure-error tolerance."
 
 [[generated_pages]]
 id = "verification-euler-mms"
@@ -660,6 +635,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "manufactured_solution"
+reference_source = "Smooth periodic Euler transport manufactured solution"
+metric = "L1 density error, pressure error, and GCI asymptotic ratio"
+acceptance = "Density rates exceed 0.8, pressure error remains near machine precision, and GCI ratio stays within the script tolerance."
 
 [[generated_pages]]
 id = "verification-mms-decoupled"
@@ -669,24 +649,11 @@ feature = "parabolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
-
-[[generated_pages]]
-id = "verification-mhd-solver-comparison"
-page = "verification/mhd_solver_comparison.md"
-source = "docs/src/literate_verification/mhd_solver_comparison.jl"
-feature = "mhd_ct"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
-
-[[generated_pages]]
-id = "verification-balsara-suite"
-page = "verification/balsara_mhd_suite.md"
-source = "docs/src/literate_verification/balsara_mhd_suite.jl"
-feature = "mhd_ct"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
+category = "code_verification"
+reference_kind = "manufactured_solution"
+reference_source = "Decoupled manufactured solution for spatial and temporal accuracy"
+metric = "Observed spatial and temporal convergence rates"
+acceptance = "Spatial and temporal rates satisfy the script's stated tolerances."
 
 [[generated_pages]]
 id = "verification-grmhd-flat"
@@ -696,6 +663,11 @@ feature = "relativistic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Minkowski-space reduction of GRMHD to SRMHD"
+metric = "Maximum GRMHD/SRMHD flux mismatch and primitive round-trip error"
+acceptance = "Flux mismatch remains below 1e-12 and round-trip error remains below 1e-10."
 
 [[generated_pages]]
 id = "verification-grmhd-newtonian"
@@ -705,10 +677,11 @@ feature = "relativistic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
-
-# =====================================================================
-# New V&V Suite — Phase 2: Analytical Benchmarks
-# =====================================================================
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Low-velocity GRMHD primitive recovery and static atmosphere limit"
+metric = "Relative primitive round-trip error and static-atmosphere density drift"
+acceptance = "Round-trip errors and density drift remain below the script's stated tolerances."
 
 [[generated_pages]]
 id = "verification-barenblatt"
@@ -718,6 +691,11 @@ feature = "parabolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Barenblatt-Pattle self-similar porous-medium solution"
+metric = "L2 error trend and observed convergence rate"
+acceptance = "Errors decrease monotonically and minimum reported rate remains above 0.3."
 
 [[generated_pages]]
 id = "verification-tgv-ke-decay"
@@ -727,6 +705,11 @@ feature = "hyperbolic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Taylor-Green vortex kinetic-energy decay law"
+metric = "Relative kinetic-energy decay error"
+acceptance = "Decay-rate error satisfies the script's stated tolerance."
 
 [[generated_pages]]
 id = "verification-srmhd-eigenmodes"
@@ -736,50 +719,35 @@ feature = "relativistic"
 validation_tier = "full_docs"
 run_locally = true
 run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Linearised SRMHD eigenmode propagation"
+metric = "Self-convergence rate for fast, slow, Alfven, and entropy modes"
+acceptance = "All mode-wise self-convergence rates remain greater than 0.5."
 
-[[generated_pages]]
-id = "verification-bondi"
-page = "verification/bondi_accretion_schwarzschild.md"
-source = "docs/src/literate_verification/bondi_accretion_schwarzschild.jl"
-feature = "relativistic"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
+[[scientific_evidence]]
+id = "evidence-poisson-convergence"
+path = "docs/src/literate_verification/poisson_convergence.jl"
+feature = "parabolic"
+rationale = "Steady-state convergence evidence for the parabolic solver family."
+runtime_tier = "ci"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Analytical Poisson solution"
+metric = "L2 solution error and observed convergence rate"
+acceptance = "Observed rates satisfy the script's stated tolerance."
 
-# =====================================================================
-# New V&V Suite — Phase 3: Experimental Validation (Stretch Goals)
-# =====================================================================
-
-[[generated_pages]]
-id = "verification-lid-cavity"
-page = "verification/lid_driven_cavity.md"
-source = "docs/src/literate_verification/lid_driven_cavity.jl"
-feature = "hyperbolic"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
-
-[[generated_pages]]
-id = "verification-fm-torus"
-page = "verification/fishbone_moncrief_torus.md"
-source = "docs/src/literate_verification/fishbone_moncrief_torus.jl"
-feature = "relativistic"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
-
-[[generated_pages]]
-id = "verification-heated-cavity"
-page = "verification/heated_cavity.md"
-source = "docs/src/literate_verification/heated_cavity.jl"
-feature = "hyperbolic"
-validation_tier = "full_docs"
-run_locally = true
-run_in_ci = false
-
-# =====================================================================
-# New Scientific Evidence — Promoted V&V Cases
-# =====================================================================
+[[scientific_evidence]]
+id = "evidence-mhd-divb"
+path = "docs/src/literate_verification/mhd_divb_verification.jl"
+feature = "mhd_ct"
+rationale = "Constraint-transport verification using explicit div(B) bounds."
+runtime_tier = "ci"
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Divergence-free magnetic field constraint"
+metric = "Maximum cellwise div(B)"
+acceptance = "Maximum div(B) remains below 1e-12."
 
 [[scientific_evidence]]
 id = "evidence-euler-mms"
@@ -787,9 +755,11 @@ path = "docs/src/literate_verification/euler_mms_convergence.jl"
 feature = "hyperbolic"
 rationale = "MMS convergence for the cell-centered Euler solver — fills biggest hyperbolic verification gap."
 runtime_tier = "ci"
-quantity = "L1 convergence rate (density)"
-reference = "Roache (1998), ASME V&V 20-2009"
-threshold = "p_obs >= 1.0, GCI asymptotic ratio within 0.5 of 1.0"
+category = "code_verification"
+reference_kind = "manufactured_solution"
+reference_source = "Smooth periodic Euler transport manufactured solution"
+metric = "L1 density error, pressure error, and GCI asymptotic ratio"
+acceptance = "Density rates exceed 0.8, pressure error remains near machine precision, and GCI ratio stays within the script tolerance."
 
 [[scientific_evidence]]
 id = "evidence-grmhd-flat"
@@ -797,9 +767,11 @@ path = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
 feature = "relativistic"
 rationale = "GRMHD → SRMHD asymptotic reduction in flat spacetime — validates tier-1 physics hierarchy."
 runtime_tier = "ci"
-quantity = "Max flux difference (GRMHD vs SRMHD)"
-reference = "Del Zanna et al. (2007)"
-threshold = "max_flux_diff < 1e-12, roundtrip_diff < 1e-10"
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Minkowski-space reduction of GRMHD to SRMHD"
+metric = "Maximum GRMHD/SRMHD flux mismatch and primitive round-trip error"
+acceptance = "Flux mismatch remains below 1e-12 and round-trip error remains below 1e-10."
 
 [[scientific_evidence]]
 id = "evidence-srmhd-eigenmodes"
@@ -807,6 +779,8 @@ path = "docs/src/literate_verification/srmhd_eigenmode_convergence.jl"
 feature = "relativistic"
 rationale = "All SRMHD wave families (fast, slow, Alfven, entropy) converge — validates wave propagation."
 runtime_tier = "ci"
-quantity = "L1 convergence rate per eigenmode"
-reference = "Anile (1989), Balsara (2001)"
-threshold = "p_obs >= 0.5 for all modes"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Linearised SRMHD eigenmode propagation"
+metric = "Self-convergence rate for fast, slow, Alfven, and entropy modes"
+acceptance = "All mode-wise self-convergence rates remain greater than 0.5."

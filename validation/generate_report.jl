@@ -1,7 +1,6 @@
 module ValidationReport
 
 using Dates
-using TOML
 
 include(joinpath(@__DIR__, "manifest.jl"))
 using .RepoValidationManifest
@@ -34,18 +33,13 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     ## ── Scientific Evidence ──
     println(io, "## Scientific Evidence Cases")
     println(io)
-    raw = TOML.parsefile(manifest_path)
-    evidence_entries = get(raw, "scientific_evidence", [])
-    println(io, "| ID | Feature | Runtime | Quantity | Reference | Threshold |")
-    println(io, "|----|---------|---------|----------|-----------|-----------|")
-    for entry in evidence_entries
-        id = get(entry, "id", "")
-        feature = get(entry, "feature", "")
-        tier = get(entry, "runtime_tier", "")
-        qty = get(entry, "quantity", "")
-        ref = get(entry, "reference", "")
-        thr = get(entry, "threshold", "")
-        println(io, "| $id | $feature | $tier | $qty | $ref | $thr |")
+    println(io, "| ID | Feature | Runtime | Category | Metric | Reference | Acceptance |")
+    println(io, "|----|---------|---------|----------|--------|-----------|------------|")
+    for entry in manifest.scientific_evidence
+        println(
+            io,
+            "| $(entry.id) | $(entry.feature) | $(entry.runtime_tier) | $(entry.category) | $(entry.metric) | $(entry.reference_source) | $(entry.acceptance) |",
+        )
     end
     println(io)
 
@@ -63,12 +57,14 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
         local_count = count(e -> e.run_locally, pages)
         println(io, "### $(feature) ($(length(pages)) pages, $(ci_count) in CI, $(local_count) run locally)")
         println(io)
-        println(io, "| ID | Tier | CI | Local | Source |")
-        println(io, "|----|------|----|-------|--------|")
+        println(io, "| ID | Tier | CI | Local | Category | Metric | Source |")
+        println(io, "|----|------|----|-------|----------|--------|--------|")
         for entry in pages
             ci = entry.run_in_ci ? "yes" : "no"
             local_ = entry.run_locally ? "yes" : "no"
-            println(io, "| $(entry.id) | $(entry.validation_tier) | $ci | $local_ | $(entry.source) |")
+            category = something(entry.category, :n_a)
+            metric = something(entry.metric, "n/a")
+            println(io, "| $(entry.id) | $(entry.validation_tier) | $ci | $local_ | $category | $metric | $(entry.source) |")
         end
         println(io)
     end
