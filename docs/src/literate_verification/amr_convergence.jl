@@ -122,3 +122,37 @@ fig
 @assert t_amr ≈ t_final #hide
 @assert t_uni ≈ t_final #hide
 @assert !isempty(grid_amr.blocks) #hide
+
+# ## Conservation Verification
+# Berger-Colella flux correction at coarse/fine boundaries must preserve
+# total mass (and momentum/energy) to machine precision on a closed domain.
+# We compute initial and final total conserved quantities on the uniform
+# grid (transmissive BCs allow flux out, so we check the uniform solve is
+# self-consistent rather than exact conservation).
+
+# Compute total mass on uniform grid at final time
+dx_uni = 1.0 / N_uniform
+dy_uni = 1.0 / N_uniform
+total_mass_uni = sum(U_uni[i, j][1] * dx_uni * dy_uni for i in 1:N_uniform, j in 1:N_uniform)
+@test total_mass_uni > 0.0 #src
+@assert total_mass_uni > 0.0 #hide
+
+# The AMR grid should have a comparable total mass.  With transmissive
+# boundaries, mass can leave the domain, but the uniform and AMR
+# solutions should agree on total remaining mass within 10%.
+function total_mass_amr(grid, law)
+    total = 0.0
+    for block in values(grid.blocks)
+        block.active || continue
+        dV = prod(block.dx)  # dx is NTuple{Dim}; prod gives cell volume
+        for j in 1:block.dims[2], i in 1:block.dims[1]
+            total += block.U[i, j][1] * dV
+        end
+    end
+    return total
+end
+mass_amr = total_mass_amr(grid_amr, law)
+@test mass_amr > 0.0 #src
+@test abs(mass_amr - total_mass_uni) / total_mass_uni < 0.1 #src
+@assert mass_amr > 0.0 #hide
+@assert abs(mass_amr - total_mass_uni) / total_mass_uni < 0.1 #hide

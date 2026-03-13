@@ -28,7 +28,7 @@ manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation"
 
     for entry in values(manifest.features)
         @test entry.maturity in (:stable, :provisional, :experimental)
-        @test entry.validation in (:executed_examples, :targeted_tests, :smoke_tests)
+        @test entry.validation in (:executed_examples, :convergence_verified, :targeted_tests, :smoke_tests)
         @test !isempty(entry.summary)
     end
 
