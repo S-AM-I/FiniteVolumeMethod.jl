@@ -259,10 +259,19 @@ end
 # kwargs so they don't get forwarded to the inner physics problem's `remake`.
 
 # Standard ODEProblem kwargs that SciML may pass during solve specialization
-const _ODE_REMAKE_KEYS = (:f, :u0, :p, :tspan, :prob_type, :problem_type, :kwargs)
+const _ODE_REMAKE_KEYS = (:f, :u0, :p, :tspan, :prob_type, :problem_type, :kwargs, :callback)
 
 function _filter_physics_kwargs(; kwargs...)
     return pairs(NamedTuple(filter(kv -> kv.first ∉ _ODE_REMAKE_KEYS, pairs(kwargs))))
+end
+
+_callback_kwarg(kwargs) = hasproperty(kwargs, :callback) ? getproperty(kwargs, :callback) : nothing
+
+function _rebuild_semidiscrete_problem(physics_prob; callback = nothing, kwargs...)
+    if callback === nothing
+        return ODEProblem(physics_prob; kwargs...)
+    end
+    return ODEProblem(physics_prob; callback, kwargs...)
 end
 
 """
@@ -273,11 +282,12 @@ Remake a semidiscrete 1D ODEProblem. Accepts any keyword argument valid for
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache1D};
+        callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
     physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return ODEProblem(physics_prob)
+    return _rebuild_semidiscrete_problem(physics_prob; callback)
 end
 
 """
@@ -287,11 +297,12 @@ Remake a semidiscrete 2D ODEProblem.
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache2D};
+        callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
     physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return ODEProblem(physics_prob)
+    return _rebuild_semidiscrete_problem(physics_prob; callback)
 end
 
 """
@@ -301,11 +312,12 @@ Remake a semidiscrete 3D ODEProblem.
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache3D};
+        callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
     physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return ODEProblem(physics_prob)
+    return _rebuild_semidiscrete_problem(physics_prob; callback)
 end
 
 """
@@ -315,11 +327,12 @@ Remake a semidiscrete unstructured ODEProblem.
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:UnstructuredCache};
+        callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
     physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return ODEProblem(physics_prob)
+    return _rebuild_semidiscrete_problem(physics_prob; callback)
 end
 
 """
@@ -331,11 +344,12 @@ Remake a semidiscrete MHD/CT ODEProblem.
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache2D};
         vector_potential = nothing,
+        callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
     physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return ODEProblem(physics_prob; vector_potential = vector_potential)
+    return _rebuild_semidiscrete_problem(physics_prob; callback, vector_potential = vector_potential)
 end
 
 """
@@ -347,9 +361,36 @@ Remake a semidiscrete GRMHD/CT ODEProblem.
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:GRMHDCTCache2D};
         vector_potential = nothing,
+        callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
     physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return ODEProblem(physics_prob; vector_potential = vector_potential)
+    return _rebuild_semidiscrete_problem(physics_prob; callback, vector_potential = vector_potential)
+end
+
+"""
+    SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache3D};
+                     vector_potential_x=nothing, vector_potential_y=nothing,
+                     vector_potential_z=nothing, kwargs...)
+
+Remake a semidiscrete 3D MHD/CT `ODEProblem`.
+"""
+function SciMLBase.remake(
+        ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache3D};
+        vector_potential_x = nothing,
+        vector_potential_y = nothing,
+        vector_potential_z = nothing,
+        callback = _callback_kwarg(ode_prob.kwargs),
+        kwargs...
+    )
+    physics_kwargs = _filter_physics_kwargs(; kwargs...)
+    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
+    return _rebuild_semidiscrete_problem(
+        physics_prob;
+        callback,
+        vector_potential_x = vector_potential_x,
+        vector_potential_y = vector_potential_y,
+        vector_potential_z = vector_potential_z,
+    )
 end

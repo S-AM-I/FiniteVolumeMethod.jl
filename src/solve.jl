@@ -199,12 +199,16 @@ function CommonSolve.init(
         specialization::Type{S} = SciMLBase.AutoSpecialize,
         jac_prototype = jacobian_sparsity(prob),
         parallel::Val{B} = Val(true),
+        callback = nothing,
         kwargs...
     ) where {S, B}
-    ode_prob = sciml_problem(
-        prob; specialization, jac_prototype, parallel, kwargs...
-    )
-    return CommonSolve.init(ode_prob, args...; kwargs...)
+    problem_kwargs = (; specialization, jac_prototype, parallel, kwargs...)
+    ode_prob = sciml_problem(prob; problem_kwargs...)
+    merged_callback = _merge_problem_callbacks(_problem_callback(ode_prob), callback)
+    if merged_callback === nothing
+        return CommonSolve.init(ode_prob, args...; kwargs...)
+    end
+    return CommonSolve.init(ode_prob, args...; callback = merged_callback, kwargs...)
 end
 
 function CommonSolve.solve(
@@ -212,12 +216,16 @@ function CommonSolve.solve(
         specialization::Type{S} = SciMLBase.AutoSpecialize,
         jac_prototype = jacobian_sparsity(prob),
         parallel::Val{B} = Val(true),
+        callback = nothing,
         kwargs...
     ) where {S, B}
-    ode_prob = sciml_problem(
-        prob; specialization, jac_prototype, parallel, kwargs...
-    )
-    return CommonSolve.solve(ode_prob, args...; kwargs...)
+    problem_kwargs = (; specialization, jac_prototype, parallel, kwargs...)
+    ode_prob = sciml_problem(prob; problem_kwargs...)
+    merged_callback = _merge_problem_callbacks(_problem_callback(ode_prob), callback)
+    if merged_callback === nothing
+        return CommonSolve.solve(ode_prob, args...; kwargs...)
+    end
+    return CommonSolve.solve(ode_prob, args...; callback = merged_callback, kwargs...)
 end
 
 function CommonSolve.solve(
@@ -225,12 +233,16 @@ function CommonSolve.solve(
         specialization::Type{S} = SciMLBase.AutoSpecialize,
         jac_prototype = jacobian_sparsity(prob),
         parallel::Val{B} = Val(true),
+        callback = nothing,
         kwargs...
     ) where {S, B}
-    nl_prob = sciml_problem(
-        prob; specialization, jac_prototype, parallel, kwargs...
-    )
-    return CommonSolve.solve(nl_prob, args...; kwargs...)
+    problem_kwargs = (; specialization, jac_prototype, parallel, kwargs...)
+    nl_prob = sciml_problem(prob; problem_kwargs...)
+    merged_callback = _merge_problem_callbacks(_problem_callback(nl_prob), callback)
+    if merged_callback === nothing
+        return CommonSolve.solve(nl_prob, args...; kwargs...)
+    end
+    return CommonSolve.solve(nl_prob, args...; callback = merged_callback, kwargs...)
 end
 
 @doc """

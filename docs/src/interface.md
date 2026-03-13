@@ -154,9 +154,13 @@ For solver-family-generic code, reproducibility scripts, and verification harnes
 
 Semidiscrete hyperbolic, IMEX, and AMR families also support direct `init`/`solve` through this same contract, so you can either build the SciML problem explicitly or call `solve(prob, alg; ...)` directly.
 
+User-supplied SciML callbacks are merged with the package's internal callbacks on this path. For constrained-transport MHD problems, keep using `mhd_stage_limiter(ode_prob.p)` with explicit Runge-Kutta algorithms so cell-centered magnetic fields remain synchronized with the face-centered CT state.
+
 ```@docs
 sciml_problem
 ```
+
+Legacy convenience wrappers such as `solve_hyperbolic`, `solve_hyperbolic_imex`, and `solve_amr` remain available during the v2 transition, but they are no longer the preferred research-grade interface.
 
 # Solution accessors
 

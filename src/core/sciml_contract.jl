@@ -52,30 +52,52 @@ sciml_problem(
     kwargs...,
 ) = SplitODEProblem(prob, stiff_source; kwargs...)
 
-function CommonSolve.init(prob::_SemidiscreteSciMLProblem, args...; kwargs...)
-    return CommonSolve.init(sciml_problem(prob; kwargs...), args...; kwargs...)
+function CommonSolve.init(prob::_SemidiscreteSciMLProblem, args...; callback = nothing, kwargs...)
+    ode_prob = sciml_problem(prob; kwargs...)
+    merged_callback = _merge_problem_callbacks(_problem_callback(ode_prob), callback)
+    if merged_callback === nothing
+        return CommonSolve.init(ode_prob, args...; kwargs...)
+    end
+    return CommonSolve.init(ode_prob, args...; callback = merged_callback, kwargs...)
 end
 
-function CommonSolve.solve(prob::_SemidiscreteSciMLProblem, args...; kwargs...)
-    return CommonSolve.solve(sciml_problem(prob; kwargs...), args...; kwargs...)
+function CommonSolve.solve(prob::_SemidiscreteSciMLProblem, args...; callback = nothing, kwargs...)
+    ode_prob = sciml_problem(prob; kwargs...)
+    merged_callback = _merge_problem_callbacks(_problem_callback(ode_prob), callback)
+    if merged_callback === nothing
+        return CommonSolve.solve(ode_prob, args...; kwargs...)
+    end
+    return CommonSolve.solve(ode_prob, args...; callback = merged_callback, kwargs...)
 end
 
 function CommonSolve.init(
         prob::_SplitSemidiscreteSciMLProblem,
         stiff_source::AbstractStiffSource,
         args...;
+        callback = nothing,
         kwargs...,
     )
-    return CommonSolve.init(sciml_problem(prob, stiff_source; kwargs...), args...; kwargs...)
+    split_prob = sciml_problem(prob, stiff_source; kwargs...)
+    merged_callback = _merge_problem_callbacks(_problem_callback(split_prob), callback)
+    if merged_callback === nothing
+        return CommonSolve.init(split_prob, args...; kwargs...)
+    end
+    return CommonSolve.init(split_prob, args...; callback = merged_callback, kwargs...)
 end
 
 function CommonSolve.solve(
         prob::_SplitSemidiscreteSciMLProblem,
         stiff_source::AbstractStiffSource,
         args...;
+        callback = nothing,
         kwargs...,
     )
-    return CommonSolve.solve(sciml_problem(prob, stiff_source; kwargs...), args...; kwargs...)
+    split_prob = sciml_problem(prob, stiff_source; kwargs...)
+    merged_callback = _merge_problem_callbacks(_problem_callback(split_prob), callback)
+    if merged_callback === nothing
+        return CommonSolve.solve(split_prob, args...; kwargs...)
+    end
+    return CommonSolve.solve(split_prob, args...; callback = merged_callback, kwargs...)
 end
 
 function CommonSolve.init(prob::AbstractFVMTemplate, args...; kwargs...)

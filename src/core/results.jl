@@ -107,6 +107,36 @@ function MHDSolutionAccessor(prob::HyperbolicProblem2D)
 end
 
 """
+    MHD3DSolutionAccessor{N, Law, Mesh}
+
+Accessor for extracting structured data from a 3D augmented-state MHD
+solution, including constrained-transport face-B fields.
+"""
+struct MHD3DSolutionAccessor{N, Law, Mesh} <: AbstractFVMSolutionAccessor
+    law::Law
+    mesh::Mesh
+    nx::Int
+    ny::Int
+    nz::Int
+    n_cell_vars::Int
+    n_bx_face::Int
+    n_by_face::Int
+    n_bz_face::Int
+end
+
+function MHD3DSolutionAccessor(prob::HyperbolicProblem3D{<:IdealMHDEquations{3}})
+    N = nvariables(prob.law)
+    nx, ny, nz = prob.mesh.nx, prob.mesh.ny, prob.mesh.nz
+    n_cell_vars = nx * ny * nz * N
+    n_bx_face = (nx + 1) * ny * nz
+    n_by_face = nx * (ny + 1) * nz
+    n_bz_face = nx * ny * (nz + 1)
+    return MHD3DSolutionAccessor{N, typeof(prob.law), typeof(prob.mesh)}(
+        prob.law, prob.mesh, nx, ny, nz, n_cell_vars, n_bx_face, n_by_face, n_bz_face
+    )
+end
+
+"""
     AMRODESolutionAccessor{N, Law, Grid}
 
 Accessor for semidiscrete AMR `ODEProblem` solutions, decoding the
@@ -144,6 +174,7 @@ solution_accessor(prob::HyperbolicProblem) = HyperbolicSolutionAccessor(prob)
 solution_accessor(prob::HyperbolicProblem2D{<:IdealMHDEquations{2}}) = MHDSolutionAccessor(prob)
 solution_accessor(prob::HyperbolicProblem2D{<:SRMHDEquations{2}}) = MHDSolutionAccessor(prob)
 solution_accessor(prob::HyperbolicProblem2D{<:GRMHDEquations{2}}) = MHDSolutionAccessor(prob)
+solution_accessor(prob::HyperbolicProblem3D{<:IdealMHDEquations{3}}) = MHD3DSolutionAccessor(prob)
 solution_accessor(prob::HyperbolicProblem2D) = HyperbolicSolutionAccessor(prob)
 solution_accessor(prob::HyperbolicProblem3D) = HyperbolicSolutionAccessor(prob)
 solution_accessor(prob::UnstructuredHyperbolicProblem) = HyperbolicSolutionAccessor(prob)
@@ -154,6 +185,7 @@ solution_accessor(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache3D}
 solution_accessor(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:UnstructuredCache}) = HyperbolicSolutionAccessor(ode_prob.p.prob)
 solution_accessor(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache2D}) = MHDSolutionAccessor(ode_prob.p.prob)
 solution_accessor(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:GRMHDCTCache2D}) = MHDSolutionAccessor(ode_prob.p.prob)
+solution_accessor(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache3D}) = MHD3DSolutionAccessor(ode_prob.p.prob)
 solution_accessor(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:AMRCache}) = AMRODESolutionAccessor(ode_prob.p)
 
 """
@@ -164,6 +196,7 @@ Return the variable names associated with the accessor layout.
 solution_variables(accessor::FVMSolutionAccessor) = copy(accessor.variable_names)
 solution_variables(accessor::HyperbolicSolutionAccessor) = variable_names(accessor.law)
 solution_variables(accessor::MHDSolutionAccessor) = variable_names(accessor.law)
+solution_variables(accessor::MHD3DSolutionAccessor) = variable_names(accessor.law)
 solution_variables(accessor::AMRODESolutionAccessor) = variable_names(accessor.law)
 
 """
@@ -174,6 +207,7 @@ Return a symbolic description of the state layout exposed by `accessor`.
 solution_state_layout(accessor::FVMSolutionAccessor) = accessor.layout
 solution_state_layout(::HyperbolicSolutionAccessor) = :cell_centered_conserved
 solution_state_layout(::MHDSolutionAccessor) = :cell_centered_conserved_with_ct
+solution_state_layout(::MHD3DSolutionAccessor) = :cell_centered_conserved_with_ct
 solution_state_layout(::AMRODESolutionAccessor) = :block_cell_centered_conserved
 
 """
@@ -291,6 +325,52 @@ function get_coordinates(accessor::MHDSolutionAccessor)
     return [(cell_center(mesh, cell_idx(mesh, ix, iy))) for ix in 1:nx, iy in 1:ny]
 end
 
+function get_conserved(accessor::MHD3DSolutionAccessor{N}, sol, i) where {N}
+    FT = eltype(sol.u[i])
+    u = sol.u[i]
+    cell_data = @view u[1:(accessor.n_cell_vars)]
+    U_flat = reinterpret(SVector{N, FT}, copy(cell_data))
+    return reshape(U_flat, accessor.nx, accessor.ny, accessor.nz)
+end
+
+function get_primitive(accessor::MHD3DSolutionAccessor{N}, sol, i) where {N}
+    U = get_conserved(accessor, sol, i)
+    return [
+        conserved_to_primitive(accessor.law, U[ix, iy, iz]) for
+            ix in axes(U, 1), iy in axes(U, 2), iz in axes(U, 3)
+    ]
+end
+
+function get_ct_state(accessor::MHD3DSolutionAccessor, sol, i)
+    u = sol.u[i]
+    nx, ny, nz = accessor.nx, accessor.ny, accessor.nz
+    FT = eltype(u)
+
+    bx_start = accessor.n_cell_vars + 1
+    bx_end = accessor.n_cell_vars + accessor.n_bx_face
+    bx_face = reshape(copy(@view u[bx_start:bx_end]), nx + 1, ny, nz)
+
+    by_start = bx_end + 1
+    by_end = bx_end + accessor.n_by_face
+    by_face = reshape(copy(@view u[by_start:by_end]), nx, ny + 1, nz)
+
+    bz_start = by_end + 1
+    bz_end = by_end + accessor.n_bz_face
+    bz_face = reshape(copy(@view u[bz_start:bz_end]), nx, ny, nz + 1)
+
+    emf_x = zeros(FT, nx, ny + 1, nz + 1)
+    emf_y = zeros(FT, nx + 1, ny, nz + 1)
+    emf_z = zeros(FT, nx + 1, ny + 1, nz)
+
+    return CTData3D(bx_face, by_face, bz_face, emf_x, emf_y, emf_z)
+end
+
+function get_coordinates(accessor::MHD3DSolutionAccessor)
+    mesh = accessor.mesh
+    nx, ny, nz = accessor.nx, accessor.ny, accessor.nz
+    return [(cell_center(mesh, cell_idx_3d(mesh, ix, iy, iz))) for ix in 1:nx, iy in 1:ny, iz in 1:nz]
+end
+
 """
     get_conserved(accessor::AMRODESolutionAccessor{N}, sol, i) where {N}
 
@@ -393,6 +473,18 @@ function solution_snapshot(accessor::MHDSolutionAccessor, sol, i)
         variables = solution_variables(accessor),
         coordinates = solution_coordinates(accessor),
         raw_state = copy(sol.u[i]),
+        conserved = get_conserved(accessor, sol, i),
+        primitive = get_primitive(accessor, sol, i),
+        ct_state = get_ct_state(accessor, sol, i),
+    )
+end
+
+function solution_snapshot(accessor::MHD3DSolutionAccessor, sol, i)
+    return (
+        time = _solution_time(sol, i),
+        layout = solution_state_layout(accessor),
+        variables = solution_variables(accessor),
+        coordinates = solution_coordinates(accessor),
         conserved = get_conserved(accessor, sol, i),
         primitive = get_primitive(accessor, sol, i),
         ct_state = get_ct_state(accessor, sol, i),

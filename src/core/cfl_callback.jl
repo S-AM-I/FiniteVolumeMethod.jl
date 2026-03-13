@@ -64,6 +64,11 @@ function _compute_cfl_dt(cache::GRMHDCTCache2D{N, FT}, u::AbstractVector, t) whe
     return compute_dt_2d(cache.prob, cache.padded_U, t, cache.metric_data)
 end
 
+function _compute_cfl_dt(cache::MHDCTCache3D{N, FT}, u::AbstractVector, t) where {N, FT}
+    unfold_mhd_augmented!(cache, u)
+    return compute_dt_3d(cache.prob, cache.padded_U, t)
+end
+
 function _compute_cfl_dt(cache::AMRCache{N, FT}, u::AbstractVector, t) where {N, FT}
     # Use minimum dt across all active blocks
     dt_min = typemax(FT)
@@ -102,6 +107,9 @@ function _get_prob(cache::MHDCTCache2D)
     return cache.prob
 end
 function _get_prob(cache::GRMHDCTCache2D)
+    return cache.prob
+end
+function _get_prob(cache::MHDCTCache3D)
     return cache.prob
 end
 function _get_prob(cache::AMRCache)

@@ -26,7 +26,9 @@ sol = solve(split_prob, KenCarp4(); adaptive = false, dt = 1e-4)
 """
 function SciMLBase.SplitODEProblem(
         prob::HyperbolicProblem, stiff_source::AbstractStiffSource;
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     _cpu_backend_only("SplitODEProblem(::HyperbolicProblem, ...)", backend)
     cache = build_cache(prob, backend)
@@ -56,7 +58,8 @@ function SciMLBase.SplitODEProblem(
     end
 
     cfl_cb = cfl_stepsize_callback(cache)
-    return SplitODEProblem{true}(f1!, f2!, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return SplitODEProblem{true}(f1!, f2!, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 """
@@ -67,7 +70,9 @@ Create a `SplitODEProblem` for 2D IMEX time integration.
 """
 function SciMLBase.SplitODEProblem(
         prob::HyperbolicProblem2D, stiff_source::AbstractStiffSource;
-        backend::AbstractBackend = CPUBackend(), kwargs...
+        backend::AbstractBackend = CPUBackend(),
+        callback = nothing,
+        kwargs...
     )
     _cpu_backend_only("SplitODEProblem(::HyperbolicProblem2D, ...)", backend)
     cache = build_cache(prob, backend)
@@ -96,5 +101,6 @@ function SciMLBase.SplitODEProblem(
     end
 
     cfl_cb = cfl_stepsize_callback(cache)
-    return SplitODEProblem{true}(f1!, f2!, u0, tspan, cache; callback = cfl_cb, kwargs...)
+    cb = _merge_problem_callbacks(cfl_cb, callback)
+    return SplitODEProblem{true}(f1!, f2!, u0, tspan, cache; callback = cb, kwargs...)
 end
