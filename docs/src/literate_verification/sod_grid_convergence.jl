@@ -18,6 +18,8 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # - **Reconstruction**: `NoReconstruction`, `MUSCL(Minmod)`, `WENO3`
 
 using FiniteVolumeMethod
+using OrdinaryDiffEq
+using SciMLBase: ReturnCode
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -31,18 +33,25 @@ wL = SVector(1.0, 0.0, 1.0)
 wR = SVector(0.125, 0.0, 0.1)
 sod_ic(x) = x < 0.5 ? wL : wR
 
+function solve_sod_case(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    @test sol.retcode == ReturnCode.Success #src
+    accessor = solution_accessor(prob)
+    return solution_coordinates(accessor), get_primitive(accessor, sol, length(sol.t))
+end
+
 # ## Exact Solution
 function sod_exact(x, t; x0 = 0.5, gamma = 1.4)
     rhoL, vL, PL = 1.0, 0.0, 1.0
     rhoR, vR, PR = 0.125, 0.0, 0.1
     cL = sqrt(gamma * PL / rhoL)
-    ## Pre-computed star-region values
     P_star = 0.30313017805064707
     v_star = 0.92745262004895057
     rho_star_L = 0.42631942817849544
     rho_star_R = 0.26557371170530708
     c_star_L = sqrt(gamma * P_star / rho_star_L)
-    ## Shock speed
     S_shock = v_star + 1.0 / (gamma * rho_star_R) *
         (P_star - PR) / (v_star - vR + 1.0e-30)
     xi = (x - x0) / t
@@ -74,16 +83,15 @@ function compute_l1_errors(N)
         DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), sod_ic;
         final_time = t_final, cfl = 0.5
     )
-    x, U, _ = solve_hyperbolic(prob)
+    x, W = solve_sod_case(prob)
     err_rho = 0.0
     err_v = 0.0
     err_P = 0.0
     for i in eachindex(x)
-        w = conserved_to_primitive(law, U[i])
         rho_ex, v_ex, P_ex = sod_exact(x[i], t_final)
-        err_rho += abs(w[1] - rho_ex)
-        err_v += abs(w[2] - v_ex)
-        err_P += abs(w[3] - P_ex)
+        err_rho += abs(W[i][1] - rho_ex)
+        err_v += abs(W[i][2] - v_ex)
+        err_P += abs(W[i][3] - P_ex)
     end
     return err_rho / N, err_v / N, err_P / N
 end
@@ -98,7 +106,7 @@ for N in grid_sizes
     push!(errs_P, e_P)
 end
 
-# ## Visualisation — Density at Multiple Resolutions
+# ## Visualisation -- Density at Multiple Resolutions
 x_exact_plot = range(0.0, 1.0, length = 1000)
 rho_exact_plot = [sod_exact(xi, t_final)[1] for xi in x_exact_plot]
 
@@ -111,8 +119,8 @@ for (panel, N_idx) in enumerate([1, 3, 4])
         DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), sod_ic;
         final_time = t_final, cfl = 0.5
     )
-    x, U, _ = solve_hyperbolic(prob)
-    rho_num = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
+    x, W = solve_sod_case(prob)
+    rho_num = [W[i][1] for i in eachindex(W)]
     local ax
     ax = Axis(fig1[1, panel], xlabel = "x", ylabel = L"\rho", title = "N = $N")
     lines!(ax, x_exact_plot, rho_exact_plot, color = :black, linewidth = 2, label = "Exact")
@@ -123,7 +131,7 @@ resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "sod_grid_convergence_density.png") fig1 #src
 
-# ## Visualisation — L1 Error Convergence
+# ## Visualisation -- L1 Error Convergence
 fig2 = Figure(fontsize = 24, size = (600, 500))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error}",
@@ -133,7 +141,6 @@ ax = Axis(
 scatterlines!(ax, grid_sizes, errs_rho, label = "Density", color = :blue, marker = :circle, linewidth = 2, markersize = 12)
 scatterlines!(ax, grid_sizes, errs_v, label = "Velocity", color = :red, marker = :utriangle, linewidth = 2, markersize = 12)
 scatterlines!(ax, grid_sizes, errs_P, label = "Pressure", color = :green, marker = :diamond, linewidth = 2, markersize = 12)
-## O(N^{-1}) reference slope
 lines!(
     ax, grid_sizes, errs_rho[1] .* (grid_sizes[1] ./ grid_sizes) .^ 1,
     color = :gray, linestyle = :dash, linewidth = 1.5, label = L"O(N^{-1})"
@@ -163,18 +170,17 @@ for (name, solver, recon) in combos
         DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), sod_ic;
         final_time = t_final, cfl = 0.4
     )
-    x, U, _ = solve_hyperbolic(prob)
+    x, W = solve_sod_case(prob)
     err = 0.0
     for i in eachindex(x)
-        rho_num = conserved_to_primitive(law, U[i])[1]
         rho_ex = sod_exact(x[i], t_final)[1]
-        err += abs(rho_num - rho_ex)
+        err += abs(W[i][1] - rho_ex)
     end
     push!(combo_errors, err / N_compare)
     push!(combo_names, name)
 end
 
-# ## Visualisation — Solver Comparison
+# ## Visualisation -- Solver Comparison
 fig3 = Figure(fontsize = 20, size = (700, 450))
 ax3 = Axis(
     fig3[1, 1], xlabel = "Solver + Reconstruction", ylabel = L"L^1 \text{ density error}",
@@ -187,9 +193,34 @@ fig3
 @test_reference joinpath(@__DIR__, "../figures", "sod_grid_convergence_comparison.png") fig3 #src
 
 # ## Test Assertions
-## Monotone convergence
 @test all(errs_rho[i] > errs_rho[i + 1] for i in 1:(length(errs_rho) - 1)) #src
-## HLLC + MUSCL beats LxF + NoRecon
 @test combo_errors[5] < combo_errors[1] #src
 @assert all(errs_rho[i] > errs_rho[i + 1] for i in 1:(length(errs_rho) - 1)) #hide
 @assert combo_errors[5] < combo_errors[1] #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "density_errors" => errs_rho,
+            "velocity_errors" => errs_v,
+            "pressure_errors" => errs_P,
+            "finest_density_error" => errs_rho[end],
+            "best_vs_baseline_ratio" => combo_errors[5] / combo_errors[1],
+        ),
+        artifacts = [
+            "sod_grid_convergence_density.png",
+            "sod_grid_convergence_errors.png",
+            "sod_grid_convergence_comparison.png",
+        ],
+        notes = [
+            "Canonical SciML execution path via sciml_problem(prob) and solve(prob, SSPRK33()).",
+            "This evidence entry is the hyperbolic benchmark-stage exact-Riemann comparison case.",
+        ],
+        summary = Dict(
+            "grid_sizes" => grid_sizes,
+            "combo_names" => combo_names,
+            "combo_errors" => combo_errors,
+            "monotone_density_convergence" => all(errs_rho[i] > errs_rho[i + 1] for i in 1:(length(errs_rho) - 1)),
+        ),
+    )
+end

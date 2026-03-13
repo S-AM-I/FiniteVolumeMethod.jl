@@ -24,6 +24,8 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   Computational Fluid Dynamics and Heat Transfer.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEq
+using SciMLBase: ReturnCode
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -44,25 +46,32 @@ function euler_mms_ic(x)
     return SVector(rho, v0, P0)
 end
 
-# ## Convergence Measurement
-# After one full period the exact solution equals the IC.
-function compute_euler_mms_error(N)
+function solve_euler_mms_state(N)
     mesh = StructuredMesh1D(0.0, 1.0, N)
     prob = HyperbolicProblem(
         law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), euler_mms_ic;
         final_time = t_final, cfl = 0.4,
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    @test sol.retcode == ReturnCode.Success #src
+    accessor = solution_accessor(prob)
+    return solution_coordinates(accessor), get_primitive(accessor, sol, length(sol.t)), sol.t[end]
+end
 
+# ## Convergence Measurement
+# After one full period the exact solution equals the IC.
+function compute_euler_mms_error(N)
+    x, W, t_end = solve_euler_mms_state(N)
     err_rho = 0.0
     err_P = 0.0
     for i in eachindex(x)
-        w_num = conserved_to_primitive(law, U[i])
         x_shifted = mod(x[i] - v0 * t_end, 1.0)
         w_exact = euler_mms_ic(x_shifted)
-        err_rho += abs(w_num[1] - w_exact[1])
-        err_P += abs(w_num[3] - w_exact[3])
+        err_rho += abs(W[i][1] - w_exact[1])
+        err_P += abs(W[i][3] - w_exact[3])
     end
     return err_rho / N, err_P / N
 end
@@ -90,15 +99,9 @@ gci_rho = let e1 = errors_rho[4], e2 = errors_rho[3], e3 = errors_rho[2], r = 2.
     (; p, gci_fine, gci_coarse, asymptotic_ratio)
 end
 
-# ## Visualisation — Solution Comparison
-mesh_fine = StructuredMesh1D(0.0, 1.0, 256)
-prob_fine = HyperbolicProblem(
-    law, mesh_fine, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
-    PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), euler_mms_ic;
-    final_time = t_final, cfl = 0.4,
-)
-x_fine, U_fine, t_fine = solve_hyperbolic(prob_fine)
-rho_num = [conserved_to_primitive(law, U_fine[i])[1] for i in eachindex(U_fine)]
+# ## Visualisation -- Solution Comparison
+x_fine, W_fine, t_fine = solve_euler_mms_state(256)
+rho_num = [W_fine[i][1] for i in eachindex(W_fine)]
 rho_exact = [euler_mms_ic(mod(x_fine[i] - v0 * t_fine, 1.0))[1] for i in eachindex(x_fine)]
 
 fig1 = Figure(fontsize = 24, size = (1100, 450))
@@ -112,7 +115,7 @@ resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "euler_mms_solution.png") fig1 #src
 
-# ## Visualisation — Convergence Plot
+# ## Visualisation -- Convergence Plot
 fig2 = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error}",
@@ -152,3 +155,26 @@ fig2
 @assert all(r -> r > 0.8, rates_rho) #hide
 @assert errors_P[end] < 1.0e-10 #hide
 @assert abs(gci_rho.asymptotic_ratio - 1.0) < 0.5 #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "min_density_rate" => minimum(rates_rho),
+            "finest_density_error" => errors_rho[end],
+            "finest_pressure_error" => errors_P[end],
+            "gci_asymptotic_ratio" => gci_rho.asymptotic_ratio,
+        ),
+        artifacts = ["euler_mms_solution.png", "euler_mms_convergence.png"],
+        notes = [
+            "Canonical SciML execution path via sciml_problem(prob) and solve(prob, SSPRK33()).",
+            "This evidence entry is the hyperbolic verification-stage manufactured-solution case.",
+        ],
+        summary = Dict(
+            "resolutions" => resolutions,
+            "density_errors" => errors_rho,
+            "pressure_errors" => errors_P,
+            "density_rates" => rates_rho,
+            "pressure_rates" => rates_P,
+        ),
+    )
+end

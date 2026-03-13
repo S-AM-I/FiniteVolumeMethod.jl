@@ -1,4 +1,4 @@
-manifest_version = 2
+manifest_version = 3
 support_policy = "current_lts_and_stable"
 
 [[features]]
@@ -25,6 +25,7 @@ solver_family = "hyperbolic"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference_gpu_experimental"
+required_ladder_stages = ["verification", "benchmark", "invariant"]
 summary = "1D and 2D cell-centered hyperbolic solvers with MMS convergence verification and analytical benchmarks."
 limitations = [
   "Publication-grade claims are limited to solver configurations and benchmarks listed in the validation manifest.",
@@ -801,9 +802,11 @@ acceptance = "All mode-wise self-convergence rates remain greater than 0.5."
 [[scientific_evidence]]
 id = "evidence-poisson-convergence"
 path = "docs/src/literate_verification/poisson_convergence.jl"
+entrypoint = "docs/src/literate_verification/poisson_convergence.jl"
 feature = "parabolic"
 rationale = "Steady-state convergence evidence for the parabolic solver family."
 runtime_tier = "ci"
+ladder_stage = "verification"
 category = "code_verification"
 reference_kind = "exact_solution"
 reference_source = "Analytical Poisson solution"
@@ -817,9 +820,11 @@ expected_artifacts = ["summary_metrics", "reference_figure"]
 [[scientific_evidence]]
 id = "evidence-mhd-divb"
 path = "docs/src/literate_verification/mhd_divb_verification.jl"
+entrypoint = "docs/src/literate_verification/mhd_divb_verification.jl"
 feature = "mhd_ct"
 rationale = "Constraint-transport verification using explicit div(B) bounds."
 runtime_tier = "ci"
+ladder_stage = "verification"
 category = "code_verification"
 reference_kind = "discrete_invariant"
 reference_source = "Divergence-free magnetic field constraint"
@@ -833,9 +838,11 @@ expected_artifacts = ["summary_metrics", "reference_figure"]
 [[scientific_evidence]]
 id = "evidence-euler-mms"
 path = "docs/src/literate_verification/euler_mms_convergence.jl"
+entrypoint = "docs/src/literate_verification/euler_mms_convergence.jl"
 feature = "hyperbolic"
 rationale = "MMS convergence for the cell-centered Euler solver — fills biggest hyperbolic verification gap."
 runtime_tier = "ci"
+ladder_stage = "verification"
 category = "code_verification"
 reference_kind = "manufactured_solution"
 reference_source = "Smooth periodic Euler transport manufactured solution"
@@ -845,13 +852,54 @@ solver_family = "hyperbolic"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-sod-grid"
+path = "docs/src/literate_verification/sod_grid_convergence.jl"
+entrypoint = "docs/src/literate_verification/sod_grid_convergence.jl"
+feature = "hyperbolic"
+rationale = "Analytical shock-tube benchmark for the canonical Euler solver family."
+runtime_tier = "local_full"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Sod shock tube exact Riemann solution"
+metric = "L1 density error trend across grid refinement and solver-comparison baseline ratio"
+acceptance = "Density error decreases monotonically with refinement and the HLLC+MUSCL reference beats the Lax-Friedrichs baseline."
+solver_family = "hyperbolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-conservation"
+path = "docs/src/literate_verification/conservation_verification.jl"
+entrypoint = "docs/src/literate_verification/conservation_verification.jl"
+feature = "hyperbolic"
+rationale = "Discrete conservation invariant check for periodic Euler evolution."
+runtime_tier = "local_full"
+ladder_stage = "invariant"
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Finite-volume conservation law identity"
+metric = "Maximum relative drift in mass, momentum, and total energy"
+acceptance = "All reported relative drifts remain below the script tolerance."
+solver_family = "hyperbolic"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
 
 [[scientific_evidence]]
 id = "evidence-grmhd-flat"
 path = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
+entrypoint = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
 feature = "relativistic"
 rationale = "GRMHD → SRMHD asymptotic reduction in flat spacetime — validates tier-1 physics hierarchy."
 runtime_tier = "ci"
+ladder_stage = "verification"
 category = "code_verification"
 reference_kind = "discrete_invariant"
 reference_source = "Minkowski-space reduction of GRMHD to SRMHD"
@@ -865,9 +913,11 @@ expected_artifacts = ["summary_metrics", "reference_figure"]
 [[scientific_evidence]]
 id = "evidence-srmhd-eigenmodes"
 path = "docs/src/literate_verification/srmhd_eigenmode_convergence.jl"
+entrypoint = "docs/src/literate_verification/srmhd_eigenmode_convergence.jl"
 feature = "relativistic"
 rationale = "All SRMHD wave families (fast, slow, Alfven, entropy) converge — validates wave propagation."
 runtime_tier = "ci"
+ladder_stage = "benchmark"
 category = "analytical_benchmark"
 reference_kind = "exact_solution"
 reference_source = "Linearised SRMHD eigenmode propagation"

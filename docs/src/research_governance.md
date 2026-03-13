@@ -23,6 +23,8 @@ research workflow, visualization, or data handling.
 - `provisional` claim-bearing solver features may be used for internal research
   and method development, but their evidence ladder is incomplete.
 - `experimental` features are engineering-only unless promoted later.
+- Features with declared required ladder stages must satisfy every stage in the
+  validation manifest before their research contract is considered complete.
 
 ## Support Policy
 
@@ -39,9 +41,17 @@ Stable claim-bearing solver features must have:
 
 - a declared capability entry in the validation manifest
 - automated scientific evidence
+- all declared required evidence-ladder stages present in the manifest
 - documented limitations
 - at least one maintained generated tutorial or example page
 
 Demoted, excluded, or manually reviewed cases remain in the repository only when
 their status is declared explicitly in the validation manifest and generated
 report.
+
+## Evidence Recording
+
+- Evidence entries may declare a canonical entrypoint, ladder stage, runtime
+  tier, and summary requirement.
+- The scientific evidence runner executes those entrypoints in isolation and
+  writes machine-readable summaries for local and release-grade reporting.

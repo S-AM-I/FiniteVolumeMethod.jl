@@ -27,6 +27,7 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     ## ── Research Contract ──
     println(io, "## Research Contract")
     println(io)
+    println(io, "- **Manifest version:** `$(manifest.manifest_version)`")
     println(io, "- **Julia support policy:** `$(manifest.support_policy)`")
     println(io, "- **Stable claim-bearing features:** Only stable `claim_bearing_solver` capabilities may support publication-grade scientific claims.")
     println(io, "- **Tooling features:** Dashboard and I/O features are treated as reproducibility infrastructure, not solver validation.")
@@ -35,12 +36,12 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     ## ── Capability Matrix ──
     println(io, "## Capability Matrix")
     println(io)
-    println(io, "| Feature | Role | Maturity | Claim Policy | Validation | Solver Family | Summary | Limitations |")
-    println(io, "|---------|------|----------|--------------|------------|---------------|---------|-------------|")
+    println(io, "| Feature | Role | Maturity | Claim Policy | Validation | Solver Family | Required Ladder | Summary | Limitations |")
+    println(io, "|---------|------|----------|--------------|------------|---------------|-----------------|---------|-------------|")
     for row in capability_rows
         println(
             io,
-            "| $(row.feature) | $(row.role) | $(row.maturity) | $(row.claim_policy) | $(row.validation) | $(row.solver_family) | $(row.summary) | $(row.limitations) |",
+            "| $(row.feature) | $(row.role) | $(row.maturity) | $(row.claim_policy) | $(row.validation) | $(row.solver_family) | $(isempty(row.required_ladder_stages) ? "n/a" : row.required_ladder_stages) | $(row.summary) | $(row.limitations) |",
         )
     end
     println(io)
@@ -48,13 +49,27 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     ## ── Scientific Evidence ──
     println(io, "## Scientific Evidence Cases")
     println(io)
-    println(io, "| ID | Feature | Solver Family | Runtime | Category | Precision | Seed Policy | Metric | Expected Artifacts | Reference | Acceptance |")
-    println(io, "|----|---------|---------------|---------|----------|-----------|-------------|--------|--------------------|-----------|------------|")
+    println(io, "| ID | Feature | Ladder Stage | Solver Family | Runtime | Category | Precision | Seed Policy | Metric | Expected Artifacts | Reference | Acceptance | Entrypoint |")
+    println(io, "|----|---------|--------------|---------------|---------|----------|-----------|-------------|--------|--------------------|-----------|------------|------------|")
     for entry in manifest.scientific_evidence
         println(
             io,
-            "| $(entry.id) | $(entry.feature) | $(entry.solver_family) | $(entry.runtime_tier) | $(entry.category) | $(entry.precision_policy) | $(entry.random_seed_policy) | $(entry.metric) | $(join(entry.expected_artifacts, ", ")) | $(entry.reference_source) | $(entry.acceptance) |",
+            "| $(entry.id) | $(entry.feature) | $(entry.ladder_stage) | $(entry.solver_family) | $(entry.runtime_tier) | $(entry.category) | $(entry.precision_policy) | $(entry.random_seed_policy) | $(entry.metric) | $(join(entry.expected_artifacts, ", ")) | $(entry.reference_source) | $(entry.acceptance) | $(entry.entrypoint) |",
         )
+    end
+    println(io)
+
+    ## ── Evidence Ladder Coverage ──
+    println(io, "## Evidence Ladder Coverage")
+    println(io)
+    println(io, "| Feature | Required Stages | Present Stages | Missing Stages | Status |")
+    println(io, "|---------|-----------------|----------------|----------------|--------|")
+    for row in RepoValidationManifest.evidence_ladder_rows(manifest)
+        required = isempty(row.required) ? "n/a" : join(string.(row.required), ", ")
+        present = isempty(row.present) ? "n/a" : join(string.(row.present), ", ")
+        missing = isempty(row.missing) ? "none" : join(string.(row.missing), ", ")
+        status = isempty(row.required) ? "not_enforced" : (row.satisfied ? "complete" : "incomplete")
+        println(io, "| $(row.feature) | $required | $present | $missing | $status |")
     end
     println(io)
 
@@ -120,6 +135,10 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     println(io, "- **Scientific evidence cases:** $(length(manifest.scientific_evidence))")
     println(io, "- **Generated pages:** $(length(manifest.generated_pages))")
     println(io, "- **Declared exclusions:** $(length(manifest.exclusions))")
+    ladder_enforced = sum(!isempty(manifest.features[f].required_ladder_stages) for f in keys(manifest.features))
+    ladder_complete = sum(isempty(row.required) || row.satisfied for row in RepoValidationManifest.evidence_ladder_rows(manifest))
+    println(io, "- **Features with enforced evidence ladders:** $ladder_enforced")
+    println(io, "- **Features currently satisfying their enforced ladder:** $ladder_complete")
     ci_pages = count(e -> e.run_in_ci, manifest.generated_pages)
     println(io, "- **Pages in CI:** $ci_pages")
     println(io)

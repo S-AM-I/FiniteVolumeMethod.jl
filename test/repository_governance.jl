@@ -9,6 +9,7 @@ manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation"
 const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.md")
 
 @testset "Validation manifest governance" begin
+    @test manifest.manifest_version == 3
     @test manifest.support_policy == :current_lts_and_stable
     @test isfile(RELEASE_CHECKLIST)
     @test !isempty(manifest.generated_pages)
@@ -26,9 +27,12 @@ const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.m
 
     for entry in manifest.scientific_evidence
         @test isfile(joinpath(REPO_ROOT, entry.path))
+        @test isfile(joinpath(REPO_ROOT, entry.entrypoint))
         @test haskey(manifest.features, entry.feature)
         @test startswith(entry.path, "docs/src/literate_verification/")
+        @test startswith(entry.entrypoint, "docs/src/literate_verification/")
         @test entry.runtime_tier in (:ci, :local_full, :manual)
+        @test entry.ladder_stage in (:verification, :benchmark, :invariant, :validation)
         @test entry.category in (:code_verification, :analytical_benchmark, :experimental_validation)
         @test entry.reference_kind in (
             :exact_solution, :manufactured_solution, :literature_table, :reference_dataset, :discrete_invariant,
@@ -58,6 +62,7 @@ const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.m
         if !isnothing(entry.backend_policy)
             @test entry.backend_policy in (:cpu_reference, :cpu_reference_gpu_experimental)
         end
+        @test all(stage -> stage in (:verification, :benchmark, :invariant, :validation), entry.required_ladder_stages)
         @test !isempty(entry.summary)
         @test !isempty(entry.limitations)
     end
@@ -96,6 +101,7 @@ const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.m
         @test FiniteVolumeMethod.feature_validation_status(feature) == manifest.features[feature].validation
         @test FiniteVolumeMethod.feature_role(feature) == manifest.features[feature].role
         @test FiniteVolumeMethod.feature_solver_family(feature) == manifest.features[feature].solver_family
+        @test FiniteVolumeMethod.feature_required_ladder_stages(feature) == manifest.features[feature].required_ladder_stages
         @test FiniteVolumeMethod.feature_claim_policy(feature) ==
             RepoValidationManifest.feature_claim_policy(manifest.features[feature])
         @test FiniteVolumeMethod.feature_limitations(feature) == manifest.features[feature].limitations
@@ -110,5 +116,14 @@ const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.m
     for feature in stable_claim_features
         @test !isempty(filter(entry -> entry.feature == feature, manifest.scientific_evidence))
         @test !isempty(filter(entry -> entry.feature == feature, manifest.generated_pages))
+    end
+
+    enforced_ladders = [
+        RepoValidationManifest.feature_ladder_coverage(manifest, feature)
+            for (feature, entry) in manifest.features if !isempty(entry.required_ladder_stages)
+    ]
+    @test !isempty(enforced_ladders)
+    for coverage in enforced_ladders
+        @test coverage.satisfied
     end
 end
