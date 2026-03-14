@@ -76,14 +76,31 @@ end
         @test isfile(outputs.report_path)
         @test isfile(outputs.bundle_index_path)
         @test isfile(outputs.release_index_path)
+        @test isfile(outputs.provenance_path)
+        @test isfile(outputs.replay_report_path)
         @test isdir(outputs.summaries_dir)
         @test isdir(outputs.bundles_dir)
+        @test isdir(outputs.replay_summaries_dir)
         @test length(outputs.bundles) == 2
         @test length(filter(name -> endswith(name, ".toml"), readdir(outputs.summaries_dir))) == 6
 
         bundle_index = TOML.parsefile(outputs.bundle_index_path)
         @test bundle_index["bundle_count"] == 2
         @test Set(entry["feature"] for entry in bundle_index["bundles"]) == Set(["hyperbolic", "parabolic"])
+
+        provenance = TOML.parsefile(outputs.provenance_path)
+        @test provenance["provenance_version"] == 1
+        @test provenance["manifest_version"] == manifest.manifest_version
+        @test provenance["bundle_features"] == ["hyperbolic", "parabolic"]
+        @test provenance["run_summary_replay"] == true
+        @test Set(provenance["replay_entry_ids"]) == Set(["evidence-euler-mms", "evidence-poisson-convergence"])
+        @test !isempty(provenance["julia_version"])
+        @test !isempty(provenance["git_commit"])
+
+        replay_report = TOML.parsefile(outputs.replay_report_path)
+        @test replay_report["replay_version"] == 1
+        @test replay_report["status"] == "pass"
+        @test Set(replay_report["entry_ids"]) == Set(["evidence-euler-mms", "evidence-poisson-convergence"])
 
         hyperbolic_artifacts = Set(readdir(joinpath(outputs.bundles_dir, "hyperbolic", "artifacts")))
         @test "euler_mms_solution.png" in hyperbolic_artifacts
@@ -99,5 +116,39 @@ end
         @test occursin("evidence-euler-mms", report)
         @test occursin("evidence-poisson-convergence", report)
         @test !occursin("evidence-mhd-alfven", report)
+
+        release_index = read(outputs.release_index_path, String)
+        @test occursin("provenance.toml", release_index)
+        @test occursin("replay_report.toml", release_index)
+        @test occursin("Summary replay status: `pass`", release_index)
+    end
+end
+
+@testset "Release output packaging without replay" begin
+    mktempdir() do tmpdir
+        outputs = RepoReleasePackaging.build_release_outputs(
+            manifest;
+            repo_root = REPO_ROOT,
+            output_root = joinpath(tmpdir, "release_outputs"),
+            bundle_features = [:hyperbolic],
+            rerun_evidence = true,
+            run_summary_replay = false,
+        )
+
+        @test isfile(outputs.provenance_path)
+        @test isfile(outputs.replay_report_path)
+        @test !isdir(outputs.replay_summaries_dir)
+
+        provenance = TOML.parsefile(outputs.provenance_path)
+        @test provenance["run_summary_replay"] == false
+        @test isempty(provenance["replay_entry_ids"])
+
+        replay_report = TOML.parsefile(outputs.replay_report_path)
+        @test replay_report["status"] == "not_run"
+        @test replay_report["replay_dir"] == "not_run"
+        @test isempty(replay_report["entry_ids"])
+
+        release_index = read(outputs.release_index_path, String)
+        @test occursin("Summary replay status: `not_run`", release_index)
     end
 end

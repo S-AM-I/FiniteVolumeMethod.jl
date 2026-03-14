@@ -66,5 +66,8 @@ report.
 - `julia --project=. scripts/build_release_outputs.jl --stable-only` builds a
   release-style output tree with executed summaries, bundle indexes, per-feature
   bundles, and the validation report in `validation/release_outputs/`.
+- Release outputs also record `provenance.toml` and `replay_report.toml` so the
+  archived tree carries the git/Julia context and the selected summary-replay
+  check that was used to validate the packaged evidence.
 - These bundles copy the exact machine-readable summaries and referenced figure
   artifacts needed to archive or review the current claim-bearing evidence set.
