@@ -3,6 +3,17 @@ module FVMCheckpointExt
 using FiniteVolumeMethod
 using JLD2
 
+function _checkpoint_metadata(metadata)
+    normalized = FiniteVolumeMethod.stringify_keys(Dict{Any, Any}(metadata))
+    return merge(
+        Dict{String, Any}(
+            "checkpoint_format_version" => 1,
+            "checkpoint_writer" => "FiniteVolumeMethod.FVMCheckpointExt",
+        ),
+        normalized,
+    )
+end
+
 """
     save_checkpoint(cm::CheckpointManager, state, step; metadata=Dict())
 
@@ -21,12 +32,13 @@ function FiniteVolumeMethod.save_checkpoint(
         cm::FiniteVolumeMethod.CheckpointManager,
         state,
         step::Int;
-        metadata::Dict{String} = Dict{String, Any}(),
+        metadata::AbstractDict = Dict{String, Any}(),
     )
     mkpath(cm.dir)
     filename = joinpath(cm.dir, "checkpoint_$(step).jld2")
+    checkpoint_metadata = _checkpoint_metadata(metadata)
 
-    JLD2.jldsave(filename; state = state, step = step, metadata = metadata)
+    JLD2.jldsave(filename; state = state, step = step, metadata = checkpoint_metadata)
 
     # Prune old checkpoints
     existing = sort(filter(f -> endswith(f, ".jld2"), readdir(cm.dir)))
@@ -64,7 +76,7 @@ function FiniteVolumeMethod.load_checkpoint(
     return Dict{String, Any}(
         "state" => data["state"],
         "step" => data["step"],
-        "metadata" => get(data, "metadata", Dict{String, Any}()),
+        "metadata" => FiniteVolumeMethod.stringify_keys(get(data, "metadata", Dict{String, Any}())),
     )
 end
 

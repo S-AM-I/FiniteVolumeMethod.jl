@@ -35,6 +35,8 @@ examples are not yet rigorous literature-backed reproductions.
 | [Flux Balance](@ref) | Discrete invariant | Residual in assembled flux balance | Machine-precision imbalance |
 | [Conservation Verification](@ref) | Discrete invariant | Drift in conserved totals | Remains within script tolerance |
 | [Species Conservation](@ref) | Discrete invariant | Drift in total and per-species quantities | Remains within script tolerance |
+| [Coupling Null-Source Identity](@ref) | Canonical non-coupled reference dataset | Maximum conserved-state difference vs the SciML-backed hyperbolic solve | Remains below the stated machine-precision threshold |
+| [Coupled Mass Conservation](@ref) | Discrete invariant | Relative drift in total mass and total momentum under cooling-source coupling | Remains below the stated machine-precision threshold |
 | [Passive Scalar Convergence](@ref) | Exact solution | L1 passive-scalar error and observed rate | Meets script tolerance |
 | [GRMHD Flat-Space Reduction](@ref) | Asymptotic reduction | GRMHD/SRMHD flux mismatch and round-trip error | Remains below stated thresholds |
 | [GRMHD Newtonian Limit](@ref) | Asymptotic reduction | Primitive-recovery error and static-atmosphere drift | Remains below stated thresholds |
@@ -52,6 +54,7 @@ examples are not yet rigorous literature-backed reproductions.
 | [Navier-Stokes Convergence](@ref) | Exact Taylor-Green vortex | Linf velocity error and observed rate | Rates exceed the script threshold |
 | [Taylor-Green KE Decay](@ref) | Exact kinetic-energy decay law | Relative decay error | Meets the script tolerance |
 | [Porous Medium (Barenblatt)](@ref) | Exact self-similar solution | L2 error trend and minimum observed rate | Errors decrease monotonically |
+| [Coupled Cooling Reference](@ref) | Trusted fine-grid coupled reference dataset | L1 pressure error and observed refinement rate | Errors decrease monotonically and rates exceed the stated threshold |
 | [AMR Reference Tracking](@ref) | Trusted structured-grid reference dataset | L1 density error versus a uniform baseline plus compression ratio | Error decreases with AMR budget while active-cell compression stays below the stated threshold |
 | [SRMHD Convergence](@ref) | Exact smooth-wave solution | L1 density error and observed rate | Rates exceed the script threshold |
 | [SRMHD Eigenmode Convergence](@ref) | Linearised exact eigenmodes | Self-convergence rate for each mode | All mode-wise rates exceed the script threshold |

@@ -84,16 +84,17 @@ limitations = [
 [[features]]
 feature = "coupling"
 maturity = "provisional"
-validation = "targeted_tests"
+validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "coupling"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
-summary = "Operator-split multiphysics coupling APIs with focused regression tests."
+required_ladder_stages = ["verification", "benchmark", "invariant"]
+summary = "Operator-split hyperbolic plus stiff-source coupling with identity verification, smooth reference tracking, and mass-momentum conservation checks."
 limitations = [
-  "Coupled workflows remain provisional until order, stability, and benchmark evidence are automated.",
-  "Current coupling tests support engineering development but not publication-grade scientific claims.",
+  "Coupling remains provisional because the automated evidence currently covers operator-split hyperbolic plus local stiff-source cases, not broader multiphysics workflows.",
+  "Current claim scope is limited to the NullSource identity, smooth advection-cooling reference benchmark, and periodic mass-momentum conservation cases listed in the validation manifest.",
 ]
 
 [[features]]
@@ -114,16 +115,16 @@ limitations = [
 [[features]]
 feature = "io_extensions"
 maturity = "experimental"
-validation = "smoke_tests"
+validation = "targeted_tests"
 role = "research_support_tooling"
 solver_family = "research_tooling"
 precision_policy = "not_applicable"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
-summary = "Optional HDF5 and related I/O extensions that require explicit opt-in dependencies."
+summary = "Optional JLD2 checkpointing and HDF5 solution I/O with round-trip integrity checks."
 limitations = [
   "I/O extensions are treated as reproducibility tooling; they do not expand the package's scientific validation claims.",
-  "Optional extensions require explicit dependency opt-in and format-compatibility checks before use in archival workflows.",
+  "Optional extensions still require explicit dependency opt-in and should remain experimental until broader archival compatibility is exercised across more workflows.",
 ]
 
 [[generated_pages]]
@@ -664,6 +665,20 @@ metric = "Observed convergence rates with source forcing"
 acceptance = "Observed rates satisfy the script's stated tolerance."
 
 [[generated_pages]]
+id = "verification-coupling-nullsource-identity"
+page = "verification/coupling_nullsource_identity.md"
+source = "docs/src/literate_verification/coupling_nullsource_identity.jl"
+feature = "coupling"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "code_verification"
+reference_kind = "reference_dataset"
+reference_source = "Canonical SciML-backed non-coupled hyperbolic solution with NullSource identity expectation"
+metric = "Maximum absolute conserved-state difference between solve(prob, SSPRK33()) and solve_coupled(prob, NullSource())"
+acceptance = "Final times match to machine precision and the conserved-state difference remains below 1e-12."
+
+[[generated_pages]]
 id = "verification-species-conservation"
 page = "verification/species_conservation.md"
 source = "docs/src/literate_verification/species_conservation.jl"
@@ -676,6 +691,34 @@ reference_kind = "discrete_invariant"
 reference_source = "Stoichiometric species conservation identity"
 metric = "Relative drift in total and per-species conserved quantities"
 acceptance = "All reported conservation errors remain below the script's thresholds."
+
+[[generated_pages]]
+id = "verification-coupling-mass-conservation"
+page = "verification/coupling_mass_conservation.md"
+source = "docs/src/literate_verification/coupling_mass_conservation.jl"
+feature = "coupling"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Mass and momentum invariance for periodic cooling-source coupling"
+metric = "Relative drift in total mass and total momentum"
+acceptance = "Mass and momentum drifts remain below 1e-12 for all reported resolutions."
+
+[[generated_pages]]
+id = "verification-coupling-cooling-reference"
+page = "verification/coupling_cooling_reference.md"
+source = "docs/src/literate_verification/coupling_cooling_reference.jl"
+feature = "coupling"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "reference_dataset"
+reference_source = "Trusted N=800 Strang-split reference for the smooth advection-cooling operator-splitting benchmark"
+metric = "L1 pressure error against the fine-grid coupled reference and observed refinement rate"
+acceptance = "Pressure error decreases monotonically, refinement rates remain above 1.7, and the finest-grid error satisfies the script tolerance."
 
 [[generated_pages]]
 id = "verification-sod-grid"
@@ -1088,6 +1131,63 @@ expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
 [[scientific_evidence]]
+id = "evidence-coupling-nullsource-identity"
+path = "docs/src/literate_verification/coupling_nullsource_identity.jl"
+entrypoint = "docs/src/literate_verification/coupling_nullsource_identity.jl"
+feature = "coupling"
+rationale = "Verification that the coupling wrapper reduces exactly to the canonical hyperbolic solve when the source operator is identically zero."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "reference_dataset"
+reference_source = "Canonical SciML-backed non-coupled hyperbolic solution with NullSource identity expectation"
+metric = "Maximum absolute conserved-state difference between solve(prob, SSPRK33()) and solve_coupled(prob, NullSource())"
+acceptance = "Final times match to machine precision and the conserved-state difference remains below 1e-12."
+solver_family = "coupling"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-coupling-cooling-reference"
+path = "docs/src/literate_verification/coupling_cooling_reference.jl"
+entrypoint = "docs/src/literate_verification/coupling_cooling_reference.jl"
+feature = "coupling"
+rationale = "Smooth advection plus temperature-dependent cooling benchmarked against a trusted fine-grid coupled reference."
+runtime_tier = "ci"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "reference_dataset"
+reference_source = "Trusted N=800 Strang-split reference for the smooth advection-cooling operator-splitting benchmark"
+metric = "L1 pressure error against the fine-grid coupled reference and observed refinement rate"
+acceptance = "Pressure error decreases monotonically, refinement rates remain above 1.7, and the finest-grid error satisfies the script tolerance."
+solver_family = "coupling"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-coupling-mass-conservation"
+path = "docs/src/literate_verification/coupling_mass_conservation.jl"
+entrypoint = "docs/src/literate_verification/coupling_mass_conservation.jl"
+feature = "coupling"
+rationale = "Periodic mass and momentum invariance for the operator-split cooling-source coupling path."
+runtime_tier = "ci"
+ladder_stage = "invariant"
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "Mass and momentum invariance for periodic cooling-source coupling"
+metric = "Relative drift in total mass and total momentum"
+acceptance = "Mass and momentum drifts remain below 1e-12 for all reported resolutions."
+solver_family = "coupling"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
 id = "evidence-grmhd-flat"
 path = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
 entrypoint = "docs/src/literate_verification/grmhd_asymptotic_flat.jl"
@@ -1189,7 +1289,7 @@ reason = "Relative solver comparisons without external truth are retained as reg
 [[exclusions]]
 id = "demoted-premixed-flame"
 path = "docs/src/literate_verification/premixed_flame_1d.jl"
-feature = "hyperbolic"
+feature = "coupling"
 status = "demoted"
 reason = "Current combustion checks are qualitative regressions and not literature-backed validation cases."
 

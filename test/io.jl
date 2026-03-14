@@ -1,6 +1,9 @@
 using Test
 using Dates
 using FiniteVolumeMethod
+using HDF5
+using JLD2
+using StaticArrays
 
 @testset "I/O Module" begin
     @testset "OutputSchedule" begin
@@ -101,6 +104,59 @@ using FiniteVolumeMethod
         @test cm.interval == 50
         @test cm.dir == "cp"
         @test cm.keep_recent == 5
+    end
+
+    @testset "Checkpoint round-trip (JLD2 extension)" begin
+        tmpdir = mktempdir()
+        cm = CheckpointManager(; interval = 10, dir = tmpdir, keep_recent = 2)
+        state = [SVector(1.0, 0.0, 2.5), SVector(0.9, 0.1, 2.4)]
+        metadata = Dict("case" => "unit-test", "step_kind" => "restartable")
+
+        first_path = save_checkpoint(cm, state, 10; metadata)
+        loaded_first = load_checkpoint(cm, 10)
+
+        @test isfile(first_path)
+        @test loaded_first["state"] == state
+        @test loaded_first["step"] == 10
+        @test loaded_first["metadata"]["case"] == "unit-test"
+        @test loaded_first["metadata"]["step_kind"] == "restartable"
+        @test loaded_first["metadata"]["checkpoint_format_version"] == 1
+        @test loaded_first["metadata"]["checkpoint_writer"] == "FiniteVolumeMethod.FVMCheckpointExt"
+
+        second_path = save_checkpoint(cm, state, 20; metadata)
+        third_path = save_checkpoint(cm, state, 30; metadata)
+
+        @test !isfile(first_path)
+        @test isfile(second_path)
+        @test isfile(third_path)
+    end
+
+    @testset "HDF5 solution round-trip" begin
+        mesh = generate_mesh_1d(5, 1.0)
+        solution = collect(range(1.0, 2.0; length = 5))
+        fields = Dict("temperature" => solution .^ 2, "density" => fill(1.0, 5))
+        metadata = Dict("case" => "roundtrip", "schema_version" => 3)
+        tmpfile = tempname() * ".h5"
+
+        try
+            write_solution_hdf5(tmpfile, solution, mesh; fields, metadata)
+            @test isfile(tmpfile)
+
+            loaded = read_solution_hdf5(tmpfile)
+            loaded_solution_only = read_solution_hdf5(tmpfile; load_fields = false)
+
+            @test loaded["solution"] ≈ solution
+            @test loaded["fields"]["temperature"] ≈ solution .^ 2
+            @test loaded["fields"]["density"] == fill(1.0, 5)
+            @test !haskey(loaded_solution_only, "fields")
+            @test loaded["metadata"]["case"] == "roundtrip"
+            @test loaded["metadata"]["schema_version"] == 3
+            @test loaded["metadata"]["solution_format_version"] == 1
+            @test loaded["metadata"]["mesh_type"] == "Mesh1D"
+            @test loaded["metadata"]["solution_writer"] == "FiniteVolumeMethod.FVMHdf5Ext"
+        finally
+            rm(tmpfile; force = true)
+        end
     end
 
     @testset "InSitu Monitors" begin
