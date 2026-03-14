@@ -211,6 +211,11 @@ end
 scientific_evidence_for_feature(manifest, feature::Symbol) =
     filter(entry -> entry.feature == feature, manifest.scientific_evidence)
 
+function scientific_evidence_for_features(manifest, features)
+    feature_set = Set(features)
+    return filter(entry -> entry.feature in feature_set, manifest.scientific_evidence)
+end
+
 function feature_ladder_coverage(manifest, feature::Symbol)
     entry = manifest.features[feature]
     required = copy(entry.required_ladder_stages)

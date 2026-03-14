@@ -79,6 +79,7 @@ end
         @test isdir(outputs.summaries_dir)
         @test isdir(outputs.bundles_dir)
         @test length(outputs.bundles) == 2
+        @test length(filter(name -> endswith(name, ".toml"), readdir(outputs.summaries_dir))) == 6
 
         bundle_index = TOML.parsefile(outputs.bundle_index_path)
         @test bundle_index["bundle_count"] == 2
@@ -97,5 +98,6 @@ end
         @test occursin("## Reproduction Bundles", report)
         @test occursin("evidence-euler-mms", report)
         @test occursin("evidence-poisson-convergence", report)
+        @test !occursin("evidence-mhd-alfven", report)
     end
 end

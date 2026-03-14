@@ -29,10 +29,11 @@ function build_release_outputs(
     mkpath(summaries_dir)
     mkpath(bundles_dir)
     mkpath(reports_dir)
+    executed_entries = RepoValidationManifest.scientific_evidence_for_features(manifest, bundle_features)
 
     if rerun_evidence
-        RepoEvidenceRunner.run_evidence_suite(
-            manifest;
+        RepoEvidenceRunner.run_evidence_entries(
+            executed_entries;
             repo_root,
             output_dir = summaries_dir,
         )
@@ -52,9 +53,10 @@ function build_release_outputs(
         report_path;
         summary_dir = summaries_dir,
         bundle_dir = bundles_dir,
+        executed_entry_ids = [entry.id for entry in executed_entries],
     )
 
-    _write_release_index(output_root, bundles, report_path, summaries_dir)
+    _write_release_index(output_root, bundles, report_path, executed_entries)
 
     return (
         output_root = output_root,
@@ -68,8 +70,8 @@ function build_release_outputs(
     )
 end
 
-function _write_release_index(output_root::AbstractString, bundles, report_path::AbstractString, summaries_dir::AbstractString)
-    summary_count = length(filter(name -> endswith(name, ".toml"), readdir(summaries_dir)))
+function _write_release_index(output_root::AbstractString, bundles, report_path::AbstractString, executed_entries)
+    summary_count = length(executed_entries)
     io = IOBuffer()
     println(io, "# Release Outputs")
     println(io)
