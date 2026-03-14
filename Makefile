@@ -6,7 +6,8 @@
 # Then:       make ci-test    (uses cached depot volume)
 
 .PHONY: help ci-build ci-test ci-test-file ci-evidence ci-format ci-format-fix \
-        ci-docs ci-docs-ci ci-report ci-bundles ci-release-outputs ci-repl ci-all ci-clean ci-depot-clean
+        ci-docs ci-docs-ci ci-report ci-bundles ci-release-outputs ci-repl ci-all \
+        ci-fast ci-smoke ci-full-evidence ci-release-audit ci-clean ci-depot-clean
 
 COMPOSE := docker-compose
 
@@ -26,6 +27,18 @@ ci-test: ## Run full test suite (mirrors .github/workflows/CI.yml.disabled)
 
 ci-test-file: ## Run single test file (TEST_FILE=test/geometry.jl make ci-test-file)
 	$(COMPOSE) run --rm test-file
+
+ci-fast: ## Run the fast API/interop lane
+	CI_LANE=fast-api-interop $(COMPOSE) run --rm lane
+
+ci-smoke: ## Run the scientific smoke lane for stable solver families
+	CI_LANE=scientific-smoke $(COMPOSE) run --rm lane
+
+ci-full-evidence: ## Run the full scientific evidence lane
+	CI_LANE=full-evidence $(COMPOSE) run --rm lane
+
+ci-release-audit: ## Run the release-audit lane with stable release outputs
+	CI_LANE=release-audit $(COMPOSE) run --rm lane
 
 ci-evidence: ## Run curated scientific-evidence suite (mirrors CI scientific-evidence lane)
 	$(COMPOSE) run --rm evidence
@@ -54,7 +67,7 @@ ci-release-outputs: ## Build release-style outputs (summaries + bundles + report
 ci-repl: ## Interactive Julia REPL in container
 	$(COMPOSE) run --rm repl
 
-ci-all: ci-format ci-test ci-evidence ci-docs-ci ci-report ## Run format + test + evidence + docs-ci + report
+ci-all: ci-format ci-fast ci-smoke ci-docs-ci ci-full-evidence ci-release-audit ## Run the full local CI lane stack
 
 ci-clean: ## Remove containers (keeps depot volume)
 	$(COMPOSE) down --remove-orphans

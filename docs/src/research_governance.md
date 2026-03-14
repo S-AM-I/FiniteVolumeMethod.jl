@@ -71,3 +71,14 @@ report.
   check that was used to validate the packaged evidence.
 - These bundles copy the exact machine-readable summaries and referenced figure
   artifacts needed to archive or review the current claim-bearing evidence set.
+
+## Local CI Lanes
+
+- `make ci-fast` runs the fast API/interop lane for environment integrity,
+  SciML contract coverage, semidiscrete adapters, and repository governance.
+- `make ci-smoke` runs one verification-grade evidence case per stable
+  claim-bearing solver family.
+- `make ci-full-evidence` runs the complete scientific evidence catalog.
+- `make ci-release-audit` runs the release-audit lane, including stable release
+  output generation with the same provenance and replay checks used by the
+  release-packaging workflow.
