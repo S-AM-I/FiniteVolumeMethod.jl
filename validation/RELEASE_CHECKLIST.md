@@ -20,6 +20,8 @@ research-grade.
 - Selected stable evidence summaries are replay-checked successfully during
   release-output generation, or the replay step is explicitly disabled and
   justified for that release candidate.
+- `make ci-release-audit` (or the equivalent `scripts/run_ci_lane.jl
+  release-audit`) passes locally before the release is considered ready.
 - `test/environment_integrity.jl` and `docs/environment_integrity.jl` pass.
 - Documentation and README language match the current capability matrix and
   evidence status.
