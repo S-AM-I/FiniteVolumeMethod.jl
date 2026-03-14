@@ -105,6 +105,18 @@ services:
       bash -c 'julia --project=test -e "using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.resolve(); Pkg.instantiate()" &&
       julia --project=test test/scientific_evidence.jl'
 
+  # Executed validation report with machine-readable summaries
+  report:
+    <<: *common
+    command: >-
+      bash -c 'julia --project=. scripts/verification_validation_report.jl'
+
+  # Reproduction bundles for all evidence-bearing solver families
+  bundles:
+    <<: *common
+    command: >-
+      bash -c 'julia --project=. scripts/build_reproduction_bundles.jl'
+
   # Interactive Julia REPL
   repl:
     <<: *common

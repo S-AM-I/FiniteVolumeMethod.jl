@@ -13,6 +13,11 @@ function run_evidence_entry(entry; repo_root::AbstractString, output_dir::Abstra
     entrypoint = joinpath(repo_root, entry.entrypoint)
     mod = @eval module $(gensym(:EvidenceModule)) end
     Base.include(mod, joinpath(@__DIR__, "evidence_capture.jl"))
+    artifact_output_dir = joinpath(output_dir, "artifacts", entry.id)
+    mkpath(artifact_output_dir)
+    Base.invokelatest(
+        () -> getfield(mod, :configure_evidence_capture)(; artifact_dir = artifact_output_dir),
+    )
 
     started_at = now()
     include_error = nothing
@@ -51,6 +56,7 @@ function run_evidence_entry(entry; repo_root::AbstractString, output_dir::Abstra
         "status" => status ? "pass" : "fail",
         "recorded_result_count" => length(records),
         "recorded_results" => copy(records),
+        "artifact_output_dir" => artifact_output_dir,
         "counts" => Dict(
             "passes" => counts.passes,
             "fails" => counts.fails,
@@ -81,10 +87,16 @@ function run_evidence_suite(
         repo_root::AbstractString,
         output_dir::AbstractString = DEFAULT_OUTPUT_DIR,
     )
+    return run_evidence_entries(manifest.scientific_evidence; repo_root, output_dir)
+end
+
+function run_evidence_entries(
+        entries;
+        repo_root::AbstractString,
+        output_dir::AbstractString = DEFAULT_OUTPUT_DIR,
+    )
     mkpath(output_dir)
-    return [
-        run_evidence_entry(entry; repo_root, output_dir) for entry in manifest.scientific_evidence
-    ]
+    return [run_evidence_entry(entry; repo_root, output_dir) for entry in entries]
 end
 
 evidence_summary_path(id::AbstractString; output_dir::AbstractString = DEFAULT_OUTPUT_DIR) =

@@ -91,6 +91,9 @@ scatterlines!(
 )
 resize_to_layout!(fig)
 fig
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("coupling_cooling_reference.png"), fig)
+end
 
 # ## Test Assertions
 @test reference.t ≈ t_final atol = 1.0e-12 #src

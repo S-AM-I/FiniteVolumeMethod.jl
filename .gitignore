@@ -9,5 +9,7 @@ test/Manifest.toml
 docs/build/
 docs/site/
 docs/Manifest.toml
+validation/reports/
+validation/reproduction_bundles/
 .gitignore
 docker-compose.override.yml
