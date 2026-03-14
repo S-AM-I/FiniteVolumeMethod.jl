@@ -7,11 +7,15 @@ using .RepoValidationManifest
 const REPO_ROOT = dirname(@__DIR__)
 manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation", "manifest.toml"))
 const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.md")
+const VALIDATION_REPORT_SCRIPT = joinpath(REPO_ROOT, "scripts", "verification_validation_report.jl")
+const REPRODUCTION_BUNDLE_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_reproduction_bundles.jl")
 
 @testset "Validation manifest governance" begin
     @test manifest.manifest_version == 3
     @test manifest.support_policy == :current_lts_and_stable
     @test isfile(RELEASE_CHECKLIST)
+    @test isfile(VALIDATION_REPORT_SCRIPT)
+    @test isfile(REPRODUCTION_BUNDLE_SCRIPT)
     @test !isempty(manifest.generated_pages)
     @test !isempty(manifest.scientific_evidence)
     @test !isempty(manifest.features)

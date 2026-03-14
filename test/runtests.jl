@@ -233,6 +233,10 @@ end
         safe_include("repository_governance.jl")
     end
 
+    @testset verbose = true "Reproducibility Bundles" begin
+        safe_include("reproducibility_bundle.jl")
+    end
+
     @testset verbose = true "Quality Ledger" begin
         safe_include("quality_ledger.jl")
     end

@@ -1,39 +1,48 @@
 module ValidationReport
 
 using Dates
+using TOML
 
 include(joinpath(@__DIR__, "manifest.jl"))
 using .RepoValidationManifest
 
 """
-    generate(manifest_path, output_path)
+    generate(manifest_path, output_path; summary_dir = nothing, bundle_dir = nothing)
 
-Generate a validation report from the manifest, summarising covered features,
-executed evidence cases, maturity levels, and open exclusions.
+Generate a validation report from the manifest, optionally enriching it with
+executed evidence summaries and reproduction-bundle links.
 """
-function generate(manifest_path::AbstractString, output_path::AbstractString)
+function generate(
+        manifest_path::AbstractString,
+        output_path::AbstractString;
+        summary_dir::Union{Nothing, AbstractString} = nothing,
+        bundle_dir::Union{Nothing, AbstractString} = nothing,
+    )
     manifest = RepoValidationManifest.load_manifest(manifest_path)
     io = IOBuffer()
     capability_rows = RepoValidationManifest.capability_rows(manifest)
     stable_features = [f for (f, e) in manifest.features if e.maturity == :stable]
     provisional_features = [f for (f, e) in manifest.features if e.maturity == :provisional]
     experimental_features = [f for (f, e) in manifest.features if e.maturity == :experimental]
+    summaries = _load_evidence_summaries(summary_dir)
 
     println(io, "# Validation Report")
     println(io)
     println(io, "Generated: $(Dates.format(now(), "yyyy-mm-dd HH:MM:SS UTC"))")
     println(io)
 
-    ## ── Research Contract ──
     println(io, "## Research Contract")
     println(io)
     println(io, "- **Manifest version:** `$(manifest.manifest_version)`")
     println(io, "- **Julia support policy:** `$(manifest.support_policy)`")
     println(io, "- **Stable claim-bearing features:** Only stable `claim_bearing_solver` capabilities may support publication-grade scientific claims.")
     println(io, "- **Tooling features:** Dashboard and I/O features are treated as reproducibility infrastructure, not solver validation.")
+    if !isempty(summaries)
+        passed = count(summary -> get(summary, "status", "unknown") == "pass", values(summaries))
+        println(io, "- **Executed evidence summaries loaded:** `$passed / $(length(summaries))` passing")
+    end
     println(io)
 
-    ## ── Capability Matrix ──
     println(io, "## Capability Matrix")
     println(io)
     println(io, "| Feature | Role | Maturity | Claim Policy | Validation | Solver Family | Required Ladder | Summary | Limitations |")
@@ -46,7 +55,6 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     end
     println(io)
 
-    ## ── Scientific Evidence ──
     println(io, "## Scientific Evidence Cases")
     println(io)
     println(io, "| ID | Feature | Ladder Stage | Solver Family | Runtime | Category | Precision | Seed Policy | Metric | Expected Artifacts | Reference | Acceptance | Entrypoint |")
@@ -59,7 +67,27 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     end
     println(io)
 
-    ## ── Evidence Ladder Coverage ──
+    if !isempty(summaries)
+        println(io, "## Executed Evidence Results")
+        println(io)
+        println(io, "| ID | Status | Recorded Results | Summary File | Bundle Artifacts |")
+        println(io, "|----|--------|------------------|--------------|------------------|")
+        for entry in manifest.scientific_evidence
+            summary = get(summaries, entry.id, nothing)
+            if isnothing(summary)
+                println(io, "| $(entry.id) | missing | 0 | n/a | n/a |")
+                continue
+            end
+            bundle_artifacts = _bundle_artifact_links(output_path, bundle_dir, entry, summary)
+            summary_link = _summary_link(output_path, summary_dir, entry.id)
+            println(
+                io,
+                "| $(entry.id) | $(get(summary, "status", "unknown")) | $(get(summary, "recorded_result_count", 0)) | $summary_link | $(isempty(bundle_artifacts) ? "n/a" : join(bundle_artifacts, ", ")) |",
+            )
+        end
+        println(io)
+    end
+
     println(io, "## Evidence Ladder Coverage")
     println(io)
     println(io, "| Feature | Required Stages | Present Stages | Missing Stages | Status |")
@@ -73,7 +101,6 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     end
     println(io)
 
-    ## ── Generated Pages Coverage ──
     println(io, "## Generated Pages Coverage")
     println(io)
     by_feature = Dict{Symbol, Vector{RepoValidationManifest.GeneratedPageEntry}}()
@@ -99,7 +126,25 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
         println(io)
     end
 
-    ## ── Open Exclusions ──
+    if !isnothing(bundle_dir) && isdir(bundle_dir)
+        println(io, "## Reproduction Bundles")
+        println(io)
+        println(io, "| Feature | Bundle Manifest | Bundle README | Artifact Count |")
+        println(io, "|---------|-----------------|---------------|----------------|")
+        for feature in sort!(readdir(bundle_dir); by = identity)
+            feature_dir = joinpath(bundle_dir, feature)
+            isdir(feature_dir) || continue
+            manifest_path = joinpath(feature_dir, "bundle_manifest.toml")
+            readme_path = joinpath(feature_dir, "README.md")
+            artifact_dir = joinpath(feature_dir, "artifacts")
+            artifact_count = isdir(artifact_dir) ? length(readdir(artifact_dir)) : 0
+            manifest_link = isfile(manifest_path) ? _markdown_link(output_path, manifest_path) : "n/a"
+            readme_link = isfile(readme_path) ? _markdown_link(output_path, readme_path) : "n/a"
+            println(io, "| $feature | $manifest_link | $readme_link | $artifact_count |")
+        end
+        println(io)
+    end
+
     println(io, "## Open Exclusions")
     println(io)
     if !isempty(provisional_features)
@@ -125,7 +170,6 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
         println(io)
     end
 
-    ## ── Summary Statistics ──
     println(io, "## Summary")
     println(io)
     println(io, "- **Total features:** $(length(manifest.features))")
@@ -144,9 +188,51 @@ function generate(manifest_path::AbstractString, output_path::AbstractString)
     println(io)
 
     report = String(take!(io))
+    mkpath(dirname(output_path))
     write(output_path, report)
     @info "Validation report written to $output_path"
     return report
 end
+
+function _load_evidence_summaries(summary_dir::Union{Nothing, AbstractString})
+    if isnothing(summary_dir) || !isdir(summary_dir)
+        return Dict{String, Dict{String, Any}}()
+    end
+    summaries = Dict{String, Dict{String, Any}}()
+    for file in sort!(filter(name -> endswith(name, ".toml"), readdir(summary_dir)); by = identity)
+        path = joinpath(summary_dir, file)
+        summary = TOML.parsefile(path)
+        summaries[get(summary, "id", basename(path))] = summary
+    end
+    return summaries
+end
+
+function _summary_link(report_path::AbstractString, summary_dir::Union{Nothing, AbstractString}, id::AbstractString)
+    if isnothing(summary_dir)
+        return "n/a"
+    end
+    path = joinpath(summary_dir, "$(id).toml")
+    return isfile(path) ? _markdown_link(report_path, path) : "n/a"
+end
+
+function _bundle_artifact_links(report_path, bundle_dir, entry, summary)
+    if isnothing(bundle_dir)
+        return String[]
+    end
+    artifact_dir = joinpath(bundle_dir, string(entry.feature), "artifacts")
+    isdir(artifact_dir) || return String[]
+    links = String[]
+    for record in get(summary, "recorded_results", Any[])
+        for artifact in get(record, "artifacts", Any[])
+            artifact_name = String(artifact)
+            artifact_path = joinpath(artifact_dir, basename(artifact_name))
+            isfile(artifact_path) && push!(links, _markdown_link(report_path, artifact_path))
+        end
+    end
+    return unique(links)
+end
+
+_markdown_link(report_path::AbstractString, target_path::AbstractString) =
+    "[`$(basename(target_path))`]($(relpath(target_path, dirname(report_path))))"
 
 end # module

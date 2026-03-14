@@ -55,3 +55,13 @@ report.
   tier, and summary requirement.
 - The scientific evidence runner executes those entrypoints in isolation and
   writes machine-readable summaries for local and release-grade reporting.
+
+## Reproduction Outputs
+
+- `julia --project=. scripts/verification_validation_report.jl` regenerates the
+  validation report together with executed evidence summaries in
+  `validation/reports/`.
+- `julia --project=. scripts/build_reproduction_bundles.jl` creates per-feature
+  reproduction bundles in `validation/reproduction_bundles/`.
+- These bundles copy the exact machine-readable summaries and referenced figure
+  artifacts needed to archive or review the current claim-bearing evidence set.

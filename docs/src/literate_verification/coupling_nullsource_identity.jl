@@ -86,6 +86,9 @@ hlines!(ax, [1.0e-12], color = :black, linestyle = :dash, linewidth = 1.5, label
 axislegend(ax, position = :rt)
 resize_to_layout!(fig)
 fig
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("coupling_nullsource_identity.png"), fig)
+end
 
 # ## Test Assertions
 @test all(result -> isapprox(result.t_canonical, result.t_split; atol = 1.0e-12), results) #src

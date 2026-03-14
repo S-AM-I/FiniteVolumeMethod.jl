@@ -10,6 +10,10 @@ research-grade.
 - Exclusions and demotions are declared explicitly in `validation/manifest.toml`.
 - `validation/generate_report.jl` produces the release validation report from a
   clean environment.
+- `scripts/verification_validation_report.jl` regenerates executed evidence
+  summaries for the release report.
+- `scripts/build_reproduction_bundles.jl` refreshes per-feature reproduction
+  bundles for archival and review.
 - `test/environment_integrity.jl` and `docs/environment_integrity.jl` pass.
 - Documentation and README language match the current capability matrix and
   evidence status.
