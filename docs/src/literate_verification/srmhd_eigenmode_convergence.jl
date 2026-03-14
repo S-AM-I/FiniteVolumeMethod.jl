@@ -135,6 +135,9 @@ axislegend(ax, position = :lb)
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "srmhd_eigenmode_convergence.png") fig #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("srmhd_eigenmode_convergence.png"), fig)
+end
 
 # ## Test Assertions
 # Each eigenmode should show self-convergence at rate > 0.5 with MUSCL+HLL.

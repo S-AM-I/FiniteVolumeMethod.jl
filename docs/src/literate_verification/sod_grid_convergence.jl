@@ -130,6 +130,9 @@ end
 resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "sod_grid_convergence_density.png") fig1 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("sod_grid_convergence_density.png"), fig1)
+end
 
 # ## Visualisation -- L1 Error Convergence
 fig2 = Figure(fontsize = 24, size = (600, 500))
@@ -149,6 +152,9 @@ axislegend(ax, position = :lb)
 resize_to_layout!(fig2)
 fig2
 @test_reference joinpath(@__DIR__, "../figures", "sod_grid_convergence_errors.png") fig2 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("sod_grid_convergence_errors.png"), fig2)
+end
 
 # ## Part 2: Solver/Reconstruction Comparison at N = 200
 N_compare = 200
@@ -191,6 +197,9 @@ barplot!(ax3, 1:length(combo_errors), combo_errors, color = :steelblue)
 resize_to_layout!(fig3)
 fig3
 @test_reference joinpath(@__DIR__, "../figures", "sod_grid_convergence_comparison.png") fig3 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("sod_grid_convergence_comparison.png"), fig3)
+end
 
 # ## Test Assertions
 @test all(errs_rho[i] > errs_rho[i + 1] for i in 1:(length(errs_rho) - 1)) #src

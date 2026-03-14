@@ -9,6 +9,7 @@ manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation"
 const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.md")
 const VALIDATION_REPORT_SCRIPT = joinpath(REPO_ROOT, "scripts", "verification_validation_report.jl")
 const REPRODUCTION_BUNDLE_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_reproduction_bundles.jl")
+const RELEASE_OUTPUT_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_release_outputs.jl")
 
 @testset "Validation manifest governance" begin
     @test manifest.manifest_version == 3
@@ -16,6 +17,7 @@ const REPRODUCTION_BUNDLE_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_reprodu
     @test isfile(RELEASE_CHECKLIST)
     @test isfile(VALIDATION_REPORT_SCRIPT)
     @test isfile(REPRODUCTION_BUNDLE_SCRIPT)
+    @test isfile(RELEASE_OUTPUT_SCRIPT)
     @test !isempty(manifest.generated_pages)
     @test !isempty(manifest.scientific_evidence)
     @test !isempty(manifest.features)

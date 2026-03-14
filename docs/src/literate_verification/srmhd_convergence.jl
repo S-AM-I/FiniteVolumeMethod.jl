@@ -105,6 +105,9 @@ axislegend(ax2, position = :rt)
 resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "srmhd_smooth_solutions.png") fig1 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("srmhd_smooth_solutions.png"), fig1)
+end
 
 # ## Visualisation — Convergence Plot
 fig2 = Figure(fontsize = 24, size = (700, 550))
@@ -124,6 +127,9 @@ axislegend(ax, position = :lb)
 resize_to_layout!(fig2)
 fig2
 @test_reference joinpath(@__DIR__, "../figures", "srmhd_smooth_convergence.png") fig2 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("srmhd_smooth_convergence.png"), fig2)
+end
 
 # ## Test Assertions
 @test all(r -> r > 0.8, rates) #src

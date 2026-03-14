@@ -101,6 +101,9 @@ tricontourf!(ax3, tri_fine, u_err, colormap = :hot)
 resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "poisson_convergence_solution.png") fig1 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("poisson_convergence_solution.png"), fig1)
+end
 
 # ## Visualisation — Convergence Plot
 h_vals = 1.0 ./ mesh_sizes
@@ -130,6 +133,9 @@ end
 resize_to_layout!(fig2)
 fig2
 @test_reference joinpath(@__DIR__, "../figures", "poisson_convergence_rates.png") fig2 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("poisson_convergence_rates.png"), fig2)
+end
 
 # ## Test Assertions
 @test all(r -> r > 1.7, rates_Linf) #src

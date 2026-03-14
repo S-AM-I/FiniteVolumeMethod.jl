@@ -14,6 +14,8 @@ research-grade.
   summaries for the release report.
 - `scripts/build_reproduction_bundles.jl` refreshes per-feature reproduction
   bundles for archival and review.
+- `scripts/build_release_outputs.jl --stable-only` produces the release-style
+  output tree, including the top-level index, bundles, summaries, and report.
 - `test/environment_integrity.jl` and `docs/environment_integrity.jl` pass.
 - Documentation and README language match the current capability matrix and
   evidence status.

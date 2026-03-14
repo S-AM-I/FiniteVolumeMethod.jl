@@ -114,6 +114,9 @@ scatter!(ax2, x_fine, abs.(rho_num .- rho_exact), color = :red, markersize = 4)
 resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "euler_mms_solution.png") fig1 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("euler_mms_solution.png"), fig1)
+end
 
 # ## Visualisation -- Convergence Plot
 fig2 = Figure(fontsize = 24, size = (700, 550))
@@ -144,6 +147,9 @@ axislegend(ax, position = :lb)
 resize_to_layout!(fig2)
 fig2
 @test_reference joinpath(@__DIR__, "../figures", "euler_mms_convergence.png") fig2 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("euler_mms_convergence.png"), fig2)
+end
 
 # ## Test Assertions
 # MUSCL with HLLC should achieve at least first-order convergence on smooth data.

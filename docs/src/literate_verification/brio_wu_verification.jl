@@ -100,6 +100,9 @@ end
 resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "brio_wu_verification_solutions.png") fig1 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("brio_wu_verification_solutions.png"), fig1)
+end
 
 # ## Visualisation — Convergence Plot
 fig2 = Figure(fontsize = 24, size = (700, 550))
@@ -122,6 +125,9 @@ axislegend(ax, position = :lb)
 resize_to_layout!(fig2)
 fig2
 @test_reference joinpath(@__DIR__, "../figures", "brio_wu_verification_convergence.png") fig2 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("brio_wu_verification_convergence.png"), fig2)
+end
 
 # ## Structural Verification
 # Check that the high-resolution solution has expected physical properties.

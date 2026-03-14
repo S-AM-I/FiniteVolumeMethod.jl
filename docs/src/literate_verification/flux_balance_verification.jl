@@ -92,6 +92,9 @@ scatterlines!(ax2, mesh_sizes, solution_errors, color = :darkgreen, marker = :ut
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "flux_balance_verification.png") fig #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("flux_balance_verification.png"), fig)
+end
 
 @test maximum(residual_inf) < 1.0e-10 #src
 @test all(solution_errors[i] > solution_errors[i + 1] for i in 1:(length(solution_errors) - 1)) #src

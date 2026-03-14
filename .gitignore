@@ -11,5 +11,6 @@ docs/site/
 docs/Manifest.toml
 validation/reports/
 validation/reproduction_bundles/
+validation/release_outputs/
 .gitignore
 docker-compose.override.yml
