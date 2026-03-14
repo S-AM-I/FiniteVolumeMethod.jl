@@ -237,6 +237,10 @@ end
         safe_include("reproducibility_bundle.jl")
     end
 
+    @testset verbose = true "Summary Replay" begin
+        safe_include("summary_replay.jl")
+    end
+
     @testset verbose = true "Quality Ledger" begin
         safe_include("quality_ledger.jl")
     end

@@ -7,7 +7,8 @@ include(joinpath(@__DIR__, "manifest.jl"))
 using .RepoValidationManifest
 
 """
-    generate(manifest_path, output_path; summary_dir = nothing, bundle_dir = nothing)
+    generate(manifest_path, output_path; summary_dir = nothing, bundle_dir = nothing,
+             executed_entry_ids = nothing)
 
 Generate a validation report from the manifest, optionally enriching it with
 executed evidence summaries and reproduction-bundle links.
@@ -17,6 +18,7 @@ function generate(
         output_path::AbstractString;
         summary_dir::Union{Nothing, AbstractString} = nothing,
         bundle_dir::Union{Nothing, AbstractString} = nothing,
+        executed_entry_ids = nothing,
     )
     manifest = RepoValidationManifest.load_manifest(manifest_path)
     io = IOBuffer()
@@ -25,6 +27,8 @@ function generate(
     provisional_features = [f for (f, e) in manifest.features if e.maturity == :provisional]
     experimental_features = [f for (f, e) in manifest.features if e.maturity == :experimental]
     summaries = _load_evidence_summaries(summary_dir)
+    executed_entries = _executed_entries(manifest, summaries, executed_entry_ids)
+    reported_entries = isnothing(executed_entry_ids) ? manifest.scientific_evidence : executed_entries
 
     println(io, "# Validation Report")
     println(io)
@@ -40,6 +44,9 @@ function generate(
     if !isempty(summaries)
         passed = count(summary -> get(summary, "status", "unknown") == "pass", values(summaries))
         println(io, "- **Executed evidence summaries loaded:** `$passed / $(length(summaries))` passing")
+    end
+    if !isnothing(executed_entry_ids)
+        println(io, "- **Executed evidence subset:** `$(length(executed_entries))` selected evidence case(s)")
     end
     println(io)
 
@@ -59,7 +66,7 @@ function generate(
     println(io)
     println(io, "| ID | Feature | Ladder Stage | Solver Family | Runtime | Category | Precision | Seed Policy | Metric | Expected Artifacts | Reference | Acceptance | Entrypoint |")
     println(io, "|----|---------|--------------|---------------|---------|----------|-----------|-------------|--------|--------------------|-----------|------------|------------|")
-    for entry in manifest.scientific_evidence
+    for entry in reported_entries
         println(
             io,
             "| $(entry.id) | $(entry.feature) | $(entry.ladder_stage) | $(entry.solver_family) | $(entry.runtime_tier) | $(entry.category) | $(entry.precision_policy) | $(entry.random_seed_policy) | $(entry.metric) | $(join(entry.expected_artifacts, ", ")) | $(entry.reference_source) | $(entry.acceptance) | $(entry.entrypoint) |",
@@ -72,7 +79,7 @@ function generate(
         println(io)
         println(io, "| ID | Status | Recorded Results | Summary File | Bundle Artifacts |")
         println(io, "|----|--------|------------------|--------------|------------------|")
-        for entry in manifest.scientific_evidence
+        for entry in executed_entries
             summary = get(summaries, entry.id, nothing)
             if isnothing(summary)
                 println(io, "| $(entry.id) | missing | 0 | n/a | n/a |")
@@ -176,7 +183,12 @@ function generate(
     println(io, "- **Stable:** $(length(stable_features))")
     println(io, "- **Provisional:** $(length(provisional_features))")
     println(io, "- **Experimental:** $(length(experimental_features))")
-    println(io, "- **Scientific evidence cases:** $(length(manifest.scientific_evidence))")
+    if isnothing(executed_entry_ids)
+        println(io, "- **Scientific evidence cases:** $(length(manifest.scientific_evidence))")
+    else
+        println(io, "- **Scientific evidence cases in manifest:** $(length(manifest.scientific_evidence))")
+        println(io, "- **Scientific evidence cases in this report:** $(length(reported_entries))")
+    end
     println(io, "- **Generated pages:** $(length(manifest.generated_pages))")
     println(io, "- **Declared exclusions:** $(length(manifest.exclusions))")
     ladder_enforced = sum(!isempty(manifest.features[f].required_ladder_stages) for f in keys(manifest.features))
@@ -192,6 +204,20 @@ function generate(
     write(output_path, report)
     @info "Validation report written to $output_path"
     return report
+end
+
+function _executed_entries(manifest, summaries, executed_entry_ids)
+    return if isnothing(executed_entry_ids)
+        if isempty(summaries)
+            manifest.scientific_evidence
+        else
+            ids = Set(keys(summaries))
+            filter(entry -> entry.id in ids, manifest.scientific_evidence)
+        end
+    else
+        ids = Set(String.(collect(executed_entry_ids)))
+        filter(entry -> entry.id in ids, manifest.scientific_evidence)
+    end
 end
 
 function _load_evidence_summaries(summary_dir::Union{Nothing, AbstractString})
