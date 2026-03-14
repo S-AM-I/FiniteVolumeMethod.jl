@@ -63,5 +63,8 @@ report.
   `validation/reports/`.
 - `julia --project=. scripts/build_reproduction_bundles.jl` creates per-feature
   reproduction bundles in `validation/reproduction_bundles/`.
+- `julia --project=. scripts/build_release_outputs.jl --stable-only` builds a
+  release-style output tree with executed summaries, bundle indexes, per-feature
+  bundles, and the validation report in `validation/release_outputs/`.
 - These bundles copy the exact machine-readable summaries and referenced figure
   artifacts needed to archive or review the current claim-bearing evidence set.

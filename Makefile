@@ -6,7 +6,7 @@
 # Then:       make ci-test    (uses cached depot volume)
 
 .PHONY: help ci-build ci-test ci-test-file ci-evidence ci-format ci-format-fix \
-        ci-docs ci-docs-ci ci-report ci-bundles ci-repl ci-all ci-clean ci-depot-clean
+        ci-docs ci-docs-ci ci-report ci-bundles ci-release-outputs ci-repl ci-all ci-clean ci-depot-clean
 
 COMPOSE := docker-compose
 
@@ -47,6 +47,9 @@ ci-report: ## Generate executed validation report with evidence summaries
 
 ci-bundles: ## Build reproduction bundles for all evidence-bearing solver families
 	$(COMPOSE) run --rm bundles
+
+ci-release-outputs: ## Build release-style outputs (summaries + bundles + report + index)
+	$(COMPOSE) run --rm release-outputs
 
 ci-repl: ## Interactive Julia REPL in container
 	$(COMPOSE) run --rm repl

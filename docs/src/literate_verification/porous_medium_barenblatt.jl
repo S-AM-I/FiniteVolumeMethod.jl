@@ -126,6 +126,9 @@ tricontourf!(ax3, tri_vis, abs.(u_num .- u_exact), colormap = :hot)
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "barenblatt_pattle_solution.png") fig #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("barenblatt_pattle_solution.png"), fig)
+end
 
 # ## Test Assertions
 # L2 errors should decrease monotonically with mesh refinement.

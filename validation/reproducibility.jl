@@ -19,6 +19,16 @@ function bundle_features(manifest)
     )
 end
 
+function stable_claim_bundle_features(manifest)
+    return sort!(
+        [
+            feature for (feature, entry) in manifest.features
+                if entry.maturity == :stable && entry.role == :claim_bearing_solver
+        ];
+        by = string,
+    )
+end
+
 function build_reproduction_bundles(
         manifest;
         repo_root::AbstractString,
@@ -28,7 +38,7 @@ function build_reproduction_bundles(
         summary_dir::Union{Nothing, AbstractString} = nothing,
     )
     mkpath(output_root)
-    return [
+    bundles = [
         build_feature_bundle(
                 manifest,
                 feature;
@@ -38,6 +48,8 @@ function build_reproduction_bundles(
                 summary_dir,
             ) for feature in features
     ]
+    write_bundle_index(output_root, bundles)
+    return bundles
 end
 
 function build_feature_bundle(
@@ -228,6 +240,43 @@ function _bundle_readme(feature::Symbol, feature_entry, evidence_rows)
     end
     println(io)
     return String(take!(io))
+end
+
+function write_bundle_index(output_root::AbstractString, bundles)
+    index_manifest = Dict{String, Any}(
+        "bundle_index_version" => 1,
+        "generated_at" => Dates.format(now(), dateformat"yyyy-mm-ddTHH:MM:SS"),
+        "bundle_count" => length(bundles),
+        "bundles" => [
+            Dict{String, Any}(
+                    "feature" => string(bundle.feature),
+                    "bundle_dir" => relpath(bundle.bundle_dir, output_root),
+                    "bundle_manifest" => relpath(bundle.bundle_manifest_path, output_root),
+                    "bundle_readme" => relpath(bundle.bundle_readme_path, output_root),
+                    "artifact_count" => isdir(bundle.artifacts_dir) ? length(readdir(bundle.artifacts_dir)) : 0,
+                    "summary_count" => isdir(bundle.summaries_dir) ? length(filter(name -> endswith(name, ".toml"), readdir(bundle.summaries_dir))) : 0,
+                ) for bundle in bundles
+        ],
+    )
+    open(joinpath(output_root, "bundle_index.toml"), "w") do io
+        TOML.print(io, index_manifest)
+    end
+
+    io = IOBuffer()
+    println(io, "# Reproduction Bundles")
+    println(io)
+    println(io, "| Feature | Bundle README | Bundle Manifest | Summaries | Artifacts |")
+    println(io, "|---------|---------------|-----------------|-----------|-----------|")
+    for bundle in bundles
+        summary_count = isdir(bundle.summaries_dir) ? length(filter(name -> endswith(name, ".toml"), readdir(bundle.summaries_dir))) : 0
+        artifact_count = isdir(bundle.artifacts_dir) ? length(readdir(bundle.artifacts_dir)) : 0
+        println(
+            io,
+            "| $(bundle.feature) | [`README.md`]($(relpath(bundle.bundle_readme_path, output_root))) | [`bundle_manifest.toml`]($(relpath(bundle.bundle_manifest_path, output_root))) | $summary_count | $artifact_count |",
+        )
+    end
+    write(joinpath(output_root, "README.md"), String(take!(io)))
+    return nothing
 end
 
 function _feature_claim_policy(entry)

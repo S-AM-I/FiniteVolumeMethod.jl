@@ -112,6 +112,9 @@ Colorbar(fig1[1, 4], hm2)
 resize_to_layout!(fig1)
 fig1
 @test_reference joinpath(@__DIR__, "../figures", "mhd_divb_solution.png") fig1 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("mhd_divb_solution.png"), fig1)
+end
 
 # ## Visualisation — max|div(B)| vs Grid Size
 fig2 = Figure(fontsize = 24, size = (600, 450))
@@ -125,6 +128,9 @@ axislegend(ax, position = :rt)
 resize_to_layout!(fig2)
 fig2
 @test_reference joinpath(@__DIR__, "../figures", "mhd_divb_convergence.png") fig2 #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("mhd_divb_convergence.png"), fig2)
+end
 
 # ## Test Assertions
 # All max|div(B)| values should be at machine precision, independent of N.

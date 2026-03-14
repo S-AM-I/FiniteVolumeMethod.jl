@@ -117,6 +117,12 @@ services:
     command: >-
       bash -c 'julia --project=. scripts/build_reproduction_bundles.jl'
 
+  # Release-style packaging outputs: summaries, bundles, report, and top-level index
+  release-outputs:
+    <<: *common
+    command: >-
+      bash -c 'julia --project=. scripts/build_release_outputs.jl --stable-only'
+
   # Interactive Julia REPL
   repl:
     <<: *common

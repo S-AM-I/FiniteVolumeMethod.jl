@@ -28,7 +28,7 @@ function generate(
 
     println(io, "# Validation Report")
     println(io)
-    println(io, "Generated: $(Dates.format(now(), "yyyy-mm-dd HH:MM:SS UTC"))")
+    println(io, "Generated: $(Dates.format(now(), dateformat"yyyy-mm-dd HH:MM:SS")) (local time)")
     println(io)
 
     println(io, "## Research Contract")

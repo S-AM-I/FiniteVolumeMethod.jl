@@ -117,6 +117,9 @@ axislegend(ax, position = :lb)
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "mhd_alfven_convergence.png") fig #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("mhd_alfven_convergence.png"), fig)
+end
 
 # ## Test Assertions
 # MUSCL with HLLD should achieve at least 1.5th-order convergence on smooth data.

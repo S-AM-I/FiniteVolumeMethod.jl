@@ -148,6 +148,9 @@ end
 resize_to_layout!(fig)
 fig
 @test_reference joinpath(@__DIR__, "../figures", "conservation_verification.png") fig #src
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("conservation_verification.png"), fig)
+end
 
 # ## Test Assertions
 @test maximum(mass_err) < 1.0e-10 #src
