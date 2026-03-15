@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.0-rc1 (proposed)
+## v2.0.0-rc1
 
 FiniteVolumeMethod.jl now ships with an explicit research-grade `v2` contract.
 This release candidate turns the repo from a broad solver collection into a
