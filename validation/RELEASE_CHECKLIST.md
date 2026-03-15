@@ -22,6 +22,8 @@ research-grade.
   justified for that release candidate.
 - `make ci-release-audit` (or the equivalent `scripts/run_ci_lane.jl
   release-audit`) passes locally before the release is considered ready.
+- `make ci-performance` passes without large regressions for the stable solver
+  families benchmarked in `validation/performance_baselines.toml`.
 - `test/release_audit.jl` passes and reports no missing stable-feature evidence,
   limitations, maintained pages, or release-output artifacts.
 - `test/environment_integrity.jl` and `docs/environment_integrity.jl` pass.

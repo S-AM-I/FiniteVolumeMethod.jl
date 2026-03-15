@@ -10,7 +10,7 @@ const DEPOT_PATH_SEPARATOR = Sys.iswindows() ? ';' : ':'
 const CI_DEPOT_PATH = string(CI_WRITABLE_DEPOT, DEPOT_PATH_SEPARATOR, BASE_DEPOT_PATH)
 
 function parse_args(args)
-    isempty(args) && error("Usage: julia --project=. scripts/run_ci_lane.jl <fast-api-interop|scientific-smoke|full-evidence|release-audit> [--output-root=/tmp/path]")
+    isempty(args) && error("Usage: julia --project=. scripts/run_ci_lane.jl <fast-api-interop|scientific-smoke|full-evidence|performance|release-audit> [--output-root=/tmp/path]")
     lane = Symbol(replace(first(args), "-" => "_"))
     output_root = joinpath(tempdir(), "fvm-release-audit")
     for arg in Iterators.drop(args, 1)
@@ -115,6 +115,12 @@ function run_full_evidence_lane()
     return nothing
 end
 
+function run_performance_lane()
+    instantiate_test_project()
+    run_test_file("performance_baselines.jl")
+    return nothing
+end
+
 function run_release_audit_lane(output_root::AbstractString)
     instantiate_test_project()
     run_test_file("environment_integrity.jl")
@@ -139,6 +145,8 @@ function run_lane(lane::Symbol; output_root::AbstractString)
         run_scientific_smoke_lane()
     elseif lane == :full_evidence
         run_full_evidence_lane()
+    elseif lane == :performance
+        run_performance_lane()
     elseif lane == :release_audit
         run_release_audit_lane(output_root)
     else

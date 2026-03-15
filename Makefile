@@ -7,7 +7,7 @@
 
 .PHONY: help ci-build ci-test ci-test-file ci-evidence ci-format ci-format-fix \
         ci-docs ci-docs-ci ci-report ci-bundles ci-release-outputs ci-repl ci-all \
-        ci-fast ci-smoke ci-full-evidence ci-release-audit ci-clean ci-depot-clean
+        ci-fast ci-smoke ci-full-evidence ci-performance ci-release-audit ci-clean ci-depot-clean
 
 COMPOSE := docker-compose
 
@@ -36,6 +36,9 @@ ci-smoke: ## Run the scientific smoke lane for stable solver families
 
 ci-full-evidence: ## Run the full scientific evidence lane
 	CI_LANE=full-evidence $(COMPOSE) run --rm lane
+
+ci-performance: ## Run stable-family performance baseline checks
+	CI_LANE=performance $(COMPOSE) run --rm lane
 
 ci-release-audit: ## Run the release-audit lane with stable release outputs
 	CI_LANE=release-audit $(COMPOSE) run --rm lane
@@ -67,7 +70,7 @@ ci-release-outputs: ## Build release-style outputs (summaries + bundles + report
 ci-repl: ## Interactive Julia REPL in container
 	$(COMPOSE) run --rm repl
 
-ci-all: ci-format ci-fast ci-smoke ci-docs-ci ci-full-evidence ci-release-audit ## Run the full local CI lane stack
+ci-all: ci-format ci-fast ci-smoke ci-docs-ci ci-full-evidence ci-performance ci-release-audit ## Run the full local CI lane stack
 
 ci-clean: ## Remove containers (keeps depot volume)
 	$(COMPOSE) down --remove-orphans

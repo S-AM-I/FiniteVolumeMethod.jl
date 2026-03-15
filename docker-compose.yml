@@ -3,7 +3,7 @@
 # Usage:
 #   docker-compose build base          # Build base image (first time / after Project.toml changes)
 #   docker-compose run --rm test       # Full test suite
-#   docker-compose run --rm lane       # Named local CI lane (set CI_LANE=fast-api-interop, scientific-smoke, full-evidence, or release-audit)
+#   docker-compose run --rm lane       # Named local CI lane (set CI_LANE=fast-api-interop, scientific-smoke, full-evidence, performance, or release-audit)
 #   docker-compose run --rm format     # Check formatting
 #   docker-compose run --rm repl       # Interactive REPL
 #
