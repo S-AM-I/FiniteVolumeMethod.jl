@@ -16,16 +16,22 @@ function rerun_release_audit_evidence()
     return get(ENV, "FVM_RELEASE_AUDIT_RERUN", "true") == "true"
 end
 
+function run_release_audit_performance()
+    return get(ENV, "FVM_RELEASE_AUDIT_PERFORMANCE", "true") == "true"
+end
+
 @testset "Release Audit" begin
     audit = RepoReleaseAudit.audit_release(
         manifest;
         repo_root = REPO_ROOT,
         output_root = release_audit_output_root(),
         rerun_evidence = rerun_release_audit_evidence(),
+        run_performance_audit = run_release_audit_performance(),
     )
 
     @test isempty(audit.findings)
     @test audit.replay_report["status"] == "pass"
+    @test audit.performance_audit.passed
     @test length(audit.expected_evidence_entries) == length(
         filter(name -> endswith(name, ".toml"), readdir(audit.outputs.summaries_dir)),
     )

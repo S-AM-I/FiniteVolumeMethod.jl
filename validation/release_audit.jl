@@ -3,8 +3,10 @@ module RepoReleaseAudit
 using TOML
 
 include(joinpath(@__DIR__, "manifest.jl"))
+include(joinpath(@__DIR__, "performance_baselines.jl"))
 include(joinpath(@__DIR__, "reproducibility.jl"))
 include(joinpath(@__DIR__, "release_packaging.jl"))
+using .RepoPerformanceBaselines
 using .RepoReleasePackaging
 using .RepoReproducibility
 using .RepoValidationManifest
@@ -15,6 +17,7 @@ function audit_release(
         output_root::AbstractString,
         rerun_evidence::Bool = true,
         run_summary_replay::Bool = true,
+        run_performance_audit::Bool = true,
     )
     stable_features = RepoReproducibility.stable_claim_bundle_features(manifest)
     outputs = RepoReleasePackaging.build_release_outputs(
@@ -29,10 +32,11 @@ function audit_release(
         manifest,
         outputs;
         run_summary_replay,
+        run_performance_audit,
     )
 end
 
-function summarize_release_audit(manifest, outputs; run_summary_replay::Bool = true)
+function summarize_release_audit(manifest, outputs; run_summary_replay::Bool = true, run_performance_audit::Bool = true)
     stable_features = RepoReproducibility.stable_claim_bundle_features(manifest)
     expected_feature_names = Set(string.(stable_features))
     expected_evidence_entries = RepoValidationManifest.scientific_evidence_for_features(manifest, stable_features)
@@ -44,6 +48,7 @@ function summarize_release_audit(manifest, outputs; run_summary_replay::Bool = t
     report = read(outputs.report_path, String)
     release_index = read(outputs.release_index_path, String)
     summary_files = filter(name -> endswith(name, ".toml"), readdir(outputs.summaries_dir))
+    performance_audit = _performance_audit(run_performance_audit)
 
     findings = String[]
 
@@ -67,6 +72,7 @@ function summarize_release_audit(manifest, outputs; run_summary_replay::Bool = t
         push!(findings, "validation report is missing the executed evidence section")
     occursin("## Reproduction Bundles", report) ||
         push!(findings, "validation report is missing the reproduction bundles section")
+    performance_audit.passed || append!(findings, performance_audit.findings)
 
     for feature in stable_features
         feature_entry = manifest.features[feature]
@@ -102,6 +108,40 @@ function summarize_release_audit(manifest, outputs; run_summary_replay::Bool = t
         replay_report = replay_report,
         report = report,
         release_index = release_index,
+        performance_audit = performance_audit,
+    )
+end
+
+function _performance_audit(run_performance_audit::Bool)
+    if !run_performance_audit
+        return (
+            passed = true,
+            findings = String[],
+            measurements = NamedTuple[],
+            comparisons = NamedTuple[],
+        )
+    end
+
+    measurements = RepoPerformanceBaselines.run_suite()
+    baselines = RepoPerformanceBaselines.load_baselines()
+    comparisons = RepoPerformanceBaselines.compare_to_baselines(measurements, baselines)
+    findings = String[]
+    for comparison in comparisons
+        comparison.passed && continue
+        if isempty(comparison.reasons)
+            push!(findings, "performance baseline `$(comparison.id)` failed without a reported reason")
+        else
+            for reason in comparison.reasons
+                push!(findings, "performance baseline `$(comparison.id)`: $reason")
+            end
+        end
+    end
+
+    return (
+        passed = isempty(findings),
+        findings = findings,
+        measurements = measurements,
+        comparisons = comparisons,
     )
 end
 

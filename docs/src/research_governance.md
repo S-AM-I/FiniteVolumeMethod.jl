@@ -83,5 +83,5 @@ report.
   `hyperbolic`, `parabolic`, `mhd_ct`, and `relativistic`.
 - `make ci-release-audit` runs the release-audit lane, including stable release
   output generation plus the executable release gate in
-  `test/release_audit.jl`, using the same provenance and replay checks as the
-  release-packaging workflow.
+  `test/release_audit.jl`, using the same provenance, replay, and stable-family
+  performance checks as the release-packaging workflow.
