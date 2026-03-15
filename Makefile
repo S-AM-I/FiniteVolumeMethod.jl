@@ -7,7 +7,8 @@
 
 .PHONY: help ci-build ci-test ci-test-file ci-evidence ci-format ci-format-fix \
         ci-docs ci-docs-ci ci-report ci-bundles ci-release-outputs ci-repl ci-all \
-        ci-fast ci-smoke ci-full-evidence ci-performance ci-release-audit ci-clean ci-depot-clean
+        ci-fast ci-smoke ci-full-evidence ci-performance ci-performance-calibrate \
+        ci-release-audit ci-clean ci-depot-clean
 
 COMPOSE := docker-compose
 
@@ -39,6 +40,9 @@ ci-full-evidence: ## Run the full scientific evidence lane
 
 ci-performance: ## Run stable-family performance baseline checks
 	CI_LANE=performance $(COMPOSE) run --rm lane
+
+ci-performance-calibrate: ## Re-run performance baselines repeatedly and write a calibration report
+	FVM_PERFORMANCE_CALIBRATION_REPETITIONS=$${FVM_PERFORMANCE_CALIBRATION_REPETITIONS:-5} $(COMPOSE) run --rm performance-calibration
 
 ci-release-audit: ## Run the release-audit lane with stable release outputs
 	CI_LANE=release-audit $(COMPOSE) run --rm lane

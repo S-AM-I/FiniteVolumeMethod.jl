@@ -29,8 +29,13 @@ research-grade.
 - `make ci-release-audit` writes `performance_report.toml` and
   `backend_parity_report.toml`; any hard performance regression fails the gate,
   while CUDA parity may remain `not_run` on machines without a functional GPU.
+- `julia --project=test scripts/calibrate_performance_baselines.jl` has been
+  rerun after major Julia,
+  dependency, or hardware changes if performance thresholds were expected to
+  move.
 - `test/release_audit.jl` passes and reports no missing stable-feature evidence,
   limitations, maintained pages, or release-output artifacts.
 - `test/environment_integrity.jl` and `docs/environment_integrity.jl` pass.
 - Documentation and README language match the current capability matrix and
   evidence status.
+- The most recent dry run is recorded in `validation/RELEASE_CANDIDATE_DRY_RUN.md`.

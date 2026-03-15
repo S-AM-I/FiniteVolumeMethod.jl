@@ -145,6 +145,21 @@ function apply_flux_correction_2d!(
     return nothing
 end
 
+"""
+    apply_flux_correction_3d!(U, reg, dt, dx, dy, dz, nx, ny, nz, face)
+
+Apply Berger-Colella flux-register corrections to a padded 3D coarse-grid state
+array `U` along the coarse-fine interface given by `face`.
+
+The correction uses the stored difference between the coarse-face flux and the
+averaged fine-face flux:
+
+```math
+\\Delta U = \\frac{\\Delta t}{\\Delta x_f} (F_{\\text{fine,avg}} - F_{\\text{coarse}})
+```
+
+with the directional spacing `dx`, `dy`, or `dz` chosen from `face`.
+"""
 function apply_flux_correction_3d!(
         U::AbstractArray{T, 3}, reg::FluxRegister{N, FT},
         dt, dx, dy, dz, nx::Int, ny::Int, nz::Int, face::Symbol

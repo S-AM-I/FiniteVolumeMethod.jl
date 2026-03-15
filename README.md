@@ -34,6 +34,14 @@ See the documentation for the capability matrix, verification evidence, and deta
 
 This repository treats only the current Julia stable release and the current Julia LTS release as release-supported targets. Pre-release Julia versions may still be tested opportunistically, but they are not part of the scientific support contract.
 
+## v2 Transition
+
+The repository now follows an explicit research-grade `v2` contract.
+
+- Start with the [capability matrix](docs/src/capability_matrix.md) and the [v2 migration guide](docs/src/v2_migration.md) before treating a feature as publication-grade.
+- CPU `Float64` runs remain the publication baseline. CUDA parity is currently audited only for the supported 2D hyperbolic extension path, so other GPU usage should be treated as experimental.
+- GitHub-hosted Actions are intentionally disabled during the overhaul. Use the local lane stack instead: `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, and `make ci-release-audit`.
+
 If this package doesn't suit what you need, you may like to review some of the other PDE packages shown [here](https://github.com/JuliaPDE/SurveyofPDEPackages).
 
 As a very quick demonstration, here is how we could solve a diffusion equation with Dirichlet boundary conditions on a square domain using the standard `FVMProblem` formulation; please see the docs for more information.
