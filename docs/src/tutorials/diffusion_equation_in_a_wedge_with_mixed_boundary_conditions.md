@@ -132,15 +132,6 @@ for (i, j) in zip(1:3, (1, 6, 11))
 end
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.png"
-
-            integrand = rθ -> _f(rθ[2], rθ[1]) * besselj(order, ζ[m, n + 1] * rθ[2]) *
-            A[m, n + 1] = 4.0 / (α * besselj(order + 1, ζ[m, n + 1])^2) *
-            s += +A[m, n + 1] * exp(-ζ[m, n + 1]^2 * t) * besselj(order, ζ[m, n + 1] * r) *
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions_exact_comparisons.png"
 ````
 
 ## Just the code
@@ -197,15 +188,6 @@ for (i, j) in zip(1:3, (1, 6, 11))
 end
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.png"
-
-            integrand = rθ -> _f(rθ[2], rθ[1]) * besselj(order, ζ[m, n + 1] * rθ[2]) *
-            A[m, n + 1] = 4.0 / (α * besselj(order + 1, ζ[m, n + 1])^2) *
-            s += +A[m, n + 1] * exp(-ζ[m, n + 1]^2 * t) * besselj(order, ζ[m, n + 1] * r) *
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "diffusion_equation_in_a_wedge_with_mixed_boundary_conditions_exact_comparisons.png"
 ```
 
 ---

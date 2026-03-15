@@ -185,9 +185,6 @@ fig, ax,
     x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
 )
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours_bad.png"
 ````
 
 The issue here is that the interpolant is trying to extrapolate inside the hole and
@@ -204,8 +201,6 @@ fig, ax,
     x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
 )
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours.png"
 ````
 
 ## Just the code
@@ -312,9 +307,6 @@ fig, ax,
     x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
 )
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours_bad.png"
 
 itp_vals = itp(_x, _y; method = Farin(), project = false)
 
@@ -323,8 +315,6 @@ fig, ax,
     x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
 )
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "diffusion_equation_on_an_annulus_interpolated_with_naturalneighbours.png"
 ```
 
 ---

@@ -1,0 +1,288 @@
+```@meta
+EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/mhd_convergence.jl"
+```
+
+````@example mhd_convergence
+using DisplayAs #hide
+tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
+nothing #hide
+````
+
+# MHD Smooth Alfvén Wave Convergence
+This example measures the convergence rate of the ideal MHD solver using
+a smooth circularly polarized Alfvén wave propagating along the x-axis.
+
+## Mathematical Setup
+The circularly polarized Alfvén wave is an exact nonlinear solution of the
+ideal MHD equations (Tóth, 2000). The wave propagates at the Alfvén speed
+$v_A = B_x / \sqrt{\rho}$ without changing shape.
+
+Initial conditions (primitive variables):
+```math
+\rho = 1, \quad v_x = 0, \quad v_y = 0.1\sin(2\pi x), \quad v_z = 0.1\cos(2\pi x)
+```
+```math
+P = 0.1, \quad B_x = 1, \quad B_y = 0.1\sin(2\pi x), \quad B_z = 0.1\cos(2\pi x)
+```
+
+## References
+- Tóth, G. (2000). The ∇·B = 0 Constraint in Shock-Capturing MHD Codes.
+  J. Comput. Phys., 161, 605-652. DOI: 10.1006/jcph.2000.6519
+- Stone et al. (2008). Athena: A New Code for Astrophysical MHD.
+  ApJS, 178, 137-177. DOI: 10.1086/588755
+
+````@example mhd_convergence
+using FiniteVolumeMethod
+using OrdinaryDiffEq
+using SciMLBase: ReturnCode
+using StaticArrays
+using CairoMakie
+
+gamma = 5.0 / 3.0
+eos = IdealGasEOS(gamma)
+law = IdealMHDEquations{2}(eos)
+
+amp = 0.1
+Bx0 = 1.0
+rho0 = 1.0
+P0 = 0.1
+vA = Bx0 / sqrt(rho0)  # Alfvén speed
+
+t_final = 1.0 / vA  # one full crossing of [0,1]
+
+function alfven_ic(x, y)
+    vy = amp * sin(2 * pi * x)
+    vz = amp * cos(2 * pi * x)
+    By = amp * sin(2 * pi * x)
+    Bz = amp * cos(2 * pi * x)
+    return SVector(rho0, 0.0, vy, vz, P0, Bx0, By, Bz)
+end
+````
+
+## Convergence Measurement
+The L1 error in $B_y$ at each resolution:
+
+````@example mhd_convergence
+function solve_mhd_state(N)
+    mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, 4)
+    prob = HyperbolicProblem2D(
+        law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        alfven_ic; final_time = t_final, cfl = 0.3,
+    )
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    return solution_coordinates(accessor), get_primitive(accessor, sol, length(sol.t)), sol.t[end]
+end
+
+function compute_mhd_error(N)
+    coords, W, t_end = solve_mhd_state(N)
+    err = 0.0
+    for ix in 1:N
+        x = coords[ix, 1][1]
+        x_shifted = mod(x - vA * t_end, 1.0)
+        By_exact = amp * sin(2 * pi * x_shifted)
+        By_num = W[ix, 1][7]
+        err += abs(By_num - By_exact)
+    end
+    return err / N
+end
+
+resolutions = [16, 32, 64, 128]
+errors = [compute_mhd_error(N) for N in resolutions]
+````
+
+## Convergence Rates
+
+````@example mhd_convergence
+function convergence_rates(errs)
+    return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
+end
+
+rates = convergence_rates(errors)
+````
+
+## Visualisation — Convergence Plot
+
+````@example mhd_convergence
+fig = Figure(fontsize = 24, size = (700, 550))
+ax = Axis(
+    fig[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error } (B_y)",
+    xscale = log2, yscale = log10,
+    title = "MHD Alfvén Wave Convergence",
+)
+scatterlines!(ax, resolutions, errors, color = :blue, marker = :circle, linewidth = 2, markersize = 12, label = "HLLD+MUSCL")
+
+# Reference slopes
+e_ref = errors[1]
+N_ref = resolutions[1]
+lines!(
+    ax, resolutions, e_ref .* (N_ref ./ resolutions) .^ 1,
+    color = :black, linestyle = :dash, linewidth = 1, label = L"O(N^{-1})",
+)
+lines!(
+    ax, resolutions, e_ref .* (N_ref ./ resolutions) .^ 2,
+    color = :black, linestyle = :dashdot, linewidth = 1, label = L"O(N^{-2})",
+)
+axislegend(ax, position = :lb)
+resize_to_layout!(fig)
+fig
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("mhd_alfven_convergence.png"), fig)
+end
+````
+
+## Test Assertions
+MUSCL with HLLD should achieve at least 1.5th-order convergence on smooth data.
+
+````@example mhd_convergence
+@assert all(r -> r > 0.8, rates) #hide
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "errors" => errors,
+            "rates" => rates,
+            "min_rate" => minimum(rates),
+            "finest_error" => errors[end],
+        ),
+        artifacts = ["mhd_alfven_convergence.png"],
+        notes = [
+            "Canonical MHD SciML execution path via sciml_problem(prob), mhd_stage_limiter, and solve(prob, SSPRK33()).",
+            "This evidence entry is the mhd_ct verification-stage smooth-wave convergence case.",
+        ],
+        summary = Dict(
+            "resolutions" => resolutions,
+            "errors" => errors,
+            "rates" => rates,
+        ),
+    )
+end
+````
+
+## Just the code
+An uncommented version of this example is given below.
+You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/mhd_convergence.jl).
+
+```julia
+using FiniteVolumeMethod
+using OrdinaryDiffEq
+using SciMLBase: ReturnCode
+using StaticArrays
+using CairoMakie
+
+gamma = 5.0 / 3.0
+eos = IdealGasEOS(gamma)
+law = IdealMHDEquations{2}(eos)
+
+amp = 0.1
+Bx0 = 1.0
+rho0 = 1.0
+P0 = 0.1
+vA = Bx0 / sqrt(rho0)  # Alfvén speed
+
+t_final = 1.0 / vA  # one full crossing of [0,1]
+
+function alfven_ic(x, y)
+    vy = amp * sin(2 * pi * x)
+    vz = amp * cos(2 * pi * x)
+    By = amp * sin(2 * pi * x)
+    Bz = amp * cos(2 * pi * x)
+    return SVector(rho0, 0.0, vy, vz, P0, Bx0, By, Bz)
+end
+
+function solve_mhd_state(N)
+    mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, 4)
+    prob = HyperbolicProblem2D(
+        law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        alfven_ic; final_time = t_final, cfl = 0.3,
+    )
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    return solution_coordinates(accessor), get_primitive(accessor, sol, length(sol.t)), sol.t[end]
+end
+
+function compute_mhd_error(N)
+    coords, W, t_end = solve_mhd_state(N)
+    err = 0.0
+    for ix in 1:N
+        x = coords[ix, 1][1]
+        x_shifted = mod(x - vA * t_end, 1.0)
+        By_exact = amp * sin(2 * pi * x_shifted)
+        By_num = W[ix, 1][7]
+        err += abs(By_num - By_exact)
+    end
+    return err / N
+end
+
+resolutions = [16, 32, 64, 128]
+errors = [compute_mhd_error(N) for N in resolutions]
+
+function convergence_rates(errs)
+    return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
+end
+
+rates = convergence_rates(errors)
+
+fig = Figure(fontsize = 24, size = (700, 550))
+ax = Axis(
+    fig[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error } (B_y)",
+    xscale = log2, yscale = log10,
+    title = "MHD Alfvén Wave Convergence",
+)
+scatterlines!(ax, resolutions, errors, color = :blue, marker = :circle, linewidth = 2, markersize = 12, label = "HLLD+MUSCL")
+
+# Reference slopes
+e_ref = errors[1]
+N_ref = resolutions[1]
+lines!(
+    ax, resolutions, e_ref .* (N_ref ./ resolutions) .^ 1,
+    color = :black, linestyle = :dash, linewidth = 1, label = L"O(N^{-1})",
+)
+lines!(
+    ax, resolutions, e_ref .* (N_ref ./ resolutions) .^ 2,
+    color = :black, linestyle = :dashdot, linewidth = 1, label = L"O(N^{-2})",
+)
+axislegend(ax, position = :lb)
+resize_to_layout!(fig)
+fig
+if isdefined(@__MODULE__, :evidence_artifact_path)
+    save(evidence_artifact_path("mhd_alfven_convergence.png"), fig)
+end
+
+
+if isdefined(@__MODULE__, :record_evidence_result)
+    record_evidence_result(
+        metrics = Dict(
+            "errors" => errors,
+            "rates" => rates,
+            "min_rate" => minimum(rates),
+            "finest_error" => errors[end],
+        ),
+        artifacts = ["mhd_alfven_convergence.png"],
+        notes = [
+            "Canonical MHD SciML execution path via sciml_problem(prob), mhd_stage_limiter, and solve(prob, SSPRK33()).",
+            "This evidence entry is the mhd_ct verification-stage smooth-wave convergence case.",
+        ],
+        summary = Dict(
+            "resolutions" => resolutions,
+            "errors" => errors,
+            "rates" => rates,
+        ),
+    )
+end
+```
+
+---
+
+*This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

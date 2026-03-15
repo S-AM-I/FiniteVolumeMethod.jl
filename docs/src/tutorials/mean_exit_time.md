@@ -378,8 +378,6 @@ ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
 tricontourf!(ax, tri, sol.u, levels = 0:2500:35000, extendhigh = :auto)
 lines!(ax, [xin; xin[1]], [yin; yin[1]], color = :magenta, linewidth = 5)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "mean_exit_time_perturbed_interface_with_hole_and_reflecting_boundary.png"
 ````
 
 Now, as a last constraint, let's add a hole. We'll put hole at the origin,  and we'll
@@ -432,9 +430,6 @@ ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
 tricontourf!(ax, tri, sol.u, levels = 0:1000:15000, extendhigh = :auto)
 lines!(ax, [xin; xin[1]], [yin; yin[1]], color = :magenta, linewidth = 5)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "mean_exit_time_perturbed_interface_with_hole_and_reflecting_boundary_and_holes.png"
 ````
 
 ## Just the code
@@ -617,8 +612,6 @@ ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
 tricontourf!(ax, tri, sol.u, levels = 0:2500:35000, extendhigh = :auto)
 lines!(ax, [xin; xin[1]], [yin; yin[1]], color = :magenta, linewidth = 5)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "mean_exit_time_perturbed_interface_with_hole_and_reflecting_boundary.png"
 
 hole = CircularArc((0.0, 1.0), (0.0, 1.0), (0.0, 0.0), positive = false)
 boundary_nodes = [[[dirichlet_circle], [neumann_circle]], [[hole]]]
@@ -660,9 +653,6 @@ ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
 tricontourf!(ax, tri, sol.u, levels = 0:1000:15000, extendhigh = :auto)
 lines!(ax, [xin; xin[1]], [yin; yin[1]], color = :magenta, linewidth = 5)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "mean_exit_time_perturbed_interface_with_hole_and_reflecting_boundary_and_holes.png"
 ```
 
 ---

@@ -65,6 +65,9 @@ The release-audit output tree contained:
   duplicate `@docs` entries for the new SciML interface helpers, a Makie
   `triplot!` attribute rename in `docs/src/math.md`, and AMR verification pages
   that needed a build-safe path to `amr_common.jl`.
+- After those fixes, a full docs-environment build completed successfully using
+  `ENV["CI"] = "true"` and `ENV["FVM_DOCS_EXECUTION"] = "none"` to make the
+  command build-only and skip local deployment.
 
 ## Follow-up
 
@@ -72,5 +75,5 @@ The release-audit output tree contained:
   dependency, or hardware changes before tightening performance thresholds.
 - Keep GitHub-hosted Actions disabled until the re-enable criteria in
   `validation/CI_REENABLE_PLAN.md` are satisfied.
-- Confirm the patched full docs build as the last RC sign-off step before
+- Review the regenerated `docs/src` pages and the release-output tree before
   calling the branch ready for `v2.0.0-rc1`.

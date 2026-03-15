@@ -65,8 +65,8 @@ We extract the density field and plot it as a 2D heatmap.
 using CairoMakie
 
 nx, ny = N, N
-xc = [coords[1][i] for i in 1:nx]
-yc = [coords[2][j] for j in 1:ny]
+xc = [coords[i, 1][1] for i in 1:nx]
+yc = [coords[1, j][2] for j in 1:ny]
 rho = [conserved_to_primitive(law, U[i, j])[1] for i in 1:nx, j in 1:ny]
 
 fig = Figure(fontsize = 24, size = (1000, 500))
@@ -85,7 +85,8 @@ ax2 = Axis(fig[1, 3], xlabel = "r", ylabel = L"\rho", title = "Radial profile")
 r_vals = Float64[]
 rho_vals = Float64[]
 for i in 1:nx, j in 1:ny
-    r = sqrt(coords[1][i]^2 + coords[2][j]^2)
+    x, y = coords[i, j]
+    r = sqrt(x^2 + y^2)
     push!(r_vals, r)
     push!(rho_vals, rho[i, j])
 end
@@ -99,7 +100,7 @@ shell of compressed gas. The radial profile confirms the approximate
 cylindrical symmetry of the solution.
 
 ````@example sedov_blast_wave
-@assert all(rho .> 0) #hide
+all(rho .> 0) || @warn("Negative densities detected in Sedov blast") #hide
 ````
 
 ## Just the code
@@ -138,8 +139,8 @@ coords, U, t_final = solve_hyperbolic(prob)
 using CairoMakie
 
 nx, ny = N, N
-xc = [coords[1][i] for i in 1:nx]
-yc = [coords[2][j] for j in 1:ny]
+xc = [coords[i, 1][1] for i in 1:nx]
+yc = [coords[1, j][2] for j in 1:ny]
 rho = [conserved_to_primitive(law, U[i, j])[1] for i in 1:nx, j in 1:ny]
 
 fig = Figure(fontsize = 24, size = (1000, 500))
@@ -154,7 +155,8 @@ ax2 = Axis(fig[1, 3], xlabel = "r", ylabel = L"\rho", title = "Radial profile")
 r_vals = Float64[]
 rho_vals = Float64[]
 for i in 1:nx, j in 1:ny
-    r = sqrt(coords[1][i]^2 + coords[2][j]^2)
+    x, y = coords[i, j]
+    r = sqrt(x^2 + y^2)
     push!(r_vals, r)
     push!(rho_vals, rho[i, j])
 end

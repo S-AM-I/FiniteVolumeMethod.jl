@@ -104,6 +104,16 @@ function CommonSolve.init(prob::AbstractFVMTemplate, args...; kwargs...)
     return CommonSolve.init(sciml_problem(prob; kwargs...), args...; kwargs...)
 end
 
+"""
+    solve(prob::AbstractFVMTemplate, args...; kwargs...)
+
+Solve a template problem through its canonical SciML problem.
+
+This is equivalent to
+`solve(sciml_problem(prob; kwargs...), args...; kwargs...)` and keeps the
+template families aligned with the same SciML-oriented execution contract used
+by the rest of the package.
+"""
 function CommonSolve.solve(prob::AbstractFVMTemplate, args...; kwargs...)
     return CommonSolve.solve(sciml_problem(prob; kwargs...), args...; kwargs...)
 end

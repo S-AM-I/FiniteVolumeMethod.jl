@@ -130,10 +130,6 @@ sol |> tc #hide
 ````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
 fig, ax, sc = tricontourf(tri, sol.u, levels = 40:70, axis = (xlabel = "x", ylabel = "y"))
 fig
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.png"
 ````
 
 ## Just the code
@@ -198,10 +194,6 @@ sol = solve(steady_prob, DynamicSS(Rosenbrock23()))
 
 fig, ax, sc = tricontourf(tri, sol.u, levels = 40:70, axis = (xlabel = "x", ylabel = "y"))
 fig
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.png"
 ```
 
 ---

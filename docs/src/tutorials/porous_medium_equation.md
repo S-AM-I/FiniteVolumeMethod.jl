@@ -96,11 +96,6 @@ for (i, j) in zip(1:3, (1, 3, 5))
 end
 resize_to_layout!(fig)
 fig
-
-        u_exact = (D * t)^(-1 / m) *
-            (
-            (M / (4π))^((m - 1) / m) -
-                (m - 1) / (4m) * (x^2 + y^2) * (D * t)^(-1 / m)
 ````
 
 ## Linear source
@@ -184,14 +179,6 @@ for (i, j) in zip(1:3, (1, 3, 5))
 end
 resize_to_layout!(fig)
 fig
-
-    return exp(λ * t) *
-    tricontourf!(
-        ax, tri, sol.u[i], levels = 0:0.05:1, extendlow = :auto,
-        colormap = :matter, extendhigh = :auto
-    tricontourf!(
-        ax, tri, u[:, i], levels = 0:0.05:1, extendlow = :auto,
-        extendhigh = :auto, colormap = :matter
 ````
 
 ## Just the code
@@ -251,11 +238,6 @@ end
 resize_to_layout!(fig)
 fig
 
-        u_exact = (D * t)^(-1 / m) *
-            (
-            (M / (4π))^((m - 1) / m) -
-                (m - 1) / (4m) * (x^2 + y^2) * (D * t)^(-1 / m)
-
 # Step 0: Define all the parameters
 m = 3.4
 M = 2.3
@@ -311,14 +293,6 @@ for (i, j) in zip(1:3, (1, 3, 5))
 end
 resize_to_layout!(fig)
 fig
-
-    return exp(λ * t) *
-    tricontourf!(
-        ax, tri, sol.u[i], levels = 0:0.05:1, extendlow = :auto,
-        colormap = :matter, extendhigh = :auto
-    tricontourf!(
-        ax, tri, u[:, i], levels = 0:0.05:1, extendlow = :auto,
-        extendhigh = :auto, colormap = :matter
 ```
 
 ---

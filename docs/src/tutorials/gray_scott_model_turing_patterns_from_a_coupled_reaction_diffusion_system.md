@@ -106,15 +106,6 @@ end
 
 ![Animation of the Gray-Scott model](../figures/gray_scott_patterns.mp4)
 
-````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
-    ax = Axis(
-        fig[plotij[i]...], width = 600, height = 600,
-        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
-    ax = Axis(
-        fig[plotij[i]...], width = 600, height = 600,
-        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
-````
-
 ## Just the code
 An uncommented version of this example is given below.
 You can view the source code for this file [here](https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl).
@@ -177,13 +168,6 @@ record(
 ) do _i
     i[] = _i
 end
-
-    ax = Axis(
-        fig[plotij[i]...], width = 600, height = 600,
-        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
-    ax = Axis(
-        fig[plotij[i]...], width = 600, height = 600,
-        xlabel = L"x", ylabel = L"y", title = "t = $(sol.t[j])"
 ```
 
 ---

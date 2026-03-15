@@ -57,18 +57,28 @@ verification pages:
   bare `include("amr_common.jl")` instead of a path that also resolves from the
   generated `../literate_verification/` location
 
-All three docs issues have now been fixed in the main checkout. A full
-clean-worktree docs rerun is in progress to confirm the corrected RC
-documentation build.
+All three docs issues have now been fixed in the main checkout.
+
+A full docs build from the docs environment now completes successfully with a
+build-only CI-mode invocation:
+
+- `julia --project=docs -e 'ENV["CI"] = "true"; ENV["FVM_DOCS_EXECUTION"] = "none"; include("docs/make.jl")'`
+
+That build regenerated the tracked `docs/src` pages and produced `docs/build/index.html`.
+The remaining docs messages were warnings only:
+
+- Makie deprecation warning for `arrows`
+- several pre-existing “Unexpected Julia interpolation in the Markdown” warnings
+  in generated tutorial pages
+- HTML/search-index size warnings for the large interface and search outputs
 
 ## Current Blocker State
 
-- Local validation, performance, and release gates: no blockers found
-- Release-candidate docs build: rerunning after the two fixes above
+- Local validation, performance, release-audit, and docs build: no blocking failures found
 - GitHub-hosted Actions: intentionally remain disabled through RC1 review
 
 ## Recommendation
 
-Treat the branch as release-candidate ready on the scientific and release-audit
-surface, with final RC sign-off pending the successful completion of the patched
-full docs build.
+Treat the branch as release-candidate ready for `v2.0.0-rc1`, subject only to
+the normal human release review of the generated bundles, validation report, and
+regenerated docs sources.

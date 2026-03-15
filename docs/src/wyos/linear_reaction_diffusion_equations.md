@@ -158,11 +158,20 @@ fvm_prob = FVMProblem(
 fvm_sol = solve(fvm_prob, Tsit5(), saveat = 2.0)
 fvm_sol |> tc #hide
 
+for j in eachindex(fvm_sol)
     ax = Axis(
+        fig[2, j], width = 600, height = 600,
+        xlabel = "x", ylabel = "y",
         title = "t = $(fvm_sol.t[j])"
+    )
     tricontourf!(
         ax, tri, fvm_sol.u[j], levels = 0:0.1:1,
         extendlow = :auto, extendhigh = :auto, colormap = :turbo
+    )
+    tightlimits!(ax)
+end
+resize_to_layout!(fig)
+fig
 ````
 
 ## Using the Provided Template
@@ -301,11 +310,20 @@ fvm_prob = FVMProblem(
 )
 fvm_sol = solve(fvm_prob, Tsit5(), saveat = 2.0)
 
+for j in eachindex(fvm_sol)
     ax = Axis(
+        fig[2, j], width = 600, height = 600,
+        xlabel = "x", ylabel = "y",
         title = "t = $(fvm_sol.t[j])"
+    )
     tricontourf!(
         ax, tri, fvm_sol.u[j], levels = 0:0.1:1,
         extendlow = :auto, extendhigh = :auto, colormap = :turbo
+    )
+    tightlimits!(ax)
+end
+resize_to_layout!(fig)
+fig
 
 prob = LinearReactionDiffusionEquation(
     mesh, BCs;

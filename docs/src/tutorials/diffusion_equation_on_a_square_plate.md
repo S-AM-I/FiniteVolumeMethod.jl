@@ -102,8 +102,6 @@ for (i, j) in zip(1:3, (1, 6, 11))
 end
 resize_to_layout!(fig)
 fig
-
-                nterm = (1 - cos(n * π / 2)) / n * sin(n * π * y / 2) *
 ````
 
 ## Just the code
@@ -150,8 +148,6 @@ for (i, j) in zip(1:3, (1, 6, 11))
 end
 resize_to_layout!(fig)
 fig
-
-                nterm = (1 - cos(n * π / 2)) / n * sin(n * π * y / 2) *
 ```
 
 ---
