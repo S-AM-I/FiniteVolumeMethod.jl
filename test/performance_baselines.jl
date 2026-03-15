@@ -25,6 +25,7 @@ comparisons = RepoPerformanceBaselines.compare_to_baselines(measurements, baseli
 
     for comparison in comparisons
         @testset "$(comparison.id)" begin
+            isempty(comparison.warnings) || @info("Performance baseline warning", id = comparison.id, warnings = comparison.warnings)
             comparison.passed || @info("Performance baseline regression", id = comparison.id, reasons = comparison.reasons)
             @test comparison.passed
         end

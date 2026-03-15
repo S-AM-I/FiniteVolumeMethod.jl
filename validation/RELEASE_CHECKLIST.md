@@ -17,6 +17,8 @@ research-grade.
 - `scripts/build_release_outputs.jl --stable-only` produces the release-style
   output tree, including the top-level index, bundles, summaries, report,
   `provenance.toml`, and `replay_report.toml`.
+- Release provenance records the bound `reference_datasets` artifact used for
+  the long-lived benchmark corpus.
 - Selected stable evidence summaries are replay-checked successfully during
   release-output generation, or the replay step is explicitly disabled and
   justified for that release candidate.
@@ -24,6 +26,9 @@ research-grade.
   release-audit`) passes locally before the release is considered ready.
 - `make ci-release-audit` includes the stable-family performance baseline checks
   from `validation/performance_baselines.toml` with no large regressions.
+- `make ci-release-audit` writes `performance_report.toml` and
+  `backend_parity_report.toml`; any hard performance regression fails the gate,
+  while CUDA parity may remain `not_run` on machines without a functional GPU.
 - `test/release_audit.jl` passes and reports no missing stable-feature evidence,
   limitations, maintained pages, or release-output artifacts.
 - `test/environment_integrity.jl` and `docs/environment_integrity.jl` pass.
