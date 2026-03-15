@@ -6,10 +6,12 @@ using TOML
 
 include(joinpath(@__DIR__, "manifest.jl"))
 include(joinpath(@__DIR__, "evidence_runner.jl"))
+include(joinpath(@__DIR__, "reference_artifacts.jl"))
 include(joinpath(@__DIR__, "reproducibility.jl"))
 include(joinpath(@__DIR__, "generate_report.jl"))
 include(joinpath(@__DIR__, "summary_replay.jl"))
 using .RepoEvidenceRunner
+using .RepoReferenceArtifacts
 using .RepoReproducibility
 using .RepoSummaryReplay
 using .RepoValidationManifest
@@ -75,6 +77,7 @@ function build_release_outputs(
     )
     _write_replay_report(replay_report_path, replay_result)
 
+    reference_artifact = RepoReferenceArtifacts.ensure_reference_datasets(; repo_root)
     provenance = _release_provenance(
         repo_root,
         manifest,
@@ -82,10 +85,20 @@ function build_release_outputs(
         executed_entries,
         replay_result,
         rerun_evidence,
+        reference_artifact,
     )
     _write_provenance(provenance_path, provenance)
 
-    _write_release_index(output_root, bundles, report_path, executed_entries, provenance_path, replay_report_path, replay_result)
+    _write_release_index(
+        output_root,
+        bundles,
+        report_path,
+        executed_entries,
+        provenance_path,
+        replay_report_path,
+        replay_result,
+        reference_artifact,
+    )
 
     return (
         output_root = output_root,
@@ -114,7 +127,7 @@ function default_replay_entry_ids(manifest, bundle_features)
     return ids
 end
 
-function _write_release_index(output_root::AbstractString, bundles, report_path::AbstractString, executed_entries, provenance_path::AbstractString, replay_report_path::AbstractString, replay_result)
+function _write_release_index(output_root::AbstractString, bundles, report_path::AbstractString, executed_entries, provenance_path::AbstractString, replay_report_path::AbstractString, replay_result, reference_artifact)
     summary_count = length(executed_entries)
     io = IOBuffer()
     println(io, "# Release Outputs")
@@ -127,6 +140,7 @@ function _write_release_index(output_root::AbstractString, bundles, report_path:
     println(io, "- Provenance metadata: [`$(basename(provenance_path))`]($(basename(provenance_path)))")
     println(io, "- Summary replay report: [`$(basename(replay_report_path))`]($(basename(replay_report_path)))")
     println(io, "- Summary replay status: `$(replay_result.status)` across `$(length(replay_result.entry_ids))` selected evidence case(s)")
+    println(io, "- Reference dataset artifact: `$(reference_artifact.name)` @ `$(reference_artifact.git_tree_sha1)` ($(length(reference_artifact.files)) files)")
     println(io)
     println(io, "## Bundles")
     println(io)
@@ -184,7 +198,7 @@ function _write_replay_report(path::AbstractString, replay_result)
     return nothing
 end
 
-function _release_provenance(repo_root, manifest, bundle_features, executed_entries, replay_result, rerun_evidence::Bool)
+function _release_provenance(repo_root, manifest, bundle_features, executed_entries, replay_result, rerun_evidence::Bool, reference_artifact)
     validation_manifest_path = joinpath(repo_root, "validation", "manifest.toml")
     test_project_path = joinpath(repo_root, "test", "Project.toml")
     test_manifest_path = joinpath(repo_root, "test", "Manifest.toml")
@@ -203,6 +217,11 @@ function _release_provenance(repo_root, manifest, bundle_features, executed_entr
         "rerun_evidence" => rerun_evidence,
         "run_summary_replay" => replay_result.status != "not_run",
         "replay_entry_ids" => replay_result.entry_ids,
+        "reference_dataset_artifact" => Dict(
+            "name" => reference_artifact.name,
+            "git_tree_sha1" => reference_artifact.git_tree_sha1,
+            "files" => reference_artifact.files,
+        ),
         "validation_manifest_sha1" => bytes2hex(open(path -> sha1(read(path)), validation_manifest_path)),
         "test_project_sha1" => bytes2hex(open(path -> sha1(read(path)), test_project_path)),
         "test_manifest_sha1" => bytes2hex(open(path -> sha1(read(path)), test_manifest_path)),

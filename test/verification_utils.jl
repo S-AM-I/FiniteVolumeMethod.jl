@@ -137,14 +137,18 @@ end
 # Reference Data I/O
 # ============================================================
 
+include(joinpath(dirname(@__DIR__), "validation", "reference_artifacts.jl"))
+using .RepoReferenceArtifacts
+
 """
     load_reference_data(filename) -> Dict
 
-Load reference benchmark data from a JSON file in `test/reference_data/`.
-Returns a Dict with the parsed contents.
+Load reference benchmark data from the versioned `reference_datasets`
+artifact defined in `Artifacts.toml`. Returns a `Dict` with the parsed
+contents.
 """
 function load_reference_data(filename)
-    path = joinpath(@__DIR__, "reference_data", filename)
+    path = RepoReferenceArtifacts.reference_dataset_path(filename; repo_root = dirname(@__DIR__))
     return JSON3.read(read(path, String), Dict)
 end
 

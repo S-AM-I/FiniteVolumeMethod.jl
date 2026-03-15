@@ -94,6 +94,9 @@ end
         @test provenance["bundle_features"] == ["hyperbolic", "parabolic"]
         @test provenance["run_summary_replay"] == true
         @test Set(provenance["replay_entry_ids"]) == Set(["evidence-euler-mms", "evidence-poisson-convergence"])
+        @test provenance["reference_dataset_artifact"]["name"] == "reference_datasets"
+        @test length(provenance["reference_dataset_artifact"]["git_tree_sha1"]) == 40
+        @test !isempty(provenance["reference_dataset_artifact"]["files"])
         @test !isempty(provenance["julia_version"])
         @test !isempty(provenance["git_commit"])
 
@@ -121,6 +124,7 @@ end
         @test occursin("provenance.toml", release_index)
         @test occursin("replay_report.toml", release_index)
         @test occursin("Summary replay status: `pass`", release_index)
+        @test occursin("Reference dataset artifact:", release_index)
     end
 end
 

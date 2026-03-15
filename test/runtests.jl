@@ -237,6 +237,14 @@ end
         safe_include("reproducibility_bundle.jl")
     end
 
+    @testset verbose = true "Reference Artifacts" begin
+        safe_include("reference_artifacts.jl")
+    end
+
+    @testset verbose = true "Backend Parity" begin
+        safe_include("backend_parity.jl")
+    end
+
     @testset verbose = true "Summary Replay" begin
         safe_include("summary_replay.jl")
     end

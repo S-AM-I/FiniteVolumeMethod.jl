@@ -9,9 +9,12 @@ using StaticArrays
 using TOML
 
 const DEFAULT_BASELINE_PATH = joinpath(@__DIR__, "performance_baselines.toml")
-const DEFAULT_TIME_RATIO_LIMIT = 8.0
-const DEFAULT_MEMORY_RATIO_LIMIT = 2.0
-const DEFAULT_ALLOC_RATIO_LIMIT = 2.0
+const DEFAULT_TIME_WARN_RATIO = 2.0
+const DEFAULT_TIME_FAIL_RATIO = 4.0
+const DEFAULT_MEMORY_WARN_RATIO = 1.15
+const DEFAULT_MEMORY_FAIL_RATIO = 1.5
+const DEFAULT_ALLOC_WARN_RATIO = 1.05
+const DEFAULT_ALLOC_FAIL_RATIO = 1.25
 const DEFAULT_SAMPLES = 5
 const DEFAULT_SECONDS = 0.5
 const DEFAULT_EVALS = 1
@@ -20,9 +23,13 @@ struct PerformanceScenario
     id::String
     feature::Symbol
     description::String
-    time_ratio_limit::Float64
-    memory_ratio_limit::Float64
-    alloc_ratio_limit::Float64
+    time_warn_ratio::Float64
+    time_fail_ratio::Float64
+    memory_warn_ratio::Float64
+    memory_fail_ratio::Float64
+    alloc_warn_ratio::Float64
+    alloc_fail_ratio::Float64
+    release_blocker::Bool
     runner::Function
 end
 
@@ -45,36 +52,52 @@ function stable_performance_scenarios()
             "hyperbolic_euler_1d",
             :hyperbolic,
             "Canonical 1D Euler Sod solve through the SciML contract.",
-            DEFAULT_TIME_RATIO_LIMIT,
-            DEFAULT_MEMORY_RATIO_LIMIT,
-            DEFAULT_ALLOC_RATIO_LIMIT,
+            DEFAULT_TIME_WARN_RATIO,
+            DEFAULT_TIME_FAIL_RATIO,
+            DEFAULT_MEMORY_WARN_RATIO,
+            DEFAULT_MEMORY_FAIL_RATIO,
+            DEFAULT_ALLOC_WARN_RATIO,
+            DEFAULT_ALLOC_FAIL_RATIO,
+            true,
             _hyperbolic_runner(),
         ),
         PerformanceScenario(
             "parabolic_diffusion_2d",
             :parabolic,
             "Node-based diffusion solve for the parabolic stable family.",
-            DEFAULT_TIME_RATIO_LIMIT,
-            DEFAULT_MEMORY_RATIO_LIMIT,
-            DEFAULT_ALLOC_RATIO_LIMIT,
+            DEFAULT_TIME_WARN_RATIO,
+            DEFAULT_TIME_FAIL_RATIO,
+            DEFAULT_MEMORY_WARN_RATIO,
+            DEFAULT_MEMORY_FAIL_RATIO,
+            DEFAULT_ALLOC_WARN_RATIO,
+            DEFAULT_ALLOC_FAIL_RATIO,
+            true,
             _parabolic_runner(),
         ),
         PerformanceScenario(
             "mhd_ct_uniform_2d",
             :mhd_ct,
             "2D CT-MHD uniform-field solve through the canonical SSPRK33 path.",
-            DEFAULT_TIME_RATIO_LIMIT,
-            DEFAULT_MEMORY_RATIO_LIMIT,
-            DEFAULT_ALLOC_RATIO_LIMIT,
+            DEFAULT_TIME_WARN_RATIO,
+            DEFAULT_TIME_FAIL_RATIO,
+            DEFAULT_MEMORY_WARN_RATIO,
+            DEFAULT_MEMORY_FAIL_RATIO,
+            DEFAULT_ALLOC_WARN_RATIO,
+            DEFAULT_ALLOC_FAIL_RATIO,
+            true,
             _mhd_runner(),
         ),
         PerformanceScenario(
             "relativistic_srmhd_1d",
             :relativistic,
             "1D SRMHD smooth-wave solve through the canonical SSPRK33 path.",
-            DEFAULT_TIME_RATIO_LIMIT,
-            DEFAULT_MEMORY_RATIO_LIMIT,
-            DEFAULT_ALLOC_RATIO_LIMIT,
+            DEFAULT_TIME_WARN_RATIO,
+            DEFAULT_TIME_FAIL_RATIO,
+            DEFAULT_MEMORY_WARN_RATIO,
+            DEFAULT_MEMORY_FAIL_RATIO,
+            DEFAULT_ALLOC_WARN_RATIO,
+            DEFAULT_ALLOC_FAIL_RATIO,
+            true,
             _relativistic_runner(),
         ),
     ]
@@ -107,9 +130,13 @@ function measure_scenario(scenario::PerformanceScenario; parameters = benchmark_
         samples = parameters.samples,
         seconds = parameters.seconds,
         evals = parameters.evals,
-        time_ratio_limit = scenario.time_ratio_limit,
-        memory_ratio_limit = scenario.memory_ratio_limit,
-        alloc_ratio_limit = scenario.alloc_ratio_limit,
+        time_warn_ratio = scenario.time_warn_ratio,
+        time_fail_ratio = scenario.time_fail_ratio,
+        memory_warn_ratio = scenario.memory_warn_ratio,
+        memory_fail_ratio = scenario.memory_fail_ratio,
+        alloc_warn_ratio = scenario.alloc_warn_ratio,
+        alloc_fail_ratio = scenario.alloc_fail_ratio,
+        release_blocker = scenario.release_blocker,
     )
 end
 
@@ -129,9 +156,13 @@ function load_baselines(path::AbstractString = DEFAULT_BASELINE_PATH)
                     time_ns = Int(entry["time_ns"]),
                     memory_bytes = Int(entry["memory_bytes"]),
                     allocs = Int(entry["allocs"]),
-                    time_ratio_limit = Float64(entry["time_ratio_limit"]),
-                    memory_ratio_limit = Float64(entry["memory_ratio_limit"]),
-                    alloc_ratio_limit = Float64(entry["alloc_ratio_limit"]),
+                    time_warn_ratio = _baseline_ratio(entry, "time_warn_ratio", "time_ratio_limit", DEFAULT_TIME_WARN_RATIO),
+                    time_fail_ratio = _baseline_ratio(entry, "time_fail_ratio", "time_ratio_limit", DEFAULT_TIME_FAIL_RATIO),
+                    memory_warn_ratio = _baseline_ratio(entry, "memory_warn_ratio", "memory_ratio_limit", DEFAULT_MEMORY_WARN_RATIO),
+                    memory_fail_ratio = _baseline_ratio(entry, "memory_fail_ratio", "memory_ratio_limit", DEFAULT_MEMORY_FAIL_RATIO),
+                    alloc_warn_ratio = _baseline_ratio(entry, "alloc_warn_ratio", "alloc_ratio_limit", DEFAULT_ALLOC_WARN_RATIO),
+                    alloc_fail_ratio = _baseline_ratio(entry, "alloc_fail_ratio", "alloc_ratio_limit", DEFAULT_ALLOC_FAIL_RATIO),
+                    release_blocker = get(entry, "release_blocker", true),
                 ) for entry in rows
         ),
     )
@@ -149,9 +180,13 @@ function compare_to_baselines(measurements, baselines)
                 id = missing_id,
                 feature = baselines.cases[missing_id].feature,
                 passed = false,
+                status = :fail,
+                warning_only = false,
                 reasons = ["missing current measurement for `$missing_id`"],
+                warnings = String[],
                 measurement = nothing,
                 baseline = baselines.cases[missing_id],
+                release_blocker = baselines.cases[missing_id].release_blocker,
             ),
         )
     end
@@ -164,9 +199,13 @@ function compare_to_baselines(measurements, baselines)
                     id = measurement.id,
                     feature = measurement.feature,
                     passed = false,
+                    status = :fail,
+                    warning_only = false,
                     reasons = ["missing baseline entry for `$(measurement.id)`"],
+                    warnings = String[],
                     measurement,
                     baseline = nothing,
+                    release_blocker = true,
                 ),
             )
             continue
@@ -174,35 +213,51 @@ function compare_to_baselines(measurements, baselines)
 
         baseline = baselines.cases[measurement.id]
         reasons = String[]
+        warnings = String[]
         time_ratio = measurement.time_ns / baseline.time_ns
         memory_ratio = baseline.memory_bytes == 0 ? 1.0 : measurement.memory_bytes / baseline.memory_bytes
         alloc_ratio = baseline.allocs == 0 ? 1.0 : measurement.allocs / baseline.allocs
 
-        time_ratio <= baseline.time_ratio_limit ||
-            push!(
+        _check_ratio!(
+            warnings,
             reasons,
-            "median runtime ratio $(round(time_ratio; digits = 2)) exceeds limit $(baseline.time_ratio_limit)",
+            "median runtime ratio",
+            time_ratio,
+            baseline.time_warn_ratio,
+            baseline.time_fail_ratio,
         )
-        memory_ratio <= baseline.memory_ratio_limit ||
-            push!(
+        _check_ratio!(
+            warnings,
             reasons,
-            "memory ratio $(round(memory_ratio; digits = 2)) exceeds limit $(baseline.memory_ratio_limit)",
+            "memory ratio",
+            memory_ratio,
+            baseline.memory_warn_ratio,
+            baseline.memory_fail_ratio,
         )
-        alloc_ratio <= baseline.alloc_ratio_limit ||
-            push!(
+        _check_ratio!(
+            warnings,
             reasons,
-            "allocation ratio $(round(alloc_ratio; digits = 2)) exceeds limit $(baseline.alloc_ratio_limit)",
+            "allocation ratio",
+            alloc_ratio,
+            baseline.alloc_warn_ratio,
+            baseline.alloc_fail_ratio,
         )
+        passed = isempty(reasons)
+        warning_only = passed && !isempty(warnings)
 
         push!(
             comparisons,
             (
                 id = measurement.id,
                 feature = measurement.feature,
-                passed = isempty(reasons),
+                passed = passed,
+                status = passed ? (warning_only ? :warn : :pass) : :fail,
+                warning_only = warning_only,
                 reasons = reasons,
+                warnings = warnings,
                 measurement = measurement,
                 baseline = baseline,
+                release_blocker = baseline.release_blocker,
             ),
         )
     end
@@ -228,15 +283,19 @@ function write_baselines(path::AbstractString, measurements)
                 "time_ns" => measurement.time_ns,
                 "memory_bytes" => measurement.memory_bytes,
                 "allocs" => measurement.allocs,
-                "time_ratio_limit" => isnothing(limits) ? measurement.time_ratio_limit : limits.time_ratio_limit,
-                "memory_ratio_limit" => isnothing(limits) ? measurement.memory_ratio_limit : limits.memory_ratio_limit,
-                "alloc_ratio_limit" => isnothing(limits) ? measurement.alloc_ratio_limit : limits.alloc_ratio_limit,
+                "time_warn_ratio" => isnothing(limits) ? measurement.time_warn_ratio : limits.time_warn_ratio,
+                "time_fail_ratio" => isnothing(limits) ? measurement.time_fail_ratio : limits.time_fail_ratio,
+                "memory_warn_ratio" => isnothing(limits) ? measurement.memory_warn_ratio : limits.memory_warn_ratio,
+                "memory_fail_ratio" => isnothing(limits) ? measurement.memory_fail_ratio : limits.memory_fail_ratio,
+                "alloc_warn_ratio" => isnothing(limits) ? measurement.alloc_warn_ratio : limits.alloc_warn_ratio,
+                "alloc_fail_ratio" => isnothing(limits) ? measurement.alloc_fail_ratio : limits.alloc_fail_ratio,
+                "release_blocker" => isnothing(limits) ? measurement.release_blocker : limits.release_blocker,
             ),
         )
     end
 
     payload = Dict{String, Any}(
-        "baseline_version" => 1,
+        "baseline_version" => 2,
         "benchmark_samples" => benchmark_samples,
         "benchmark_seconds" => benchmark_seconds,
         "benchmark_evals" => benchmark_evals,
@@ -247,6 +306,26 @@ function write_baselines(path::AbstractString, measurements)
         TOML.print(io, payload)
     end
     return path
+end
+
+_baseline_ratio(entry, preferred_key::AbstractString, fallback_key::AbstractString, default::Float64) =
+    Float64(get(entry, preferred_key, get(entry, fallback_key, default)))
+
+function _check_ratio!(
+        warnings::Vector{String},
+        failures::Vector{String},
+        label::AbstractString,
+        ratio::Float64,
+        warn_limit::Float64,
+        fail_limit::Float64,
+    )
+    rounded_ratio = round(ratio; digits = 2)
+    if ratio > fail_limit
+        push!(failures, "$label $rounded_ratio exceeds fail limit $fail_limit")
+    elseif ratio > warn_limit
+        push!(warnings, "$label $rounded_ratio exceeds warning limit $warn_limit")
+    end
+    return nothing
 end
 
 function _hyperbolic_runner()

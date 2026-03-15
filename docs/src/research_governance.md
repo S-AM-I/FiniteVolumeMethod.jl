@@ -69,6 +69,8 @@ report.
 - Release outputs also record `provenance.toml` and `replay_report.toml` so the
   archived tree carries the git/Julia context and the selected summary-replay
   check that was used to validate the packaged evidence.
+- Release provenance also records the bound `reference_datasets` artifact so the
+  long-lived benchmark corpus is versioned alongside the release metadata.
 - These bundles copy the exact machine-readable summaries and referenced figure
   artifacts needed to archive or review the current claim-bearing evidence set.
 
@@ -83,5 +85,6 @@ report.
   `hyperbolic`, `parabolic`, `mhd_ct`, and `relativistic`.
 - `make ci-release-audit` runs the release-audit lane, including stable release
   output generation plus the executable release gate in
-  `test/release_audit.jl`, using the same provenance, replay, and stable-family
-  performance checks as the release-packaging workflow.
+  `test/release_audit.jl`, using the same provenance, replay, reference-dataset
+  artifact, stable-family performance, and optional CUDA backend-parity checks
+  as the release-packaging workflow.
