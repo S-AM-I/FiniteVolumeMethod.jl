@@ -79,6 +79,8 @@ report.
 - `make ci-smoke` runs one verification-grade evidence case per stable
   claim-bearing solver family.
 - `make ci-full-evidence` runs the complete scientific evidence catalog.
+- `make ci-performance` runs the stable-family performance baselines for
+  `hyperbolic`, `parabolic`, `mhd_ct`, and `relativistic`.
 - `make ci-release-audit` runs the release-audit lane, including stable release
   output generation plus the executable release gate in
   `test/release_audit.jl`, using the same provenance and replay checks as the
