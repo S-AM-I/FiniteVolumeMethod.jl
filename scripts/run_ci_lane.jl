@@ -1,7 +1,6 @@
 using Dates
 
 const REPO_ROOT = normpath(joinpath(@__DIR__, ".."))
-const ROOT_PROJECT = REPO_ROOT
 const TEST_PROJECT = joinpath(REPO_ROOT, "test")
 const DOCS_PROJECT = joinpath(REPO_ROOT, "docs")
 const JULIA_BIN = joinpath(Sys.BINDIR, Base.julia_exename())
@@ -42,29 +41,16 @@ function ci_env()
     )
 end
 
-function julia_expr(project::AbstractString, expr::AbstractString)
+function julia_expr(project::AbstractString, expr::AbstractString; extra_env = Dict{String, String}())
     mkpath(CI_WRITABLE_DEPOT)
     cmd = Cmd(`$JULIA_BIN --project=$project -e $expr`; dir = REPO_ROOT)
-    return setenv(cmd, ci_env())
-end
-
-function julia_script(project::AbstractString, script::AbstractString, args::AbstractString...)
-    mkpath(CI_WRITABLE_DEPOT)
-    cmd = Cmd(`$JULIA_BIN --project=$project $script $(args...)`; dir = REPO_ROOT)
-    return setenv(cmd, ci_env())
+    return setenv(cmd, merge(ci_env(), extra_env))
 end
 
 function run_step(label::AbstractString, cmd::Cmd)
     log_step(label)
     run(cmd)
     return nothing
-end
-
-function instantiate_root_project()
-    return run_step(
-        "Instantiate root project",
-        julia_expr(ROOT_PROJECT, "using Pkg; Pkg.resolve(); Pkg.instantiate()"),
-    )
 end
 
 function instantiate_test_project()
@@ -87,15 +73,15 @@ function instantiate_docs_project()
     )
 end
 
-function run_test_file(filename::AbstractString)
+function run_test_file(filename::AbstractString; extra_env = Dict{String, String}())
     path = joinpath(REPO_ROOT, "test", filename)
-    run_step("Run test/$filename", julia_expr(TEST_PROJECT, "include($(repr(path)))"))
+    run_step("Run test/$filename", julia_expr(TEST_PROJECT, "include($(repr(path)))"; extra_env))
     return nothing
 end
 
-function run_docs_file(filename::AbstractString)
+function run_docs_file(filename::AbstractString; extra_env = Dict{String, String}())
     path = joinpath(REPO_ROOT, "docs", filename)
-    run_step("Run docs/$filename", julia_expr(DOCS_PROJECT, "include($(repr(path)))"))
+    run_step("Run docs/$filename", julia_expr(DOCS_PROJECT, "include($(repr(path)))"; extra_env))
     return nothing
 end
 
@@ -135,14 +121,11 @@ function run_release_audit_lane(output_root::AbstractString)
     run_test_file("repository_governance.jl")
     instantiate_docs_project()
     run_docs_file("environment_integrity.jl")
-    instantiate_root_project()
-    run_step(
-        "Build release outputs for stable features",
-        julia_script(
-            ROOT_PROJECT,
-            joinpath(REPO_ROOT, "scripts", "build_release_outputs.jl"),
-            "--stable-only",
-            "--output-root=$output_root",
+    run_test_file(
+        "release_audit.jl";
+        extra_env = Dict(
+            "FVM_RELEASE_AUDIT_OUTPUT_ROOT" => output_root,
+            "FVM_RELEASE_AUDIT_RERUN" => "true",
         ),
     )
     return nothing
