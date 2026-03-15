@@ -8,4 +8,6 @@ Local equivalents remain available through:
 - `docker-compose.yml`
 - direct Julia entrypoints in `test/`, `docs/`, and `validation/`
 
-To re-enable GitHub Actions after the overhaul, rename the relevant files back to `*.yml` and review the trigger policy before pushing.
+The staged re-enable criteria and proposed cloud mapping live in `validation/CI_REENABLE_PLAN.md`.
+
+To re-enable GitHub Actions after the overhaul, rename the relevant files back to `*.yml`, apply the trigger policy from `validation/CI_REENABLE_PLAN.md`, and keep docs deployment gated on green scientific and release lanes.

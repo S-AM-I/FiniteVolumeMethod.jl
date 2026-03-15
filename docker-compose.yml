@@ -4,6 +4,7 @@
 #   docker-compose build base          # Build base image (first time / after Project.toml changes)
 #   docker-compose run --rm test       # Full test suite
 #   docker-compose run --rm lane       # Named local CI lane (set CI_LANE=fast-api-interop, scientific-smoke, full-evidence, performance, or release-audit)
+#   docker-compose run --rm performance-calibration   # Repeated performance calibration
 #   docker-compose run --rm format     # Check formatting
 #   docker-compose run --rm repl       # Interactive REPL
 #
@@ -63,6 +64,15 @@ services:
       FVM_RELEASE_AUDIT_OUTPUT_ROOT: ${FVM_RELEASE_AUDIT_OUTPUT_ROOT:-/tmp/fvm-release-audit}
     command: >-
       bash -c 'julia --project=. scripts/run_ci_lane.jl "$$CI_LANE" --output-root="$$FVM_RELEASE_AUDIT_OUTPUT_ROOT"'
+
+  # Repeated performance calibration to review warning/fail headroom
+  performance-calibration:
+    <<: *common
+    environment:
+      <<: *env
+      FVM_PERFORMANCE_CALIBRATION_REPETITIONS: ${FVM_PERFORMANCE_CALIBRATION_REPETITIONS:-5}
+    command: >-
+      bash -c 'julia --project=test scripts/calibrate_performance_baselines.jl --repetitions="$$FVM_PERFORMANCE_CALIBRATION_REPETITIONS"'
 
   # Runic format check — mirrors the disabled GitHub format template in .github/workflows/FormatCheck.yml.disabled
   format:

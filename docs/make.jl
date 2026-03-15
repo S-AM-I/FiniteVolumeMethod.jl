@@ -95,6 +95,7 @@ _PAGES = [
     "Scientific Governance" => [
         "Research Governance" => "research_governance.md",
         "Capability Matrix" => "capability_matrix.md",
+        "v2 Migration" => "v2_migration.md",
     ],
     "Tutorials" => [
         "Parabolic and Elliptic PDEs" => [
@@ -172,6 +173,7 @@ _PAGES = [
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
             "Toro Riemann Tests" => "verification/toro_riemann_tests.md",
+            "Brio-Wu Shock Tube" => "verification/brio_wu_verification.md",
             "MHD Convergence" => "verification/mhd_convergence.md",
             "Navier-Stokes Convergence" => "verification/ns_convergence.md",
             "Taylor-Green KE Decay" => "verification/tgv_kinetic_energy_decay.md",

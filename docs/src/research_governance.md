@@ -34,6 +34,10 @@ research workflow, visualization, or data handling.
   evidence explicitly states otherwise.
 - GPU execution is treated as an extension path that must demonstrate parity
   against the CPU reference baseline before it can inherit the same claim level.
+- The currently audited GPU claim boundary is intentionally narrow: the repo
+  ships a CUDA parity check for the supported 2D hyperbolic extension path, and
+  other GPU paths remain experimental until they gain comparable parity
+  coverage.
 
 ## Release Discipline
 
@@ -73,6 +77,10 @@ report.
   long-lived benchmark corpus is versioned alongside the release metadata.
 - These bundles copy the exact machine-readable summaries and referenced figure
   artifacts needed to archive or review the current claim-bearing evidence set.
+- `julia --project=test scripts/calibrate_performance_baselines.jl` reruns the
+  stable performance suite repeatedly and writes a calibration report to
+  `validation/reports/` so warning and fail thresholds can be reviewed after
+  environment changes.
 
 ## Local CI Lanes
 
@@ -83,8 +91,16 @@ report.
 - `make ci-full-evidence` runs the complete scientific evidence catalog.
 - `make ci-performance` runs the stable-family performance baselines for
   `hyperbolic`, `parabolic`, `mhd_ct`, and `relativistic`.
+- `make ci-performance-calibrate` repeats those baselines and records a
+  calibration report for threshold review.
 - `make ci-release-audit` runs the release-audit lane, including stable release
   output generation plus the executable release gate in
   `test/release_audit.jl`, using the same provenance, replay, reference-dataset
   artifact, stable-family performance, and optional CUDA backend-parity checks
   as the release-packaging workflow.
+
+## Cloud CI Status
+
+- GitHub-hosted Actions remain intentionally disabled during the `v2` overhaul.
+- The local lane stack is the authoritative release process until the staged
+  re-enable criteria in `validation/CI_REENABLE_PLAN.md` are satisfied.

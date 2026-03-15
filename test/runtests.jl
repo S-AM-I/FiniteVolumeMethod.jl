@@ -91,6 +91,9 @@ end
     @testset verbose = true "Performance & Threading" begin
         safe_include("performance.jl")
     end
+    @testset verbose = true "Performance Calibration" begin
+        safe_include("performance_calibration.jl")
+    end
     @testset verbose = true "Advanced Numerics" begin
         safe_include("advanced_numerics.jl")
     end
