@@ -8,6 +8,8 @@ IS_CI = get(ENV, "CI", "false") == "true"
 IS_LIVESERVER = get(ENV, "LIVESERVER_ACTIVE", "false") == "true"
 DOCS_EXECUTION_MODE = get(ENV, "FVM_DOCS_EXECUTION", IS_CI ? "subset" : "all")
 DOCS_EXECUTION_MODE in ("all", "subset", "none") || error("FVM_DOCS_EXECUTION must be one of: all, subset, none")
+USE_PRETTY_URLS = IS_CI || IS_LIVESERVER
+DOCS_PRETTYURLS = get(ENV, "FVM_DOCS_PRETTYURLS", USE_PRETTY_URLS ? "true" : "false") == "true"
 
 should_execute_example(entry) = !IS_LIVESERVER && (
     DOCS_EXECUTION_MODE == "all" ? entry.run_locally :
@@ -249,6 +251,10 @@ makedocs(;
     format = Documenter.HTML(;
         canonical = "https://cx-xd.github.io/FiniteVolumeMethod.jl",
         edit_link = "main",
+        # Pretty URLs work well on hosted docs and LiveServer, but they produce
+        # directory links that open in Finder when users browse the local build
+        # directly via file:// on macOS.
+        prettyurls = DOCS_PRETTYURLS,
         collapselevel = 2,
         assets = String[],
         mathengine = MathJax3(
