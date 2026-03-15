@@ -45,3 +45,10 @@ Keep `*.yml.disabled` workflow files disabled until after the first accepted
 research-grade `v2` release candidate. When re-enabling, restore only the
 minimum set of workflows needed for pull-request feedback and release gating,
 then add heavier lanes incrementally.
+
+## Current Decision
+
+As of March 15, 2026, GitHub-hosted Actions remain intentionally disabled
+through `v2.0.0-rc1` review. Re-enable work should begin only after the first
+release-candidate bundle, validation report, and release audit have been
+reviewed and accepted as the authoritative local process.

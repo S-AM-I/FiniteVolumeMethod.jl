@@ -19,7 +19,9 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 using Test #src
 using CairoMakie
 
-include("amr_common.jl")
+amr_common_path = joinpath(@__DIR__, "amr_common.jl")
+isfile(amr_common_path) || (amr_common_path = joinpath(@__DIR__, "..", "literate_verification", "amr_common.jl"))
+include(amr_common_path)
 
 base_cells = [8, 12, 16]
 reference_cells = 128

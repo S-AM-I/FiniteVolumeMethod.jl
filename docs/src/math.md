@@ -135,8 +135,8 @@ fig, ax, sc = poly(control_volume_verts[cv_idx],
 triplot!(tri,
     show_convex_hull=false,
     show_constrained_edges=false,
-    show_all_points=true,
-    point_color=:black,
+    show_points=true,
+    markercolor=:black,
     markersize=11)
 scatter!(ax, [a, b, c], color=:cyan, markersize=11, strokecolor=:black, strokewidth=1)
 linesegments!(ax, linesegments, color=:blue, linewidth=3)
