@@ -39,6 +39,7 @@ This repository treats only the current Julia stable release and the current Jul
 The repository now follows an explicit research-grade `v2` contract.
 
 - Start with the [capability matrix](docs/src/capability_matrix.md) and the [v2 migration guide](docs/src/v2_migration.md) before treating a feature as publication-grade.
+- Review the proposed [v2.0.0-rc1 changelog](CHANGELOG.md) for the current release-candidate contract and migration summary.
 - CPU `Float64` runs remain the publication baseline. CUDA parity is currently audited only for the supported 2D hyperbolic extension path, so other GPU usage should be treated as experimental.
 - GitHub-hosted Actions are intentionally disabled during the overhaul. Use the local lane stack instead: `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, and `make ci-release-audit`.
 

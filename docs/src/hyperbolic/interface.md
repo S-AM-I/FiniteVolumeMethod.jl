@@ -110,14 +110,16 @@ PeriodicHyperbolicBC
 HyperbolicProblem
 HyperbolicProblem2D
 HyperbolicProblem3D
-sciml_problem
-solution_accessor
-solution_snapshot
 mhd_stage_limiter
 compute_dt
 compute_dt_2d
 compute_dt_3d
 ```
+
+The canonical SciML execution helpers `sciml_problem`, `solution_accessor`, and
+`solution_snapshot` are documented on the package-level interface page so they
+can serve parabolic, hyperbolic, AMR, coupling, and relativistic workflows from
+one place.
 
 For direct `solve(prob, alg; ...)` calls, SciML callbacks supplied via the `callback` keyword are merged with the package's internal CFL controller. For constrained-transport MHD, pass a stage limiter such as `SSPRK33(; stage_limiter! = mhd_stage_limiter(sciml_problem(prob).p))`.
 

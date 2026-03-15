@@ -3,6 +3,19 @@
 This note records the full local release-candidate dry run completed on
 March 15, 2026.
 
+## Environment
+
+The dry run used a clean detached worktree at `/tmp/fvm-rc-check` together with
+the Julia binary
+`/Users/sami/.julia/juliaup/julia-1.12.4+0.aarch64.apple.darwin14/bin/julia`
+and
+`JULIA_DEPOT_PATH=/tmp/fvm-julia-depot:/Users/sami/.julia`.
+
+A truly empty depot could not be exercised inside this sandbox because registry
+downloads are blocked by network policy. The clean-worktree plus writable overlay
+depot setup was used to keep the RC pass isolated without introducing false
+package-resolution failures unrelated to the repository.
+
 ## Commands Run
 
 The dry run exercised the full local lane stack through
@@ -47,6 +60,11 @@ The release-audit output tree contained:
 - `backend_parity_report.toml` reported the CUDA parity case as `not_run` on
   the dry-run machine because CUDA was not functional there. Under the current
   claim boundary, that is acceptable and does not block a CPU-reference release.
+- A subsequent full docs build from the clean worktree surfaced RC docs
+  regressions that were fixed immediately:
+  duplicate `@docs` entries for the new SciML interface helpers, a Makie
+  `triplot!` attribute rename in `docs/src/math.md`, and AMR verification pages
+  that needed a build-safe path to `amr_common.jl`.
 
 ## Follow-up
 
@@ -54,3 +72,5 @@ The release-audit output tree contained:
   dependency, or hardware changes before tightening performance thresholds.
 - Keep GitHub-hosted Actions disabled until the re-enable criteria in
   `validation/CI_REENABLE_PLAN.md` are satisfied.
+- Confirm the patched full docs build as the last RC sign-off step before
+  calling the branch ready for `v2.0.0-rc1`.
