@@ -217,13 +217,6 @@ for i in eachindex(sol)
 end
 resize_to_layout!(fig)
 fig
-
-    ax3 = Axis(
-        title = L"Exact $\Phi: t = %$(sol.t[i])$", titlealign = :left
-    ax4 = Axis(
-        title = L"Exact $\Psi: t = %$(sol.t[i])$", titlealign = :left
-@test_reference joinpath(
-    @__DIR__, "../figures", "reaction_diffusion_brusselator_system_of_pdes_exact_comparisons.png"
 ````
 
 ## Just the code
@@ -298,13 +291,6 @@ for i in eachindex(sol)
 end
 resize_to_layout!(fig)
 fig
-
-    ax3 = Axis(
-        title = L"Exact $\Phi: t = %$(sol.t[i])$", titlealign = :left
-    ax4 = Axis(
-        title = L"Exact $\Psi: t = %$(sol.t[i])$", titlealign = :left
-@test_reference joinpath(
-    @__DIR__, "../figures", "reaction_diffusion_brusselator_system_of_pdes_exact_comparisons.png"
 ```
 
 ---

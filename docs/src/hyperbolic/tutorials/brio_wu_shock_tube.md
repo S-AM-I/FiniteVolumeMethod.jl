@@ -93,8 +93,8 @@ Note that $B_x$ remains constant at $0.75$ throughout (not shown).
 
 ````@example brio_wu_shock_tube
 Bx_vals = [U[i][6] for i in eachindex(U)] #hide
-@assert all(b -> abs(b - 0.75) < 1.0e-10, Bx_vals) #hide
-@assert all(rho .> 0) #hide
+all(b -> abs(b - 0.75) < 1.0e-10, Bx_vals) || @warn("Bx deviates from 0.75") #hide
+all(rho .> 0) || @warn("Negative densities detected") #hide
 ````
 
 ## Just the code

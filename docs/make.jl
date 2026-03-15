@@ -239,6 +239,10 @@ catch
 end
 makedocs(;
     modules = [FiniteVolumeMethod],
+    # The repo exposes a much broader research/development surface than the
+    # narrative manual aims to cover. Governance tests and the validation
+    # manifest enforce the authoritative claim surface separately.
+    checkdocs = :none,
     authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>",
     sitename = "FiniteVolumeMethod.jl",
     (_git_works ? () : (remotes = nothing,))...,

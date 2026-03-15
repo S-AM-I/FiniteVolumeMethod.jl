@@ -140,15 +140,30 @@ fvm_prob = FVMProblem(
 fvm_sol = solve(fvm_prob, Tsit5(), saveat = 2.0)
 fvm_sol |> tc #hide
 
-for j in eachindex(fvm_sol) #src
+for j in eachindex(fvm_sol)
     ax = Axis(
-        fig[2, j], width = 600, height = 600, #src
-        xlabel = "x", ylabel = "y", #src
+        fig[2, j], width = 600, height = 600,
+        xlabel = "x", ylabel = "y",
         title = "t = $(fvm_sol.t[j])"
-    ) #src
+    )
     tricontourf!(
         ax, tri, fvm_sol.u[j], levels = 0:0.1:1,
         extendlow = :auto, extendhigh = :auto, colormap = :turbo
+    )
+    tightlimits!(ax)
+end
+resize_to_layout!(fig)
+fig
+
+for j in eachindex(fvm_sol) #src
+    ax = Axis( #src
+        fig[2, j], width = 600, height = 600, #src
+        xlabel = "x", ylabel = "y", #src
+        title = "t = $(fvm_sol.t[j])" #src
+    ) #src
+    tricontourf!( #src
+        ax, tri, fvm_sol.u[j], levels = 0:0.1:1, #src
+        extendlow = :auto, extendhigh = :auto, colormap = :turbo #src
     ) #src
     tightlimits!(ax) #src
 end #src

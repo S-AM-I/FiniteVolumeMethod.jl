@@ -55,6 +55,7 @@ Neumann
 Dudt
 Dirichlet 
 Constrained
+Robin
 ```
 
 # `InternalConditions`: Defining internal conditions

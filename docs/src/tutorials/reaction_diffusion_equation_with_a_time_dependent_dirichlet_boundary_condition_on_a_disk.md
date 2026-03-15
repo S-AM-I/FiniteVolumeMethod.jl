@@ -90,15 +90,6 @@ for (i, j) in zip(1:3, (1, 6, 11))
 end
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.png"
-
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk_exact_comparisons.png"
 ````
 
 ## Just the code
@@ -152,15 +143,6 @@ for (i, j) in zip(1:3, (1, 6, 11))
 end
 resize_to_layout!(fig)
 fig
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.png"
-
-@test_reference joinpath(
-    @__DIR__,
-    "../figures",
-    "reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk_exact_comparisons.png"
 ```
 
 ---

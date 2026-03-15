@@ -26,39 +26,39 @@ examples are not yet rigorous literature-backed reproductions.
 
 | Example | Evidence Basis | Metric | Acceptance |
 |:--------|:---------------|:-------|:-----------|
-| [MMS Convergence](@ref) | Manufactured solution | Observed convergence rates in multiple norms | Meets script tolerance for second-order behaviour |
-| [Decoupled MMS Convergence](@ref) | Manufactured solution | Separate spatial and temporal convergence rates | Meets script tolerances for each refinement study |
-| [Euler MMS Convergence](@ref) | Manufactured solution | L1 density error, pressure error, GCI ratio | Density rates and GCI remain within script tolerances |
-| [Poisson Convergence](@ref) | Exact solution | L2 error and observed convergence rate | Meets script convergence tolerance |
-| [Smooth Advection](@ref) | Exact solution | L1 transport error and observed convergence rate | Meets scheme-specific tolerance |
-| [Source Term Convergence](@ref) | Manufactured solution | Convergence with source forcing | Meets script tolerance |
-| [Flux Balance](@ref) | Discrete invariant | Residual in assembled flux balance | Machine-precision imbalance |
-| [Conservation Verification](@ref) | Discrete invariant | Drift in conserved totals | Remains within script tolerance |
-| [Species Conservation](@ref) | Discrete invariant | Drift in total and per-species quantities | Remains within script tolerance |
-| [Coupling Null-Source Identity](@ref) | Canonical non-coupled reference dataset | Maximum conserved-state difference vs the SciML-backed hyperbolic solve | Remains below the stated machine-precision threshold |
-| [Coupled Mass Conservation](@ref) | Discrete invariant | Relative drift in total mass and total momentum under cooling-source coupling | Remains below the stated machine-precision threshold |
-| [Passive Scalar Convergence](@ref) | Exact solution | L1 passive-scalar error and observed rate | Meets script tolerance |
-| [GRMHD Flat-Space Reduction](@ref) | Asymptotic reduction | GRMHD/SRMHD flux mismatch and round-trip error | Remains below stated thresholds |
-| [GRMHD Newtonian Limit](@ref) | Asymptotic reduction | Primitive-recovery error and static-atmosphere drift | Remains below stated thresholds |
-| [MHD div(B) Preservation](@ref) | Discrete invariant | Maximum cellwise ``\nabla\cdot B`` | Remains below stated threshold |
-| [AMR Smooth-Pulse Convergence](@ref) | Exact solution | L1 density error and observed refinement rate | Error decreases monotonically and rates remain above the stated threshold |
-| [AMR Regridding Conservation](@ref) | Discrete invariant | Maximum relative drift in mass, momentum, and energy | Dynamic AMR reaches level 2 and all reported drifts remain below the stated threshold |
+| [MMS Convergence](mms_convergence.md) | Manufactured solution | Observed convergence rates in multiple norms | Meets script tolerance for second-order behaviour |
+| [Decoupled MMS Convergence](mms_spatial_temporal_decoupled.md) | Manufactured solution | Separate spatial and temporal convergence rates | Meets script tolerances for each refinement study |
+| [Euler MMS Convergence](euler_mms_convergence.md) | Manufactured solution | L1 density error, pressure error, GCI ratio | Density rates and GCI remain within script tolerances |
+| [Poisson Convergence](poisson_convergence.md) | Exact solution | L2 error and observed convergence rate | Meets script convergence tolerance |
+| [Smooth Advection](smooth_advection_convergence.md) | Exact solution | L1 transport error and observed convergence rate | Meets scheme-specific tolerance |
+| [Source Term Convergence](source_term_convergence.md) | Manufactured solution | Convergence with source forcing | Meets script tolerance |
+| [Flux Balance](flux_balance_verification.md) | Discrete invariant | Residual in assembled flux balance | Machine-precision imbalance |
+| [Conservation Verification](conservation_verification.md) | Discrete invariant | Drift in conserved totals | Remains within script tolerance |
+| [Species Conservation](species_conservation.md) | Discrete invariant | Drift in total and per-species quantities | Remains within script tolerance |
+| [Coupling Null-Source Identity](coupling_nullsource_identity.md) | Canonical non-coupled reference dataset | Maximum conserved-state difference vs the SciML-backed hyperbolic solve | Remains below the stated machine-precision threshold |
+| [Coupled Mass Conservation](coupling_mass_conservation.md) | Discrete invariant | Relative drift in total mass and total momentum under cooling-source coupling | Remains below the stated machine-precision threshold |
+| [Passive Scalar Convergence](passive_scalar_convergence.md) | Exact solution | L1 passive-scalar error and observed rate | Meets script tolerance |
+| [GRMHD Flat-Space Reduction](grmhd_asymptotic_flat.md) | Asymptotic reduction | GRMHD/SRMHD flux mismatch and round-trip error | Remains below stated thresholds |
+| [GRMHD Newtonian Limit](grmhd_newtonian_limit.md) | Asymptotic reduction | Primitive-recovery error and static-atmosphere drift | Remains below stated thresholds |
+| [MHD div(B) Preservation](mhd_divb_verification.md) | Discrete invariant | Maximum cellwise ``\nabla\cdot B`` | Remains below stated threshold |
+| [AMR Smooth-Pulse Convergence](amr_convergence.md) | Exact solution | L1 density error and observed refinement rate | Error decreases monotonically and rates remain above the stated threshold |
+| [AMR Regridding Conservation](amr_regridding_conservation.md) | Discrete invariant | Maximum relative drift in mass, momentum, and energy | Dynamic AMR reaches level 2 and all reported drifts remain below the stated threshold |
 
 ## Analytical Benchmarks
 
 | Example | Evidence Basis | Metric | Acceptance |
 |:--------|:---------------|:-------|:-----------|
-| [Sod Grid Convergence](@ref) | Exact Riemann solution | L1 density error and convergence trend | Errors decrease monotonically |
-| [Toro Riemann Tests](@ref) | Published star-state values | Star-region pressure error | Each case meets the script tolerance |
-| [MHD Convergence](@ref) | Exact Alfvén-wave solution | L1 magnetic-field error and observed rate | Rates exceed the script threshold |
-| [Navier-Stokes Convergence](@ref) | Exact Taylor-Green vortex | Linf velocity error and observed rate | Rates exceed the script threshold |
-| [Taylor-Green KE Decay](@ref) | Exact kinetic-energy decay law | Relative decay error | Meets the script tolerance |
-| [Porous Medium (Barenblatt)](@ref) | Exact self-similar solution | L2 error trend and minimum observed rate | Errors decrease monotonically |
-| [Coupled Cooling Reference](@ref) | Trusted fine-grid coupled reference dataset | L1 pressure error and observed refinement rate | Errors decrease monotonically and rates exceed the stated threshold |
-| [AMR Reference Tracking](@ref) | Trusted structured-grid reference dataset | L1 density error versus a uniform baseline plus compression ratio | Error decreases with AMR budget while active-cell compression stays below the stated threshold |
-| [SRMHD Convergence](@ref) | Exact smooth-wave solution | L1 density error and observed rate | Rates exceed the script threshold |
-| [SRMHD Eigenmode Convergence](@ref) | Linearised exact eigenmodes | Self-convergence rate for each mode | All mode-wise rates exceed the script threshold |
-| [GRMHD Convergence](@ref) | Exact smooth-wave solution in Minkowski spacetime | L1 density error and observed rate | Rates exceed the script threshold |
+| [Sod Grid Convergence](sod_grid_convergence.md) | Exact Riemann solution | L1 density error and convergence trend | Errors decrease monotonically |
+| [Toro Riemann Tests](toro_riemann_tests.md) | Published star-state values | Star-region pressure error | Each case meets the script tolerance |
+| [MHD Convergence](mhd_convergence.md) | Exact Alfvén-wave solution | L1 magnetic-field error and observed rate | Rates exceed the script threshold |
+| [Navier-Stokes Convergence](ns_convergence.md) | Exact Taylor-Green vortex | Linf velocity error and observed rate | Rates exceed the script threshold |
+| [Taylor-Green KE Decay](tgv_kinetic_energy_decay.md) | Exact kinetic-energy decay law | Relative decay error | Meets the script tolerance |
+| [Porous Medium (Barenblatt)](porous_medium_barenblatt.md) | Exact self-similar solution | L2 error trend and minimum observed rate | Errors decrease monotonically |
+| [Coupled Cooling Reference](coupling_cooling_reference.md) | Trusted fine-grid coupled reference dataset | L1 pressure error and observed refinement rate | Errors decrease monotonically and rates exceed the stated threshold |
+| [AMR Reference Tracking](amr_reference_tracking.md) | Trusted structured-grid reference dataset | L1 density error versus a uniform baseline plus compression ratio | Error decreases with AMR budget while active-cell compression stays below the stated threshold |
+| [SRMHD Convergence](srmhd_convergence.md) | Exact smooth-wave solution | L1 density error and observed rate | Rates exceed the script threshold |
+| [SRMHD Eigenmode Convergence](srmhd_eigenmode_convergence.md) | Linearised exact eigenmodes | Self-convergence rate for each mode | All mode-wise rates exceed the script threshold |
+| [GRMHD Convergence](grmhd_convergence.md) | Exact smooth-wave solution in Minkowski spacetime | L1 density error and observed rate | Rates exceed the script threshold |
 
 ## Scope Notes
 

@@ -440,6 +440,7 @@ since $\grad u \vdot \vu n = 2$, we have $-D\grad u \vdot \vu n = -2D = -4$, so
 $\vb q \vdot \vu n = -4$. Here is a comparison of the two solutions.
 
 ````@example diffusion_equations
+using LinearSolve
 BCs_prob = BoundaryConditions(mesh, (x, y, t, u, p) -> -4, Neumann)
 fvm_prob = FVMProblem(
     mesh, BCs_prob;
@@ -494,7 +495,6 @@ These problems also work with the `pl_interpolate` function:
 q = (30.0, 45.0)
 T = jump_and_march(tri, q)
 val = pl_interpolate(prob, T, sol.u[3], q[1], q[2])
-@test pl_interpolate(prob, T, sol.u[3], q[1], q[2]) ≈
 ````
 
 ## Just the code
@@ -717,6 +717,7 @@ end
 resize_to_layout!(fig)
 fig
 
+using LinearSolve
 BCs_prob = BoundaryConditions(mesh, (x, y, t, u, p) -> -4, Neumann)
 fvm_prob = FVMProblem(
     mesh, BCs_prob;
@@ -748,7 +749,6 @@ fig
 q = (30.0, 45.0)
 T = jump_and_march(tri, q)
 val = pl_interpolate(prob, T, sol.u[3], q[1], q[2])
-@test pl_interpolate(prob, T, sol.u[3], q[1], q[2]) ≈
 ```
 
 ---

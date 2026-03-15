@@ -218,7 +218,6 @@ ax = Axis(fig[1, 2], width = 600, height = 600, title = "Template")
 tricontourf!(ax, tri, fvm_sol.u, levels = 0:1000:15000, extendhigh = :auto)
 resize_to_layout!(fig)
 fig
-ind = findall(i -> DelaunayTriangulation.has_vertex(tri, i), DelaunayTriangulation.each_point_index(tri))
 ````
 
 ## Using the Provided Template
@@ -392,7 +391,6 @@ ax = Axis(fig[1, 2], width = 600, height = 600, title = "Template")
 tricontourf!(ax, tri, fvm_sol.u, levels = 0:1000:15000, extendhigh = :auto)
 resize_to_layout!(fig)
 fig
-ind = findall(i -> DelaunayTriangulation.has_vertex(tri, i), DelaunayTriangulation.each_point_index(tri))
 
 prob = MeanExitTimeProblem(
     mesh, BCs, ICs;

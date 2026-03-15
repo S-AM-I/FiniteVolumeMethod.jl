@@ -96,12 +96,6 @@ Now let's visualise.
 using CairoMakie
 fig, ax, sc = tricontourf(tri, sol.u, levels = -2.5:0.15:-1.0, colormap = :matter)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "helmholtz_equation_with_inhomogeneous_boundary_conditions.png"
-
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "helmholtz_equation_with_inhomogeneous_boundary_conditions_exact_comparisons.png"
 ````
 
 ## Just the code
@@ -138,12 +132,6 @@ sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 using CairoMakie
 fig, ax, sc = tricontourf(tri, sol.u, levels = -2.5:0.15:-1.0, colormap = :matter)
 fig
-@test_reference joinpath(
-    @__DIR__, "../figures", "helmholtz_equation_with_inhomogeneous_boundary_conditions.png"
-
-@test_reference joinpath(
-    @__DIR__, "../figures",
-    "helmholtz_equation_with_inhomogeneous_boundary_conditions_exact_comparisons.png"
 ```
 
 ---

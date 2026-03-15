@@ -130,9 +130,6 @@ fig, ax,
 )
 tightlimits!(ax)
 fig
-@test sol.u ≈ [
-    1 / (2π^2) * sin(π * x) * sin(π * y)
-        for (x, y) in DelaunayTriangulation.each_point(tri)
 ````
 
 If we wanted to turn this into a `SteadyFVMProblem`, we use a similar call to `poissons_equation`
@@ -159,9 +156,6 @@ fvm_prob = SteadyFVMProblem(
 using SteadyStateDiffEq, OrdinaryDiffEq
 fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 fvm_sol |> tc #hide
-tricontourf!(
-    ax, tri, fvm_sol.u, levels = LinRange(0, 0.05, 10),
-    colormap = :matter, extendhigh = :auto
 ````
 
 ## Using the Provided Template
@@ -175,9 +169,6 @@ prob = PoissonsEquation(mesh, BCs; source_function = source_function)
 ````@example poissons_equation
 sol = solve(prob, KLUFactorization())
 sol |> tc #hide
-@test sol.u ≈ [
-    1 / (2π^2) * sin(π * x) * sin(π * y)
-        for (x, y) in DelaunayTriangulation.each_point(tri)
 ````
 
 Here is a benchmark comparison of the `PoissonsEquation` approach against the `FVMProblem` approach.
@@ -505,9 +496,6 @@ fig, ax,
 )
 tightlimits!(ax)
 fig
-@test sol.u ≈ [
-    1 / (2π^2) * sin(π * x) * sin(π * y)
-        for (x, y) in DelaunayTriangulation.each_point(tri)
 
 initial_condition = zeros(DelaunayTriangulation.num_points(tri))
 fvm_prob = SteadyFVMProblem(
@@ -524,16 +512,10 @@ fvm_prob = SteadyFVMProblem(
 
 using SteadyStateDiffEq, OrdinaryDiffEq
 fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
-tricontourf!(
-    ax, tri, fvm_sol.u, levels = LinRange(0, 0.05, 10),
-    colormap = :matter, extendhigh = :auto
 
 prob = PoissonsEquation(mesh, BCs; source_function = source_function)
 
 sol = solve(prob, KLUFactorization())
-@test sol.u ≈ [
-    1 / (2π^2) * sin(π * x) * sin(π * y)
-        for (x, y) in DelaunayTriangulation.each_point(tri)
 
 a, b, c, d = 0.0, 10.0, 0.0, 10.0
 e, f = (2.0, 3.0), (8.0, 3.0)
