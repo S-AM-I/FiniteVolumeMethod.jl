@@ -80,5 +80,6 @@ report.
   claim-bearing solver family.
 - `make ci-full-evidence` runs the complete scientific evidence catalog.
 - `make ci-release-audit` runs the release-audit lane, including stable release
-  output generation with the same provenance and replay checks used by the
+  output generation plus the executable release gate in
+  `test/release_audit.jl`, using the same provenance and replay checks as the
   release-packaging workflow.
