@@ -3,15 +3,19 @@
 
 The HLLC (Harten-Lax-van Leer-Contact) approximate Riemann solver.
 
-The HLLC solver is a 3-wave model that resolves:
+A 3-wave model that resolves:
 - Left-going wave (speed `SL`)
 - Contact discontinuity (speed `S*`)
 - Right-going wave (speed `SR`)
 
-This provides significantly better resolution of contact discontinuities
-and shear waves compared to the 2-wave HLL solver.
+Exactly resolves isolated contact discontinuities and shear waves, which
+the 2-wave HLL solver smears. The standard choice for the Euler equations.
 
-Reference: Toro, E.F. (2009) "Riemann Solvers and Numerical Methods for Fluid Dynamics", Chapter 10.
+## References
+- Toro, E. F., Spruce, M., & Speares, W. (1994). "Restoration of the contact
+  surface in the HLL-Riemann solver." *Shock Waves*, 4(1), 25–34.
+- Toro, E. F. (2009). *Riemann Solvers and Numerical Methods for Fluid
+  Dynamics*, 3rd ed., Springer. Chapter 10.
 """
 struct HLLCSolver <: AbstractRiemannSolver end
 

@@ -15,52 +15,127 @@ Abstract type for flux limiters.
 """
 abstract type AbstractLimiter end
 
-"""
+@doc raw"""
     MinmodLimiter <: AbstractLimiter
 
-The minmod limiter - most diffusive, guaranteed TVD.
+The minmod limiter — the most diffusive symmetric TVD limiter.
+
+```math
+\psi(r) = \max(0,\, \min(1,\, r))
+```
+
+Clips any anti-diffusive flux, guaranteeing monotonicity at the cost of
+reducing to first-order accuracy near smooth extrema.
+
+## References
+- Roe, P. L. (1986). "Characteristic-based schemes for the Euler equations."
+  *Annu. Rev. Fluid Mech.*, 18, 337–365.
 """
 struct MinmodLimiter <: AbstractLimiter end
 
-"""
+@doc raw"""
     SuperbeeLimiter <: AbstractLimiter
 
-The superbee limiter - least diffusive TVD limiter, can be oscillatory.
+The superbee limiter — the least diffusive symmetric TVD limiter.
+
+```math
+\psi(r) = \max\!\big(0,\, \min(2r,\, 1),\, \min(r,\, 2)\big)
+```
+
+Produces the sharpest resolution of discontinuities among TVD limiters but
+can steepen smooth profiles and introduce mild oscillations near extrema.
+
+## References
+- Roe, P. L. (1986). "Characteristic-based schemes for the Euler equations."
+  *Annu. Rev. Fluid Mech.*, 18, 337–365.
 """
 struct SuperbeeLimiter <: AbstractLimiter end
 
-"""
+@doc raw"""
     VanLeerLimiter <: AbstractLimiter
 
-The van Leer limiter - smooth, good balance between accuracy and stability.
+The van Leer (harmonic) limiter — smooth and symmetric.
+
+```math
+\psi(r) = \frac{r + |r|}{1 + |r|}
+```
+
+A good default: continuously differentiable, second-order accurate in smooth
+regions, and TVD. Lies midway between minmod and superbee on the Sweby diagram.
+
+## References
+- van Leer, B. (1974). "Towards the ultimate conservative difference scheme.
+  II. Monotonicity and conservation combined in a second-order scheme."
+  *J. Comput. Phys.*, 14(4), 361–370.
 """
 struct VanLeerLimiter <: AbstractLimiter end
 
-"""
+@doc raw"""
     VenkatakrishnanLimiter <: AbstractLimiter
 
-The Venkatakrishnan limiter - designed for unstructured meshes, smooth and differentiable.
+The Venkatakrishnan limiter — smooth and differentiable, suited for
+unstructured meshes and implicit solvers.
+
+```math
+\phi(r) = \frac{r^2 + 2r}{r^2 + r + 2}
+```
+
+Unlike piecewise-linear TVD limiters, this function is infinitely
+differentiable, which improves convergence of Newton-type implicit solvers.
+
+## References
+- Venkatakrishnan, V. (1995). "Convergence to steady state solutions of the
+  Euler equations on unstructured grids with limiters." *J. Comput. Phys.*,
+  118(1), 120–130.
 """
 struct VenkatakrishnanLimiter <: AbstractLimiter end
 
-"""
+@doc raw"""
     BarthJespersenLimiter <: AbstractLimiter
 
-The Barth-Jespersen limiter - preserves local extrema, commonly used for unstructured meshes.
+The Barth-Jespersen limiter — enforces a strict local maximum principle
+on unstructured meshes.
+
+Limits the reconstructed face value so it never exceeds the range of
+neighbouring cell averages. Widely used for finite volume gradient
+reconstruction on unstructured grids.
+
+## References
+- Barth, T. J. & Jespersen, D. C. (1989). "The design and application of
+  upwind schemes on unstructured meshes." AIAA Paper 89-0366.
 """
 struct BarthJespersenLimiter <: AbstractLimiter end
 
-"""
+@doc raw"""
     KorenLimiter <: AbstractLimiter
 
-The Koren limiter - third-order accurate for smooth solutions.
+The Koren limiter — third-order accurate for smooth solutions.
+
+```math
+\psi(r) = \max\!\left(0,\, \min\!\left(2r,\, \frac{2 + r}{3},\, 2\right)\right)
+```
+
+Achieves third-order spatial accuracy on uniform meshes while remaining TVD.
+The default `β = 1/3` corresponds to the κ-scheme with κ = 1/3.
+
+## References
+- Koren, B. (1993). "A robust upwind discretization method for advection,
+  diffusion and source terms." In *Numerical Methods for Advection–Diffusion
+  Problems*, Vieweg, pp. 117–138.
 """
 struct KorenLimiter <: AbstractLimiter end
 
-"""
+@doc raw"""
     OspreLimiter <: AbstractLimiter
 
-The OSPRE limiter - optimized second-order polynomial, smooth and symmetric.
+The OSPRE limiter — a smooth, symmetric, second-order accurate limiter.
+
+```math
+\psi(r) = \frac{1.5\,(r^2 + r)}{r^2 + r + 1}
+```
+
+Optimized to minimize dissipation while remaining within the TVD region
+of the Sweby diagram.
 """
 struct OspreLimiter <: AbstractLimiter end
 

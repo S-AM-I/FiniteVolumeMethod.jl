@@ -12,15 +12,27 @@
 """
     WENO5{FT}
 
-Weighted Essentially Non-Oscillatory reconstruction of order 5 with
-WENO-Z nonlinear weights.
+Fifth-order Weighted Essentially Non-Oscillatory (WENO) reconstruction
+with WENO-Z nonlinear weights.
 
-Uses a 5-point stencil with 3 candidate quadratic polynomials.
+Constructs a convex combination of three candidate quadratic polynomials on
+a 5-point stencil `{i-2, …, i+2}`. The nonlinear weights adapt so that
+stencils crossing discontinuities are assigned near-zero weight, achieving
+fifth-order accuracy in smooth regions while remaining essentially
+non-oscillatory at shocks.
+
 Requires 3 ghost cells on each side of the domain.
 
 # Fields
 - `epsilon::FT`: Small parameter to avoid division by zero (default `1e-6`).
 - `p::Int`: Exponent for weight computation (default `2`).
+
+## References
+- Jiang, G.-S. & Shu, C.-W. (1996). "Efficient implementation of weighted ENO
+  schemes." *J. Comput. Phys.*, 126(1), 202–228.
+- Borges, R. et al. (2008). "An improved weighted essentially non-oscillatory
+  scheme for hyperbolic conservation laws." *J. Comput. Phys.*, 227(6),
+  3191–3211. (WENO-Z weights)
 """
 struct WENO5{FT}
     epsilon::FT

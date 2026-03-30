@@ -1,66 +1,54 @@
 # v2 Migration
 
-FiniteVolumeMethod.jl now exposes an explicit research-grade `v2` contract. If
-you have used earlier revisions of the repository, the main change is that
-solver APIs, scientific claims, and release operations are now all tied to the
-same validation manifest.
+FiniteVolumeMethod.jl v2 significantly expands the solver capabilities and
+adopts SciML as the time-integration interface. This page summarises what
+changed and how to update existing code.
 
-## What Changed
+## New Solver Capabilities
 
-- Scientific claims are now manifest-driven. The authoritative contract lives in
-  the capability matrix and the validation manifest, not in scattered tutorials
-  or README prose.
-- Only `stable` claim-bearing solver families may support publication-grade
-  claims. Today that set is `parabolic`, `hyperbolic`, `mhd_ct`, and
-  `relativistic`.
-- `amr` and `coupling` remain `provisional`. They have automated evidence, but
-  they are still limited to the narrower cases recorded in the manifest.
-- Dashboard and archival I/O paths are treated as research-support tooling, not
-  solver validation.
+v2 adds a cell-centred hyperbolic solver family alongside the original
+cell-vertex parabolic/elliptic solver:
 
-## Execution Contract
+| Solver family   | PDE class                          | Validation status |
+|-----------------|------------------------------------|-------------------|
+| `parabolic`     | Diffusion, advection-diffusion     | Stable            |
+| `hyperbolic`    | Compressible Euler equations       | Stable            |
+| `mhd_ct`        | Ideal MHD with constrained transport | Stable          |
+| `relativistic`  | SRMHD, GRMHD                      | Stable            |
+| `amr`           | Block-structured AMR (Euler, MHD)  | Provisional       |
+| `coupling`      | Multi-physics operator splitting   | Provisional       |
 
-- The canonical execution path is the SciML interface:
-  construct a problem, derive the SciML problem with `sciml_problem(prob)`, and
-  use `remake`, `init`, and `solve` through that path.
-- Legacy convenience helpers such as older `solve_*` entrypoints remain a
-  migration layer only. New research workflows should use the canonical SciML
-  contract and the documented solution accessors.
-- CPU `Float64` runs are the publication baseline. Other precision modes or
-  backends need their own parity evidence before they should inherit the same
-  claim level.
+See the [Capability Matrix](capability_matrix.md) for detailed V&V coverage.
 
-## Backend Claim Boundary
+## SciML Integration
 
-- The repo currently ships an executable CUDA parity check only for the
-  supported 2D hyperbolic extension path.
-- A release audit may therefore report backend parity as `not_run` on machines
-  without a functional CUDA setup. That is expected and does not extend the
-  public claim boundary.
-- Until broader parity coverage exists, GPU execution should be treated as
-  experimental outside the specific audited CUDA path.
+The recommended workflow is now the SciML method-of-lines interface:
 
-## Release Operations
+```julia
+prob = HyperbolicProblem2D(law, mesh, ic, bcs, tspan)
+ode  = sciml_problem(prob)          # or ODEProblem(prob)
+sol  = solve(ode, SSPRK33(); dt = 1e-3, adaptive = false)
+```
 
-- Use the local lane runner rather than cloud CI while the overhaul remains in
-  progress:
-  `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`,
-  `make ci-performance`, and `make ci-release-audit`.
-- `make ci-release-audit` is the release-blocking path. It builds stable release
-  outputs, checks replay summaries, runs performance baselines, and records
-  provenance plus backend-parity status.
-- `julia --project=. scripts/build_release_outputs.jl --stable-only` produces
-  the archival release tree used by the release audit.
-- `julia --project=test scripts/calibrate_performance_baselines.jl` reruns the
-  stable performance suite repeatedly so warning and fail thresholds can be
-  reviewed after hardware, Julia, or dependency changes.
+This enables:
+- **Adaptive timestepping** via the CFL callback
+- **Implicit-explicit (IMEX) splitting** via `SplitODEProblem`
+- **`remake`** for parameter studies without re-allocating
+- Access to the full DifferentialEquations.jl solver library
 
-## User Checklist
+Older `solve_*` entry points still work but are not recommended for new code.
 
-- Check the capability matrix before treating a solver family as publication
-  grade.
-- Prefer the canonical SciML execution path for new code.
-- Treat provisional and experimental features as development surfaces, not
-  publication surfaces.
-- Use the release audit and release outputs when preparing archived scientific
-  results.
+## GPU Support
+
+A CUDA backend is available for the 2D hyperbolic solver via the `FVMCUDAExt`
+package extension. GPU results must demonstrate parity against the CPU
+`Float64` baseline before they are considered at the same validation level.
+Currently only the 2D Euler/MHD paths have a parity check.
+
+## Checklist for Existing Users
+
+- Check the [Capability Matrix](capability_matrix.md) before relying on a
+  solver family for publication-grade results.
+- Prefer `sciml_problem(prob)` for new workflows.
+- Provisional and experimental solvers are suitable for development and
+  exploration, not for final published results.

@@ -17,11 +17,13 @@
 The HLLD (Harten-Lax-van Leer-Discontinuities) approximate Riemann solver
 for ideal MHD equations.
 
-Resolves 5 waves: fast shocks (SL, SR), Alfvén/rotational discontinuities
-(SL*, SR*), and the contact/entropy wave (SM).
+Resolves 5 waves: fast magnetosonic shocks (SL, SR), Alfvén/rotational
+discontinuities (SL*, SR*), and the contact/entropy wave (SM). This is the
+standard Riemann solver for ideal MHD, analogous to HLLC for hydrodynamics.
 
-Reference: Miyoshi & Kusano (2005), "A multi-state HLL approximate Riemann
-solver for ideal magnetohydrodynamics", JCP 208, 315-344.
+## References
+- Miyoshi, T. & Kusano, K. (2005). "A multi-state HLL approximate Riemann
+  solver for ideal magnetohydrodynamics." *J. Comput. Phys.*, 208(1), 315–344.
 """
 struct HLLDSolver <: AbstractRiemannSolver end
 

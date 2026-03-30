@@ -1,12 +1,15 @@
 # ============================================================
-# Canonical SciML Execution Contract
+# Semi-discrete Problem Constructors
 # ============================================================
 #
-# `sciml_problem` is the single family-agnostic constructor for the
-# SciML problem behind a FiniteVolumeMethod problem definition.
-# Existing `ODEProblem`, `SteadyStateProblem`, and `SplitODEProblem`
-# constructors remain available as convenience wrappers over this
-# canonical path.
+# Maps each FVM problem type to its SciML problem form:
+#   Parabolic/elliptic  → ODEProblem  or  SteadyStateProblem
+#   Hyperbolic (MOL)    → ODEProblem
+#   Split (IMEX)        → SplitODEProblem
+#
+# `sciml_problem` is the family-agnostic entry point; the
+# type-specific `ODEProblem` / `SteadyStateProblem` constructors
+# remain available as convenience wrappers.
 
 const _SemidiscreteSciMLProblem = Union{
     HyperbolicProblem,

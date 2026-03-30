@@ -32,7 +32,14 @@ The numerical flux is:
   `F* = ½(F(UL) + F(UR)) - ½ λ_max (UR - UL)`
 where `λ_max = max(|vL| + cL, |vR| + cR)`.
 
-This is the most diffusive but most robust Riemann solver.
+This is the most diffusive but most robust Riemann solver. First-order
+accurate at discontinuities; suitable as a fallback or baseline solver.
+
+## References
+- Rusanov, V. V. (1962). "The calculation of the interaction of non-stationary
+  shock waves with barriers." *Zh. Vychisl. Mat. Mat. Fiz.*, 1(2), 267–279.
+- Lax, P. D. (1954). "Weak solutions of nonlinear hyperbolic equations and
+  their numerical computation." *Comm. Pure Appl. Math.*, 7(1), 159–193.
 """
 struct LaxFriedrichsSolver <: AbstractRiemannSolver end
 
@@ -60,6 +67,15 @@ compute a two-wave flux:
 If `SL ≥ 0`: `F* = FL`
 If `SR ≤ 0`: `F* = FR`
 Otherwise: `F* = (SR*FL - SL*FR + SL*SR*(UR - UL)) / (SR - SL)`
+
+Resolves rarefactions and shocks but smears contact discontinuities (see HLLC).
+Wave speed estimates use the Davis bounds.
+
+## References
+- Harten, A., Lax, P. D., & van Leer, B. (1983). "On upstream differencing and
+  Godunov-type schemes for hyperbolic conservation laws." *SIAM Review*, 25(1), 35–61.
+- Davis, S. F. (1988). "Simplified second-order Godunov-type methods."
+  *SIAM J. Sci. Stat. Comput.*, 9(3), 445–473.
 """
 struct HLLSolver <: AbstractRiemannSolver end
 

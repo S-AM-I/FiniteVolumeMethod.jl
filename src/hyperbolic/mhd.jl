@@ -16,7 +16,9 @@
 """
     IdealMHDEquations{Dim, EOS <: AbstractEOS} <: AbstractConservationLaw{Dim}
 
-The ideal magnetohydrodynamics equations in `Dim` spatial dimensions.
+The ideal magnetohydrodynamics (MHD) equations in `Dim` spatial dimensions —
+conservation of mass, momentum, energy, and magnetic flux for an electrically
+conducting inviscid fluid in the infinite-conductivity (ideal) limit.
 
 ## Variables (8 components in all dimensions)
 - Primitive: `W = [ρ, vx, vy, vz, P, Bx, By, Bz]`
@@ -24,16 +26,25 @@ The ideal magnetohydrodynamics equations in `Dim` spatial dimensions.
 
 Total energy: `E = P/(γ-1) + ½ρ|v|² + ½|B|²`
 
+The system must satisfy the solenoidal constraint `∇·B = 0`, which is
+maintained to machine precision via constrained transport (see [`CTData2D`](@ref)).
+
 ## 1D
 Bx is constant (its x-flux is zero). The 1D system still has 8 variables
 but the Bx equation is trivially satisfied.
 
 ## 2D
-In 2D with constrained transport, the ∇·B = 0 constraint is maintained
-via a staggered update of face-centered magnetic fields.
+The ∇·B = 0 constraint is maintained via a staggered (Yee-type) update of
+face-centered magnetic fields using the corner EMF.
 
 # Fields
 - `eos::EOS`: Equation of state.
+
+## References
+- Powell, K. G. et al. (1999). "A solution-adaptive upwind scheme for ideal
+  magnetohydrodynamics." *J. Comput. Phys.*, 154(2), 284–309.
+- Tóth, G. (2000). "The ∇·B = 0 constraint in shock-capturing magnetohydrodynamics
+  codes." *J. Comput. Phys.*, 161(2), 605–652.
 """
 struct IdealMHDEquations{Dim, EOS <: AbstractEOS} <: AbstractConservationLaw{Dim}
     eos::EOS

@@ -1,6 +1,14 @@
-# boundary_conditions.jl - Consolidated Boundary Condition Handlers for Parabolic FVM
-# Migrated from Simu.jl SimuFVM/boundary_conditions.jl
-# All Dirichlet/Neumann/Robin references use ParabolicDirichlet/ParabolicNeumann/ParabolicRobin
+# Boundary condition assembly for the parabolic FVM solver.
+#
+# Each BC type modifies the linear system  A u = b  assembled by the
+# cell-centred finite volume discretization of  ∂u/∂t + ∇·q = S:
+#
+#   Dirichlet  u = g       →  ghost-node flux  γ/Δx · (g - u_P)  added to row P
+#   Neumann    ∂u/∂n = g   →  prescribed flux  g  added to RHS of row P
+#   Robin      �� u + β ∂u/∂n = g  →  combined diagonal + RHS modification
+#
+# Types are prefixed "Parabolic" to avoid name collisions with the
+# hyperbolic solver's boundary condition enums.
 
 # ==============================================================================
 # 1. Advanced Boundary Condition Types
@@ -66,8 +74,13 @@ end
 # ==============================================================================
 # 2. Matrix-based Handlers (1D)
 # ==============================================================================
+#
+# Each handler modifies the global system  A u = b  for the boundary cell i.
+# The discrete diffusion flux at a boundary face is  q_f = γ (u_b - u_i) / Δx,
+# which contributes +γ/Δx to A[i,i] (diagonal) and +γ/Δx · g to b[i] (RHS).
 
 function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::ParabolicDirichlet, side, transient)
+    # Dirichlet u = g:  flux = γ/Δx · (g - u_i), so A[i,i] += γ/Δx, b[i] += γ/Δx · g
     dx = (side == :left) ? mesh.cells[i].center - mesh.nodes[1].x : mesh.nodes[end].x - mesh.cells[i].center
     gamma = get_diffusion_coefficient(diffusion, mesh, i)
     flux_coeff = gamma / dx
@@ -76,10 +89,13 @@ function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::Parabo
 end
 
 function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::ParabolicNeumann, side, transient)
+    # Neumann ∂u/∂n = g:  prescribed flux enters RHS directly (sign convention: outward normal)
     return b[i] += (side == :left ? -1 : 1) * bc.value
 end
 
 function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::ParabolicRobin, side, transient)
+    # Robin  a·u + b·∂u/∂n = c:  eliminate ghost value using the BC to get
+    # a combined diagonal and RHS contribution.
     dx = (side == :left) ? mesh.cells[i].center - mesh.nodes[1].x : mesh.nodes[end].x - mesh.cells[i].center
     gamma = get_diffusion_coefficient(diffusion, mesh, i)
     denominator = bc.a * dx + bc.b * gamma

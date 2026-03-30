@@ -1,17 +1,22 @@
 # ============================================================
-# Constrained Transport Update
+# Constrained Transport (CT) Update
 # ============================================================
 #
-# Updates the face-centered magnetic field using the corner EMF,
-# guaranteeing ∇·B = 0 to machine precision via Faraday's law
-# in integral (Stokes) form.
+# Evolves face-centered B via a discrete Stokes-theorem form of
+# Faraday's law, guaranteeing ∇·B = 0 to machine precision.
 #
-# Bx_face[i,j] -= dt/dy * (emf_z[i,j+1] - emf_z[i,j])
-# By_face[i,j] += dt/dx * (emf_z[i+1,j] - emf_z[i,j])
+# The continuous induction equation  ∂B/∂t = -∇×E  is discretized
+# on a staggered (Yee) mesh so that the discrete divergence of the
+# face-centered B is exactly preserved:
 #
-# This is a discrete form of:
-#   ∂Bx/∂t = -∂Ez/∂y
-#   ∂By/∂t = +∂Ez/∂x
+#   Bx_face[i,j] -= dt/dy * (emf_z[i,j+1] - emf_z[i,j])
+#   By_face[i,j] += dt/dx * (emf_z[i+1,j] - emf_z[i,j])
+#
+# References:
+#   Evans, C. R. & Hawley, J. F. (1988). "Simulation of magnetohydrodynamic
+#     flows: a constrained transport method." ApJ, 332, 659–677.
+#   Tóth, G. (2000). "The ∇·B = 0 constraint in shock-capturing MHD codes."
+#     J. Comput. Phys., 161(2), 605–652.
 
 """
     ct_update!(ct::CTData2D, dt, dx, dy, nx::Int, ny::Int)

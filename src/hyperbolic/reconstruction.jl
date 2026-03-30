@@ -1,16 +1,30 @@
 using StaticArrays: SVector
 
-"""
+@doc raw"""
     CellCenteredMUSCL{L <: AbstractLimiter}
 
 MUSCL (Monotonic Upstream-centered Scheme for Conservation Laws) reconstruction
 for cell-centered data on structured meshes.
 
-Reconstructs left and right interface states from cell-averaged values using
-slope limiting from the existing `AbstractLimiter` hierarchy.
+Constructs a piecewise-linear approximation in each cell:
+
+```math
+u(x) = \bar{u}_i + \sigma_i \, (x - x_i)
+```
+
+where ``\bar{u}_i`` is the cell average, ``x_i`` the cell centre, and
+``\sigma_i`` is a limited slope that enforces TVD (or TVB) properties.
+The limiter bounds the ratio of consecutive slopes to prevent spurious
+oscillations near discontinuities while retaining second-order accuracy
+in smooth regions.
 
 # Fields
 - `limiter::L`: Slope limiter to use for reconstruction.
+
+## References
+- van Leer, B. (1979). "Towards the ultimate conservative difference scheme.
+  V. A second-order sequel to Godunov's method." *J. Comput. Phys.*, 32(1),
+  101–136.
 """
 struct CellCenteredMUSCL{L <: AbstractLimiter}
     limiter::L
