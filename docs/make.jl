@@ -270,7 +270,9 @@ makedocs(;
     ),
     draft = IS_LIVESERVER,
     pages = _PAGES,
-    warnonly = IS_LIVESERVER
+    warnonly = IS_LIVESERVER,
+    size_threshold = 512 * 1024,          # 512 KiB — tutorial pages embed inline plots
+    size_threshold_warn = 200 * 1024
 )
 
 # Only run deploydocs for local/non-Actions deployment (e.g. TagBot).
