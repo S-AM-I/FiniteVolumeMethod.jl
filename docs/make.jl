@@ -267,8 +267,8 @@ makedocs(;
                 )
             )
         ),
-        size_threshold = 512 * 1024,          # 512 KiB — tutorial pages embed inline plots
-        size_threshold_warn = 200 * 1024
+        size_threshold = 2 * 1024 * 1024,      # 2 MiB — tutorial pages embed large inline plots
+        size_threshold_warn = 500 * 1024
     ),
     draft = IS_LIVESERVER,
     pages = _PAGES,
