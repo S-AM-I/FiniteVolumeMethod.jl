@@ -2,9 +2,13 @@
 # Semidiscrete Cache Types
 # ============================================================
 #
-# Pre-allocated workspace for the ODE RHS evaluation. Ghost cells
-# live in the cache (not in the ODE state vector). The ODE state
-# contains only interior cell values (plus face-B for MHD/CT).
+# Pre-allocated work arrays for the method-of-lines RHS evaluation.
+#
+# The ODE state vector u contains only interior cell averages (and
+# face-centred B for MHD/CT). Ghost cells, padded arrays, and
+# temporary flux buffers live here so the RHS can be evaluated
+# without allocation — critical for performance inside the ODE
+# time-stepper's inner loop.
 
 """
     AbstractSemidiscreteCache

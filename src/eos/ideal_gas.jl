@@ -1,10 +1,15 @@
 """
     IdealGasEOS{FT} <: AbstractEOS
 
-Ideal gas (gamma-law) equation of state: `P = (γ - 1) ρ ε`.
+Ideal (gamma-law) equation of state: `P = (γ - 1) ρ ε`, where `ε` is the
+specific internal energy. Equivalent to `P V = n R T` for a calorically
+perfect gas with constant ratio of specific heats `γ = cₚ/cᵥ`.
+
+Sound speed: `c = √(γ P / ρ)`.
 
 # Fields
-- `gamma::FT`: Adiabatic index (ratio of specific heats). Common values: 5/3 (monatomic), 7/5 (diatomic), 4/3 (relativistic).
+- `gamma::FT`: Adiabatic index. Common values: 5/3 (monatomic), 7/5 (diatomic),
+  4/3 (relativistic gas or radiation-dominated).
 """
 struct IdealGasEOS{FT} <: AbstractEOS
     gamma::FT

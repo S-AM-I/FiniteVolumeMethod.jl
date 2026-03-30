@@ -2,20 +2,25 @@
 # EMF Computation for Constrained Transport
 # ============================================================
 #
-# The EMF (electromotive force) Ez is computed at cell corners from
-# the Riemann solver fluxes at cell faces.
+# The electric field (EMF) Ez at cell corners drives the CT update of
+# face-centred B. It is reconstructed from the Riemann-solver fluxes
+# at cell faces, which already contain the upwind information from the
+# MHD Riemann problem.
 #
 # From the x-sweep at face (i+1/2, j):
-#   Ez_x[i,j] = -F_By = -(By*vx - Bx*vy) at x-face
-#   This is the negative of the 7th component of the x-flux (the By induction flux)
+#   Ez_x = -F_By = -(By*vx - Bx*vy)   [negative of the By induction flux]
 #
 # From the y-sweep at face (i, j+1/2):
-#   Ez_y[i,j] = +G_Bx = (Bx*vy - By*vx) at y-face
-#   This is the positive of the 6th component of the y-flux (the Bx induction flux)
+#   Ez_y = +G_Bx = (Bx*vy - By*vx)    [positive of the Bx induction flux]
 #
-# The corner EMF is computed by arithmetic averaging of the 4 adjacent face values
-# (Balsara & Spicer 1999):
+# Corner EMF via simple arithmetic averaging of the 4 adjacent face values:
 #   emf_z[i,j] = 0.25 * (Ez_x[i,j-1] + Ez_x[i,j] + Ez_y[i-1,j] + Ez_y[i,j])
+#
+# References:
+#   Balsara, D. S. & Spicer, D. S. (1999). "A staggered mesh algorithm using
+#     high order Godunov fluxes to ensure solenoidal magnetic fields in MHD
+#     simulations." J. Comput. Phys., 149(2), 270–292.
+#   Evans, C. R. & Hawley, J. F. (1988). ApJ, 332, 659–677.
 
 """
     compute_emf_2d!(ct::CTData2D, Fx_faces::AbstractMatrix, Fy_faces::AbstractMatrix,

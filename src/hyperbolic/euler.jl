@@ -3,7 +3,8 @@ using StaticArrays: SVector
 """
     EulerEquations{Dim, EOS <: AbstractEOS} <: AbstractConservationLaw{Dim}
 
-The compressible Euler equations in `Dim` spatial dimensions.
+The compressible Euler equations in `Dim` spatial dimensions — inviscid
+conservation of mass, momentum, and total energy for a compressible fluid.
 
 ## 1D (Dim=1)
 Conserved variables: `U = [ρ, ρv, E]`
@@ -17,8 +18,16 @@ Fluxes:
   `Fx = [ρvx, ρvx² + P, ρvx*vy, (E + P)vx]`
   `Fy = [ρvy, ρvx*vy, ρvy² + P, (E + P)vy]`
 
+Closed by an equation of state `P = P(ρ, ε)` (see [`AbstractEOS`](@ref)).
+
 # Fields
 - `eos::EOS`: Equation of state.
+
+## References
+- Toro, E. F. (2009). *Riemann Solvers and Numerical Methods for Fluid
+  Dynamics*, 3rd ed., Springer.
+- LeVeque, R. J. (2002). *Finite Volume Methods for Hyperbolic Problems*,
+  Cambridge University Press.
 """
 struct EulerEquations{Dim, EOS <: AbstractEOS} <: AbstractConservationLaw{Dim}
     eos::EOS

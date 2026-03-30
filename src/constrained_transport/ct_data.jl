@@ -1,6 +1,12 @@
 # ============================================================
-# Constrained Transport Data Structures
+# Constrained Transport Data Structures  (Yee-type staggered grid)
 # ============================================================
+#
+# The solenoidal constraint ∇·B = 0 is preserved exactly by storing
+# B on a staggered (Yee) mesh: each component lives at the face whose
+# normal aligns with that component. This layout ensures that the
+# discrete divergence — a telescoping sum of face fluxes — cancels
+# identically at every timestep.
 #
 # For 2D MHD on a structured Cartesian mesh (nx × ny):
 #
@@ -8,16 +14,16 @@
 #   Bx_face[1:nx+1, 1:ny]  — x-component at x-faces (vertical faces)
 #   By_face[1:nx, 1:ny+1]  — y-component at y-faces (horizontal faces)
 #
-# Cell-centered B (averaged from face values):
+# Cell-centered B (simple average of bounding faces):
 #   Bx_cell[i,j] = 0.5 * (Bx_face[i,j] + Bx_face[i+1,j])
 #   By_cell[i,j] = 0.5 * (By_face[i,j] + By_face[i,j+1])
 #
 # Corner-centered EMF (electromotive force):
 #   emf_z[1:nx+1, 1:ny+1]  — z-component of E at cell corners
 #
-# The CT update guarantees ∇·B = 0 to machine precision via:
-#   Bx_face[i,j] -= dt/dy * (emf_z[i,j+1] - emf_z[i,j])
-#   By_face[i,j] += dt/dx * (emf_z[i+1,j] - emf_z[i,j])
+# References:
+#   Yee, K. S. (1966). IEEE Trans. Antennas Propagat., 14(3), 302–307.
+#   Evans, C. R. & Hawley, J. F. (1988). ApJ, 332, 659–677.
 
 """
     CTData2D{FT}

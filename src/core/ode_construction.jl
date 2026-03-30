@@ -1,9 +1,15 @@
 # ============================================================
-# ODEProblem Constructors for Hyperbolic Problems
+# Method of Lines (MOL) Semi-discretization
 # ============================================================
 #
-# Routes every hyperbolic problem type through ODEProblem,
-# following the pattern from src/solve.jl:167-183.
+# The spatial FVM discretization converts the hyperbolic PDE
+#   ∂U/∂t + ∇·F(U) = 0
+# into a system of ODEs
+#   dU/dt = -R(U)
+# where R is the finite-volume residual (flux differences + source terms).
+#
+# This file constructs the SciML ODEProblem from that semi-discrete form,
+# pairing the RHS function with a pre-allocated cache and CFL callback.
 
 # ============================================================
 # Standard Hyperbolic (1D)

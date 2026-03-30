@@ -94,8 +94,8 @@ using Dates
 # All the pages to be included
 _PAGES = [
     "Introduction" => "index.md",
-    "Scientific Governance" => [
-        "Research Governance" => "research_governance.md",
+    "Verification & Validation" => [
+        "V&V Status" => "research_governance.md",
         "Capability Matrix" => "capability_matrix.md",
         "v2 Migration" => "v2_migration.md",
     ],

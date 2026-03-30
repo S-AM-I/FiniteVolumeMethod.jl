@@ -22,30 +22,15 @@ using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
-# Layered internal loading for the research-grade v2 refactor.
+# Module loading order: types → solvers → SciML bridge → I/O
 include("layers/domain_problem_definitions.jl")
 include("layers/discretization_assembly_kernels.jl")
 include("layers/sciml_adapters_and_accessors.jl")
 include("layers/extensions_tooling_output.jl")
 
-# --- Parabolic Core Types (from Simu.jl migration) ---
+# --- Parabolic Core Types ---
 export
-    # Tags
-    AbstractTag,
-    AbstractTagSpatial,
-    AbstractTagTime,
-    AbstractTagSteady,
-    AbstractTagIVP,
-    # Simulation, Problem, Solution
-    AbstractSimulation,
-    AbstractProblem,
-    AbstractSolution,
-    AbstractProblemIVP,
-    AbstractProblemSteady,
-    AbstractProblemPDE,
     # Geometry and Mesh
-    AbstractGeometry,
-    AbstractGeometryComponent,
     AbstractParabolicMesh,
     AbstractNode,
     AbstractCell,
@@ -56,9 +41,7 @@ export
     CT_Prism,
     CT_Pyramid,
     CT_Polyhedron,
-    # Physics and Discretization
-    AbstractField,
-    AbstractPhysicsOperator,
+    # Boundary and Initial Conditions
     AbstractBoundaryCondition,
     AbstractInitialCondition,
     ParabolicDirichlet,
@@ -73,23 +56,11 @@ export
     SimulationState,
     validate_state,
     update_field,
-    # Materials
-    AbstractMaterialProperty,
-    AbstractMaterial,
-    AbstractMaterialModel,
     # Discretization
     AbstractDiscretization,
     AbstractSemidiscretization,
     AbstractFluxCalculator,
     AbstractReconstruction,
-    # Solvers and Algorithms
-    AbstractAlgorithm,
-    # Callbacks and Diagnostics
-    AbstractCallback,
-    AbstractDiagnostic,
-    # Post-processing and I/O
-    AbstractOutputManager,
-    AbstractConfig,
     # Structured Mesh Types (Parabolic)
     Node1D,
     Cell1D,

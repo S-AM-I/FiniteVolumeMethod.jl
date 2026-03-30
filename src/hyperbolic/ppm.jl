@@ -7,11 +7,17 @@
 """
     PPMReconstruction
 
-Piecewise Parabolic Method reconstruction (Colella & Woodward 1984).
-Third-order spatial reconstruction using parabolic interpolation
-with monotonicity constraints.
+Piecewise Parabolic Method (PPM) reconstruction — third-order spatial
+accuracy using parabolic interpolation within each cell, subject to
+monotonicity constraints that prevent new extrema at cell interfaces.
 
 Uses a 4-cell stencil and 2 ghost cells per side (same as MUSCL/WENO3).
+Particularly effective for resolving contact discontinuities and
+compressive waves in gas dynamics.
+
+## References
+- Colella, P. & Woodward, P. R. (1984). "The Piecewise Parabolic Method (PPM)
+  for gas-dynamical simulations." *J. Comput. Phys.*, 54(1), 174–201.
 """
 struct PPMReconstruction end
 
