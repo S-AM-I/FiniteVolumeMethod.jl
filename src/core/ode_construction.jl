@@ -191,7 +191,8 @@ function SciMLBase.ODEProblem(
         return fold_mhd_augmented!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = _mhd_ct_2d_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
@@ -226,7 +227,8 @@ function SciMLBase.ODEProblem(
         return fold_mhd_augmented!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = _mhd_ct_2d_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
@@ -265,7 +267,8 @@ function SciMLBase.ODEProblem(
         return fold_mhd_augmented!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = _mhd_ct_2d_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
@@ -303,7 +306,8 @@ function SciMLBase.ODEProblem(
         return fold_mhd_augmented!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = _mhd_ct_3d_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
@@ -368,7 +372,8 @@ function SciMLBase.ODEProblem(prob::AMRProblem; callback = nothing, kwargs...)
         return fold_amr!(du, p)
     end
 
-    f = ODEFunction{true}(rhs!)
+    sys = _amr_symbolic_index(prob)
+    f = ODEFunction{true}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
