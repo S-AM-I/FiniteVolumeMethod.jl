@@ -1,6 +1,7 @@
 # fsi.jl - Fluid-Structure Interaction
 # Migrated from Simu.jl SimuFVM/fsi.jl
 
+"""Abstract supertype for structural models in fluid-structure interaction."""
 abstract type AbstractStructuralModel end
 
 """

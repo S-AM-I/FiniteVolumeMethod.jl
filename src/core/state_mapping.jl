@@ -280,6 +280,7 @@ end
 # AMR State Mapping
 # ============================================================
 
+"""Copy flat ODE state into per-block ghost-padded arrays for AMR RHS evaluation."""
 function unfold_amr!(cache::AMRCache{N, FT}, u::AbstractVector) where {N, FT}
     for (idx, bid) in enumerate(cache.block_ids)
         offset = cache.block_offsets[idx]
@@ -298,6 +299,7 @@ function unfold_amr!(cache::AMRCache{N, FT}, u::AbstractVector) where {N, FT}
     return nothing
 end
 
+"""Copy per-block RHS results back into the flat ODE derivative vector."""
 function fold_amr!(du::AbstractVector, cache::AMRCache{N, FT}) where {N, FT}
     for (idx, bid) in enumerate(cache.block_ids)
         offset = cache.block_offsets[idx]

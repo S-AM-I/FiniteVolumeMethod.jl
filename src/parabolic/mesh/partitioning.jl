@@ -43,6 +43,7 @@ function partition_mesh_rcb(mesh::UnstructuredMesh2D, n_parts::Int)
     return PartitionedMesh(local_meshes, global_map, halo_exchange)
 end
 
+"""Partition `cells` into `n_parts` groups using recursive coordinate bisection."""
 function recursive_bisection(cells, n_parts, depth)
     if n_parts == 1
         return [[c[1] for c in cells]]

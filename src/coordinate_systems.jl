@@ -1,15 +1,21 @@
-# Coordinate system types for non-Cartesian FVM
+"""Abstract supertype for coordinate system representations (Cartesian, cylindrical, spherical)."""
 abstract type AbstractCoordinateSystem end
-struct Cartesian <: AbstractCoordinateSystem end
-struct Cylindrical <: AbstractCoordinateSystem end   # Axisymmetric (r,z) - x=r, y=z
-struct Spherical <: AbstractCoordinateSystem end     # Radially symmetric (r,θ) - x=r, y=θ
 
-# Geometric weight for volume integration
+"""Cartesian coordinate system (default, unit geometric weights)."""
+struct Cartesian <: AbstractCoordinateSystem end
+
+"""Cylindrical (axisymmetric) coordinate system where `x = r`, `y = z`."""
+struct Cylindrical <: AbstractCoordinateSystem end
+
+"""Spherical coordinate system where `x = r`, `y = θ`."""
+struct Spherical <: AbstractCoordinateSystem end
+
+"""Return the geometric volume integration weight for the given coordinate system."""
 geometric_volume_weight(::Cartesian, x, y) = 1.0
 geometric_volume_weight(::Cylindrical, r, z) = r     # r is the x-coordinate
 geometric_volume_weight(::Spherical, r, θ) = r^2 * sin(θ)
 
-# Geometric weight for flux integration (face weighting)
+"""Return the geometric flux integration weight (face weighting) for the given coordinate system."""
 geometric_flux_weight(::Cartesian, x, y) = 1.0
 geometric_flux_weight(::Cylindrical, r, z) = r       # r at the face midpoint
 geometric_flux_weight(::Spherical, r, θ) = r^2 * sin(θ)

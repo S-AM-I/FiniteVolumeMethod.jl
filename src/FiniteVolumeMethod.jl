@@ -239,13 +239,6 @@ export
     add_entry!,
     apply_source_term!,
     get_diffusion_coefficient_at_face_2d,
-    get_velocity_at_face_1d,
-    get_velocity_at_face_2d,
-    compute_cfl_1d,
-    compute_cfl_2d,
-    assemble_mass_matrix_1d,
-    assemble_mass_matrix_2d,
-    assemble_mass_matrix_3d,
     TimeDependentDirichlet,
     TimeDependentNeumann,
     TimeDependentRobin

@@ -23,6 +23,7 @@ const _FEATURE_CAPABILITIES = Dict{
         ) for (feature, entry) in _FEATURE_MANIFEST.features
 )
 
+"""Return a sorted list of all registered feature names."""
 supported_features() = sort!(collect(keys(_FEATURE_CAPABILITIES)); by = string)
 
 function _feature_capability(feature::Symbol)
@@ -30,14 +31,22 @@ function _feature_capability(feature::Symbol)
     return _FEATURE_CAPABILITIES[feature]
 end
 
+"""Return the maturity level (`:stable`, `:experimental`, `:deprecated`) for `feature`."""
 feature_maturity(feature::Symbol) = _feature_capability(feature).maturity
+"""Return the validation status for `feature`."""
 feature_validation_status(feature::Symbol) = _feature_capability(feature).validation
+"""Return the role (`:core`, `:extension`, `:research`) for `feature`."""
 feature_role(feature::Symbol) = _feature_capability(feature).role
+"""Return the solver family for `feature`, or `nothing`."""
 feature_solver_family(feature::Symbol) = _feature_capability(feature).solver_family
+"""Return the required validation ladder stages for `feature`."""
 feature_required_ladder_stages(feature::Symbol) = copy(_feature_capability(feature).required_ladder_stages)
+"""Return the claim policy (`:publication_ready`, `:provisional`, `:manual_review`) for `feature`."""
 feature_claim_policy(feature::Symbol) = _feature_capability(feature).claim_policy
+"""Return a list of known limitations for `feature`."""
 feature_limitations(feature::Symbol) = copy(_feature_capability(feature).limitations)
 
+"""Return the full capability matrix as a vector of named tuples."""
 function capability_matrix()
     return [
         (

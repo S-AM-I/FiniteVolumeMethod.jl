@@ -94,6 +94,7 @@ function read_gmsh(filename::String)
     return UnstructuredMesh3D(nodes, cells, faces)
 end
 
+"""Compute the volume of a tetrahedron from its four `Node3D` vertices."""
 function volume_tet(nodes::Vector{Node3D})
     # V = |(a-d) . ((b-d) x (c-d))| / 6
     a, b, c, d = nodes[1], nodes[2], nodes[3], nodes[4]
@@ -103,6 +104,7 @@ function volume_tet(nodes::Vector{Node3D})
     return abs(dot(v1, cross(v2, v3))) / 6.0
 end
 
+"""Compute the volume of a hexahedron from its eight `Node3D` vertices (approximate)."""
 function volume_hex(nodes::Vector{Node3D})
     # Approximate as bounding box or sum of tets.
     return 1.0
@@ -183,6 +185,7 @@ function build_faces_from_cells(nodes, cells)
     return u_faces
 end
 
+"""Extract the face connectivity for an `UnstructuredCell3D`, returning sorted vertex-index tuples."""
 function get_cell_faces(cell::UnstructuredCell3D, node_to_idx)
     ids = [node_to_idx[n] for n in cell.nodes]
     faces = Vector{Vector{Int}}()

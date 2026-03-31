@@ -14,6 +14,12 @@
 # 1. Advanced Boundary Condition Types
 # ==============================================================================
 
+"""
+    InterfaceBC(; value_continuity=true, flux_continuity=true, jump_value=0.0, interface_tag=:default)
+
+Interface boundary condition for multi-domain coupling.  Enforces value and/or
+flux continuity across an internal interface, with an optional prescribed jump.
+"""
 struct InterfaceBC <: AbstractBoundaryCondition
     value_continuity::Bool
     flux_continuity::Bool
@@ -23,6 +29,13 @@ end
 InterfaceBC(; value_continuity = true, flux_continuity = true, jump_value = 0.0, interface_tag = :default) =
     InterfaceBC(value_continuity, flux_continuity, jump_value, interface_tag)
 
+"""
+    ParabolicPeriodicBC(pair::Tuple{Symbol,Symbol}, shift=0.0)
+
+Periodic boundary condition that identifies two opposite boundary faces (e.g.
+`(:left, :right)`).  An optional constant `shift` is added when mapping values
+across the period.
+"""
 struct ParabolicPeriodicBC <: AbstractBoundaryCondition
     pair::Tuple{Symbol, Symbol}
     shift::Float64
@@ -30,22 +43,61 @@ end
 ParabolicPeriodicBC(pair::Tuple{Symbol, Symbol}) = ParabolicPeriodicBC(pair, 0.0)
 ParabolicPeriodicBC(left::Symbol, right::Symbol) = ParabolicPeriodicBC((left, right), 0.0)
 
+"""
+    ParabolicNonlinearDirichlet(f)
+
+Nonlinear Dirichlet boundary condition.  `f(phi, grad_phi, x, t)` returns the
+prescribed boundary value as a function of the current solution, its gradient,
+position, and time.  Linearised via Newton at each assembly step.
+"""
 struct ParabolicNonlinearDirichlet <: AbstractBoundaryCondition
     f::Function
 end
+
+"""
+    ParabolicNonlinearNeumann(f)
+
+Nonlinear Neumann boundary condition.  `f(phi, grad_phi, x, t)` returns the
+prescribed normal flux as a function of the current solution, its gradient,
+position, and time.
+"""
 struct ParabolicNonlinearNeumann <: AbstractBoundaryCondition
     f::Function
 end
+
+"""
+    ParabolicNonlinearRobin(f)
+
+Nonlinear Robin boundary condition.  `f(phi, grad_phi, x, t)` returns a tuple
+`(a, b, c)` defining the Robin relation `a u + b du/dn = c`, where the
+coefficients may depend on the current solution state.
+"""
 struct ParabolicNonlinearRobin <: AbstractBoundaryCondition
     f::Function
 end
 
+"""
+    ParabolicCoupledBC(fields, coefficients, value)
+
+Coupled multi-field boundary condition.  Prescribes a linear combination of
+field values at the boundary: `sum(coefficients .* fields) = value`.
+Used in multi-physics `FVMSystem` problems where boundary constraints span
+more than one unknown.
+"""
 struct ParabolicCoupledBC <: AbstractBoundaryCondition
     fields::Vector{Symbol}
     coefficients::Vector{Float64}
     value::Float64
 end
 
+"""
+    OutflowBC(; type=:zero_gradient, pressure=0.0, backflow_prevention=true)
+
+Outflow (open) boundary condition.  Applies a zero-gradient extrapolation by
+default so that convected quantities leave the domain without reflection.
+`backflow_prevention` adds upwind dissipation when the local velocity points
+inward, preventing spurious inflow at outflow faces.
+"""
 struct OutflowBC <: AbstractBoundaryCondition
     type::Symbol
     pressure::Float64
@@ -66,6 +118,13 @@ struct RegionBC <: AbstractBoundaryCondition
     region::BoundaryRegion
 end
 
+"""
+    ParabolicTurbulentWall(; roughness=0.0)
+
+Wall boundary condition for turbulence-model equations.  Applies standard
+wall-function treatment; `roughness` (in mesh length units) activates the
+rough-wall log-law when positive.
+"""
 struct ParabolicTurbulentWall <: AbstractBoundaryCondition
     roughness::Float64
     ParabolicTurbulentWall(; roughness = 0.0) = new(roughness)

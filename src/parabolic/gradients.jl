@@ -41,6 +41,7 @@ function reconstruct_gradient_green_gauss(mesh::Mesh1D, phi, i)
     end
 end
 
+"""Reconstruct the gradient of `phi` at cell `i` using weighted least squares (1D)."""
 function reconstruct_gradient_least_squares_1d(mesh::Mesh1D, phi, i)
     nx = length(mesh.cells)
     neighbors = Int[]; distances = Float64[]
@@ -62,6 +63,7 @@ function reconstruct_gradient_least_squares_1d(mesh::Mesh1D, phi, i)
     end
 end
 
+"""Reconstruct the gradient of `phi` at cell `(i, j)` using the Green-Gauss theorem (2D structured)."""
 function reconstruct_gradient_green_gauss_2d(mesh::Mesh2D, phi, i, j)
     k = (i - 1) * mesh.ny + j
     dx = get_cell_dx(mesh, i, j); dy = get_cell_dy(mesh, i, j)
@@ -87,6 +89,7 @@ function reconstruct_gradient_green_gauss_2d(mesh::Mesh2D, phi, i, j)
     return (grad_x, grad_y)
 end
 
+"""Reconstruct the gradient of `phi` at cell `(i, j)` using weighted least squares (2D structured)."""
 function reconstruct_gradient_least_squares_2d(mesh::Mesh2D, phi, i, j; weighted = true)
     k = (i - 1) * mesh.ny + j
     cell = mesh.cells[k]; x0, y0 = cell.center
@@ -144,6 +147,7 @@ function reconstruct_gradient_green_gauss_2d(mesh::UnstructuredMesh2D, phi, cell
     return (grad_x, grad_y)
 end
 
+"""Reconstruct the gradient of `phi` at `cell_idx` using the Green-Gauss theorem (3D unstructured)."""
 function reconstruct_gradient_green_gauss_3d(mesh::UnstructuredMesh3D, phi, cell_idx; bcs = nothing)
     cell = mesh.cells[cell_idx]
     grad_x = 0.0; grad_y = 0.0; grad_z = 0.0

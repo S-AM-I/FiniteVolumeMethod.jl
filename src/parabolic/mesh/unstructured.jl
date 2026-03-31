@@ -4,6 +4,7 @@ using LinearAlgebra: norm, cross, dot
 
 # --- Concrete types for Unstructured 2D mesh ---
 
+"""Face in a 2D unstructured mesh, storing nodes, outward normal, area (length), center, and owner/neighbour indices."""
 mutable struct UnstructuredFace2D <: AbstractFace
     nodes::Vector{Node2D}
     normal::Vector{Float64}
@@ -13,6 +14,7 @@ mutable struct UnstructuredFace2D <: AbstractFace
     neighbor::Int # Index of neighbor cell (0 if boundary)
 end
 
+"""Cell (polygon) in a 2D unstructured mesh, storing nodes, centroid, area, and incident face indices."""
 mutable struct UnstructuredCell2D <: AbstractCell
     nodes::Vector{Node2D}
     center::Vector{Float64}
@@ -20,6 +22,7 @@ mutable struct UnstructuredCell2D <: AbstractCell
     faces::Vector{Int} # Indices of faces
 end
 
+"""Complete 2D unstructured mesh consisting of nodes, cells, and faces."""
 mutable struct UnstructuredMesh2D <: AbstractParabolicMesh
     nodes::Vector{Node2D}
     cells::Vector{UnstructuredCell2D}
@@ -138,6 +141,7 @@ end
 
 # --- Concrete types for Unstructured 3D mesh ---
 
+"""Face in a 3D unstructured mesh, storing nodes, outward normal, area, center, and owner/neighbour indices."""
 struct UnstructuredFace3D <: AbstractFace
     nodes::Vector{Node3D}
     normal::Vector{Float64}
@@ -147,6 +151,7 @@ struct UnstructuredFace3D <: AbstractFace
     neighbor::Int # Index of neighbor cell (0 if boundary)
 end
 
+"""Cell (polyhedron) in a 3D unstructured mesh, storing nodes, centroid, volume, face indices, and [`CellType`](@ref)."""
 struct UnstructuredCell3D <: AbstractCell
     nodes::Vector{Node3D}
     center::Vector{Float64}
@@ -155,6 +160,7 @@ struct UnstructuredCell3D <: AbstractCell
     type::CellType
 end
 
+"""Complete 3D unstructured mesh consisting of nodes, cells, and faces."""
 struct UnstructuredMesh3D <: AbstractParabolicMesh
     nodes::Vector{Node3D}
     cells::Vector{UnstructuredCell3D}

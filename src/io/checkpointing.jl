@@ -16,5 +16,7 @@ end
 CheckpointManager(; interval = 100, dir = "checkpoints", keep_recent = 3) =
     CheckpointManager(interval, dir, keep_recent)
 
+"""Save simulation state to a checkpoint file. Requires the JLD2 extension."""
 function save_checkpoint end
+"""Load simulation state from a checkpoint file. Requires the JLD2 extension."""
 function load_checkpoint end

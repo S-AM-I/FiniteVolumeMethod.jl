@@ -640,14 +640,34 @@ end
 
 # --- Time-Dependent Boundary Conditions ---
 
+"""
+    TimeDependentDirichlet(f)
+
+Time-dependent Dirichlet boundary condition.  `f(t)` returns the prescribed
+boundary value at time `t`.  Evaluated via [`evaluate_bc`](@ref) each time the
+linear system is assembled.
+"""
 struct TimeDependentDirichlet <: AbstractBoundaryCondition
     f::Function  # f(t) -> Float64
 end
 
+"""
+    TimeDependentNeumann(f)
+
+Time-dependent Neumann boundary condition.  `f(t)` returns the prescribed
+normal flux at time `t`.
+"""
 struct TimeDependentNeumann <: AbstractBoundaryCondition
     f::Function  # f(t) -> Float64
 end
 
+"""
+    TimeDependentRobin(a, b, c)
+
+Time-dependent Robin boundary condition.  The callable coefficients `a(t)`,
+`b(t)`, `c(t)` define the relation `a(t) u + b(t) du/dn = c(t)` at each
+time level.
+"""
 struct TimeDependentRobin <: AbstractBoundaryCondition
     a::Function  # a(t) -> Float64
     b::Function  # b(t) -> Float64

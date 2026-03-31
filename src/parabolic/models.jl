@@ -2,12 +2,22 @@
 # Migrated from Simu.jl SimuFVM/models.jl
 
 # --- Physics Model Abstract Types ---
+
+"""Abstract supertype for all parabolic equation models."""
 abstract type AbstractEquationModel end
+
+"""Abstract supertype for diffusion equation models."""
 abstract type AbstractDiffusion <: AbstractEquationModel end
+
+"""Abstract supertype for advection equation models."""
 abstract type AbstractAdvection <: AbstractEquationModel end
+
+"""Abstract supertype for combined advection-diffusion equation models."""
 abstract type AbstractAdvectionDiffusion <: AbstractEquationModel end
 
 # --- Diffusion Models ---
+
+"""Constant-coefficient diffusion equation model in 1D Cartesian coordinates."""
 struct Diffusion1D <: AbstractDiffusion
     gamma::Float64 # Diffusion coefficient
     scheme::Symbol # :first_order or :second_order
@@ -16,6 +26,7 @@ struct Diffusion1D <: AbstractDiffusion
     Diffusion1D(gamma::Float64, scheme::Symbol) = new(gamma, scheme)
 end
 
+"""Constant-coefficient diffusion equation model in 2D Cartesian coordinates."""
 struct Diffusion2D <: AbstractDiffusion
     gamma::Float64 # Diffusion coefficient
     scheme::Symbol # :first_order or :second_order
@@ -24,6 +35,7 @@ struct Diffusion2D <: AbstractDiffusion
     Diffusion2D(gamma::Float64, scheme::Symbol) = new(gamma, scheme)
 end
 
+"""Constant-coefficient diffusion equation model in 3D Cartesian coordinates."""
 struct Diffusion3D <: AbstractDiffusion
     gamma::Float64 # Diffusion coefficient
     scheme::Symbol # :first_order or :second_order
@@ -33,6 +45,8 @@ struct Diffusion3D <: AbstractDiffusion
 end
 
 # --- Variable Diffusion Models ---
+
+"""Variable-coefficient diffusion equation model in 1D Cartesian coordinates."""
 struct VariableDiffusion1D <: AbstractDiffusion
     gamma::Union{Function, Vector{Float64}} # Diffusion coefficient (function or array)
     scheme::Symbol
@@ -41,28 +55,36 @@ struct VariableDiffusion1D <: AbstractDiffusion
     VariableDiffusion1D(gamma, scheme::Symbol) = new(gamma, scheme)
 end
 
+"""Variable-coefficient diffusion equation model in 2D Cartesian coordinates."""
 struct VariableDiffusion2D <: AbstractDiffusion
     gamma::Union{Function, Matrix{Float64}} # Diffusion coefficient (function or array)
 end
 
+"""Variable-coefficient diffusion equation model in 3D Cartesian coordinates."""
 struct VariableDiffusion3D <: AbstractDiffusion
     gamma::Union{Function, Array{Float64, 3}} # Diffusion coefficient (function or 3D array)
 end
 
 # --- Anisotropic Diffusion Models ---
+
+"""Anisotropic (tensor) diffusion equation model in 1D Cartesian coordinates."""
 struct AnisotropicDiffusion1D <: AbstractDiffusion
     D::Float64  # 1x1 diffusion tensor (scalar for 1D)
 end
 
+"""Anisotropic (tensor) diffusion equation model in 2D Cartesian coordinates."""
 struct AnisotropicDiffusion2D <: AbstractDiffusion
     D::Matrix{Float64}  # 2x2 diffusion tensor
 end
 
+"""Anisotropic (tensor) diffusion equation model in 3D Cartesian coordinates."""
 struct AnisotropicDiffusion3D <: AbstractDiffusion
     D::Union{Array{Float64, 2}, Array{Float64, 5}}  # 3x3 diffusion tensor (3x3 matrix for constant, or 3x3xNxMxK array for spatially varying)
 end
 
 # --- Cylindrical Diffusion Models ---
+
+"""Constant-coefficient diffusion equation model in 1D cylindrical (radial) coordinates."""
 struct CylindricalDiffusion1D <: AbstractDiffusion
     gamma::Float64 # Diffusion coefficient
     scheme::Symbol # :first_order or :second_order
@@ -71,6 +93,7 @@ struct CylindricalDiffusion1D <: AbstractDiffusion
     CylindricalDiffusion1D(gamma::Float64, scheme::Symbol) = new(gamma, scheme)
 end
 
+"""Constant-coefficient diffusion equation model in 2D cylindrical (r-z) coordinates."""
 struct CylindricalDiffusion2D <: AbstractDiffusion
     gamma::Float64 # Diffusion coefficient
     scheme::Symbol # :first_order or :second_order
@@ -80,6 +103,8 @@ struct CylindricalDiffusion2D <: AbstractDiffusion
 end
 
 # --- Spherical Diffusion Models ---
+
+"""Constant-coefficient diffusion equation model in 1D spherical (radial) coordinates."""
 struct SphericalDiffusion1D <: AbstractDiffusion
     gamma::Float64 # Diffusion coefficient
     scheme::Symbol # :first_order or :second_order
@@ -89,6 +114,8 @@ struct SphericalDiffusion1D <: AbstractDiffusion
 end
 
 # --- Spherical Advection Models ---
+
+"""Advection equation model in 1D spherical (radial) coordinates."""
 struct SphericalAdvection1D <: AbstractAdvection
     v::Float64 # Radial velocity
     scheme::Symbol # :upwind (default)
@@ -97,12 +124,15 @@ struct SphericalAdvection1D <: AbstractAdvection
     SphericalAdvection1D(v::Float64, scheme::Symbol) = new(v, scheme)
 end
 
+"""Combined advection-diffusion equation model in 1D spherical (radial) coordinates."""
 struct SphericalAdvectionDiffusion1D <: AbstractAdvectionDiffusion
     advection::SphericalAdvection1D
     diffusion::SphericalDiffusion1D
 end
 
 # --- Cylindrical Advection Models ---
+
+"""Advection equation model in 1D cylindrical (radial) coordinates."""
 struct CylindricalAdvection1D <: AbstractAdvection
     v::Float64 # Radial advection velocity
     scheme::Symbol # :upwind (default)
@@ -111,6 +141,7 @@ struct CylindricalAdvection1D <: AbstractAdvection
     CylindricalAdvection1D(v::Float64, scheme::Symbol) = new(v, scheme)
 end
 
+"""Advection equation model in 2D cylindrical (r-z) coordinates."""
 struct CylindricalAdvection2D <: AbstractAdvection
     vr::Float64 # Radial velocity
     vz::Float64 # Axial velocity
@@ -121,6 +152,8 @@ struct CylindricalAdvection2D <: AbstractAdvection
 end
 
 # --- Advection Models ---
+
+"""Constant-velocity advection equation model in 1D Cartesian coordinates."""
 struct Advection1D <: AbstractAdvection
     v::Float64 # Advection velocity (positive = rightward)
     scheme::Symbol # :upwind, :central, :muscl, or :quick (default: :upwind)
@@ -129,6 +162,7 @@ struct Advection1D <: AbstractAdvection
     Advection1D(v::Float64, scheme::Symbol) = new(v, scheme)
 end
 
+"""Constant-velocity advection equation model in 2D Cartesian coordinates."""
 struct Advection2D <: AbstractAdvection
     vx::Float64 # x-component of the advection velocity
     vy::Float64 # y-component of the advection velocity
@@ -138,6 +172,7 @@ struct Advection2D <: AbstractAdvection
     Advection2D(vx::Float64, vy::Float64, scheme::Symbol) = new(vx, vy, scheme)
 end
 
+"""Constant-velocity advection equation model in 3D Cartesian coordinates."""
 struct Advection3D <: AbstractAdvection
     vx::Float64 # x-component of the advection velocity
     vy::Float64 # y-component of the advection velocity
@@ -149,6 +184,8 @@ struct Advection3D <: AbstractAdvection
 end
 
 # --- Variable Advection Models ---
+
+"""Variable-velocity advection equation model in 1D Cartesian coordinates."""
 struct VariableAdvection1D <: AbstractAdvection
     v::Union{Function, Vector{Float64}} # Advection velocity (function or array)
     scheme::Symbol
@@ -157,11 +194,13 @@ struct VariableAdvection1D <: AbstractAdvection
     VariableAdvection1D(v, scheme::Symbol) = new(v, scheme)
 end
 
+"""Variable-velocity advection equation model in 2D Cartesian coordinates."""
 struct VariableAdvection2D <: AbstractAdvection
     vx::Union{Function, Matrix{Float64}} # x-component velocity (function or array)
     vy::Union{Function, Matrix{Float64}} # y-component velocity (function or array)
 end
 
+"""Variable-velocity advection equation model in 3D Cartesian coordinates."""
 struct VariableAdvection3D <: AbstractAdvection
     vx::Union{Function, Array{Float64, 3}} # x-component velocity (function or 3D array)
     vy::Union{Function, Array{Float64, 3}} # y-component velocity (function or 3D array)
@@ -169,48 +208,60 @@ struct VariableAdvection3D <: AbstractAdvection
 end
 
 # --- Combined Models ---
+
+"""Combined advection-diffusion equation model in 1D Cartesian coordinates."""
 struct AdvectionDiffusion1D <: AbstractAdvectionDiffusion
     advection::Advection1D
     diffusion::Diffusion1D
 end
 
+"""Combined advection-diffusion equation model in 2D Cartesian coordinates."""
 struct AdvectionDiffusion2D <: AbstractAdvectionDiffusion
     advection::Advection2D
     diffusion::Diffusion2D
 end
 
 # --- Variable Combined Models ---
+
+"""Combined variable-coefficient advection-diffusion equation model in 1D Cartesian coordinates."""
 struct VariableAdvectionDiffusion1D <: AbstractAdvectionDiffusion
     advection::VariableAdvection1D
     diffusion::VariableDiffusion1D
 end
 
+"""Combined variable-coefficient advection-diffusion equation model in 2D Cartesian coordinates."""
 struct VariableAdvectionDiffusion2D <: AbstractAdvectionDiffusion
     advection::VariableAdvection2D
     diffusion::VariableDiffusion2D
 end
 
+"""Combined advection-diffusion equation model in 1D cylindrical (radial) coordinates."""
 struct CylindricalAdvectionDiffusion1D <: AbstractAdvectionDiffusion
     advection::CylindricalAdvection1D
     diffusion::CylindricalDiffusion1D
 end
 
+"""Combined advection-diffusion equation model in 2D cylindrical (r-z) coordinates."""
 struct CylindricalAdvectionDiffusion2D <: AbstractAdvectionDiffusion
     advection::CylindricalAdvection2D
     diffusion::CylindricalDiffusion2D
 end
 
+"""Combined advection-diffusion equation model in 3D Cartesian coordinates."""
 struct AdvectionDiffusion3D <: AbstractAdvectionDiffusion
     advection::Advection3D
     diffusion::Diffusion3D
 end
 
+"""Combined variable-coefficient advection-diffusion equation model in 3D Cartesian coordinates."""
 struct VariableAdvectionDiffusion3D <: AbstractAdvectionDiffusion
     advection::VariableAdvection3D
     diffusion::VariableDiffusion3D
 end
 
 # --- Source Terms ---
+
+"""Abstract supertype for source term models."""
 abstract type AbstractSourceTerm end
 
 """
@@ -329,6 +380,8 @@ function evaluate_source(source::FunctionSource, mesh::Mesh3D, i, j, k)
 end
 
 # --- Turbulence Models ---
+
+"""Abstract supertype for turbulence closure models."""
 abstract type AbstractTurbulenceModel <: AbstractEquationModel end
 
 """

@@ -1,6 +1,7 @@
 # In-situ monitoring — migrated from Simu.jl SimuIO InSitu module
 # Provides probe sampling and integral monitoring without full I/O.
 
+"""Abstract supertype for in-situ monitoring probes and diagnostics."""
 abstract type AbstractMonitor end
 
 """
