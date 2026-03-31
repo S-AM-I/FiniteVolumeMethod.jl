@@ -277,7 +277,7 @@ function weno5_advection_flux_1d(advection::Union{Advection1D, VariableAdvection
 
     u_minus = weno5_reconstruction_1d(phi, i, direction)
 
-    val = 0.0
+    val = u_minus
 
     if v >= 0
         val = u_minus
