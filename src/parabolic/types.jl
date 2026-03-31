@@ -147,6 +147,12 @@ Instances: `CT_Tetrahedron`, `CT_Hexahedron`, `CT_Prism`, `CT_Pyramid`, `CT_Poly
     CT_Polyhedron    # generic polyhedral (fallback)
 end
 
+@doc "Tetrahedral cell (4 triangular faces)." CT_Tetrahedron
+@doc "Hexahedral cell (6 quadrilateral faces)." CT_Hexahedron
+@doc "Prismatic / wedge cell (2 triangular + 3 quadrilateral faces)." CT_Prism
+@doc "Pyramidal cell (1 quadrilateral base + 4 triangular faces)." CT_Pyramid
+@doc "Generic polyhedral cell (fallback for non-standard shapes)." CT_Polyhedron
+
 # --- Physics and Discretization Abstract Types ---
 
 """
