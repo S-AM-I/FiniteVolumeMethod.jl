@@ -35,15 +35,27 @@ state vector.
 # Fields
 - `names::Vector{Symbol}` — ordered field names.
 - `n_vars::Int` — number of variables per cell/node.
+- `n_cell_vars::Int` — total number of cell-centered state entries
+  (`n_vars * n_cells`).  For basic problems this equals
+  `length(u0)`.  For MHD/CT augmented states it excludes the
+  face-centered B field entries that follow.
 """
 struct FVMSymbolicIndex
     names::Vector{Symbol}
     n_vars::Int
+    n_cell_vars::Int   # stride limit: extract u[idx:N:n_cell_vars]
+end
+
+# Convenience: when n_cell_vars is not specified, use 0 as sentinel
+# meaning "extract through end of state vector".
+function FVMSymbolicIndex(names::Vector{Symbol}, n_vars::Int)
+    return FVMSymbolicIndex(names, n_vars, 0)
 end
 
 function Base.getproperty(sys::FVMSymbolicIndex, sym::Symbol)
     sym === :names && return getfield(sys, :names)
     sym === :n_vars && return getfield(sys, :n_vars)
+    sym === :n_cell_vars && return getfield(sys, :n_cell_vars)
     sym in getfield(sys, :names) && return FVMVar(sym)
     return error("Unknown FVM variable: $sym")
 end
@@ -82,7 +94,12 @@ end
 function SII.observed(sys::FVMSymbolicIndex, sym::Symbol)
     idx = _field_index(sys, sym)
     N = sys.n_vars
-    return (u, p, t) -> u[idx:N:end]
+    limit = sys.n_cell_vars
+    if limit > 0
+        return (u, p, t) -> @view u[idx:N:limit]
+    else
+        return (u, p, t) -> @view u[idx:N:end]
+    end
 end
 
 function SII.observed(sys::FVMSymbolicIndex, sym::FVMVar)
@@ -121,5 +138,30 @@ end
 function fvm_symbolic_index(prob::UnstructuredHyperbolicProblem)
     names = Symbol.(variable_names(prob.law))
     N = nvariables(prob.law)
+    return FVMSymbolicIndex(names, N)
+end
+
+# MHD/CT 2D: augmented state [cell_conserved | Bx_face | By_face]
+function _mhd_ct_2d_symbolic_index(prob)
+    names = Symbol.(variable_names(prob.law))
+    N = nvariables(prob.law)
+    nx, ny = prob.mesh.nx, prob.mesh.ny
+    n_cell_vars = nx * ny * N
+    return FVMSymbolicIndex(names, N, n_cell_vars)
+end
+
+# MHD/CT 3D: augmented state [cell_conserved | Bx_face | By_face | Bz_face]
+function _mhd_ct_3d_symbolic_index(prob)
+    names = Symbol.(variable_names(prob.law))
+    N = nvariables(prob.law)
+    nx, ny, nz = prob.mesh.nx, prob.mesh.ny, prob.mesh.nz
+    n_cell_vars = nx * ny * nz * N
+    return FVMSymbolicIndex(names, N, n_cell_vars)
+end
+
+# AMR: flattened block state — all blocks use same stride, just concatenated
+function _amr_symbolic_index(prob::AMRProblem)
+    names = Symbol.(variable_names(prob.grid.law))
+    N = nvariables(prob.grid.law)
     return FVMSymbolicIndex(names, N)
 end
