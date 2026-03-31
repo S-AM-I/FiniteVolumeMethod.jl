@@ -11,6 +11,15 @@
 #   - Limited slope computation for 1D reconstruction
 #   - Automatic limiter selection heuristics
 
+"""
+    ParabolicLimiters
+
+Submodule providing slope-limiter utilities for the parabolic solver's MUSCL
+reconstruction.  Delegates core limiter functions (minmod, superbee, van_leer,
+etc.) to `src/schemes/limiters.jl` and adds symbol-based dispatch
+([`apply_limiter`](@ref)), 1D slope-ratio computation, and automatic limiter
+selection heuristics.
+"""
 module ParabolicLimiters
 
 # Import canonical limiter functions from the parent module (src/schemes/limiters.jl)

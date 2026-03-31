@@ -27,8 +27,7 @@ struct HyperbolicOperator{P} <: AbstractOperator
     problem::P
 end
 
-# ---------- 1D advance! ----------
-
+"""Advance the state `U` by one sub-step of duration `dt` using operator `op`."""
 function advance!(
         U::AbstractVector{<:SVector}, op::HyperbolicOperator{<:HyperbolicProblem},
         dt, t, workspace
@@ -96,8 +95,7 @@ function advance!(
     return nothing
 end
 
-# ---------- CFL time step ----------
-
+"""Compute the CFL-limited time step for a single operator."""
 function compute_operator_dt(op::HyperbolicOperator{<:HyperbolicProblem}, U::AbstractVector, t)
     prob = op.problem
     law = prob.law

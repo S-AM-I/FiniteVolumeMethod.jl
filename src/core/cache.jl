@@ -315,6 +315,7 @@ function build_cache(prob::UnstructuredHyperbolicProblem, backend::AbstractBacke
     return UnstructuredCache{N, FT, typeof(prob)}(prob, U, dU, ntri)
 end
 
+"""Build a pre-allocated `MHDCTCache2D` (or `MHDCTCache3D`) for MHD constrained-transport problems."""
 function build_mhd_ct_cache(prob::HyperbolicProblem2D, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_mhd_ct_cache", backend)
     nx, ny = prob.mesh.nx, prob.mesh.ny
@@ -381,6 +382,7 @@ function build_mhd_ct_cache(
     )
 end
 
+"""Build a pre-allocated `GRMHDCTCache2D` for GRMHD constrained-transport problems with metric data."""
 function build_grmhd_ct_cache(prob::HyperbolicProblem2D{<:GRMHDEquations{2}}, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_grmhd_ct_cache", backend)
     nx, ny = prob.mesh.nx, prob.mesh.ny
@@ -415,6 +417,7 @@ function build_grmhd_ct_cache(prob::HyperbolicProblem2D{<:GRMHDEquations{2}}, ba
     )
 end
 
+"""Build a pre-allocated `AMRCache` with per-block padded arrays for an AMR problem."""
 function build_amr_cache(prob::AMRProblem)
     grid = prob.grid
     law = grid.law

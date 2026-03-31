@@ -1,8 +1,17 @@
 # particles.jl - Lagrangian Particle Tracking
 # Migrated from Simu.jl SimuFVM/particles.jl
 
+"""Abstract supertype for Lagrangian particle types."""
 abstract type AbstractParticle end
 
+"""
+    LagrangianParticle{N,T}
+
+A single Lagrangian tracer particle in an `N`-dimensional domain with floating-
+point type `T`.  Stores position, velocity, the index of the mesh cell currently
+containing the particle, a unique `id`, an `active` flag (set to `false` when
+the particle leaves the domain), and an arbitrary property bag.
+"""
 mutable struct LagrangianParticle{N, T} <: AbstractParticle
     position::SVector{N, T}
     velocity::SVector{N, T}
@@ -12,6 +21,13 @@ mutable struct LagrangianParticle{N, T} <: AbstractParticle
     properties::Dict{Symbol, Any}
 end
 
+"""
+    ParticleTracker{N,T}
+
+Container that owns a collection of [`LagrangianParticle`](@ref)s and manages
+unique ID assignment.  Use [`inject_particles!`](@ref) to seed particles and
+[`advect_particles!`](@ref) to advance them through a velocity field.
+"""
 struct ParticleTracker{N, T}
     particles::Vector{LagrangianParticle{N, T}}
     next_id::Ref{Int}

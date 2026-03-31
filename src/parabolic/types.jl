@@ -132,12 +132,19 @@ Abstract representation of an interface between cells or a boundary.
 """
 abstract type AbstractFace <: AbstractGeometryComponent end
 
+"""
+    CellType
+
+Enum identifying the geometric shape of an unstructured 3D cell.
+
+Instances: `CT_Tetrahedron`, `CT_Hexahedron`, `CT_Prism`, `CT_Pyramid`, `CT_Polyhedron`.
+"""
 @enum CellType begin
-    CT_Tetrahedron
-    CT_Hexahedron
-    CT_Prism
-    CT_Pyramid
-    CT_Polyhedron # Generic fallback
+    CT_Tetrahedron   # 4 triangular faces
+    CT_Hexahedron    # 6 quadrilateral faces
+    CT_Prism         # 2 triangular + 3 quadrilateral faces
+    CT_Pyramid       # 1 quadrilateral base + 4 triangular faces
+    CT_Polyhedron    # generic polyhedral (fallback)
 end
 
 # --- Physics and Discretization Abstract Types ---
@@ -229,6 +236,8 @@ abstract type VariableRole <: AbstractVariable end
 Singleton role tag for state variables.
 """
 struct _StateVar <: VariableRole end
+
+"""Singleton instance of `_StateVar`, used as the role tag for state variables."""
 const STATEVAR = _StateVar()
 
 """

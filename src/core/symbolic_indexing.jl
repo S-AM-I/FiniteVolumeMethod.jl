@@ -108,6 +108,12 @@ end
 
 # ---- Constructors for each problem family ----
 
+"""
+    fvm_symbolic_index(prob) -> FVMSymbolicIndex
+
+Build an [`FVMSymbolicIndex`](@ref) for the given problem, enabling `sol[:rho]`-style
+field access on ODE solutions.
+"""
 function fvm_symbolic_index(prob::FVMProblem)
     return FVMSymbolicIndex([:u], 1)
 end

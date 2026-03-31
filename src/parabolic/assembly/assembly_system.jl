@@ -1,6 +1,7 @@
 # System assembly for coupled physics
 # Migrated from Simu.jl SimuFVM/assembly/assembly_system.jl
 
+"""Abstract supertype for inter-equation coupling terms in multi-physics systems."""
 abstract type AbstractCoupling end
 
 """
@@ -116,6 +117,7 @@ function assemble_coupled_system(
     return A_global, b_global
 end
 
+"""Build a diagonal coupling matrix block with uniform coefficient `coeff` for the given mesh."""
 function build_linear_coupling_block(mesh, coeff::Float64)
     n = length(mesh.cells)
     V = [mesh.cells[k].volume for k in 1:n]

@@ -258,6 +258,7 @@ function assemble_system(model::Union{AdvectionDiffusion2D, VariableAdvectionDif
     return A, b
 end
 
+"""Return the diffusion coefficient at the face between cell `(i,j)` and its neighbour on `side`."""
 function get_diffusion_coefficient_at_face_2d(diffusion::Diffusion2D, mesh::Union{Mesh2D, CurvilinearMesh2D}, i, j, side)
     return diffusion.gamma
 end

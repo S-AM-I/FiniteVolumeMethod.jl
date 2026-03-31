@@ -5,8 +5,10 @@ using LinearAlgebra: norm, cross, det
 
 # --- FVM Mesh Types ---
 
+"""Abstract supertype for finite-volume mesh implementations, parameterised by dimension and element type."""
 abstract type AbstractFVMMesh{Dim, T} <: AbstractParabolicMesh end
 
+"""Axis-aligned structured finite-volume mesh with per-dimension cell centers, spacings, and face areas."""
 struct StructuredFVMMesh{Dim, T, A <: AbstractArray{T, Dim}} <: AbstractFVMMesh{Dim, T}
     xc::NTuple{Dim, Vector{T}}
     Δ::NTuple{Dim, Vector{T}}
@@ -15,6 +17,7 @@ struct StructuredFVMMesh{Dim, T, A <: AbstractArray{T, Dim}} <: AbstractFVMMesh{
     periodic::NTuple{Dim, Bool}
 end
 
+"""Curvilinear structured mesh with parametric coordinates and a coordinate mapping (metrics stored in `metrics`)."""
 struct CurvilinearFVMMesh{Dim, T, A <: AbstractArray{T, Dim}} <: AbstractFVMMesh{Dim, T}
     xc::NTuple{Dim, Vector{T}}           # parametric centers
     Δ::NTuple{Dim, Vector{T}}            # parametric spacings
@@ -24,6 +27,7 @@ struct CurvilinearFVMMesh{Dim, T, A <: AbstractArray{T, Dim}} <: AbstractFVMMesh
     periodic::NTuple{Dim, Bool}
 end
 
+"""Face-based unstructured finite-volume mesh storing cell centers, volumes, face connectivity, normals, and optional tags."""
 struct UnstructuredFVMMesh{Dim, T} <: AbstractFVMMesh{Dim, T}
     cell_centers::Matrix{T}
     cell_volumes::Vector{T}
@@ -38,6 +42,7 @@ end
 
 # --- Validation ---
 
+"""Validate mesh consistency: positive volumes, matching dimensions, and non-degenerate faces."""
 function validate_mesh(mesh::StructuredFVMMesh)
     dims = size(mesh.cell_volumes)
     length(mesh.xc) == length(mesh.Δ) == length(mesh.face_areas) || error("Structured mesh dimension mismatch")
@@ -238,6 +243,7 @@ end
 
 # --- Loaders ---
 
+"""Compute the signed area of a 2D polygon given an ordered list of vertices."""
 function polygon_area(points2d::Vector{<:AbstractVector})
     n = length(points2d)
     area = 0.0
@@ -248,6 +254,7 @@ function polygon_area(points2d::Vector{<:AbstractVector})
     return 0.5 * area
 end
 
+"""Parse a PLY mesh file and return `(vertices, faces)` as vectors."""
 function parse_ply(path)
     lines = readlines(path)
     startswith(lines[1], "ply") || error("Not a PLY file")
@@ -274,6 +281,7 @@ function parse_ply(path)
     return verts, faces
 end
 
+"""Parse a legacy VTK unstructured grid file and return `(vertices, faces)`."""
 function parse_vtk(path)
     lines = readlines(path)
     lower = lowercase.(lines)
@@ -302,6 +310,7 @@ function parse_vtk(path)
     return verts, faces
 end
 
+"""Tag boundary faces of an unstructured mesh with `:xmin`, `:xmax`, `:ymin`, `:ymax` based on bounding-box proximity."""
 function tag_unstructured_faces_by_bounds(mesh::UnstructuredFVMMesh; atol = 1.0e-8)
     nfaces = size(mesh.face_cells, 2)
     face_tags = mesh.face_tags === nothing ? fill(Symbol(""), nfaces) : copy(mesh.face_tags)
@@ -339,6 +348,7 @@ function tag_unstructured_faces_by_bounds(mesh::UnstructuredFVMMesh; atol = 1.0e
     return face_tags
 end
 
+"""Build an `UnstructuredFVMMesh` from a list of vertex coordinates and face-to-vertex connectivity."""
 function build_unstructured_from_polygons(vertices::Vector{<:AbstractVector}, faces::Vector{Vector{Int}}; velocity = nothing, tag_boundary::Bool = true)
     isempty(vertices) && error("No vertices provided")
     dim = length(vertices[1]) >= 2 ? 2 : error("Only 2D polygonal meshes are supported")
@@ -409,6 +419,7 @@ function build_unstructured_from_polygons(vertices::Vector{<:AbstractVector}, fa
     return mesh
 end
 
+"""Load an unstructured mesh from a PLY or VTK file and return an `UnstructuredFVMMesh`."""
 function load_unstructured_mesh(path::AbstractString; velocity = nothing, tag_boundary::Bool = true)
     ext = lowercase(splitext(path)[2])
     verts, faces = if ext == ".ply"

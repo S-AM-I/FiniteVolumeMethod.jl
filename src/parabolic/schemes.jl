@@ -288,6 +288,7 @@ function weno5_advection_flux_1d(advection::Union{Advection1D, VariableAdvection
     return v * val
 end
 
+"""WENO5 reconstruction of `phi` at cell `i` using a right-biased stencil in the given `direction`."""
 function weno5_reconstruction_right_biased(phi, i::Int, direction::Symbol)
     nx = length(phi)
     epsilon = 1.0e-6

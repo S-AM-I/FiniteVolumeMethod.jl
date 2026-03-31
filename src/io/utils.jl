@@ -72,16 +72,19 @@ end
 
 # --- Formatted Printing & File Utilities ---
 
+"""Format `value` as a string in scientific notation with the given `precision`."""
 function print_scientific(value::Real, precision::Int = 3)
     format_str = "%.$(precision)e"
     return Printf.format(Printf.Format(format_str), value)
 end
 
+"""Format `value` with fixed-point precision and append `unit` string."""
 function print_with_units(value::Real, unit::String, precision::Int = 3)
     formatted = Printf.format(Printf.Format("%.$(precision)f"), value)
     return "$(formatted) $(unit)"
 end
 
+"""Print a formatted table header row followed by a separator line."""
 function print_table_header(headers::Vector{String}, widths::Vector{Int})
     header_line = join([rpad(h, w) for (h, w) in zip(headers, widths)], " | ")
     separator = join([repeat("-", w) for w in widths], "-+-")
@@ -89,6 +92,7 @@ function print_table_header(headers::Vector{String}, widths::Vector{Int})
     return println(separator)
 end
 
+"""Print a formatted table data row. Supported format codes: `\"f\"`, `\"e\"`, `\"d\"`, `\"s\"`."""
 function print_table_row(values::Vector, widths::Vector{Int}, formats::Vector{String} = String[])
     if isempty(formats)
         formats = fill("s", length(values))
@@ -108,6 +112,7 @@ function print_table_row(values::Vector, widths::Vector{Int}, formats::Vector{St
     return println(join(row_data, " | "))
 end
 
+"""Print an in-place progress indicator (`current/total`) with percentage."""
 function print_progress(current::Int, total::Int, operation::String = "Processing")
     percentage = round(100 * current / total, digits = 1)
     Printf.@printf("\r%s: %d/%d (%.1f%%)", operation, current, total, percentage)
@@ -116,11 +121,13 @@ function print_progress(current::Int, total::Int, operation::String = "Processin
     end
 end
 
+"""Append `ext` to `filename` if it doesn't already end with that extension."""
 function ensure_extension(filename::String, ext::String)
     ext = startswith(ext, ".") ? ext : "." * ext
     return endswith(filename, ext) ? filename : filename * ext
 end
 
+"""Sanitize `name` for use as a filename by replacing illegal characters with underscores."""
 function safe_filename(name::String)
     # Replace common illegal filename characters with underscores
     safe = replace(name, r"[\<\>:\"\/\\\|\?\*]" => "_")
