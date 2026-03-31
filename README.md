@@ -173,6 +173,34 @@ sol = solve(ode, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0
 
 ![Orszag-Tang vortex animation](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/orszag_tang.gif)
 
+## Navier-Stokes: Lid-Driven Cavity
+
+The compressible Navier-Stokes solver adds viscous fluxes to the Euler equations. Here a moving lid drives recirculating flow in a square cavity (low-Mach regime):
+
+```julia
+using FiniteVolumeMethod, OrdinaryDiffEq, StaticArrays, CairoMakie
+
+ns = NavierStokesEquations{2}(IdealGasEOS(1.4); mu = 0.005, Pr = 0.72)
+nx, ny = 32, 32
+mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, nx, ny)
+
+U_lid = 0.1
+ic(x, y) = SVector(1.0, 0.0, 0.0, 100.0)
+w_lid = SVector(1.0, U_lid, 0.0, 100.0)
+
+prob = HyperbolicProblem2D(
+    ns, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
+    NoSlipBC(), NoSlipBC(),                    # left, right walls
+    NoSlipBC(), DirichletHyperbolicBC(w_lid),  # bottom wall, top lid
+    ic; final_time = 30.0, cfl = 0.3
+)
+
+dt0 = compute_initial_dt(sciml_problem(prob).p, sciml_problem(prob).u0)
+sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0, saveat = 0.5)
+```
+
+![Lid-driven cavity animation](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/lid_driven_cavity.gif)
+
 ## Conservation Laws
 
 **Gas dynamics:** `EulerEquations{1,2,3}`, `NavierStokesEquations{1,2}`, `ShallowWaterEquations{1,2}`
