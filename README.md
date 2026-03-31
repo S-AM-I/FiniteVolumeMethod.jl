@@ -81,10 +81,10 @@ and be solved much more efficiently. See the documentation for more information.
 
 ## Hyperbolic Solver
 
-The cell-centered hyperbolic solver handles conservation laws on structured 1D/2D/3D meshes using a method-of-lines approach with explicit time stepping. Here is a 1D Sod shock tube solved with the HLLC Riemann solver:
+The cell-centered hyperbolic solver handles conservation laws on structured 1D/2D/3D meshes using a method-of-lines approach with explicit time stepping. Here is a 1D Sod shock tube solved with the HLLC Riemann solver and MUSCL reconstruction:
 
 ```julia
-using FiniteVolumeMethod, OrdinaryDiffEq, StaticArrays
+using FiniteVolumeMethod, OrdinaryDiffEq, StaticArrays, CairoMakie
 
 law = EulerEquations{1}(IdealGasEOS(1.4))
 mesh = StructuredMesh1D(0.0, 1.0, 200)
@@ -96,12 +96,24 @@ prob = HyperbolicProblem(
     final_time = 0.2, cfl = 0.5
 )
 
-sol = solve(prob, SSPRK33(); adaptive = false, dt = 1e-4)
+dt0 = compute_initial_dt(sciml_problem(prob).p, sciml_problem(prob).u0)
+sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
 
 # Access fields by name via SymbolicIndexingInterface
 rho = sol[:rho]       # density at each cell, for each saved time step
-E   = sol[:E]         # total energy
+
+# Animate the density profile
+N = nvariables(law)
+xs = mesh.cell_centers
+rho_obs = Observable([sol.u[1][(i - 1) * N + 1] for i in 1:200])
+fig, ax, _ = lines(xs, rho_obs; axis = (; xlabel = "x", ylabel = "density", title = "Sod Shock Tube"))
+ylims!(ax, 0.0, 1.15)
+record(fig, "sod_shock.gif", eachindex(sol); framerate = 20) do idx
+    rho_obs[] = [sol.u[idx][(i - 1) * N + 1] for i in 1:200]
+end
 ```
+
+![Sod shock tube animation](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/sod_shock.gif)
 
 ### Riemann Solvers
 
@@ -126,24 +138,40 @@ Characteristic-variable projection is available via `CharacteristicWENO(WENO3())
 
 ## MHD with Constrained Transport
 
-The MHD solver preserves $\nabla \cdot \mathbf{B} = 0$ to machine precision using constrained transport on face-centered magnetic fields:
+The MHD solver preserves $\nabla \cdot \mathbf{B} = 0$ to machine precision using constrained transport on face-centered magnetic fields. Here is the Orszag-Tang MHD vortex, a standard test for MHD turbulence:
 
 ```julia
-law = IdealMHDEquations{2}(IdealGasEOS(5.0 / 3.0))
+using FiniteVolumeMethod, OrdinaryDiffEq, StaticArrays, CairoMakie
+
+gamma = 5.0 / 3.0
+law = IdealMHDEquations{2}(IdealGasEOS(gamma))
 mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 64, 64)
+
+function orszag_tang_ic(x, y)
+    rho = gamma^2;  P = gamma
+    vx = -sin(2pi * y);  vy = sin(2pi * x);  vz = 0.0
+    Bx = -sin(2pi * y) / sqrt(4pi);  By = sin(4pi * x) / sqrt(4pi);  Bz = 0.0
+    E = P / (gamma - 1) + 0.5 * rho * (vx^2 + vy^2 + vz^2) + 0.5 * (Bx^2 + By^2 + Bz^2)
+    return SVector(rho, rho * vx, rho * vy, rho * vz, E, Bx, By, Bz)
+end
+
+# Vector potential ensures ∇·B = 0 at initialization
+Az(x, y) = cos(2pi * y) / (2pi * sqrt(4pi)) + cos(4pi * x) / (4pi * sqrt(4pi))
 
 prob = HyperbolicProblem2D(
     law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-    mhd_initial_condition; final_time = 0.5, cfl = 0.4
+    orszag_tang_ic; final_time = 0.5, cfl = 0.4
 )
 
-# Pass a vector potential to initialize face-B with ∇·B = 0
 ode = ODEProblem(prob; vector_potential = Az)
 limiter = mhd_stage_limiter(ode.p)
-sol = solve(ode, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0, saveat = 0.01)
 ```
+
+![Orszag-Tang vortex animation](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/orszag_tang.gif)
 
 ## Conservation Laws
 
