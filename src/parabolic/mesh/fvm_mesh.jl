@@ -2,8 +2,6 @@
 # Structured, curvilinear, and unstructured FVM mesh wrappers with validation and builders.
 
 using LinearAlgebra: norm, cross, det
-using Statistics: mean
-using DelimitedFiles
 
 # --- FVM Mesh Types ---
 
@@ -359,8 +357,8 @@ function build_unstructured_from_polygons(vertices::Vector{<:AbstractVector}, fa
         pts = [vertices[idx][1:dim] for idx in fverts]
         area = polygon_area(pts)
         cell_volumes[ci] = abs(area)
-        cx = mean(first.(pts))
-        cy = mean(last.(pts))
+        cx = sum(first, pts) / length(pts)
+        cy = sum(last, pts) / length(pts)
         cell_centers[:, ci] .= (cx, cy)
         nverts = length(fverts)
         for k in 1:nverts

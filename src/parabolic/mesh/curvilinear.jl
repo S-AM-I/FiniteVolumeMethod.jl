@@ -2,7 +2,6 @@
 # Body-fitted (curvilinear) mesh types and geometric helpers.
 
 using LinearAlgebra: norm, cross, dot
-using Statistics: mean
 
 # ==============================================================================
 # 2D Curvilinear Mesh
@@ -131,9 +130,9 @@ function CurvilinearMesh3D(x_nodes::Array{Float64, 3}, y_nodes::Array{Float64, 3
                 push!(cell_nodes, Node3D(x_nodes[i, j + 1, k + 1], y_nodes[i, j + 1, k + 1], z_nodes[i, j + 1, k + 1]))
 
                 # Center
-                cx = mean([n.x for n in cell_nodes])
-                cy = mean([n.y for n in cell_nodes])
-                cz = mean([n.z for n in cell_nodes])
+                cx = sum(n.x for n in cell_nodes) / length(cell_nodes)
+                cy = sum(n.y for n in cell_nodes) / length(cell_nodes)
+                cz = sum(n.z for n in cell_nodes) / length(cell_nodes)
 
                 center = [cx, cy, cz]
 
