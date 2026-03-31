@@ -41,7 +41,7 @@ The repository now follows an explicit research-grade `v2` contract.
 - Start with the [capability matrix](docs/src/capability_matrix.md) and the [v2 migration guide](docs/src/v2_migration.md) before treating a feature as publication-grade.
 - Review the proposed [v2.0.0-rc1 changelog](CHANGELOG.md) for the current release-candidate contract and migration summary.
 - CPU `Float64` runs remain the publication baseline. CUDA parity is currently audited only for the supported 2D hyperbolic extension path, so other GPU usage should be treated as experimental.
-- GitHub-hosted Actions are intentionally disabled during the overhaul. Use the local lane stack instead: `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, and `make ci-release-audit`.
+- GitHub Actions CI is enabled with four lanes (environment-integrity, unit-interop, scientific-smoke, docs). For local iteration, use `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, or `make ci-release-audit`.
 
 If this package doesn't suit what you need, you may like to review some of the other PDE packages shown [here](https://github.com/JuliaPDE/SurveyofPDEPackages).
 
@@ -69,7 +69,7 @@ record(fig, "anim.gif", eachindex(sol)) do i
 end
 ```
 
-![Animation of a solution](https://github.com/SciML/FiniteVolumeMethod.jl/blob/main/anim.gif)
+![Animation of a solution](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/anim.gif)
 
 We could have equivalently used the `DiffusionEquation` template, so that `prob` could have also been defined by
 
@@ -78,3 +78,91 @@ prob = DiffusionEquation(mesh, BCs; diffusion_function = D, initial_condition, f
 ```
 
 and be solved much more efficiently. See the documentation for more information.
+
+## Hyperbolic Solver
+
+The cell-centered hyperbolic solver handles conservation laws on structured 1D/2D/3D meshes using a method-of-lines approach with explicit time stepping. Here is a 1D Sod shock tube solved with the HLLC Riemann solver:
+
+```julia
+using FiniteVolumeMethod, OrdinaryDiffEq, StaticArrays
+
+law = EulerEquations{1}(IdealGasEOS(1.4))
+mesh = StructuredMesh1D(0.0, 1.0, 200)
+
+prob = HyperbolicProblem(
+    law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
+    TransmissiveBC(), TransmissiveBC(),
+    x -> x < 0.5 ? SVector(1.0, 0.0, 1.0) : SVector(0.125, 0.0, 0.1);
+    final_time = 0.2, cfl = 0.5
+)
+
+sol = solve(prob, SSPRK33(); adaptive = false, dt = 1e-4)
+
+# Access fields by name via SymbolicIndexingInterface
+rho = sol[:rho]       # density at each cell, for each saved time step
+E   = sol[:E]         # total energy
+```
+
+### Riemann Solvers
+
+| Solver | Waves | Use case |
+|--------|-------|----------|
+| `LaxFriedrichsSolver()` | 1 | Most diffusive, always stable |
+| `HLLSolver()` | 2 | Robust baseline |
+| `HLLCSolver()` | 3 | Default for Euler (resolves contacts) |
+| `HLLDSolver()` | 5 | MHD (resolves Alfven waves) |
+
+### Reconstruction Schemes
+
+| Scheme | Order | Notes |
+|--------|-------|-------|
+| `NoReconstruction()` | 1st | Piecewise constant |
+| `CellCenteredMUSCL(limiter)` | 2nd | Default; limiters: `MinmodLimiter`, `SuperbeeLimiter`, `VanLeerLimiter`, `KorenLimiter`, `OspreLimiter`, `VenkatakrishnanLimiter` |
+| `PPMReconstruction()` | 3rd | Piecewise parabolic (sharp contacts) |
+| `WENO3()` | 3rd | Weighted ENO |
+| `WENO5()` | 5th | High-order for smooth regions |
+
+Characteristic-variable projection is available via `CharacteristicWENO(WENO3())` or `CharacteristicWENO(WENO5())`.
+
+## MHD with Constrained Transport
+
+The MHD solver preserves $\nabla \cdot \mathbf{B} = 0$ to machine precision using constrained transport on face-centered magnetic fields:
+
+```julia
+law = IdealMHDEquations{2}(IdealGasEOS(5.0 / 3.0))
+mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 64, 64)
+
+prob = HyperbolicProblem2D(
+    law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
+    PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+    PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+    mhd_initial_condition; final_time = 0.5, cfl = 0.4
+)
+
+# Pass a vector potential to initialize face-B with ∇·B = 0
+ode = ODEProblem(prob; vector_potential = Az)
+limiter = mhd_stage_limiter(ode.p)
+sol = solve(ode, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+```
+
+## Conservation Laws
+
+**Gas dynamics:** `EulerEquations{1,2,3}`, `NavierStokesEquations{1,2}`, `ShallowWaterEquations{1,2}`
+
+**Magnetohydrodynamics:** `IdealMHDEquations{2,3}`, `ResistiveMHDEquations`, `HallMHDEquations`
+
+**Relativistic:** `SRHydroEquations{1,2}`, `SRMHDEquations`, `GRMHDEquations`
+
+**Multi-species / multi-fluid:** `ReactiveEulerEquations{Dim,NSpecies}`, `TwoFluidEquations{1,2}`
+
+New conservation laws can be added by subtyping `AbstractConservationLaw{Dim}` and implementing `nvariables`, `physical_flux`, `max_wave_speed`, `conserved_to_primitive`, and `primitive_to_conserved`.
+
+## SciML Ecosystem Integration
+
+All solver families produce standard `SciMLBase.ODEProblem` objects, compatible with any ODE solver from [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl):
+
+- **CommonSolve**: `solve(prob, alg; kwargs...)` and `init(prob, alg; kwargs...)` work directly on FVM problem types
+- **`remake`**: Full support for parameter studies — `remake(ode_prob; cfl = 0.3, final_time = 1.0)`
+- **SymbolicIndexingInterface**: Access solution fields by name — `sol[:rho]`, `sol[:E]`, `sol[:Bx]`
+- **SciMLStructures**: Parameter partitioning for optimization and sensitivity analysis
+- **RecipesBase**: Plot recipes for 1D line plots and 2D heatmaps (via `FVMRecipesExt`)
