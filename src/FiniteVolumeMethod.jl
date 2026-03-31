@@ -200,8 +200,6 @@ export
     reconstruct_gradient_green_gauss_3d,
     reconstruct_gradient_least_squares_1d,
     reconstruct_gradient_least_squares_2d,
-    # Limiters (Parabolic submodule)
-    ParabolicLimiters,
     # Schemes (Parabolic)
     muscl_reconstruction_1d,
     quick_reconstruction_1d,
