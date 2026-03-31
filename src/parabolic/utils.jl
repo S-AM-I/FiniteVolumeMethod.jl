@@ -47,10 +47,10 @@ function get_diffusion_coefficient_at_face(diffusion::VariableDiffusion1D, mesh:
         else
             gamma_L = get_diffusion_coefficient(diffusion, mesh, i - 1)
             gamma_R = get_diffusion_coefficient(diffusion, mesh, i)
-            if gamma_L == 0.0 || gamma_R == 0.0
-                return 0.0
+            if iszero(gamma_L) || iszero(gamma_R)
+                return zero(gamma_L)
             end
-            return 2.0 * gamma_L * gamma_R / (gamma_L + gamma_R)
+            return 2 * gamma_L * gamma_R / (gamma_L + gamma_R)
         end
     else # side == :right
         if i == length(mesh.cells)
@@ -58,10 +58,10 @@ function get_diffusion_coefficient_at_face(diffusion::VariableDiffusion1D, mesh:
         else
             gamma_L = get_diffusion_coefficient(diffusion, mesh, i)
             gamma_R = get_diffusion_coefficient(diffusion, mesh, i + 1)
-            if gamma_L == 0.0 || gamma_R == 0.0
-                return 0.0
+            if iszero(gamma_L) || iszero(gamma_R)
+                return zero(gamma_L)
             end
-            return 2.0 * gamma_L * gamma_R / (gamma_L + gamma_R)
+            return 2 * gamma_L * gamma_R / (gamma_L + gamma_R)
         end
     end
 end
@@ -455,33 +455,33 @@ function get_diffusion_coefficient_at_face_3d(diffusion::VariableDiffusion3D, me
     if side == :left
         i == 1 && return gamma_P
         gamma_W = get_diffusion_coefficient(diffusion, mesh, i - 1, j, k)
-        (gamma_P == 0.0 || gamma_W == 0.0) && return 0.0
-        return 2.0 * gamma_P * gamma_W / (gamma_P + gamma_W)
+        (iszero(gamma_P) || iszero(gamma_W)) && return zero(gamma_P)
+        return 2 * gamma_P * gamma_W / (gamma_P + gamma_W)
     elseif side == :right
         i == mesh.nx && return gamma_P
         gamma_E = get_diffusion_coefficient(diffusion, mesh, i + 1, j, k)
-        (gamma_P == 0.0 || gamma_E == 0.0) && return 0.0
-        return 2.0 * gamma_P * gamma_E / (gamma_P + gamma_E)
+        (iszero(gamma_P) || iszero(gamma_E)) && return zero(gamma_P)
+        return 2 * gamma_P * gamma_E / (gamma_P + gamma_E)
     elseif side == :bottom
         j == 1 && return gamma_P
         gamma_S = get_diffusion_coefficient(diffusion, mesh, i, j - 1, k)
-        (gamma_P == 0.0 || gamma_S == 0.0) && return 0.0
-        return 2.0 * gamma_P * gamma_S / (gamma_P + gamma_S)
+        (iszero(gamma_P) || iszero(gamma_S)) && return zero(gamma_P)
+        return 2 * gamma_P * gamma_S / (gamma_P + gamma_S)
     elseif side == :top
         j == mesh.ny && return gamma_P
         gamma_N = get_diffusion_coefficient(diffusion, mesh, i, j + 1, k)
-        (gamma_P == 0.0 || gamma_N == 0.0) && return 0.0
-        return 2.0 * gamma_P * gamma_N / (gamma_P + gamma_N)
+        (iszero(gamma_P) || iszero(gamma_N)) && return zero(gamma_P)
+        return 2 * gamma_P * gamma_N / (gamma_P + gamma_N)
     elseif side == :front
         k == 1 && return gamma_P
         gamma_F = get_diffusion_coefficient(diffusion, mesh, i, j, k - 1)
-        (gamma_P == 0.0 || gamma_F == 0.0) && return 0.0
-        return 2.0 * gamma_P * gamma_F / (gamma_P + gamma_F)
+        (iszero(gamma_P) || iszero(gamma_F)) && return zero(gamma_P)
+        return 2 * gamma_P * gamma_F / (gamma_P + gamma_F)
     else # side == :back
         k == mesh.nz && return gamma_P
         gamma_B = get_diffusion_coefficient(diffusion, mesh, i, j, k + 1)
-        (gamma_P == 0.0 || gamma_B == 0.0) && return 0.0
-        return 2.0 * gamma_P * gamma_B / (gamma_P + gamma_B)
+        (iszero(gamma_P) || iszero(gamma_B)) && return zero(gamma_P)
+        return 2 * gamma_P * gamma_B / (gamma_P + gamma_B)
     end
 end
 
