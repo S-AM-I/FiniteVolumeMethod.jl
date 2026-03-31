@@ -20,6 +20,7 @@ _rebuild_eos(::StiffenedGasEOS, vals) = StiffenedGasEOS(vals[1], vals[2])
 _rebuild_eos(eos, _) = eos
 
 _eos_from_law(law) = law.eos
+_eos_from_law(law::NavierStokesEquations) = law.euler.eos
 _n_eos_tunables(eos::IdealGasEOS) = 1
 _n_eos_tunables(eos::StiffenedGasEOS) = 2
 _n_eos_tunables(::Any) = 0
@@ -50,6 +51,8 @@ end
 # Law reconstruction: create a new law with a new EOS
 _rebuild_law(law::EulerEquations{D}, eos) where {D} = EulerEquations{D}(eos)
 _rebuild_law(law::IdealMHDEquations, eos) = IdealMHDEquations(eos)
+_rebuild_law(law::NavierStokesEquations{D}, eos) where {D} =
+    NavierStokesEquations{D}(eos; mu = law.mu, Pr = law.Pr)
 _rebuild_law(law, _) = law  # fallback — no EOS to replace
 
 # Problem field replacement helpers using remake
