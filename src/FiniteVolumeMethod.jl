@@ -665,6 +665,9 @@ export
     get_ct_state,
     # Canonical SciML contract
     sciml_problem,
+    FVMSymbolicIndex,
+    FVMVar,
+    fvm_symbolic_index,
     solution_accessor,
     solution_snapshot,
     solution_coordinates,

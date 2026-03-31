@@ -176,7 +176,8 @@ function SciMLBase.ODEProblem(
     time_span = (initial_time, final_time)
     initial_condition = prob.initial_condition
     cb = get_dirichlet_callback(prob; kwargs...)
-    f = ODEFunction{true, S}(fvm_eqs!; jac_prototype)
+    sys = fvm_symbolic_index(prob)
+    f = ODEFunction{true, S}(fvm_eqs!; jac_prototype, sys)
     p = get_fvm_parameters(prob, parallel)
     ode_problem = ODEProblem{true, S}(f, initial_condition, time_span, p; callback = cb)
     return ode_problem

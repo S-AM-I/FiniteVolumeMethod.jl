@@ -46,7 +46,8 @@ function SciMLBase.ODEProblem(
         return fold_from_padded!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = fvm_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
@@ -79,7 +80,8 @@ function SciMLBase.ODEProblem(
         return fold_from_padded!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = fvm_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
@@ -110,7 +112,8 @@ function SciMLBase.ODEProblem(
         return fold_from_padded!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = fvm_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
@@ -141,7 +144,8 @@ function SciMLBase.ODEProblem(
         return fold_from_padded!(du, p)
     end
 
-    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!)
+    sys = fvm_symbolic_index(prob)
+    f = ODEFunction{true, SciMLBase.AutoSpecialize}(rhs!; sys)
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
     return ODEProblem{true}(f, u0, tspan, cache; callback = cb, kwargs...)
