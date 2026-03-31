@@ -43,19 +43,19 @@ mutable struct AMRBlock{N, FT, Dim}
 end
 
 """
-    AMRBlock(id, level, origin, dims, dx, N, FT, Dim)
+    AMRBlock(id, level, origin, dims, dx, zero_state::SVector{N, FT})
 
-Create a zero-initialized AMR block.
+Create a zero-initialized AMR block from an explicit zero state vector.
 """
 function AMRBlock(
         id::Int, level::Int, origin::NTuple{Dim, FT},
         dims::NTuple{Dim, Int}, dx::NTuple{Dim, FT},
-        ::Val{N}
+        zero_state::SVector{N, FT}
     ) where {N, FT, Dim}
-    zero_state = zero(SVector{N, FT})
     U = fill(zero_state, dims...)
     return AMRBlock{N, FT, Dim}(id, level, origin, dims, dx, U, -1, Int[], true, Dict{Symbol, Int}())
 end
+
 
 """
     is_leaf(block::AMRBlock) -> Bool
@@ -109,16 +109,18 @@ Create an AMR grid with a single root block covering the entire domain.
 - `domain_hi`: Upper corner of the domain (tuple).
 """
 function AMRGrid(
-        law, criterion::AbstractRefinementCriterion,
-        block_size::NTuple{Dim, Int}, max_level::Int,
-        domain_lo::NTuple{Dim, FT}, domain_hi::NTuple{Dim, FT},
-        ::Val{N}
-    ) where {N, FT, Dim}
-    # Compute dx for root level
+        law::AbstractConservationLaw,
+        criterion::AbstractRefinementCriterion,
+        block_size::Tuple, max_level::Int,
+        domain_lo::Tuple, domain_hi::Tuple,
+    )
+    Dim = length(block_size)
+    FT = eltype(domain_lo)
+    N = nvariables(law)
     dx = ntuple(d -> (domain_hi[d] - domain_lo[d]) / block_size[d], Val(Dim))
+    zs = zero(SVector{N, FT})
 
-    # Create root block
-    root = AMRBlock(1, 0, domain_lo, block_size, dx, Val(N))
+    root = AMRBlock(1, 0, domain_lo, block_size, dx, zs)
 
     blocks = Dict{Int, AMRBlock{N, FT, Dim}}(1 => root)
     next_id = Ref(2)
@@ -126,6 +128,17 @@ function AMRGrid(
     return AMRGrid{N, FT, Dim, typeof(law), typeof(criterion)}(
         blocks, max_level, 2, block_size, law, criterion, next_id
     )
+end
+
+# Backward-compatible method: Val{N} is ignored since N is inferred from the law.
+function AMRGrid(
+        law::AbstractConservationLaw,
+        criterion::AbstractRefinementCriterion,
+        block_size::Tuple, max_level::Int,
+        domain_lo::Tuple, domain_hi::Tuple,
+        ::Val,
+    )
+    return AMRGrid(law, criterion, block_size, max_level, domain_lo, domain_hi)
 end
 
 """
