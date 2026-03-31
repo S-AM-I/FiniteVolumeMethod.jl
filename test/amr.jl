@@ -22,7 +22,7 @@ const AMR_NVAR = 4  # 2D Euler: [rho, rho*vx, rho*vy, E]
     level = 0
     id = 1
 
-    block = AMRBlock(id, level, origin, block_size, dx, Val(AMR_NVAR))
+    block = AMRBlock(id, level, origin, block_size, dx, zero(SVector{AMR_NVAR, Float64}))
 
     # Basic field checks
     @test block.id == 1
@@ -49,7 +49,7 @@ const AMR_NVAR = 4  # 2D Euler: [rho, rho*vx, rho*vy, E]
 end
 
 @testset "AMRBlock with non-square block size" begin
-    block = AMRBlock(1, 0, (0.0, 0.0), (8, 4), (0.125, 0.25), Val(AMR_NVAR))
+    block = AMRBlock(1, 0, (0.0, 0.0), (8, 4), (0.125, 0.25), zero(SVector{AMR_NVAR, Float64}))
     @test size(block.U) == (8, 4)
     @test block.dims == (8, 4)
     @test block.dx == (0.125, 0.25)
@@ -58,7 +58,7 @@ end
 @testset "block_cell_center" begin
     origin = (1.0, 2.0)
     dx = (0.5, 0.5)
-    block = AMRBlock(1, 0, origin, (4, 4), dx, Val(AMR_NVAR))
+    block = AMRBlock(1, 0, origin, (4, 4), dx, zero(SVector{AMR_NVAR, Float64}))
 
     # Cell (1,1): center at origin + (1-0.5)*dx = origin + 0.5*dx
     xc, yc = block_cell_center(block, 1, 1)
@@ -166,7 +166,7 @@ end
 
 @testset "GradientRefinement: needs_refinement with large gradient" begin
     # Create a block with a large density jump (shock-like)
-    block = AMRBlock(1, 0, (0.0, 0.0), (8, 8), (0.125, 0.125), Val(AMR_NVAR))
+    block = AMRBlock(1, 0, (0.0, 0.0), (8, 8), (0.125, 0.125), zero(SVector{AMR_NVAR, Float64}))
 
     # Fill left half with high density, right half with low density
     gamma = 1.4
@@ -191,7 +191,7 @@ end
 
 @testset "GradientRefinement: needs_coarsening with uniform data" begin
     # Uniform data should trigger coarsening
-    block = AMRBlock(1, 0, (0.0, 0.0), (8, 8), (0.125, 0.125), Val(AMR_NVAR))
+    block = AMRBlock(1, 0, (0.0, 0.0), (8, 8), (0.125, 0.125), zero(SVector{AMR_NVAR, Float64}))
     gamma = 1.4
     rho, P = 1.0, 1.0
     E = P / (gamma - 1)
@@ -778,7 +778,7 @@ end
 # ============================================================
 
 @testset "AMRBlock type parameters" begin
-    block = AMRBlock(1, 0, (0.0, 0.0), (4, 4), (0.25, 0.25), Val(AMR_NVAR))
+    block = AMRBlock(1, 0, (0.0, 0.0), (4, 4), (0.25, 0.25), zero(SVector{AMR_NVAR, Float64}))
     @test block isa AMRBlock{AMR_NVAR, Float64, 2}
 
     # Verify SVector element type

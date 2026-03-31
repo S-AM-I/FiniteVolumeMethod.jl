@@ -321,7 +321,7 @@ end
         # Create a simple AMR grid with one block
         origin = (0.0, 0.0)
         dx = (1.0 / nx, 1.0 / ny)
-        block = AMRBlock(1, 0, origin, (nx, ny), dx, Val(4))
+        block = AMRBlock(1, 0, origin, (nx, ny), dx, zero(SVector{4, Float64}))
 
         # Initialize with Sod problem in x
         for j in 1:ny, i in 1:nx

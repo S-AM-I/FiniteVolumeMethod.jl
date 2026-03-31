@@ -245,7 +245,7 @@ makedocs(;
     # narrative manual aims to cover. Governance tests and the validation
     # manifest enforce the authoritative claim surface separately.
     checkdocs = :none,
-    authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>",
+    authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>, cx-xd contributors",
     sitename = "FiniteVolumeMethod.jl",
     (_git_works ? () : (remotes = nothing,))...,
     format = Documenter.HTML(;

@@ -312,7 +312,7 @@ function refine_block!(grid::AMRGrid{N, FT, Dim}, block_id::Int) where {N, FT, D
         offset = ntuple(d -> ((ci >> (d - 1)) & 1), Val(Dim))
         child_origin = ntuple(d -> parent.origin[d] + offset[d] * parent.dims[d] * child_dx[d], Val(Dim))
 
-        child = AMRBlock(child_id, parent.level + 1, child_origin, child_dims, child_dx, Val(N))
+        child = AMRBlock(child_id, parent.level + 1, child_origin, child_dims, child_dx, zero(SVector{N, FT}))
         child.parent_id = block_id
 
         grid.blocks[child_id] = child

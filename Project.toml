@@ -1,7 +1,7 @@
 name = "FiniteVolumeMethod"
 uuid = "d4f04ab7-4f65-4d72-8a28-7087bc7f46f4"
-version = "1.2.0"
-authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>"]
+version = "2.0.0"
+authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>", "cx-xd contributors"]
 
 [deps]
 ChunkSplitters = "ae650224-84b6-46f8-82ea-d812ca08434e"
@@ -39,25 +39,17 @@ FVMVTKExt = "WriteVTK"
 CUDA = "5"
 ChunkSplitters = "0.1, 1.0, 2.0"
 CommonSolve = "0.2"
-Dates = "1.11.0"
 DelaunayTriangulation = "1.0"
-DelimitedFiles = "1.9.1"
 HDF5 = "0.17, 0.18"
 HTTP = "1"
 JLD2 = "0.4, 0.5"
 JSON3 = "1"
-LinearAlgebra = "1"
 PreallocationTools = "0.4"
 PrecompileTools = "1.2"
-Printf = "1.11.0"
 SciMLBase = "2"
-SparseArrays = "1"
 StaticArrays = "1.9.16"
-Statistics = "1.11.1"
-TOML = "1.0.3"
-Test = "1"
 WriteVTK = "1"
-julia = "1"
+julia = "1.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
