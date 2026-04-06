@@ -435,6 +435,19 @@ export
     compute_surface_tension_force,
     solve_vof
 
+# --- Radiation (Phase 9) ---
+export
+    AbstractRadiationModel,
+    P1Model,
+    RadiationState,
+    STEFAN_BOLTZMANN,
+    assemble_p1!,
+    solve_p1_radiation,
+    compute_radiation_source,
+    marshak_wall_bc,
+    radiation_inlet_bc,
+    solve_simple_thermal_radiation
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,

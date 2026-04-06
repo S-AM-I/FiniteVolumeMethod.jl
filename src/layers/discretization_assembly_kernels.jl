@@ -185,3 +185,9 @@ include("../multiphase/boundedness.jl")
 include("../multiphase/alpha_transport.jl")
 include("../multiphase/surface_tension.jl")
 include("../multiphase/solvers.jl")
+
+# Radiation (Phase 9)
+# Depends on Phase 0 operators + Phase 3 thermal.
+include("../radiation/types.jl")
+include("../radiation/p1.jl")
+include("../radiation/solvers.jl")
