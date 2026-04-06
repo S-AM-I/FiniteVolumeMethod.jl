@@ -103,6 +103,9 @@ end
     @testset verbose = true "Reactive Euler" begin
         safe_include("reactive_euler.jl")
     end
+    @testset verbose = true "Incompressible NS" begin
+        safe_include("incompressible.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

@@ -1299,3 +1299,40 @@ path = "docs/src/literate_tutorials/keller_segel_chemotaxis.jl"
 feature = "parabolic"
 status = "manual_review"
 reason = "This tutorial remains excluded from automated CI and is not part of the scientific evidence contract."
+
+# ── Phase 0: Collocated Cell-Centered Operators ─────────────────────
+
+[[features]]
+feature = "collocated_operators"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_support_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "Collocated cell-centered FVM operators on unstructured polyhedral meshes: Laplacian, divergence, gradient, temporal, interpolation."
+limitations = [
+  "Experimental — operators tested via unit tests only; no MMS convergence verification yet.",
+  "Requires UnstructuredFVMMesh with cell_faces and face_tags populated.",
+]
+
+# ── Phase 1: Incompressible Navier-Stokes ────────────────────────────
+
+[[features]]
+feature = "incompressible_ns"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification", "benchmark"]
+summary = "Incompressible Navier-Stokes with SIMPLE, PISO, and PIMPLE pressure-velocity coupling on unstructured meshes."
+limitations = [
+  "Experimental — validated via smoke tests only; lid-driven cavity benchmark pending.",
+  "Scalar viscosity only; turbulence models (Phase 2) not yet integrated.",
+  "Fixed time step only; adaptive CFL control deferred.",
+]
