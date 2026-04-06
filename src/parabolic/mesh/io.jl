@@ -77,11 +77,11 @@ function read_gmsh(filename::String)
                     push!(cells, UnstructuredCell3D(mapped_nodes, center, vol, Int[], CT_Hexahedron))
                 elseif elem_type == 6 # Prism
                     center = sum([[n.x, n.y, n.z] for n in mapped_nodes]) / 6.0
-                    vol = 1.0 # Placeholder
+                    vol = volume_prism(mapped_nodes)
                     push!(cells, UnstructuredCell3D(mapped_nodes, center, vol, Int[], CT_Prism))
                 elseif elem_type == 7 # Pyramid
                     center = sum([[n.x, n.y, n.z] for n in mapped_nodes]) / 5.0
-                    vol = 1.0 # Placeholder
+                    vol = volume_pyramid(mapped_nodes)
                     push!(cells, UnstructuredCell3D(mapped_nodes, center, vol, Int[], CT_Pyramid))
                 end
             end
@@ -104,10 +104,16 @@ function volume_tet(nodes::Vector{Node3D})
     return abs(dot(v1, cross(v2, v3))) / 6.0
 end
 
-"""Compute the volume of a hexahedron from its eight `Node3D` vertices (approximate)."""
+"""Compute the volume of a hexahedron from its 8 `Node3D` vertices via 5-tet decomposition."""
 function volume_hex(nodes::Vector{Node3D})
-    # Approximate as bounding box or sum of tets.
-    return 1.0
+    length(nodes) == 8 || error("Hexahedron requires exactly 8 nodes, got $(length(nodes))")
+    n = nodes
+    V = volume_tet([n[1], n[2], n[4], n[5]]) +
+        volume_tet([n[2], n[3], n[4], n[7]]) +
+        volume_tet([n[2], n[5], n[6], n[7]]) +
+        volume_tet([n[4], n[5], n[7], n[8]]) +
+        volume_tet([n[2], n[4], n[5], n[7]])
+    return V
 end
 
 """

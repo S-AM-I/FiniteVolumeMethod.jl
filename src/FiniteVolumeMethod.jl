@@ -119,6 +119,14 @@ export
     build_faces_from_cells,
     get_cell_faces,
     write_vtk_unstructured,
+    # Mesh I/O (Phase 4)
+    read_openfoam_polymesh,
+    convert_to_fvm_mesh,
+    volume_prism,
+    volume_pyramid,
+    MeshQualityReport,
+    check_mesh_quality,
+    print_mesh_quality,
     # Mesh Partitioning
     PartitionedMesh,
     partition_mesh_rcb,
