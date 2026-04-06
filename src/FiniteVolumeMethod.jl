@@ -348,6 +348,35 @@ export
     turbulence_inlet_bc,
     turbulence_wall_bc
 
+# --- Conjugate Heat Transfer & Buoyancy (Phase 3) ---
+export
+    # Types
+    FluidThermalProperties,
+    SolidThermalProperties,
+    ThermalState,
+    ConjugateHeatTransferProblem,
+    # Energy equation
+    assemble_energy!,
+    update_k_eff!,
+    compute_alpha_eff,
+    # Buoyancy
+    compute_buoyancy_source,
+    has_buoyancy,
+    # Solid conduction
+    assemble_solid_conduction!,
+    solve_solid_conduction,
+    # Conjugate
+    solve_conjugate_ht,
+    compute_interface_heat_flux,
+    # Solver wrappers
+    solve_simple_thermal,
+    solve_incompressible_thermal,
+    # BC convenience
+    thermal_inlet_bc,
+    thermal_insulated_bc,
+    thermal_heated_wall_bc,
+    thermal_convective_bc
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,

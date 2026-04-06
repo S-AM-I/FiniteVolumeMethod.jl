@@ -1354,3 +1354,22 @@ limitations = [
   "Wall functions are simplified (Neumann/Dirichlet); dynamic wall function update not yet implemented.",
   "SST viscosity limiter uses simplified form without strain rate recomputation.",
 ]
+
+# ── Phase 3: Conjugate Heat Transfer & Buoyancy ────────────────────
+
+[[features]]
+feature = "conjugate_heat_transfer"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification", "benchmark"]
+summary = "Fluid energy equation, Boussinesq buoyancy, solid conduction, and Dirichlet-Neumann conjugate heat transfer coupling."
+limitations = [
+  "Experimental — validated via smoke tests only; heated cavity and conjugate benchmarks pending.",
+  "Constant fluid properties (rho, Cp) only; temperature-dependent properties deferred.",
+  "Conjugate coupling uses scalar interface temperature (face-averaged); per-face mapping deferred.",
+]

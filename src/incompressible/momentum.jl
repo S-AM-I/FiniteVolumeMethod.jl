@@ -26,6 +26,7 @@ The assembled equation is:
 - `dt` — time step (if `nothing`, no temporal term is added)
 - `scheme` — convection interpolation scheme
 - `nu_eff` — effective viscosity: scalar `T` or per-cell `Vector{T}` (default: `prob.nu`)
+- `body_force` — per-cell body force vector (e.g. buoyancy), or `nothing`
 """
 function assemble_momentum!(
         eq::CollocatedEquation{T},
@@ -35,6 +36,7 @@ function assemble_momentum!(
         dt::Union{Nothing, T} = nothing,
         scheme::ConvectionScheme = CONV_UPWIND,
         nu_eff::Union{T, Vector{T}} = prob.nu,
+        body_force::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
@@ -60,6 +62,13 @@ function assemble_momentum!(
     grad_p = gradient(state.p, mesh)
     for c in 1:nc
         eq.b[c] -= grad_p[c][component] * mesh.cell_volumes[c]
+    end
+
+    # Body force (buoyancy, etc.)
+    if body_force !== nothing
+        for c in 1:nc
+            eq.b[c] += body_force[c][component] * mesh.cell_volumes[c]
+        end
     end
 
     return nothing
