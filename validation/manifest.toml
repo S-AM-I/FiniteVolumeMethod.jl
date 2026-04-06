@@ -1487,3 +1487,22 @@ limitations = [
   "P1 only; discrete ordinates (fvDOM) deferred.",
   "Radiation-flow coupling is lagged one iteration (standard approach).",
 ]
+
+# ── Phase 8: Combustion & Species Transport ────────────────────────
+
+[[features]]
+feature = "combustion"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification", "benchmark"]
+summary = "Multi-species transport with EDM turbulence-chemistry interaction and heat release coupling."
+limitations = [
+  "Experimental — EDM only; finite-rate Arrhenius for collocated solver deferred.",
+  "Three-species (fuel/oxidizer/product) model; multi-step mechanisms deferred.",
+  "Constant density (incompressible); variable density combustion deferred.",
+]
