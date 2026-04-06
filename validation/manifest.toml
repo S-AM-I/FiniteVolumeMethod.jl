@@ -1468,3 +1468,22 @@ limitations = [
   "Boundedness limiter is clip+redistribute, not face-based MULES.",
   "No contact angle model for wall-interface interaction.",
 ]
+
+# ── Phase 9: Radiation ─────────────────────────────────────────────
+
+[[features]]
+feature = "radiation"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "P1 radiation model with absorption/emission, Marshak BCs, and coupled thermal+radiation solver."
+limitations = [
+  "Experimental — constant absorption coefficient only; WSGGM deferred.",
+  "P1 only; discrete ordinates (fvDOM) deferred.",
+  "Radiation-flow coupling is lagged one iteration (standard approach).",
+]

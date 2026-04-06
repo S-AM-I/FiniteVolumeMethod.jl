@@ -127,6 +127,9 @@ end
     @testset verbose = true "Multiphase VOF" begin
         safe_include("multiphase_vof.jl")
     end
+    @testset verbose = true "Radiation" begin
+        safe_include("radiation.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
