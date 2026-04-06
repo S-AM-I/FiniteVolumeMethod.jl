@@ -241,6 +241,88 @@ export
     TimeDependentNeumann,
     TimeDependentRobin
 
+# --- Collocated Cell-Centered FVM Operators (Phase 0) ---
+export
+    # Fields
+    AbstractCollocatedField,
+    CollocatedScalarField,
+    CollocatedVectorField,
+    FaceFluxField,
+    CollocatedEquation,
+    BoundaryPatch,
+    extract_boundary_patches,
+    ncells,
+    n_boundary_faces,
+    nfaces,
+    # Mesh helpers
+    is_internal_face,
+    face_normal_area,
+    face_weight,
+    # Interpolation
+    interpolate_linear,
+    interpolate_upwind,
+    interpolate_blended,
+    build_boundary_map,
+    face_value,
+    compute_face_flux!,
+    rhie_chow_correction!,
+    # Gradient
+    gradient!,
+    gradient,
+    green_gauss_gradient,
+    # Laplacian
+    assemble_laplacian!,
+    assemble_laplacian,
+    # Divergence
+    divergence!,
+    divergence,
+    ConvectionScheme,
+    CONV_UPWIND,
+    CONV_LINEAR,
+    CONV_BLENDED,
+    assemble_convection!,
+    # Temporal
+    TimeScheme,
+    TIME_EULER,
+    TIME_BDF2,
+    TIME_CRANK_NICOLSON,
+    assemble_ddt!,
+    assemble_ddt_euler!,
+    assemble_ddt_bdf2!,
+    # SciML bridge
+    to_linear_problem,
+    collocated_to_odefunction,
+    reset!
+
+# --- Incompressible Navier-Stokes (Phase 1) ---
+export
+    # Algorithm types
+    AbstractPVCoupling,
+    SIMPLE,
+    PISO,
+    PIMPLE,
+    # Problem and state
+    IncompressibleProblem,
+    IncompressibleState,
+    SolveResult,
+    # Boundary conditions
+    FixedVelocityBC,
+    FixedPressureBC,
+    NoSlipWallBC,
+    SlipWallBC,
+    InletOutletBC,
+    # Solvers
+    solve_simple,
+    solve_incompressible,
+    # Assembly (advanced)
+    assemble_momentum!,
+    assemble_pressure!,
+    extract_momentum_operators!,
+    correct_velocity!,
+    correct_fluxes!,
+    momentum_residual,
+    continuity_residual
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,

@@ -39,6 +39,16 @@ include("../parabolic/assembly/assembly_unstructured.jl")
 include("../parabolic/assembly/assembly_curvilinear.jl")
 include("../parabolic/assembly/assembly_system.jl")
 
+# Collocated cell-centered operators (Phase 0 — OpenFOAM-style FVM)
+# Types must load after UnstructuredFVMMesh and AbstractBoundaryCondition;
+# operators load here since they depend on mesh + BC types from Layer 1.
+include("../collocated/types.jl")
+include("../collocated/interpolation.jl")
+include("../collocated/gradient.jl")
+include("../collocated/laplacian.jl")
+include("../collocated/divergence.jl")
+include("../collocated/ddt.jl")
+
 include("../coordinate_systems.jl")
 include("../geometry.jl")
 include("../conditions.jl")
