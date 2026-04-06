@@ -459,6 +459,20 @@ export
     compute_heat_release,
     solve_simple_reacting
 
+# --- Lagrangian DPM (Phase 11) ---
+export
+    AbstractDragModel,
+    StokesDrag,
+    SchillerNaumann,
+    compute_drag_force,
+    AbstractParticleHeatTransfer,
+    RanzMarshall,
+    compute_particle_heat_transfer,
+    compute_momentum_source,
+    compute_energy_source,
+    set_particle_properties!,
+    advance_particles!
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,
