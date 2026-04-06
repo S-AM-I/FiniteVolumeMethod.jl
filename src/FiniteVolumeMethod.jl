@@ -323,6 +323,31 @@ export
     momentum_residual,
     continuity_residual
 
+# --- RANS Turbulence Models (Phase 2a) ---
+export
+    # Abstract types
+    AbstractRANSModel,
+    # Model types
+    KOmega,
+    KOmegaSSTModel,
+    SpalartAllmaras,
+    # State
+    RANSTurbulenceState,
+    # Interface
+    turbulent_viscosity!,
+    solve_turbulence!,
+    n_turbulence_fields,
+    turbulence_field_names,
+    # Solvers
+    solve_simple_turbulent,
+    solve_incompressible_turbulent,
+    # Utilities
+    compute_wall_distance,
+    compute_strain_rate,
+    compute_nu_eff,
+    turbulence_inlet_bc,
+    turbulence_wall_bc
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,

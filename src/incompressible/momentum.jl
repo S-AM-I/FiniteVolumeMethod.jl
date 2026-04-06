@@ -8,14 +8,14 @@
 # ── Momentum assembly ──────────────────────────────────────────────
 
 @doc """
-    assemble_momentum!(eq, state, prob, component; dt = nothing, scheme = CONV_UPWIND)
+    assemble_momentum!(eq, state, prob, component; dt, scheme, nu_eff)
 
 Assemble the momentum equation for velocity component `component` into
 the `CollocatedEquation` `eq`.
 
 The assembled equation is:
 ```
-    div(phi * u_d) - div(nu * grad(u_d)) = -dp/dx_d * V_c  [+ ddt term]
+    div(phi * u_d) - div(nu_eff * grad(u_d)) = -dp/dx_d * V_c  [+ ddt term]
 ```
 
 # Arguments
@@ -25,6 +25,7 @@ The assembled equation is:
 - `component::Int` — velocity component index (1 = x, 2 = y, ...)
 - `dt` — time step (if `nothing`, no temporal term is added)
 - `scheme` — convection interpolation scheme
+- `nu_eff` — effective viscosity: scalar `T` or per-cell `Vector{T}` (default: `prob.nu`)
 """
 function assemble_momentum!(
         eq::CollocatedEquation{T},
@@ -33,6 +34,7 @@ function assemble_momentum!(
         component::Int;
         dt::Union{Nothing, T} = nothing,
         scheme::ConvectionScheme = CONV_UPWIND,
+        nu_eff::Union{T, Vector{T}} = prob.nu,
     ) where {Dim, T}
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
@@ -43,9 +45,9 @@ function assemble_momentum!(
     # Convection: div(phi * u_d)
     assemble_convection!(eq, state.phi, mesh, bcs_U; scheme = scheme)
 
-    # Diffusion: -div(nu * grad(u_d))  (negative because Laplacian adds it
-    # to the LHS as a positive-definite operator)
-    assemble_laplacian!(eq, prob.nu, mesh, bcs_U)
+    # Diffusion: -div(nu_eff * grad(u_d))  (Laplacian assembles as
+    # positive-definite operator on the LHS)
+    assemble_laplacian!(eq, nu_eff, mesh, bcs_U)
 
     # Temporal term (if transient)
     if dt !== nothing
