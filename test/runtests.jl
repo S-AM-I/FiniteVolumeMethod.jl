@@ -109,6 +109,9 @@ end
     @testset verbose = true "RANS Turbulence" begin
         safe_include("turbulence_rans.jl")
     end
+    @testset verbose = true "Conjugate Heat Transfer" begin
+        safe_include("thermal.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

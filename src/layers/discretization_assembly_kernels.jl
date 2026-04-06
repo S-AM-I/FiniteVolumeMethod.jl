@@ -155,3 +155,12 @@ include("../turbulence/k_omega_sst.jl")
 include("../turbulence/spalart_allmaras.jl")
 include("../turbulence/wall_functions.jl")
 include("../turbulence/solvers.jl")
+
+# Conjugate Heat Transfer & Buoyancy (Phase 3)
+# Depends on Phase 0 operators + Phase 1 incompressible + Phase 2a turbulence.
+include("../thermal/types.jl")
+include("../thermal/energy_equation.jl")
+include("../thermal/buoyancy.jl")
+include("../thermal/solid_conduction.jl")
+include("../thermal/conjugate.jl")
+include("../thermal/solvers.jl")
