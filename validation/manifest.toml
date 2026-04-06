@@ -1333,6 +1333,24 @@ required_ladder_stages = ["verification", "benchmark"]
 summary = "Incompressible Navier-Stokes with SIMPLE, PISO, and PIMPLE pressure-velocity coupling on unstructured meshes."
 limitations = [
   "Experimental — validated via smoke tests only; lid-driven cavity benchmark pending.",
-  "Scalar viscosity only; turbulence models (Phase 2) not yet integrated.",
   "Fixed time step only; adaptive CFL control deferred.",
+]
+
+# ── Phase 2a: RANS Turbulence Models ────────────────────────────────
+
+[[features]]
+feature = "turbulence_rans"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification", "benchmark"]
+summary = "RANS turbulence models (k-epsilon, k-omega, k-omega SST, Spalart-Allmaras) for incompressible collocated solver."
+limitations = [
+  "Experimental — validated via smoke tests only; channel flow and flat plate benchmarks pending.",
+  "Wall functions are simplified (Neumann/Dirichlet); dynamic wall function update not yet implemented.",
+  "SST viscosity limiter uses simplified form without strain rate recomputation.",
 ]

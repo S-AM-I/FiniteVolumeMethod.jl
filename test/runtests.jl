@@ -106,6 +106,9 @@ end
     @testset verbose = true "Incompressible NS" begin
         safe_include("incompressible.jl")
     end
+    @testset verbose = true "RANS Turbulence" begin
+        safe_include("turbulence_rans.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
