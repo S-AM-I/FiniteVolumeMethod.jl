@@ -422,6 +422,19 @@ export
     sample_line,
     sample_field_at_point
 
+# --- Multiphase VOF (Phase 7) ---
+export
+    TwoPhaseProperties,
+    VOFState,
+    has_surface_tension,
+    assemble_alpha!,
+    compute_compression_flux,
+    clip_alpha!,
+    update_mixture_properties!,
+    compute_curvature,
+    compute_surface_tension_force,
+    solve_vof
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,

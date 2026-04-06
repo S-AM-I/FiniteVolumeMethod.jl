@@ -176,3 +176,12 @@ include("../thermal/buoyancy.jl")
 include("../thermal/solid_conduction.jl")
 include("../thermal/conjugate.jl")
 include("../thermal/solvers.jl")
+
+# Multiphase VOF (Phase 7)
+# Depends on Phase 0 operators + Phase 1 incompressible.
+include("../multiphase/types.jl")
+include("../multiphase/mixture.jl")
+include("../multiphase/boundedness.jl")
+include("../multiphase/alpha_transport.jl")
+include("../multiphase/surface_tension.jl")
+include("../multiphase/solvers.jl")

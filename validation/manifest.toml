@@ -1449,3 +1449,22 @@ limitations = [
   "Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form.",
   "DDES only wraps Spalart-Allmaras; SST-based DDES deferred.",
 ]
+
+# ── Phase 7: Multiphase VOF ───────────────────────────────────────
+
+[[features]]
+feature = "multiphase_vof"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification", "benchmark"]
+summary = "Volume of Fluid two-phase flow with alpha transport, interface compression, CSF surface tension, and mixture property blending."
+limitations = [
+  "Experimental — validated via smoke tests only; dam break benchmark pending.",
+  "Boundedness limiter is clip+redistribute, not face-based MULES.",
+  "No contact angle model for wall-interface interaction.",
+]
