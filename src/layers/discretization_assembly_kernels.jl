@@ -191,3 +191,10 @@ include("../multiphase/solvers.jl")
 include("../radiation/types.jl")
 include("../radiation/p1.jl")
 include("../radiation/solvers.jl")
+
+# Combustion & Species Transport (Phase 8)
+# Depends on Phase 0 operators + Phase 1 incompressible + Phase 2a turbulence + Phase 3 thermal.
+include("../combustion/types.jl")
+include("../combustion/species_transport.jl")
+include("../combustion/edm.jl")
+include("../combustion/solvers.jl")

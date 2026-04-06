@@ -448,6 +448,17 @@ export
     radiation_inlet_bc,
     solve_simple_thermal_radiation
 
+# --- Combustion & Species Transport (Phase 8) ---
+export
+    CombustionProperties,
+    SpeciesState,
+    EddyDissipationModel,
+    assemble_species!,
+    solve_species!,
+    compute_edm_reaction_rates,
+    compute_heat_release,
+    solve_simple_reacting
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,

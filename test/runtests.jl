@@ -130,6 +130,9 @@ end
     @testset verbose = true "Radiation" begin
         safe_include("radiation.jl")
     end
+    @testset verbose = true "Combustion" begin
+        safe_include("combustion.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
