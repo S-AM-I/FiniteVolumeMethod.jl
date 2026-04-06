@@ -121,6 +121,9 @@ end
     @testset verbose = true "Linear Solvers" begin
         safe_include("linear_solvers.jl")
     end
+    @testset verbose = true "LES Turbulence" begin
+        safe_include("turbulence_les.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

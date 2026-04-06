@@ -161,6 +161,13 @@ include("../turbulence/spalart_allmaras.jl")
 include("../turbulence/wall_functions.jl")
 include("../turbulence/solvers.jl")
 
+# LES & Hybrid Turbulence Models (Phase 2b)
+include("../turbulence/les_types.jl")
+include("../turbulence/smagorinsky.jl")
+include("../turbulence/wale.jl")
+include("../turbulence/dynamic_smagorinsky.jl")
+include("../turbulence/ddes.jl")
+
 # Conjugate Heat Transfer & Buoyancy (Phase 3)
 # Depends on Phase 0 operators + Phase 1 incompressible + Phase 2a turbulence.
 include("../thermal/types.jl")

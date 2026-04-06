@@ -363,6 +363,17 @@ export
     turbulence_inlet_bc,
     turbulence_wall_bc
 
+# --- LES & Hybrid Turbulence Models (Phase 2b) ---
+export
+    AbstractLESModel,
+    AbstractHybridModel,
+    LESTurbulenceState,
+    Smagorinsky,
+    WALE,
+    DynamicSmagorinsky,
+    DDES,
+    compute_filter_width
+
 # --- Conjugate Heat Transfer & Buoyancy (Phase 3) ---
 export
     # Types
