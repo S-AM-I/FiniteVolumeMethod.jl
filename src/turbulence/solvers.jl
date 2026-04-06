@@ -33,8 +33,8 @@ function solve_simple_turbulent(
     update_boundary_velocity!(state, prob.bcs, mesh)
     update_boundary_pressure!(state, prob.bcs, mesh)
 
-    turb_state = RANSTurbulenceState(turb_model, mesh)
-    turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
+    turb_state = _init_turb_state(turb_model, mesh)
+    _update_turbulence!(turb_state, turb_model, state, prob, mesh, turb_bcs)
 
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
@@ -85,11 +85,10 @@ function solve_simple_turbulent(
         correct_fluxes!(state, mesh)
 
         # ── Turbulence ──────────────────────────────────────────
-        solve_turbulence!(
-            turb_state, turb_model, state.U, state.phi, prob.nu, mesh, turb_bcs;
+        _update_turbulence!(
+            turb_state, turb_model, state, prob, mesh, turb_bcs;
             linear_solver = linear_solver,
         )
-        turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
 
         # ── Convergence ─────────────────────────────────────────
         max_res = zero(T)
@@ -140,8 +139,8 @@ function solve_incompressible_turbulent(
     update_boundary_velocity!(state, prob.bcs, mesh)
     update_boundary_pressure!(state, prob.bcs, mesh)
 
-    turb_state = RANSTurbulenceState(turb_model, mesh)
-    turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
+    turb_state = _init_turb_state(turb_model, mesh)
+    _update_turbulence!(turb_state, turb_model, state, prob, mesh, turb_bcs)
 
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
@@ -171,11 +170,10 @@ function solve_incompressible_turbulent(
         end
 
         # Turbulence update
-        solve_turbulence!(
-            turb_state, turb_model, state.U, state.phi, prob.nu, mesh, turb_bcs;
+        _update_turbulence!(
+            turb_state, turb_model, state, prob, mesh, turb_bcs;
             dt = dt_actual, linear_solver = linear_solver,
         )
-        turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
 
         t += dt_actual
         n_steps += 1
@@ -194,6 +192,11 @@ function solve_incompressible_turbulent(
     result = SolveResult{Dim, T}(true, n_steps, residuals, state)
     return (result, turb_state)
 end
+
+# ── Turbulence state initialization ────────────────────────────────
+
+"""Initialize appropriate turbulence state based on model type."""
+_init_turb_state(model, mesh) = RANSTurbulenceState(model, mesh)
 
 # ── Turbulent PISO step (with nu_eff) ───────────────────────────────
 

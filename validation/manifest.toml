@@ -1430,3 +1430,22 @@ limitations = [
   "Krylov solver symbols require LinearSolve.jl to be loaded by the user.",
   "Solver config not yet auto-integrated into solver wrappers — users call _dispatch_solve or pass config manually.",
 ]
+
+# ── Phase 2b: LES & Hybrid Turbulence Models ──────────────────────
+
+[[features]]
+feature = "turbulence_les"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification", "benchmark"]
+summary = "LES (Smagorinsky, WALE, dynamic Smagorinsky) and hybrid (DDES) turbulence models for incompressible collocated solver."
+limitations = [
+  "Experimental — validated via smoke tests only; decaying turbulence benchmark pending.",
+  "Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form.",
+  "DDES only wraps Spalart-Allmaras; SST-based DDES deferred.",
+]
