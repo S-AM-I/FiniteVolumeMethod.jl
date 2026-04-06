@@ -385,6 +385,25 @@ export
     thermal_heated_wall_bc,
     thermal_convective_bc
 
+# --- Post-Processing (Phase 12) ---
+export
+    # Field operations
+    compute_vorticity,
+    compute_q_criterion,
+    compute_enstrophy,
+    compute_courant_number,
+    # Wall quantities
+    compute_wall_shear_stress,
+    compute_y_plus,
+    compute_wall_heat_flux,
+    compute_nusselt_number,
+    # Forces
+    compute_forces,
+    force_coefficients,
+    # Sampling
+    sample_line,
+    sample_field_at_point
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,
