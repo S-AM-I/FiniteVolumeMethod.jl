@@ -331,6 +331,13 @@ export
     momentum_residual,
     continuity_residual
 
+# --- Linear Solver Infrastructure (Phase 5) ---
+export
+    FVMSolverConfig,
+    FieldSolverConfig,
+    default_solver_config,
+    build_preconditioner
+
 # --- RANS Turbulence Models (Phase 2a) ---
 export
     # Abstract types

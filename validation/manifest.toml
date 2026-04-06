@@ -1411,3 +1411,22 @@ limitations = [
   "Wall quantities use linear near-wall approximation; wall functions not integrated.",
   "Force coefficients assume rho = 1 for viscous contribution.",
 ]
+
+# ── Phase 5: Linear Solver Infrastructure ──────────────────────────
+
+[[features]]
+feature = "linear_solver_infra"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_support_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "Configurable iterative linear solvers with AMG and ILU preconditioners via package extensions for the incompressible collocated solver."
+limitations = [
+  "Experimental — AMG and ILU require loading AlgebraicMultigrid.jl and IncompleteLU.jl as weak deps.",
+  "Krylov solver symbols require LinearSolve.jl to be loaded by the user.",
+  "Solver config not yet auto-integrated into solver wrappers — users call _dispatch_solve or pass config manually.",
+]

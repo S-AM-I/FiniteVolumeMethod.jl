@@ -118,6 +118,9 @@ end
     @testset verbose = true "Post-Processing" begin
         safe_include("postprocessing.jl")
     end
+    @testset verbose = true "Linear Solvers" begin
+        safe_include("linear_solvers.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
