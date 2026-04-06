@@ -1373,3 +1373,22 @@ limitations = [
   "Constant fluid properties (rho, Cp) only; temperature-dependent properties deferred.",
   "Conjugate coupling uses scalar interface temperature (face-averaged); per-face mapping deferred.",
 ]
+
+# ── Phase 4: Polyhedral Mesh I/O ───────────────────────────────────
+
+[[features]]
+feature = "polyhedral_mesh_io"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_support_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "OpenFOAM polyMesh reader, UnstructuredMesh3D converter, correct polyhedral volumes, and mesh quality metrics."
+limitations = [
+  "Experimental — ASCII OpenFOAM format only; gzip-compressed files must be decompressed first.",
+  "OpenFOAM writer, Gmsh v4 reader, and blockMesh equivalent deferred to Phase 4b.",
+  "Mesh quality aspect ratio uses approximate formula (max_face_area / V^(2/3)).",
+]

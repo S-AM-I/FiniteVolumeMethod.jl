@@ -15,6 +15,14 @@ include("../parabolic/mesh/curvilinear.jl")
 include("../parabolic/mesh/unstructured.jl")
 include("../parabolic/mesh/fvm_mesh.jl")
 include("../parabolic/mesh/io.jl")
+
+# Polyhedral Mesh I/O (Phase 4)
+# Depends on mesh types, io.jl (volume_tet, Node3D), fvm_mesh.jl (UnstructuredFVMMesh).
+include("../mesh/polyhedral_volumes.jl")
+include("../mesh/convert.jl")
+include("../mesh/openfoam_io.jl")
+include("../mesh/quality.jl")
+
 include("../parabolic/mesh/partitioning.jl")
 
 include("../schemes/limiters.jl")

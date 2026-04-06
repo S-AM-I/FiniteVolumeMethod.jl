@@ -112,6 +112,9 @@ end
     @testset verbose = true "Conjugate Heat Transfer" begin
         safe_include("thermal.jl")
     end
+    @testset verbose = true "Polyhedral Mesh I/O" begin
+        safe_include("mesh_io.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
