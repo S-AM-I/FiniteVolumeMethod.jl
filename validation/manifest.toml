@@ -1392,3 +1392,22 @@ limitations = [
   "OpenFOAM writer, Gmsh v4 reader, and blockMesh equivalent deferred to Phase 4b.",
   "Mesh quality aspect ratio uses approximate formula (max_face_area / V^(2/3)).",
 ]
+
+# ── Phase 12: Post-Processing ──────────────────────────────────────
+
+[[features]]
+feature = "postprocessing"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_support_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "Derived field operations (vorticity, Q-criterion), wall quantities (shear stress, y+, heat flux, Nusselt), force coefficients, and line sampling."
+limitations = [
+  "Experimental — 0th-order nearest-cell interpolation for sampling; higher-order deferred.",
+  "Wall quantities use linear near-wall approximation; wall functions not integrated.",
+  "Force coefficients assume rho = 1 for viscous contribution.",
+]

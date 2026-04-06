@@ -115,6 +115,9 @@ end
     @testset verbose = true "Polyhedral Mesh I/O" begin
         safe_include("mesh_io.jl")
     end
+    @testset verbose = true "Post-Processing" begin
+        safe_include("postprocessing.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end
