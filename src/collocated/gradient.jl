@@ -107,7 +107,7 @@ function gradient!(
 
     # --- Iterative non-orthogonal correction ---
     for _ in 1:n_corrections
-        fill!(grad_phi, _corrected_gradient_pass!(grad_phi, phi, mesh, bmap))
+        _corrected_gradient_pass!(grad_phi, phi, mesh, bmap)
     end
 
     return nothing

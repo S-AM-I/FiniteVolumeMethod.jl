@@ -15,18 +15,21 @@ logic. Requires wall distance `d_wall` per cell.
 # Fields
 - `coeffs::KappaOmegaSST{T}` — model coefficients
 - `d_wall::Vector{T}` — wall distance per cell (precomputed)
+- `nu::T` — laminar kinematic viscosity (for F2 computation)
 """
 struct KOmegaSSTModel{T} <: AbstractRANSModel
     coeffs::KappaOmegaSST{T}
     d_wall::Vector{T}
+    nu::T
 end
 
 function KOmegaSSTModel(
         mesh::UnstructuredFVMMesh{Dim, T}, wall_patches::Vector{Symbol};
         coeffs = KappaOmegaSST(),
+        nu::Real = 1.0e-5,
     ) where {Dim, T}
     d_wall = compute_wall_distance(mesh, wall_patches)
-    return KOmegaSSTModel{T}(coeffs, T.(d_wall))
+    return KOmegaSSTModel{T}(coeffs, T.(d_wall), T(nu))
 end
 
 n_turbulence_fields(::KOmegaSSTModel) = 2
@@ -82,21 +85,23 @@ function turbulent_viscosity!(
     co = model.coeffs
     nc = length(mesh.cell_volumes)
 
-    # Need strain rate for SST limiter
-    # Approximate with stored nu_t: S ≈ sqrt(nu_t * omega / k) — crude but avoids
-    # recomputing gradients. For accuracy, caller should recompute.
+    # SST viscosity limiter: nu_t = a1*k / max(a1*omega, S*F2)
+    # Estimate strain rate from existing nu_t: S ≈ nu_t * omega / k
+    # (from the equilibrium relation nu_t = k/omega and production = dissipation)
     for c in 1:nc
         k_val = max(k_field.internal[c], T(1.0e-10))
         omega_val = max(omega_field.internal[c], T(1.0e-10))
 
-        # Compute F2 for SST limiter
-        F2 = _sst_F2(k_val, omega_val, T(0), model.d_wall[c], co)
-        # nu is not stored in model; use 0 as conservative estimate (makes F2 smaller)
-        # In practice, the solver wrapper passes nu separately when needed
+        # F2 with correct laminar viscosity
+        F2 = _sst_F2(k_val, omega_val, model.nu, model.d_wall[c], co)
 
-        # SST limiter: nu_t = a1*k / max(a1*omega, S*F2)
-        # Without S available here, use the simpler k/omega form with F2 damping
-        nu_t[c] = co.a1 * k_val / max(co.a1 * omega_val, T(1.0e-10))
+        # Estimate S from current nu_t: in equilibrium, nu_t*S^2 ≈ beta_star*k*omega
+        # so S ≈ sqrt(beta_star * k * omega / max(nu_t, eps))
+        nu_t_old = max(nu_t[c], T(1.0e-10))
+        S_est = sqrt(co.beta_star * k_val * omega_val / nu_t_old)
+
+        # SST limiter
+        nu_t[c] = co.a1 * k_val / max(co.a1 * omega_val, S_est * F2)
     end
     return nothing
 end

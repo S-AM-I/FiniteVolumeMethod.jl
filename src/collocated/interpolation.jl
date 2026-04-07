@@ -185,6 +185,9 @@ function rhie_chow_correction!(
     pbmap = build_boundary_map(p)
     ubmap = Dict(f => i for (i, f) in enumerate(U.boundary_face_indices))
 
+    # Compute cell-center pressure gradient for Rhie-Chow
+    grad_p = gradient(p, mesh)
+
     for f in 1:nf
         S_f = face_normal_area(mesh, f)
 
@@ -201,12 +204,17 @@ function rhie_chow_correction!(
             D_N = mesh.cell_volumes[N] / A_P_diag[N]
             D_f = w * D_P + (one(T) - w) * D_N
 
-            # Compact face-normal pressure gradient
+            # Compact face-normal pressure gradient: (p_N - p_P) / |d| * |S_f|
             d_vec, d_mag = owner_neighbour_distance(mesh, f)
-            grad_p_f_dot_S = (p.internal[N] - p.internal[P]) / d_mag * mesh.face_areas[f]
+            grad_p_compact = (p.internal[N] - p.internal[P]) / d_mag * mesh.face_areas[f]
 
-            # Base flux + Rhie-Chow correction
-            phi.values[f] = dot(U_f, S_f) - under_relax * D_f * grad_p_f_dot_S
+            # Interpolated cell-center pressure gradient at face
+            grad_p_interp = w * grad_p[P] + (one(T) - w) * grad_p[N]
+            grad_p_interp_dot_S = dot(grad_p_interp, S_f)
+
+            # Rhie-Chow: phi = U_f·S_f - D_f * (compact - interpolated)
+            phi.values[f] = dot(U_f, S_f) -
+                under_relax * D_f * (grad_p_compact - grad_p_interp_dot_S)
         else
             # Boundary: use boundary velocity directly
             bi = ubmap[f]
