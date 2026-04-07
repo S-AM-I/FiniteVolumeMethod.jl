@@ -136,3 +136,38 @@ function EddyDissipationModel(; A_edm::Real = 4.0, B_edm::Real = 0.5)
     T = promote_type(typeof(A_edm), typeof(B_edm))
     return EddyDissipationModel{T}(T(A_edm), T(B_edm))
 end
+
+# ── Eddy Dissipation Concept (placeholder) ─────────────────────────
+
+"""
+    EddyDissipationConcept{T}
+
+EDC fine-structure reactor model (Magnussen, 2005).
+
+Unlike the simpler [`EddyDissipationModel`](@ref), EDC resolves a
+fine-structure volume fraction and residence time derived from
+turbulence quantities, enabling finite-rate chemistry within the
+fine structures.
+
+!!! warning "Not yet implemented"
+    This type exists as a placeholder for future development.
+    Constructing it is allowed; passing it to a solver will error.
+
+# Fields
+- `C_gamma::T` — fine-structure volume fraction constant (default 2.1377)
+- `C_tau::T` — fine-structure residence time constant (default 0.4082)
+"""
+struct EddyDissipationConcept{T}
+    C_gamma::T
+    C_tau::T
+end
+
+"""
+    EddyDissipationConcept(; C_gamma = 2.1377, C_tau = 0.4082)
+
+Construct an [`EddyDissipationConcept`](@ref) with default constants.
+"""
+function EddyDissipationConcept(; C_gamma::Real = 2.1377, C_tau::Real = 0.4082)
+    T = promote_type(typeof(C_gamma), typeof(C_tau))
+    return EddyDissipationConcept{T}(T(C_gamma), T(C_tau))
+end
