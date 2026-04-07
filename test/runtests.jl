@@ -142,6 +142,9 @@ end
     @testset verbose = true "Dynamic Mesh" begin
         safe_include("dynamic_mesh.jl")
     end
+    @testset verbose = true "Remaining Features" begin
+        safe_include("remaining_features.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

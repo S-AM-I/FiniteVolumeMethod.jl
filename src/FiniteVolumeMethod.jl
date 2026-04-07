@@ -299,6 +299,9 @@ export
     assemble_ddt!,
     assemble_ddt_euler!,
     assemble_ddt_bdf2!,
+    # Cyclic BC
+    match_cyclic_faces,
+    apply_cyclic_bc!,
     # SciML bridge
     to_linear_problem,
     collocated_to_odefunction,
@@ -456,10 +459,12 @@ export
 export
     AbstractRadiationModel,
     P1Model,
+    FvDOMModel,
     RadiationState,
     STEFAN_BOLTZMANN,
     assemble_p1!,
     solve_p1_radiation,
+    solve_fvdom_radiation,
     compute_radiation_source,
     marshak_wall_bc,
     radiation_inlet_bc,
@@ -474,6 +479,7 @@ export
     assemble_species!,
     solve_species!,
     compute_edm_reaction_rates,
+    compute_edc_reaction_rates,
     compute_heat_release,
     solve_simple_reacting
 
@@ -489,7 +495,15 @@ export
     compute_momentum_source,
     compute_energy_source,
     set_particle_properties!,
-    advance_particles!
+    advance_particles!,
+    # Spray breakup
+    AbstractBreakupModel,
+    TABBreakup,
+    KHRTBreakup,
+    weber_number,
+    should_breakup,
+    breakup_diameter,
+    apply_breakup!
 
 # --- Dynamic/Moving Mesh (Phase 10) ---
 export

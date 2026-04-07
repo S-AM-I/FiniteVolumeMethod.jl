@@ -1481,10 +1481,10 @@ precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "P1 radiation model with absorption/emission, Marshak BCs, and coupled thermal+radiation solver."
+summary = "P1 and fvDOM radiation models with absorption/emission, Marshak BCs, and coupled thermal+radiation solver."
 limitations = [
   "Experimental — constant absorption coefficient only; WSGGM deferred.",
-  "P1 only; discrete ordinates (fvDOM) deferred.",
+  "P1 and fvDOM (S2 quadrature); higher-order SN deferred.",
   "Radiation-flow coupling is lagged one iteration (standard approach).",
 ]
 
@@ -1500,9 +1500,9 @@ precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
-summary = "Multi-species transport with EDM turbulence-chemistry interaction and heat release coupling."
+summary = "Multi-species transport with EDM and EDC turbulence-chemistry interaction and heat release coupling."
 limitations = [
-  "Experimental — EDM only; finite-rate Arrhenius for collocated solver deferred.",
+  "Experimental — EDM and EDC implemented; finite-rate Arrhenius for collocated solver deferred.",
   "Three-species (fuel/oxidizer/product) model; multi-step mechanisms deferred.",
   "Constant density (incompressible); variable density combustion deferred.",
 ]
@@ -1519,11 +1519,11 @@ precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "Lagrangian particle tracking with drag models (Stokes, Schiller-Naumann), Ranz-Marshall heat transfer, and two-way momentum/energy coupling."
+summary = "Lagrangian particle tracking with drag models (Stokes, Schiller-Naumann), Ranz-Marshall heat transfer, two-way momentum/energy coupling, and TAB/KHRT spray breakup."
 limitations = [
   "Experimental — Euler time integration only; higher-order particle integration deferred.",
   "PSI-cell coupling (volume-weighted); no particle-source smoothing.",
-  "No spray breakup or collision models.",
+  "TAB and KHRT breakup models; collision models deferred.",
 ]
 
 # ── Phase 10: Dynamic/Moving Mesh ────────────────────────────────────
