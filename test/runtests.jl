@@ -139,6 +139,9 @@ end
     @testset verbose = true "Lagrangian DPM" begin
         safe_include("lagrangian_dpm.jl")
     end
+    @testset verbose = true "Dynamic Mesh" begin
+        safe_include("dynamic_mesh.jl")
+    end
     @testset verbose = true "README" begin
         safe_include("README.jl")
     end

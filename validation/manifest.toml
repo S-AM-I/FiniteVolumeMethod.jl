@@ -1525,3 +1525,22 @@ limitations = [
   "PSI-cell coupling (volume-weighted); no particle-source smoothing.",
   "No spray breakup or collision models.",
 ]
+
+# ── Phase 10: Dynamic/Moving Mesh ────────────────────────────────────
+
+[[features]]
+feature = "dynamic_mesh"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "ALE mesh motion with solid-body and Laplacian displacement solvers, mesh geometry update, face sweep flux, and ALE-corrected transport for incompressible NS."
+limitations = [
+  "Experimental — first-order GCL volume approximation; not yet suitable for large deformations.",
+  "Laplacian motion uses uniform diffusivity; distance-based weighting deferred.",
+  "No topology change (remeshing) support.",
+]
