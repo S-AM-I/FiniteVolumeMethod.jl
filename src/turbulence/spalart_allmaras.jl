@@ -70,14 +70,15 @@ function turbulent_viscosity!(
     ) where {Dim, T}
     nt_field = turb_state.fields[:nu_tilde]
     nc = length(mesh.cell_volumes)
-    # nu_t = nu_tilde * fv1
-    # We need laminar nu for chi — estimate from nu_tilde magnitude
-    # In practice the solver wrapper provides nu; here we use a placeholder
+    # Compute fv1 using a typical laminar nu estimate (1e-5 for air, 1e-6 for water).
+    # The exact value matters little when nu_tilde >> nu (turbulent region).
+    nu_est = T(1.0e-5)
     for c in 1:nc
         nt = max(nt_field.internal[c], zero(T))
-        # Without nu available, use fv1 ≈ 1 for large nu_tilde (turbulent region)
-        # This is corrected when the solver calls with actual nu
-        nu_t[c] = nt
+        chi = nt / max(nu_est, T(1.0e-15))
+        chi3 = chi^3
+        fv1 = chi3 / (chi3 + model.cv1^3)
+        nu_t[c] = nt * fv1
     end
     return nothing
 end

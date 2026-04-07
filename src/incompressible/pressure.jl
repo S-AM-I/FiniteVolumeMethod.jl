@@ -99,9 +99,11 @@ function assemble_pressure!(
     assemble_laplacian!(eq, D, mesh, bcs_p)
 
     # Compute H/A flux divergence and add to RHS.
-    # The Laplacian operator assembles -div(D*grad(p)) on the LHS, so the
-    # equation is: -div(D*grad(p)) = -div(phi_HbyA), i.e. the RHS needs
-    # the NEGATIVE divergence of the HbyA flux.
+    # The Laplacian assembles a positive-definite operator A*p where
+    # A[P,P] > 0 for the diffusion term. This corresponds to the negative
+    # Laplacian: A*p represents -div(D*grad(p)). So the equation is
+    # -div(D*grad(p)) = -div(phi_HbyA), and the RHS needs the NEGATIVE
+    # divergence of the HbyA flux.
     phi_HbyA = compute_HbyA_flux(state, mesh)
     for f in 1:nf
         P = owner(mesh, f)

@@ -109,37 +109,43 @@ function extract_momentum_operators!(
         state.A_P[c] = A[c, c]
     end
 
-    # Compute H(U) per cell
+    # Compute H(U) per cell using face connectivity for O(nc) performance.
+    # H_d[c] = b_d[c] - sum_{N: neighbor of c} A[c, N] * u_d[N]
+    # We iterate over faces of cell c to find neighbors, avoiding O(nc²).
+    nf = size(mesh.face_cells, 2)
+
+    # Pre-extract velocity components for efficiency
+    u_components = Vector{Vector{T}}(undef, Dim)
+    for d in 1:Dim
+        u_components[d] = _extract_component(state.U, d)
+    end
+
+    # Initialize H with RHS values
     for c in 1:nc
-        h_components = ntuple(Val(Dim)) do d
-            eq = eqs[d]
-            u_d = _extract_component(state.U, d)
-            h_val = eq.b[c]
-            # Subtract off-diagonal contributions: sum_{N != c} A[c, N] * u_d[N]
-            # Iterate over column c in CSC format is not efficient;
-            # instead iterate over row c by walking all columns via nzrange
-            # But CSC stores columns, so we iterate the row of A by
-            # checking all entries in each column that lands in row c.
-            # A better approach: use the fact that the matrix is structured
-            # by face connectivity, so iterate the row entries.
-            #
-            # For CSC: nzrange(A, j) gives row indices for column j.
-            # We need row c, so we iterate all columns. Instead, use the
-            # transpose-like approach: sum over columns that have a nonzero
-            # in row c.
-            #
-            # Practical approach: iterate over all faces of cell c and
-            # pick up neighbour contributions directly from the sparse matrix.
-            for j in 1:nc
-                j == c && continue
-                a_cj = eq.A[c, j]
-                if a_cj != zero(T)
-                    h_val -= a_cj * u_d[j]
-                end
-            end
-            return h_val
+        h = ntuple(Val(Dim)) do d
+            eqs[d].b[c]
         end
-        state.H_U[c] = SVector{Dim, T}(h_components)
+        state.H_U[c] = SVector{Dim, T}(h)
+    end
+
+    # Subtract off-diagonal contributions via face loop
+    for f in 1:nf
+        if is_internal_face(mesh, f)
+            P = owner(mesh, f)
+            N = neighbour(mesh, f)
+            h_P = state.H_U[P]
+            h_N = state.H_U[N]
+            new_P = ntuple(Val(Dim)) do d
+                a_PN = eqs[d].A[P, N]
+                h_P[d] - a_PN * u_components[d][N]
+            end
+            new_N = ntuple(Val(Dim)) do d
+                a_NP = eqs[d].A[N, P]
+                h_N[d] - a_NP * u_components[d][P]
+            end
+            state.H_U[P] = SVector{Dim, T}(new_P)
+            state.H_U[N] = SVector{Dim, T}(new_N)
+        end
     end
 
     return nothing
