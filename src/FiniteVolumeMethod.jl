@@ -326,6 +326,11 @@ export
     SymmetryBC,
     FlowRateInletBC,
     TimeDependentVelocityBC,
+    WallFunctionBC,
+    ConvectiveOutletBC,
+    PressureInletVelocityBC,
+    CyclicBC,
+    CustomBC,
     # Solvers
     solve_simple,
     solve_incompressible,
