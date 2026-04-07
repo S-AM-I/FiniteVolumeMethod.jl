@@ -57,6 +57,7 @@ include("../collocated/gradient.jl")
 include("../collocated/laplacian.jl")
 include("../collocated/divergence.jl")
 include("../collocated/ddt.jl")
+include("../collocated/cyclic.jl")
 
 include("../coordinate_systems.jl")
 include("../geometry.jl")

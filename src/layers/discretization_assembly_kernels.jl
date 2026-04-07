@@ -191,6 +191,7 @@ include("../multiphase/solvers.jl")
 include("../radiation/types.jl")
 include("../radiation/p1.jl")
 include("../radiation/solvers.jl")
+include("../radiation/fvdom.jl")
 
 # Combustion & Species Transport (Phase 8)
 # Depends on Phase 0 operators + Phase 1 incompressible + Phase 2a turbulence + Phase 3 thermal.
@@ -198,12 +199,14 @@ include("../combustion/types.jl")
 include("../combustion/species_transport.jl")
 include("../combustion/edm.jl")
 include("../combustion/solvers.jl")
+include("../combustion/edc.jl")
 
 # Lagrangian DPM (Phase 11)
 include("../lagrangian/drag_models.jl")
 include("../lagrangian/heat_transfer.jl")
 include("../lagrangian/two_way_coupling.jl")
 include("../lagrangian/particle_solver.jl")
+include("../lagrangian/spray.jl")
 
 # Dynamic/Moving Mesh (Phase 10)
 include("../dynamic_mesh/types.jl")
