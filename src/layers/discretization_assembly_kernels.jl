@@ -214,3 +214,7 @@ include("../dynamic_mesh/solid_body.jl")
 include("../dynamic_mesh/laplacian_motion.jl")
 include("../dynamic_mesh/mesh_update.jl")
 include("../dynamic_mesh/ale.jl")
+
+# MPI Parallelism stubs (Phase 6)
+# Concrete implementations live in ext/FVMMPIExt/.
+include("../parallel/stubs.jl")
