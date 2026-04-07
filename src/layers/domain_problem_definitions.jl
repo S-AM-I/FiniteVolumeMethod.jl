@@ -21,6 +21,7 @@ include("../parabolic/mesh/io.jl")
 include("../mesh/polyhedral_volumes.jl")
 include("../mesh/convert.jl")
 include("../mesh/openfoam_io.jl")
+include("../mesh/openfoam_writer.jl")
 include("../mesh/quality.jl")
 
 include("../parabolic/mesh/partitioning.jl")

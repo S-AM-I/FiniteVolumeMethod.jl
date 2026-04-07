@@ -121,6 +121,7 @@ export
     write_vtk_unstructured,
     # Mesh I/O (Phase 4)
     read_openfoam_polymesh,
+    write_openfoam_field,
     convert_to_fvm_mesh,
     volume_prism,
     volume_pyramid,
@@ -422,6 +423,10 @@ export
     compute_q_criterion,
     compute_enstrophy,
     compute_courant_number,
+    # Field statistics
+    field_average,
+    field_min_max,
+    turbulence_intensity,
     # Wall quantities
     compute_wall_shear_stress,
     compute_y_plus,
@@ -465,6 +470,7 @@ export
     CombustionProperties,
     SpeciesState,
     EddyDissipationModel,
+    EddyDissipationConcept,
     assemble_species!,
     solve_species!,
     compute_edm_reaction_rates,
