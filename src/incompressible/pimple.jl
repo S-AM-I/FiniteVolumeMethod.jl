@@ -37,6 +37,7 @@ function _pimple_step!(
         prob::IncompressibleProblem{Dim, T},
         dt::T;
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -66,7 +67,10 @@ function _pimple_step!(
                 under_relax_momentum!(eqs[d], U_old_d, alpha_U)
             end
             lp = to_linear_problem(eqs[d])
-            sol = _solve_linear(lp, linear_solver)
+            sol = _dispatch_solve(
+                lp, linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
@@ -81,7 +85,7 @@ function _pimple_step!(
                 fix_pressure_reference!(p_eq, 1, zero(T))
             end
             lp_p = to_linear_problem(p_eq)
-            p_sol = _solve_linear(lp_p, linear_solver)
+            p_sol = _dispatch_solve(lp_p, linear_solver, solver_config, :p)
 
             # 4b. Under-relax pressure if not final outer, else direct
             if !is_final
@@ -176,6 +180,7 @@ function solve_incompressible(
         dt::T;
         save_every::Int = 1,
         linear_solver = nothing,
+        solver_config = nothing,
         verbose::Bool = false,
     ) where {Dim, T}
     mesh = prob.mesh
@@ -202,7 +207,7 @@ function solve_incompressible(
     n_steps = 0
     while t < t_end - eps(T) * abs(t_end)
         dt_actual = min(dt, t_end - t)
-        step_fn!(state, prob, dt_actual; linear_solver = linear_solver)
+        step_fn!(state, prob, dt_actual; linear_solver = linear_solver, solver_config = solver_config)
         t += dt_actual
         n_steps += 1
 
@@ -232,13 +237,19 @@ Return the appropriate single-step function for the given algorithm type.
 """
 function _select_step_function(algo::PISO)
     n_correctors = algo.n_correctors
-    return (state, prob, dt; linear_solver = nothing) ->
-    _piso_step!(state, prob, dt, n_correctors; linear_solver = linear_solver)
+    return (state, prob, dt; linear_solver = nothing, solver_config = nothing) ->
+    _piso_step!(
+        state, prob, dt, n_correctors;
+        linear_solver = linear_solver, solver_config = solver_config,
+    )
 end
 
 function _select_step_function(algo::PIMPLE)
-    return (state, prob, dt; linear_solver = nothing) ->
-    _pimple_step!(state, prob, dt; linear_solver = linear_solver)
+    return (state, prob, dt; linear_solver = nothing, solver_config = nothing) ->
+    _pimple_step!(
+        state, prob, dt;
+        linear_solver = linear_solver, solver_config = solver_config,
+    )
 end
 
 """

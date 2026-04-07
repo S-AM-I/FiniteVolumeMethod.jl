@@ -36,6 +36,7 @@ function solve_turbulence!(
         bcs_turb::Dict{Symbol, <:Dict{Symbol, <:AbstractBoundaryCondition}};
         dt::Union{Nothing, T} = nothing,
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
     k_field = turb_state.fields[:k]
@@ -76,7 +77,7 @@ function solve_turbulence!(
 
     # Solve k
     lp_k = to_linear_problem(k_eq)
-    sol_k = _solve_linear(lp_k, linear_solver)
+    sol_k = _dispatch_solve(lp_k, linear_solver, solver_config, :k)
     for c in 1:nc
         k_field.internal[c] = max(sol_k.u[c], T(1.0e-10))
     end
@@ -110,7 +111,7 @@ function solve_turbulence!(
 
     # Solve ε
     lp_eps = to_linear_problem(eps_eq)
-    sol_eps = _solve_linear(lp_eps, linear_solver)
+    sol_eps = _dispatch_solve(lp_eps, linear_solver, solver_config, :epsilon)
     for c in 1:nc
         eps_field.internal[c] = max(sol_eps.u[c], T(1.0e-10))
     end

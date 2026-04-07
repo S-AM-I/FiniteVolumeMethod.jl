@@ -34,6 +34,7 @@ function solve_simple_thermal_radiation(
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
         T_init::Real = thermal_props.T_ref,
         linear_solver = nothing,
+        solver_config = nothing,
         verbose::Bool = false,
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
@@ -95,7 +96,10 @@ function solve_simple_thermal_radiation(
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
-            sol = _solve_linear(to_linear_problem(eqs[d]), linear_solver)
+            sol = _dispatch_solve(
+                to_linear_problem(eqs[d]), linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
@@ -106,7 +110,7 @@ function solve_simple_thermal_radiation(
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
-        p_sol = _solve_linear(to_linear_problem(p_eq), linear_solver)
+        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
 
         for c in 1:nc
             state.p.internal[c] += algo.alpha_p * (p_sol.u[c] - state.p.internal[c])
@@ -135,7 +139,7 @@ function solve_simple_thermal_radiation(
             T_eq.b[c] += S_rad[c] * mesh.cell_volumes[c] / rho_Cp
         end
 
-        T_sol = _solve_linear(to_linear_problem(T_eq), linear_solver)
+        T_sol = _dispatch_solve(to_linear_problem(T_eq), linear_solver, solver_config, :T)
         for c in 1:nc
             thermal_state.T_field.internal[c] = T_sol.u[c]
         end
@@ -143,7 +147,7 @@ function solve_simple_thermal_radiation(
         # -- P1 radiation --------------------------------------------------
         rad_state.G = solve_p1_radiation(
             rad_model, thermal_state.T_field, mesh, bcs_G;
-            linear_solver = linear_solver,
+            linear_solver = linear_solver, solver_config = solver_config,
         )
         S_rad = compute_radiation_source(rad_model, rad_state.G, thermal_state.T_field)
 

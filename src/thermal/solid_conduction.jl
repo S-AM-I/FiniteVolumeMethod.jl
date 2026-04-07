@@ -76,12 +76,13 @@ function solve_solid_conduction(
         dt::Union{Nothing, T} = nothing,
         T_old::Union{Nothing, Vector{T}} = nothing,
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     eq = CollocatedEquation(mesh)
     assemble_solid_conduction!(eq, solid, mesh, bcs_T; dt = dt, T_old = T_old)
 
     lp = to_linear_problem(eq)
-    sol = _solve_linear(lp, linear_solver)
+    sol = _dispatch_solve(lp, linear_solver, solver_config, :T_solid)
 
     nc = length(mesh.cell_volumes)
     T_field = CollocatedScalarField(:T_solid, mesh)

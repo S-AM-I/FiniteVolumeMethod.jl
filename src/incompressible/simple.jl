@@ -37,6 +37,7 @@ residual history, and the final [`IncompressibleState`](@ref).
 function solve_simple(
         prob::IncompressibleProblem{Dim, T};
         linear_solver = nothing,
+        solver_config = nothing,
         verbose::Bool = false,
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
@@ -79,7 +80,10 @@ function solve_simple(
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, alpha_U)
             lp = to_linear_problem(eqs[d])
-            sol = _solve_linear(lp, linear_solver)
+            sol = _dispatch_solve(
+                lp, linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
             _set_component!(state.U, d, sol.u)
         end
 
@@ -93,7 +97,7 @@ function solve_simple(
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
         lp_p = to_linear_problem(p_eq)
-        p_sol = _solve_linear(lp_p, linear_solver)
+        p_sol = _dispatch_solve(lp_p, linear_solver, solver_config, :p)
 
         # ── 6. Under-relax pressure ─────────────────────────────────
         nc = length(mesh.cell_volumes)

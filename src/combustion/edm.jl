@@ -8,6 +8,19 @@
 const _EDM_FALLBACK_TAU_MIX = 0.1
 
 """
+    _species_index(props::CombustionProperties{NS}, name::Symbol) -> Int
+
+Look up the index of species `name` in `props.species_names`.
+Throws an error if the species is not found.
+"""
+function _species_index(props::CombustionProperties{NS}, name::Symbol) where {NS}
+    for i in 1:NS
+        props.species_names[i] === name && return i
+    end
+    return error("Species :$name not found in $(props.species_names)")
+end
+
+"""
     compute_edm_reaction_rates(
         edm, species_state, combustion_props,
         k_field, eps_field, density, mesh,
@@ -59,13 +72,15 @@ function compute_edm_reaction_rates(
     B = edm.B_edm
     s = combustion_props.stoich_ratio
 
-    # Access species fields — assumes ordering: fuel(1), oxidizer(2), product(3)
-    Y_fuel = species_state.Y[1].internal
-    Y_ox = species_state.Y[2].internal
+    # Look up species by name (no assumed ordering)
+    fuel_idx = _species_index(combustion_props, :fuel)
+    ox_idx = _species_index(combustion_props, :oxidizer)
+    has_product = any(n -> n === :product, combustion_props.species_names)
+    prod_idx = has_product ? _species_index(combustion_props, :product) : 0
 
-    # Product field (if 3+ species)
-    has_product = NS >= 3
-    Y_prod = has_product ? species_state.Y[3].internal : nothing
+    Y_fuel = species_state.Y[fuel_idx].internal
+    Y_ox = species_state.Y[ox_idx].internal
+    Y_prod = has_product ? species_state.Y[prod_idx].internal : nothing
 
     # Allocate output
     omega = ntuple(_ -> zeros(T, nc), Val(NS))
@@ -92,10 +107,10 @@ function compute_edm_reaction_rates(
         end
 
         # Store species rates from stoichiometry
-        omega[1][c] = omega_fuel_c              # fuel consumed
-        omega[2][c] = s * omega_fuel_c          # oxidizer consumed
+        omega[fuel_idx][c] = omega_fuel_c              # fuel consumed
+        omega[ox_idx][c] = s * omega_fuel_c            # oxidizer consumed
         if has_product
-            omega[3][c] = -(one(T) + s) * omega_fuel_c  # product formed
+            omega[prod_idx][c] = -(one(T) + s) * omega_fuel_c  # product formed
         end
 
         # Additional species (if NS > 3) get zero rate
@@ -120,7 +135,8 @@ function compute_heat_release(
         reaction_rates::NTuple{NS, Vector{T}},
         combustion_props::CombustionProperties{NS, T},
     ) where {NS, T}
-    omega_fuel = reaction_rates[1]
+    fuel_idx = _species_index(combustion_props, :fuel)
+    omega_fuel = reaction_rates[fuel_idx]
     dH = combustion_props.heat_of_combustion
     nc = length(omega_fuel)
     S_h = Vector{T}(undef, nc)

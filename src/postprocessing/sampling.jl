@@ -5,33 +5,6 @@
 
 using LinearAlgebra: norm
 
-# -- Nearest cell lookup -------------------------------------------------------
-
-"""
-    _find_nearest_cell(mesh, point) -> Int
-
-Find the cell whose center is nearest to `point` (brute force).
-"""
-function _find_nearest_cell(
-        mesh::UnstructuredFVMMesh{Dim, T},
-        point::SVector{Dim, T},
-    ) where {Dim, T}
-    nc = length(mesh.cell_volumes)
-    best_cell = 1
-    best_dist = T(Inf)
-
-    for c in 1:nc
-        x_c = cell_center(mesh, c)
-        d = norm(point - x_c)
-        if d < best_dist
-            best_dist = d
-            best_cell = c
-        end
-    end
-
-    return best_cell
-end
-
 # -- Point sampling ------------------------------------------------------------
 
 """
@@ -44,7 +17,7 @@ function sample_field_at_point(
         mesh::UnstructuredFVMMesh{Dim, T},
         point::SVector{Dim, T},
     ) where {Dim, T}
-    c = _find_nearest_cell(mesh, point)
+    c = find_nearest_cell(mesh, point)
     return field.internal[c]
 end
 
@@ -58,7 +31,7 @@ function sample_field_at_point(
         mesh::UnstructuredFVMMesh{Dim, T},
         point::SVector{Dim, T},
     ) where {Dim, T}
-    c = _find_nearest_cell(mesh, point)
+    c = find_nearest_cell(mesh, point)
     return field.internal[c]
 end
 

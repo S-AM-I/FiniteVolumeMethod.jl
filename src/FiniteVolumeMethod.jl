@@ -266,6 +266,7 @@ export
     is_internal_face,
     face_normal_area,
     face_weight,
+    find_nearest_cell,
     # Interpolation
     interpolate_linear,
     interpolate_upwind,

@@ -24,6 +24,7 @@ function solve_simple_turbulent(
         turb_model;
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
         linear_solver = nothing,
+        solver_config = nothing,
         verbose::Bool = false,
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
@@ -61,7 +62,10 @@ function solve_simple_turbulent(
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
-            sol = _solve_linear(to_linear_problem(eqs[d]), linear_solver)
+            sol = _dispatch_solve(
+                to_linear_problem(eqs[d]), linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
@@ -72,7 +76,7 @@ function solve_simple_turbulent(
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
-        p_sol = _solve_linear(to_linear_problem(p_eq), linear_solver)
+        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
 
         nc = length(mesh.cell_volumes)
         for c in 1:nc
@@ -131,6 +135,7 @@ function solve_incompressible_turbulent(
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
         save_every::Int = 1,
         linear_solver = nothing,
+        solver_config = nothing,
         verbose::Bool = false,
     ) where {Dim, T}
     mesh = prob.mesh
@@ -160,12 +165,12 @@ function solve_incompressible_turbulent(
         if prob.algorithm isa PISO
             _turbulent_piso_step!(
                 state, prob, dt_actual, prob.algorithm.n_correctors,
-                nu_eff; linear_solver = linear_solver
+                nu_eff; linear_solver = linear_solver, solver_config = solver_config,
             )
         elseif prob.algorithm isa PIMPLE
             _turbulent_pimple_step!(
                 state, prob, dt_actual, nu_eff;
-                linear_solver = linear_solver
+                linear_solver = linear_solver, solver_config = solver_config,
             )
         end
 
@@ -206,6 +211,7 @@ function _turbulent_piso_step!(
         dt::T, n_correctors::Int,
         nu_eff::Vector{T};
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -219,7 +225,10 @@ function _turbulent_piso_step!(
     extract_momentum_operators!(state, eqs, mesh)
 
     for d in 1:Dim
-        sol = _solve_linear(to_linear_problem(eqs[d]), linear_solver)
+        sol = _dispatch_solve(
+            to_linear_problem(eqs[d]), linear_solver, solver_config,
+            d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+        )
         _set_component!(state.U, d, sol.u)
     end
     update_boundary_velocity!(state, prob.bcs, mesh)
@@ -230,7 +239,7 @@ function _turbulent_piso_step!(
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
-        p_sol = _solve_linear(to_linear_problem(p_eq), linear_solver)
+        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
 
         nc = length(mesh.cell_volumes)
         for c in 1:nc
@@ -262,6 +271,7 @@ function _turbulent_pimple_step!(
         prob::IncompressibleProblem{Dim, T},
         dt::T, nu_eff::Vector{T};
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -282,7 +292,10 @@ function _turbulent_pimple_step!(
                 U_old_d = _extract_component(state.U, d)
                 under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
             end
-            sol = _solve_linear(to_linear_problem(eqs[d]), linear_solver)
+            sol = _dispatch_solve(
+                to_linear_problem(eqs[d]), linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
@@ -294,7 +307,7 @@ function _turbulent_pimple_step!(
             if _needs_pressure_reference(prob.bcs)
                 fix_pressure_reference!(p_eq, 1, zero(T))
             end
-            p_sol = _solve_linear(to_linear_problem(p_eq), linear_solver)
+            p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
 
             if !is_final
                 for c in 1:nc
