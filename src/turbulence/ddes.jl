@@ -109,20 +109,18 @@ function solve_turbulence!(
     end
 
     # Solve base RANS model with modified wall distance
-    # For SA: temporarily modify the d_wall in the base model
-    # Since SpalartAllmaras stores d_wall as a Vector, .= works
+    # For SA: create a new instance with the DDES length scale (no mutation)
     if model.base_model isa SpalartAllmaras
-        # Save original d_wall
-        d_orig = copy(model.base_model.d_wall)
-        # Replace with DDES length scale
-        model.base_model.d_wall .= l_ddes
-        # Solve
+        modified_model = SpalartAllmaras{T}(
+            model.base_model.cb1, model.base_model.cb2, model.base_model.sigma,
+            model.base_model.kappa, model.base_model.cw2, model.base_model.cw3,
+            model.base_model.cv1, model.base_model.ct3, model.base_model.ct4,
+            l_ddes,
+        )
         solve_turbulence!(
-            turb_state, model.base_model, U, phi, nu, mesh, bcs_turb;
+            turb_state, modified_model, U, phi, nu, mesh, bcs_turb;
             dt = dt, linear_solver = linear_solver
         )
-        # Restore original
-        model.base_model.d_wall .= d_orig
     else
         # Generic fallback: just solve the base model
         solve_turbulence!(

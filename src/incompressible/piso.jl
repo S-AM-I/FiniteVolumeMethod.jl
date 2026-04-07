@@ -40,6 +40,7 @@ function _piso_step!(
         dt::T,
         n_correctors::Int;
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -55,7 +56,10 @@ function _piso_step!(
 
     for d in 1:Dim
         lp = to_linear_problem(eqs[d])
-        sol = _solve_linear(lp, linear_solver)
+        sol = _dispatch_solve(
+            lp, linear_solver, solver_config,
+            d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+        )
         _set_component!(state.U, d, sol.u)
     end
     update_boundary_velocity!(state, prob.bcs, mesh)
@@ -69,7 +73,7 @@ function _piso_step!(
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
         lp_p = to_linear_problem(p_eq)
-        p_sol = _solve_linear(lp_p, linear_solver)
+        p_sol = _dispatch_solve(lp_p, linear_solver, solver_config, :p)
 
         # 2b. Direct assign (no under-relaxation in PISO)
         nc = length(mesh.cell_volumes)

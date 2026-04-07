@@ -85,6 +85,7 @@ function solve_species!(
         bcs_species::Dict{Symbol, <:Any};
         dt::Union{Nothing, T} = nothing,
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T, NS}
     nc = length(mesh.cell_volumes)
 
@@ -119,7 +120,7 @@ function solve_species!(
         end
 
         # Solve
-        sol = _solve_linear(to_linear_problem(eq), linear_solver)
+        sol = _dispatch_solve(to_linear_problem(eq), linear_solver, solver_config, name_i)
 
         # Update field with clipping to [0, 1]
         for c in 1:nc

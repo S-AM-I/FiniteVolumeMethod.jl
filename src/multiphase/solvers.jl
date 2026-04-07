@@ -51,6 +51,7 @@ function solve_vof(
         C_alpha::T = one(T),
         algorithm::AbstractPVCoupling = PISO(),
         linear_solver = nothing,
+        solver_config = nothing,
         save_every::Int = 1,
         verbose::Bool = false,
     ) where {Dim, T}
@@ -92,7 +93,7 @@ function solve_vof(
             alpha_eq, vof_state.alpha, state.phi, mesh, bcs_alpha;
             dt = dt_actual, C_alpha = C_alpha,
         )
-        alpha_sol = _solve_linear(to_linear_problem(alpha_eq), linear_solver)
+        alpha_sol = _dispatch_solve(to_linear_problem(alpha_eq), linear_solver, solver_config, :alpha)
         for c in 1:nc
             vof_state.alpha.internal[c] = alpha_sol.u[c]
         end
@@ -128,13 +129,13 @@ function solve_vof(
             _vof_piso_step!(
                 state, prob, dt_actual, algorithm.n_correctors,
                 nu_eff, body_force, vof_state.rho;
-                linear_solver = linear_solver,
+                linear_solver = linear_solver, solver_config = solver_config,
             )
         elseif algorithm isa PIMPLE
             _vof_pimple_step!(
                 state, prob, dt_actual,
                 nu_eff, body_force, vof_state.rho;
-                linear_solver = linear_solver,
+                linear_solver = linear_solver, solver_config = solver_config,
             )
         end
 
@@ -170,6 +171,7 @@ function _vof_piso_step!(
         body_force::Vector{SVector{Dim, T}},
         rho::Vector{T};
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
@@ -188,7 +190,10 @@ function _vof_piso_step!(
     extract_momentum_operators!(state, eqs, mesh)
 
     for d in 1:Dim
-        sol = _solve_linear(to_linear_problem(eqs[d]), linear_solver)
+        sol = _dispatch_solve(
+            to_linear_problem(eqs[d]), linear_solver, solver_config,
+            d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+        )
         _set_component!(state.U, d, sol.u)
     end
     update_boundary_velocity!(state, prob.bcs, mesh)
@@ -222,7 +227,7 @@ function _vof_piso_step!(
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
 
-        p_sol = _solve_linear(to_linear_problem(p_eq), linear_solver)
+        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
         for c in 1:nc
             state.p.internal[c] = p_sol.u[c]
         end
@@ -259,6 +264,7 @@ function _vof_pimple_step!(
         body_force::Vector{SVector{Dim, T}},
         rho::Vector{T};
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -283,7 +289,10 @@ function _vof_pimple_step!(
                 U_old_d = _extract_component(state.U, d)
                 under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
             end
-            sol = _solve_linear(to_linear_problem(eqs[d]), linear_solver)
+            sol = _dispatch_solve(
+                to_linear_problem(eqs[d]), linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
@@ -314,7 +323,7 @@ function _vof_pimple_step!(
                 fix_pressure_reference!(p_eq, 1, zero(T))
             end
 
-            p_sol = _solve_linear(to_linear_problem(p_eq), linear_solver)
+            p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
 
             if !is_final
                 for c in 1:nc

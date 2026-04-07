@@ -51,6 +51,7 @@ function solve_simple_reacting(
         Y_init::Dict{Symbol, <:Real} = Dict{Symbol, T}(),
         T_init::Real = thermal_props.T_ref,
         linear_solver = nothing,
+        solver_config = nothing,
         verbose::Bool = false,
     ) where {Dim, T, NS}
     algo = prob.algorithm::SIMPLE{T}
@@ -117,7 +118,10 @@ function solve_simple_reacting(
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
-            sol = _solve_linear(to_linear_problem(eqs[d]), linear_solver)
+            sol = _dispatch_solve(
+                to_linear_problem(eqs[d]), linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
@@ -128,7 +132,7 @@ function solve_simple_reacting(
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
-        p_sol = _solve_linear(to_linear_problem(p_eq), linear_solver)
+        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
 
         for c in 1:nc
             state.p.internal[c] += algo.alpha_p * (p_sol.u[c] - state.p.internal[c])
@@ -168,7 +172,7 @@ function solve_simple_reacting(
         solve_species!(
             species_state, state.phi, combustion_props, reaction_rates,
             nu_t_vec, prob.density, mesh, bcs_species;
-            dt = nothing, linear_solver = linear_solver,
+            dt = nothing, linear_solver = linear_solver, solver_config = solver_config,
         )
 
         # ── Energy equation with heat release ───────────────────
@@ -183,7 +187,7 @@ function solve_simple_reacting(
             T_eq.b[c] += S_h[c] * mesh.cell_volumes[c] / rho_Cp
         end
 
-        T_sol = _solve_linear(to_linear_problem(T_eq), linear_solver)
+        T_sol = _dispatch_solve(to_linear_problem(T_eq), linear_solver, solver_config, :T)
         for c in 1:nc
             thermal_state.T_field.internal[c] = T_sol.u[c]
         end

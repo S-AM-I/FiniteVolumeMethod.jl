@@ -28,6 +28,7 @@ RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 AlgebraicMultigrid = "2169fc97-5a83-5252-b627-83903c6c433c"
 IncompleteLU = "40713840-3770-5561-ab4c-a76e7d0d7895"
+LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 
 [extensions]
 FVMCUDAExt = "CUDA"
@@ -39,6 +40,7 @@ FVMRecipesExt = "RecipesBase"
 FVMVTKExt = "WriteVTK"
 FVMAMGExt = "AlgebraicMultigrid"
 FVMILUExt = "IncompleteLU"
+FVMLinearSolveExt = "LinearSolve"
 
 [compat]
 AlgebraicMultigrid = "0.6"
@@ -49,6 +51,7 @@ DelaunayTriangulation = "1.0"
 HDF5 = "0.17, 0.18"
 HTTP = "1"
 IncompleteLU = "0.2"
+LinearSolve = "2"
 JLD2 = "0.4, 0.5"
 JSON3 = "1"
 PreallocationTools = "0.4"

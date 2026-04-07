@@ -135,10 +135,7 @@ function assemble_ddt!(
         phi_old_old === nothing && error("BDF2 requires phi_old_old")
         assemble_ddt_bdf2!(eq, rho, phi_old, phi_old_old, mesh, dt)
     elseif scheme == TIME_CRANK_NICOLSON
-        # Crank-Nicolson: Euler ddt with factor + 0.5 weighting handled
-        # by the caller assembling spatial operators at both time levels.
-        # Here we just add the ddt term as Euler.
-        assemble_ddt_euler!(eq, rho, phi_old, mesh, dt)
+        error("TIME_CRANK_NICOLSON is not yet implemented. Use TIME_EULER or TIME_BDF2.")
     end
     return nothing
 end

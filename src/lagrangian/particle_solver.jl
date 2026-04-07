@@ -3,30 +3,6 @@
 # Advances particles through a collocated velocity field using forward
 # Euler integration with drag, gravity, and optional heat transfer.
 
-"""
-    _find_cell_fvm(mesh, point) -> Int
-
-Find the cell whose center is nearest to `point` on an `UnstructuredFVMMesh`
-(brute-force nearest-cell-center lookup).  Returns 0 if the mesh has no cells.
-"""
-function _find_cell_fvm(
-        mesh::UnstructuredFVMMesh{Dim, T},
-        point::SVector{Dim, T},
-    ) where {Dim, T}
-    nc = length(mesh.cell_volumes)
-    nc == 0 && return 0
-    best_cell = 1
-    best_dist = T(Inf)
-    for c in 1:nc
-        x_c = cell_center(mesh, c)
-        d = norm(point - x_c)
-        if d < best_dist
-            best_dist = d
-            best_cell = c
-        end
-    end
-    return best_cell
-end
 
 """
     _is_in_domain(mesh, point) -> Bool
@@ -96,7 +72,7 @@ function advance_particles!(
 
         # Ensure valid cell index
         if p.cell_index < 1 || p.cell_index > nc
-            p.cell_index = _find_cell_fvm(mesh, p.position)
+            p.cell_index = find_nearest_cell(mesh, p.position)
         end
         if p.cell_index < 1 || p.cell_index > nc
             p.active = false
@@ -142,7 +118,7 @@ function advance_particles!(
 
         # Update cell index
         if _is_in_domain(mesh, x_new)
-            p.cell_index = _find_cell_fvm(mesh, x_new)
+            p.cell_index = find_nearest_cell(mesh, x_new)
         else
             p.active = false
             p.cell_index = 0

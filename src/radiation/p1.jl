@@ -59,13 +59,14 @@ function solve_p1_radiation(
         mesh::UnstructuredFVMMesh{Dim, T},
         bcs_G::Dict{Symbol, <:AbstractBoundaryCondition};
         linear_solver = nothing,
+        solver_config = nothing,
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
     eq = CollocatedEquation(mesh)
     assemble_p1!(eq, rad_model, T_field, mesh, bcs_G)
 
     lp = to_linear_problem(eq)
-    sol = _solve_linear(lp, linear_solver)
+    sol = _dispatch_solve(lp, linear_solver, solver_config, :G)
 
     G = CollocatedScalarField(:G, mesh)
     for c in 1:nc

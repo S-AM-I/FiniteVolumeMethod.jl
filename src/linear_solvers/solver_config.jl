@@ -140,25 +140,18 @@ _resolve_solver(solver) = solver  # pass-through for LinearSolve algorithm objec
 """
     _try_krylov_solver(sym::Symbol)
 
-Try to construct a Krylov solver. If LinearSolve is available in Main,
-constructs the corresponding `KrylovJL_*` solver. Otherwise, warns and
-returns `nothing` (falls back to direct solver).
+Try to construct a Krylov solver. Dispatches to `Val`-based methods
+that are overridden by `FVMLinearSolveExt` when LinearSolve.jl is loaded.
+Falls back to `nothing` (direct solver) with a warning if the extension
+is not available.
 """
 function _try_krylov_solver(sym::Symbol)
-    try
-        if sym == :cg
-            return Base.invokelatest(getfield(Main, :KrylovJL_CG))
-        elseif sym == :bicgstab
-            return Base.invokelatest(getfield(Main, :KrylovJL_BICGSTAB))
-        elseif sym == :gmres
-            return Base.invokelatest(getfield(Main, :KrylovJL_GMRES))
-        end
-    catch
-        @warn "Krylov solver :$sym not available. " *
-            "Install and load LinearSolve.jl. " *
-            "Falling back to direct solver."
-        return nothing
-    end
+    return _try_krylov_solver(Val(sym))
+end
+
+function _try_krylov_solver(::Val{S}) where {S}
+    @warn "Krylov solver :$S not available. Load LinearSolve.jl: `using LinearSolve`. Falling back to direct solver."
+    return nothing
 end
 
 # ── Solve with config ────────────────────────────────────────────────

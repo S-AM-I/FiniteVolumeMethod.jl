@@ -298,3 +298,30 @@ function face_weight(mesh::UnstructuredFVMMesh{Dim, T}, f::Int) where {Dim, T}
     d_PN = norm(c_P - c_N)
     return d_PN > zero(T) ? d_fN / d_PN : one(T) / 2
 end
+
+# ── Nearest-cell lookup ─────────────────────────────────────────────
+
+"""
+    find_nearest_cell(mesh, point) -> Int
+
+Find the cell whose center is nearest to `point` (brute-force search).
+Returns `0` if the mesh has no cells.
+"""
+function find_nearest_cell(
+        mesh::UnstructuredFVMMesh{Dim, T},
+        point::SVector{Dim, T},
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    nc == 0 && return 0
+    best_cell = 1
+    best_dist = T(Inf)
+    for c in 1:nc
+        x_c = cell_center(mesh, c)
+        d = norm(point - x_c)
+        if d < best_dist
+            best_dist = d
+            best_cell = c
+        end
+    end
+    return best_cell
+end
