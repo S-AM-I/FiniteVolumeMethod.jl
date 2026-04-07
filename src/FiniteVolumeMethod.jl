@@ -491,6 +491,12 @@ export
     set_particle_properties!,
     advance_particles!
 
+# --- Dynamic/Moving Mesh (Phase 10) ---
+export
+    AbstractMotionSolver, SolidBodyMotion, LaplacianMotion, MeshMotionState,
+    compute_displacement!, update_mesh!, compute_mesh_flux!,
+    ale_corrected_flux, solve_ale
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,
