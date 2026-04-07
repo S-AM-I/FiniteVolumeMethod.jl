@@ -69,6 +69,88 @@ struct InletOutletBC{Dim, T} <: AbstractBoundaryCondition
     inlet_value::SVector{Dim, T}
 end
 
+@doc """
+    ZeroGradientBC <: AbstractBoundaryCondition
+
+Zero-gradient (Neumann(0)) for both velocity and pressure.
+Equivalent to OpenFOAM's `zeroGradient` condition.
+"""
+struct ZeroGradientBC <: AbstractBoundaryCondition end
+
+@doc """
+    TotalPressureBC{T} <: AbstractBoundaryCondition
+
+Total pressure inlet: ``p_0 = p + \\tfrac{1}{2}|\\mathbf{U}|^2``.
+Expands to Dirichlet for pressure using the specified total pressure value.
+The full dynamic-pressure correction requires the velocity field and is
+applied during the solve loop (future enhancement); the initial expansion
+uses ``p_0`` directly.
+
+# Fields
+- `p0::T` — total pressure value
+"""
+struct TotalPressureBC{T} <: AbstractBoundaryCondition
+    p0::T
+end
+
+@doc """
+    SymmetryBC <: AbstractBoundaryCondition
+
+Symmetry plane.  Zero normal velocity, zero-gradient for tangential
+velocity and pressure.  Expands as zero-gradient (Neumann) for both
+velocity and pressure; the normal-velocity constraint is enforced by the
+face-flux treatment in the SIMPLE/PISO loop.
+"""
+struct SymmetryBC <: AbstractBoundaryCondition end
+
+@doc """
+    FlowRateInletBC{Dim, T} <: AbstractBoundaryCondition
+
+Fixed volume-flow-rate inlet.  Stores a bulk velocity vector that
+corresponds to the desired flow rate divided by the patch area:
+``\\mathbf{U} = (Q / A)\\,\\hat{\\mathbf{n}}``.
+
+# Fields
+- `velocity::SVector{Dim, T}` — bulk velocity vector
+"""
+struct FlowRateInletBC{Dim, T} <: AbstractBoundaryCondition
+    velocity::SVector{Dim, T}
+end
+
+@doc """
+    FlowRateInletBC(velocity::NTuple{Dim, T})
+
+Construct a [`FlowRateInletBC`](@ref) from a tuple.
+"""
+function FlowRateInletBC(velocity::NTuple{Dim, T}) where {Dim, T}
+    return FlowRateInletBC{Dim, T}(SVector{Dim, T}(velocity))
+end
+
+@doc """
+    TimeDependentVelocityBC{Dim, T, F} <: AbstractBoundaryCondition
+
+Time-dependent velocity inlet.  Wraps a callable `func(t)` that returns
+an `SVector{Dim, T}`.  The initial expansion evaluates `func(t_ref)`;
+time-dependent updates during the solve loop are a future enhancement.
+
+# Fields
+- `func::F` — callable `t -> SVector{Dim, T}`
+- `t_ref::T` — reference time used for the initial expansion (default `0.0`)
+"""
+struct TimeDependentVelocityBC{Dim, T, F} <: AbstractBoundaryCondition
+    func::F
+    t_ref::T
+end
+
+@doc """
+    TimeDependentVelocityBC{Dim, T}(func) where {Dim, T}
+
+Construct a [`TimeDependentVelocityBC`](@ref) with `t_ref = 0`.
+"""
+function TimeDependentVelocityBC{Dim, T}(func) where {Dim, T}
+    return TimeDependentVelocityBC{Dim, T, typeof(func)}(func, zero(T))
+end
+
 # ── Velocity BC expansion ──────────────────────────────────────────
 
 @doc """
@@ -99,6 +181,26 @@ function expand_velocity_bc(bc::InletOutletBC, component::Int)
     return ParabolicDirichlet(bc.inlet_value[component])
 end
 
+function expand_velocity_bc(::ZeroGradientBC, ::Int)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_velocity_bc(::TotalPressureBC, ::Int)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_velocity_bc(::SymmetryBC, ::Int)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_velocity_bc(bc::FlowRateInletBC, component::Int)
+    return ParabolicDirichlet(bc.velocity[component])
+end
+
+function expand_velocity_bc(bc::TimeDependentVelocityBC, component::Int)
+    return ParabolicDirichlet(bc.func(bc.t_ref)[component])
+end
+
 # ── Pressure BC expansion ──────────────────────────────────────────
 
 @doc """
@@ -126,6 +228,26 @@ function expand_pressure_bc(::SlipWallBC)
 end
 
 function expand_pressure_bc(::InletOutletBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(::ZeroGradientBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(bc::TotalPressureBC)
+    return ParabolicDirichlet(bc.p0)
+end
+
+function expand_pressure_bc(::SymmetryBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(::FlowRateInletBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(::TimeDependentVelocityBC)
     return ParabolicNeumann(0.0)
 end
 

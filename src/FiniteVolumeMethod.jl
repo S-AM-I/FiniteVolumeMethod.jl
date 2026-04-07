@@ -321,6 +321,11 @@ export
     NoSlipWallBC,
     SlipWallBC,
     InletOutletBC,
+    ZeroGradientBC,
+    TotalPressureBC,
+    SymmetryBC,
+    FlowRateInletBC,
+    TimeDependentVelocityBC,
     # Solvers
     solve_simple,
     solve_incompressible,
