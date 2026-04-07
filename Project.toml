@@ -29,6 +29,8 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 AlgebraicMultigrid = "2169fc97-5a83-5252-b627-83903c6c433c"
 IncompleteLU = "40713840-3770-5561-ab4c-a76e7d0d7895"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+PartitionedArrays = "5a9dfac6-5c52-46f7-8278-5e2210713be9"
 
 [extensions]
 FVMCUDAExt = "CUDA"
@@ -41,6 +43,7 @@ FVMVTKExt = "WriteVTK"
 FVMAMGExt = "AlgebraicMultigrid"
 FVMILUExt = "IncompleteLU"
 FVMLinearSolveExt = "LinearSolve"
+FVMMPIExt = ["MPI", "PartitionedArrays"]
 
 [compat]
 AlgebraicMultigrid = "0.6"
@@ -60,6 +63,8 @@ RecipesBase = "1"
 SciMLBase = "2"
 StaticArrays = "1.9.16"
 WriteVTK = "1"
+MPI = "0.20"
+PartitionedArrays = "0.5"
 julia = "1.10"
 
 [extras]

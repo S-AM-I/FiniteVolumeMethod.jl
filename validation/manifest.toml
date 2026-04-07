@@ -1544,3 +1544,23 @@ limitations = [
   "Laplacian motion uses uniform diffusivity; distance-based weighting deferred.",
   "No topology change (remeshing) support.",
 ]
+
+# ── Phase 6: MPI Parallelism ──────────────────────────────────────
+
+[[features]]
+feature = "mpi_parallel"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "research_tooling"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "Distributed-memory parallelism via MPI.jl package extension with ghost-cell halo exchange, mesh partitioning, and parallel SIMPLE solver."
+limitations = [
+  "Experimental — full mesh replicated on every rank; memory-efficient local-only storage deferred.",
+  "Contiguous cell partitioning only; graph-based (Metis) partitioning deferred.",
+  "Parallel SIMPLE solver only; PISO/PIMPLE distributed variants deferred.",
+  "Requires mpiexec for testing; not included in standard CI test suite.",
+]

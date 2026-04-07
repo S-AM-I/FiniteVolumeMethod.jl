@@ -511,6 +511,12 @@ export
     compute_displacement!, update_mesh!, compute_mesh_flux!,
     ale_corrected_flux, solve_ale
 
+# --- MPI Parallelism (Phase 6) ---
+export
+    distribute_mesh,
+    halo_exchange!,
+    solve_simple_distributed
+
 export FVMGeometry,
     FVMProblem,
     FVMSystem,
