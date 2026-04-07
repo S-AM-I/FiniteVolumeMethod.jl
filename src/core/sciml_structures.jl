@@ -111,3 +111,53 @@ end
 function SS.replace(::SS.Tunable, cache::_HyperbolicCaches, new_vals)
     return _hyp_repack(cache, new_vals)
 end
+
+# ---- Incompressible problem ----
+
+function _incomp_tunable_values(prob::IncompressibleProblem{Dim, T}) where {Dim, T}
+    vals = T[prob.nu, prob.density]
+    algo = prob.algorithm
+    if algo isa SIMPLE
+        append!(vals, T[algo.alpha_U, algo.alpha_p, algo.tolerance])
+    elseif algo isa PIMPLE
+        append!(vals, T[algo.alpha_U, algo.alpha_p, algo.tolerance])
+    end
+    return vals
+end
+
+function _incomp_repack(prob::IncompressibleProblem{Dim, T}, new_vals) where {Dim, T}
+    new_nu = T(new_vals[1])
+    new_density = T(new_vals[2])
+    algo = prob.algorithm
+    if algo isa SIMPLE && length(new_vals) >= 5
+        new_algo = SIMPLE{T}(
+            T(new_vals[3]), T(new_vals[4]), algo.max_iterations, T(new_vals[5]),
+        )
+    elseif algo isa PIMPLE && length(new_vals) >= 5
+        new_algo = PIMPLE{T}(
+            algo.n_outer, algo.n_correctors,
+            T(new_vals[3]), T(new_vals[4]), T(new_vals[5]),
+        )
+    else
+        new_algo = algo
+    end
+    return remake(prob; nu = new_nu, density = new_density, algorithm = new_algo)
+end
+
+SS.isscimlstructure(::IncompressibleProblem) = true
+SS.ismutablescimlstructure(::IncompressibleProblem) = false
+
+SS.hasportion(::SS.Tunable, ::IncompressibleProblem) = true
+SS.hasportion(::SS.Constants, ::IncompressibleProblem) = false
+SS.hasportion(::SS.Caches, ::IncompressibleProblem) = false
+SS.hasportion(::SS.Discrete, ::IncompressibleProblem) = false
+
+function SS.canonicalize(::SS.Tunable, prob::IncompressibleProblem)
+    vals = _incomp_tunable_values(prob)
+    repack = new_vals -> _incomp_repack(prob, new_vals)
+    return vals, repack, false
+end
+
+function SS.replace(::SS.Tunable, prob::IncompressibleProblem, new_vals)
+    return _incomp_repack(prob, new_vals)
+end

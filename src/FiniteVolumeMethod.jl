@@ -313,6 +313,7 @@ export
     # Problem and state
     IncompressibleProblem,
     IncompressibleState,
+    IncompressibleSolution,
     SolveResult,
     # Boundary conditions
     FixedVelocityBC,
