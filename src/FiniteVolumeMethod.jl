@@ -336,6 +336,11 @@ export
     PressureInletVelocityBC,
     CyclicBC,
     CustomBC,
+    UniformFixedValueBC,
+    CodedFixedValueBC,
+    WaveTransmissiveBC,
+    AtmosphericBLProfileBC,
+    PorousJumpBC,
     # Solvers
     solve_simple,
     solve_incompressible,

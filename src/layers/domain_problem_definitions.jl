@@ -23,6 +23,7 @@ include("../mesh/convert.jl")
 include("../mesh/openfoam_io.jl")
 include("../mesh/openfoam_writer.jl")
 include("../mesh/quality.jl")
+include("../mesh/gmsh_reader.jl")
 
 include("../parabolic/mesh/partitioning.jl")
 
