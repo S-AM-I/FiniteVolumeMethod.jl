@@ -6,12 +6,16 @@
 using LinearAlgebra: norm, dot
 
 """
-    compute_forces(p, U, nu, mesh, patch)
+    compute_forces(p, U, nu, mesh, patch; density = one(T))
 
 Compute pressure and viscous forces on boundary `patch`.
 
-Pressure force: `F_p = -sum_f p_f * S_f` (outward-pointing)
-Viscous force: `F_v = sum_f tau_w_f * A_f`
+Pressure force: `F_p = -density * sum_f p_f * S_f` (outward-pointing)
+Viscous force: `F_v = density * sum_f tau_w_f * A_f`
+
+The `density` keyword scales both force contributions.  For
+incompressible solvers where `p` already includes the `1/rho` factor,
+pass the actual fluid density to recover dimensional forces.
 
 Returns `(pressure = SVector, viscous = SVector)`.
 """
@@ -20,7 +24,8 @@ function compute_forces(
         U::CollocatedVectorField{Dim, T},
         nu::T,
         mesh::UnstructuredFVMMesh{Dim, T},
-        patch::Symbol,
+        patch::Symbol;
+        density::T = one(T),
     ) where {Dim, T}
     faces = _patch_faces(mesh, patch)
     pbmap = build_boundary_map(p)
@@ -34,8 +39,8 @@ function compute_forces(
         p_f = p.boundary[pbmap[f]]
         A_f = mesh.face_areas[f]
 
-        F_pressure = F_pressure - p_f * S_f
-        F_viscous = F_viscous + tau_w[i] * A_f
+        F_pressure = F_pressure - density * p_f * S_f
+        F_viscous = F_viscous + density * tau_w[i] * A_f
     end
 
     return (pressure = F_pressure, viscous = F_viscous)

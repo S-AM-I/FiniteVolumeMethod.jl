@@ -9,9 +9,9 @@ FiniteVolumeMethod.jl is a Julia package for solving PDEs with three solver fami
 - **Hyperbolic**: Cell-centered solver on structured 1D/2D/3D meshes (Euler, MHD, Navier-Stokes, GRMHD, etc.)
 - **Collocated incompressible**: OpenFOAM-style cell-centered solver on unstructured polyhedral meshes with SIMPLE/PISO/PIMPLE pressure-velocity coupling, turbulence (RANS/LES/hybrid), heat transfer, radiation, combustion, multiphase VOF, Lagrangian DPM, and dynamic mesh
 
-Requires Julia 1.10+. Supports current stable + LTS releases. Targets eventual inclusion in the SciML ecosystem.
+Requires Julia 1.10+. Supports current stable + LTS releases. Targets eventual inclusion in the SciML ecosystem. Currently in a v2 research-grade overhaul — only features marked `stable` in the capability matrix and validation manifest are publication-grade. The collocated solver stack is `experimental`.
 
-The capability matrix (`docs/src/capability_matrix.md`) and validation manifest (`validation/manifest.toml`) are the authoritative contracts for feature maturity. Only `stable` features are publication-grade. The collocated solver stack is `experimental`.
+The capability matrix (`docs/src/capability_matrix.md`) and validation manifest (`validation/manifest.toml`) are the authoritative contracts for feature maturity, V&V status, and CI inclusion.
 
 ## Common Commands
 
@@ -20,26 +20,33 @@ The capability matrix (`docs/src/capability_matrix.md`) and validation manifest 
 # Full test suite (slow — runs tutorials, verification, and governance checks)
 julia --project -e 'using Pkg; Pkg.test()'
 
-# Single test file
+# Single test file (test env must have FiniteVolumeMethod dev'd)
 julia --project=test test/<filename>.jl
 
 # Single test file via Docker
 TEST_FILE=test/geometry.jl make ci-test-file
+
+# Scientific evidence subset (used by CI scientific-smoke lane)
+julia --project=test test/scientific_evidence.jl
 ```
 
 ### Formatting (Runic)
 All `.jl` files must pass Runic formatting. A pre-commit hook enforces this.
 ```bash
-# Check formatting
-julia --project -e 'using Runic; Runic.main(["--check", "."])'
+# Check formatting (Runic lives in the global/default Julia env, not the project env)
+julia -e 'using Runic; Runic.main(["--check", "."])'
 
 # Auto-fix formatting
-julia --project -e 'using Runic; Runic.main(["--inplace", "."])'
+julia -e 'using Runic; Runic.main(["--inplace", "."])'
+
+# Via Docker
+make ci-format       # check only
+make ci-format-fix   # auto-fix
 ```
-Runic is in the global Julia environment, not the project env. Key rules: spaces around `=` in kwargs (`atol = 0.01`), 4-space continuation indent (not aligned to `(`), spaces around `/` in arithmetic.
+Key Runic rules: spaces around `=` in kwargs (`atol = 0.01`), 4-space continuation indent (not aligned to `(`), spaces around `/` in arithmetic.
 
 ### Local CI (Docker-based)
-GitHub Actions CI is enabled (`.github/workflows/CI.yml`) with four lanes: environment-integrity, unit-interop, scientific-smoke, and docs. For local iteration, use the Makefile Docker lanes:
+GitHub Actions CI is active (`.github/workflows/CI.yml`, `Docs.yml`) with four jobs: environment-integrity, unit-interop, scientific-smoke, and docs. Other workflows (FormatCheck, Nightly, Release, TagBot) are disabled (`.yml.disabled`) during the v2 overhaul — see `validation/CI_REENABLE_PLAN.md` for staged re-enable criteria. For local iteration, use the Makefile Docker lanes:
 ```bash
 make ci-fast              # Fast API/interop lane
 make ci-smoke             # Scientific smoke tests
@@ -134,7 +141,7 @@ Defined in `Project.toml` under `[extensions]`:
 
 Note: `keller_segel_chemotaxis.jl` is explicitly excluded from the tutorials testset. Each collocated solver test file includes its own `build_cartesian_unstructured_mesh` helper due to `safe_include` module isolation.
 
-To add a new test file, create it in `test/` and add a `safe_include("filename.jl")` entry in `test/runtests.jl` under the appropriate testset. Orphaned test files (`test/engine.jl`, `test/parabolic_solver.jl`, `test/parabolic_mesh.jl`, `test/io.jl`) exist but are NOT included in `runtests.jl`.
+To add a new test file, create it in `test/` and add a `safe_include("filename.jl")` entry in `test/runtests.jl` under the appropriate testset. Orphaned test files (`test/parabolic_solver.jl`, `test/parabolic_mesh.jl`) exist but are NOT included in `runtests.jl`.
 
 ### Validation Infrastructure
 - `validation/manifest.toml` — Machine-readable source of truth for feature maturity, V&V status, and CI inclusion. Features are `stable`, `experimental`, or `deprecated`.
@@ -165,6 +172,6 @@ To add a new test file, create it in `test/` and add a `safe_include("filename.j
 - Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `||b||` denominator)
 - Conjugate heat transfer uses scalar (face-averaged) interface temperature, not per-face
 - Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form
-- CyclicBC assembly is approximate — true periodicity requires mesh-level periodicity support
+- CyclicBC: face matching and cell coupling are wired into SIMPLE/PISO/PIMPLE solver loops; convergence on coarse meshes may still be slow
 - MPI extension uses full mesh per rank (not memory-efficient) — production MPI needs true submesh decomposition
 - All collocated solver features are `experimental` maturity — not yet validated against published benchmarks

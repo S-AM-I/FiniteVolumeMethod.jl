@@ -74,3 +74,37 @@ function continuity_residual(
 
     return residual
 end
+
+# ── Courant number ─────────────────────────────────────────────────
+
+@doc """
+    compute_max_courant(state, mesh, dt) -> T
+
+Compute the maximum face Courant number over the mesh:
+```
+    Co = max_f |phi_f| * dt / V_owner
+```
+
+Used by adaptive time-stepping in the transient solver.
+
+# Arguments
+- `state::IncompressibleState` — current solver state (uses `phi`)
+- `mesh::UnstructuredFVMMesh` — mesh
+- `dt::T` — current time step size
+"""
+function compute_max_courant(
+        state::IncompressibleState{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        dt::T,
+    ) where {Dim, T}
+    nf = size(mesh.face_cells, 2)
+    co_max = zero(T)
+
+    for f in 1:nf
+        P = owner(mesh, f)
+        co_f = abs(state.phi.values[f]) * dt / mesh.cell_volumes[P]
+        co_max = max(co_max, co_f)
+    end
+
+    return co_max
+end

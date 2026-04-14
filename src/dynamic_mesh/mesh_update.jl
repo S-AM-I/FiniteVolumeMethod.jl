@@ -116,23 +116,28 @@ function compute_mesh_flux!(
         return nothing
     end
 
-    # Distribute volume change to faces
-    for c in 1:nc
-        dV = mesh.cell_volumes[c] - motion_state.V_old[c]
-        if mesh.cell_faces !== nothing
-            n_cell_faces = length(mesh.cell_faces[c])
-            if n_cell_faces > 0
-                contribution = dV / (T(n_cell_faces) * dt)
-                for f in mesh.cell_faces[c]
-                    P = mesh.face_cells[1, f]
-                    if P == c
-                        motion_state.phi_mesh[f] += contribution
-                    else
-                        motion_state.phi_mesh[f] -= contribution
-                    end
-                end
-            end
+    # 2nd-order GCL: compute face sweep flux from face-velocity dotted
+    # with face area vector.  The face velocity is interpolated from the
+    # cell displacement field: v_face = d_face / dt.
+    #
+    # phi_mesh[f] = dot(v_face, S_f) = dot(d_face, S_f) / dt
+    #
+    # This gives a per-face flux that exactly satisfies the GCL when
+    # cell volumes are updated via divergence of displacement.
+    for f in 1:nf
+        P = mesh.face_cells[1, f]
+        N = mesh.face_cells[2, f]
+        S_f = face_normal_area(mesh, f)
+
+        if N != 0
+            # Internal face: interpolate displacement to face
+            d_f = (motion_state.displacement[P] + motion_state.displacement[N]) / 2
+        else
+            # Boundary face: use owner displacement
+            d_f = motion_state.displacement[P]
         end
+
+        motion_state.phi_mesh[f] = dot(d_f, S_f) / dt
     end
 
     return nothing

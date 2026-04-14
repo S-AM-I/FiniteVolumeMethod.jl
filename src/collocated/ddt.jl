@@ -96,6 +96,46 @@ function assemble_ddt_bdf2!(
     return nothing
 end
 
+# ── Crank-Nicolson ──────────────────────────────────────────────────
+
+"""
+    assemble_ddt_crank_nicolson!(
+        eq::CollocatedEquation{T},
+        rho::Union{T, Vector{T}},
+        phi_old::Vector{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        dt::T,
+    )
+
+Add Crank-Nicolson temporal term to `eq`:
+
+```
+ρ V_P / Δt * (φ^{n+1} - φ^n)
+```
+
+The temporal contribution is identical to implicit Euler.  The
+Crank-Nicolson averaging of spatial operators (0.5 implicit + 0.5
+explicit) is the *caller's* responsibility: assemble spatial terms
+with half the coefficient and add the explicit old-time contribution
+to the RHS.  This function only provides the mass-matrix / ddt part.
+"""
+function assemble_ddt_crank_nicolson!(
+        eq::CollocatedEquation{T},
+        rho::Union{T, Vector{T}},
+        phi_old::Vector{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        dt::T,
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    for c in 1:nc
+        rho_c = _cell_density(rho, c)
+        coeff = rho_c * mesh.cell_volumes[c] / dt
+        eq.A[c, c] += coeff
+        eq.b[c] += coeff * phi_old[c]
+    end
+    return nothing
+end
+
 # ── Unified ddt assembly ─────────────────────────────────────────────
 
 """
@@ -135,7 +175,7 @@ function assemble_ddt!(
         phi_old_old === nothing && error("BDF2 requires phi_old_old")
         assemble_ddt_bdf2!(eq, rho, phi_old, phi_old_old, mesh, dt)
     elseif scheme == TIME_CRANK_NICOLSON
-        error("TIME_CRANK_NICOLSON is not yet implemented. Use TIME_EULER or TIME_BDF2.")
+        assemble_ddt_crank_nicolson!(eq, rho, phi_old, mesh, dt)
     end
     return nothing
 end

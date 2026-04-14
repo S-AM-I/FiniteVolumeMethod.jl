@@ -149,9 +149,8 @@ fine-structure volume fraction and residence time derived from
 turbulence quantities, enabling finite-rate chemistry within the
 fine structures.
 
-!!! warning "Not yet implemented"
-    This type exists as a placeholder for future development.
-    Constructing it is allowed; passing it to a solver will error.
+The implementation is in `combustion/edc.jl` via
+[`compute_edc_reaction_rates`](@ref).
 
 # Fields
 - `C_gamma::T` — fine-structure volume fraction constant (default 2.1377)

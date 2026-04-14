@@ -116,7 +116,30 @@ function _update_turbulence!(
         dt = dt, linear_solver = linear_solver,
     )
     turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
+
+    # Apply equilibrium wall functions to wall-adjacent cells
+    wall_patches = _detect_wall_patches(prob.bcs)
+    if !isempty(wall_patches)
+        apply_wall_functions!(turb_state, turb_model, state.U, mesh, prob.nu, wall_patches)
+    end
+
     return nothing
+end
+
+"""
+    _detect_wall_patches(bcs) -> Vector{Symbol}
+
+Identify wall boundary patches from the incompressible BCs dict.
+Returns patch names whose BC is `NoSlipWallBC` or `WallFunctionBC`.
+"""
+function _detect_wall_patches(bcs)
+    patches = Symbol[]
+    for (name, bc) in bcs
+        if bc isa NoSlipWallBC || bc isa WallFunctionBC
+            push!(patches, name)
+        end
+    end
+    return patches
 end
 
 # ── State initialization override ────────────────────────────────────

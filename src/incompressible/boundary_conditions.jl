@@ -204,9 +204,16 @@ end
 
 Cyclic (periodic) boundary condition.  Paired patches map to each
 other so that the flow leaving one patch enters the partner patch.
-Expands as Neumann(0) as a placeholder; full cyclic periodicity
-requires mesh-level support to identify matching cell pairs during
-assembly.
+
+The SIMPLE/PISO/PIMPLE solver loops automatically detect `CyclicBC`
+entries, match face pairs via [`match_cyclic_faces`](@ref), and apply
+cross-boundary cell coupling via [`apply_cyclic_bc!`](@ref) to all
+assembled equations (momentum, pressure, and optionally turbulence,
+thermal, species, alpha).
+
+The individual BC expansion functions (`expand_velocity_bc`,
+`expand_pressure_bc`) return `Neumann(0)` since the actual coupling
+is applied at the equation level after assembly.
 
 # Fields
 - `partner_patch::Symbol` — name of the partner boundary patch
@@ -426,4 +433,118 @@ function expand_bcs_pressure(
         name => expand_pressure_bc(bc)
             for (name, bc) in bcs
     )
+end
+
+# ── Cyclic BC helpers ────────���─────────────────────────────────────
+
+"""
+    collect_cyclic_pairs(bcs, mesh) -> Vector{Vector{Tuple{Int, Int}}}
+
+Scan `bcs` for `CyclicBC` entries, match face pairs using
+[`match_cyclic_faces`](@ref), and return a vector of matched-pair lists
+(one per cyclic patch pair).  Returns an empty vector when no cyclic
+BCs are present.
+
+Each cyclic pair is matched only once: the patch that appears first
+alphabetically is treated as `patch1`.
+"""
+function collect_cyclic_pairs(
+        bcs::Dict{Symbol, <:AbstractBoundaryCondition},
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    all_pairs = Vector{Vector{Tuple{Int, Int}}}()
+    seen = Set{Symbol}()
+
+    for (name, bc) in bcs
+        bc isa CyclicBC || continue
+        name in seen && continue
+        partner = bc.partner_patch
+        partner in seen && continue
+
+        # Mark both patches as handled
+        push!(seen, name)
+        push!(seen, partner)
+
+        pairs = match_cyclic_faces(mesh, name, partner)
+        push!(all_pairs, pairs)
+    end
+
+    return all_pairs
+end
+
+"""
+    apply_cyclic_to_equation!(eq, field, mesh, cyclic_pairs)
+
+Apply cyclic coupling to an assembled equation for all cyclic patch pairs.
+No-op when `cyclic_pairs` is empty.
+"""
+function apply_cyclic_to_equation!(
+        eq::CollocatedEquation{T},
+        field::CollocatedScalarField{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}},
+    ) where {Dim, T}
+    for pairs in cyclic_pairs
+        apply_cyclic_bc!(eq, field, mesh, pairs)
+    end
+    return nothing
+end
+
+"""
+    _make_scalar_field(values, state) -> CollocatedScalarField
+
+Create a temporary `CollocatedScalarField` from a vector of cell values,
+using the boundary face indices from `state.p`.  Used internally to pass
+velocity component data to `apply_cyclic_bc!`.
+"""
+function _make_scalar_field(
+        values::Vector{T},
+        state::IncompressibleState{Dim, T},
+    ) where {Dim, T}
+    bfi = state.p.boundary_face_indices
+    return CollocatedScalarField{T}(
+        :_tmp, values, zeros(T, length(bfi)), bfi,
+    )
+end
+
+"""
+    update_boundary_cyclic!(state, mesh, cyclic_pairs)
+
+Update boundary face values for cyclic patches by copying from the
+partner cell.  For velocity, the partner cell's internal velocity is
+copied to the boundary face.  For pressure, similarly.
+"""
+function update_boundary_cyclic!(
+        state::IncompressibleState{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}},
+    ) where {Dim, T}
+    isempty(cyclic_pairs) && return nothing
+
+    # Build reverse lookup: boundary face index → position in boundary array
+    ubmap_U = Dict(f => i for (i, f) in enumerate(state.U.boundary_face_indices))
+    ubmap_p = Dict(f => i for (i, f) in enumerate(state.p.boundary_face_indices))
+
+    for pairs in cyclic_pairs
+        for (f1, f2) in pairs
+            c1 = owner(mesh, f1)
+            c2 = owner(mesh, f2)
+
+            # f1 boundary gets c2's value, f2 boundary gets c1's value
+            if haskey(ubmap_U, f1)
+                state.U.boundary[ubmap_U[f1]] = state.U.internal[c2]
+            end
+            if haskey(ubmap_U, f2)
+                state.U.boundary[ubmap_U[f2]] = state.U.internal[c1]
+            end
+            if haskey(ubmap_p, f1)
+                state.p.boundary[ubmap_p[f1]] = state.p.internal[c2]
+            end
+            if haskey(ubmap_p, f2)
+                state.p.boundary[ubmap_p[f2]] = state.p.internal[c1]
+            end
+        end
+    end
+
+    return nothing
 end

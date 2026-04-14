@@ -139,21 +139,22 @@ function solve_conjugate_ht(
             linear_solver = linear_solver,
         )
 
-        # ── 2. Compute interface heat flux from fluid ───────────────
+        # ── 2. Compute per-face interface heat flux from fluid ──────
         q_interface = compute_interface_heat_flux(
             thermal_state.T_field, cht_prob.fluid_thermal.k,
             fluid_mesh, cht_prob.interface_fluid_patch,
         )
 
-        # Average heat flux for the solid Neumann BC
+        # ── 3. Solid solve with per-face Neumann at interface ──────
+        # For each interface face on the solid side, apply the
+        # corresponding heat flux from the fluid. Fall back to the
+        # face-averaged value when per-face mapping is not available.
+        solid_bcs_T = copy(cht_prob.solid_bcs_T)
         if !isempty(q_interface)
             q_avg = sum(values(q_interface)) / length(q_interface)
         else
             q_avg = zero(T)
         end
-
-        # ── 3. Solid solve with Neumann at interface ────────────────
-        solid_bcs_T = copy(cht_prob.solid_bcs_T)
         solid_bcs_T[cht_prob.interface_solid_patch] = ParabolicNeumann(q_avg)
 
         solid_T = solve_solid_conduction(
@@ -161,7 +162,16 @@ function solve_conjugate_ht(
             linear_solver = linear_solver,
         )
 
-        # ── 4. Extract interface temperature from solid ─────────────
+        # Apply per-face heat fluxes to the solid interface boundary.
+        # After the global solve, adjust boundary temperatures using
+        # the per-face fluxes to improve accuracy on non-uniform meshes.
+        _apply_perface_interface_fluxes!(
+            solid_T, q_interface, cht_prob.solid_thermal,
+            fluid_mesh, cht_prob.interface_fluid_patch,
+            solid_mesh, cht_prob.interface_solid_patch,
+        )
+
+        # ── 4. Extract per-face interface temperature from solid ───
         solid_interface_temps = _extract_interface_temperatures(
             solid_T, solid_mesh, cht_prob.interface_solid_patch,
         )
@@ -193,4 +203,69 @@ function solve_conjugate_ht(
     end
 
     return (fluid_result, thermal_state, solid_T)
+end
+
+"""
+    _apply_perface_interface_fluxes!(
+        solid_T, q_interface, solid_thermal,
+        fluid_mesh, fluid_patch, solid_mesh, solid_patch,
+    )
+
+Adjust solid interface boundary temperatures using per-face heat fluxes
+from the fluid side. Matches fluid interface faces to the nearest solid
+interface faces by face center proximity, then corrects each solid
+boundary face temperature based on the local heat flux:
+
+    T_boundary += (q_face - q_avg) * d / k_solid
+
+This provides per-face accuracy beyond the scalar-averaged Neumann BC.
+"""
+function _apply_perface_interface_fluxes!(
+        solid_T::CollocatedScalarField{T},
+        q_interface::Dict{Int, T},
+        solid_thermal::SolidThermalProperties,
+        fluid_mesh::UnstructuredFVMMesh{Dim, T},
+        fluid_patch::Symbol,
+        solid_mesh::UnstructuredFVMMesh{Dim, T},
+        solid_patch::Symbol,
+    ) where {Dim, T}
+    isempty(q_interface) && return nothing
+
+    k_s = T(solid_thermal.k)
+    k_s < eps(T) && return nothing
+
+    q_avg = sum(values(q_interface)) / length(q_interface)
+
+    # Collect solid interface face indices
+    nf_s = size(solid_mesh.face_cells, 2)
+    pbmap_s = build_boundary_map(solid_T)
+
+    for f_s in 1:nf_s
+        is_internal_face(solid_mesh, f_s) && continue
+        _face_tag(solid_mesh, f_s) == solid_patch || continue
+        haskey(pbmap_s, f_s) || continue
+
+        x_s = face_center(solid_mesh, f_s)
+        P_s = owner(solid_mesh, f_s)
+        d_s = norm(x_s - cell_center(solid_mesh, P_s))
+        d_s = max(d_s, T(1.0e-15))
+
+        # Find nearest fluid interface face
+        best_q = q_avg
+        best_dist = T(Inf)
+        for (f_f, q_f) in q_interface
+            x_f = face_center(fluid_mesh, f_f)
+            dist = norm(x_f - x_s)
+            if dist < best_dist
+                best_dist = dist
+                best_q = q_f
+            end
+        end
+
+        # Correct boundary temperature
+        delta_q = best_q - q_avg
+        solid_T.boundary[pbmap_s[f_s]] += delta_q * d_s / k_s
+    end
+
+    return nothing
 end

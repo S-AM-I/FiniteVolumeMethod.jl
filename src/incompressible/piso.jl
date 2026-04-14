@@ -41,6 +41,7 @@ function _piso_step!(
         n_correctors::Int;
         linear_solver = nothing,
         solver_config = nothing,
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -49,6 +50,11 @@ function _piso_step!(
     for d in 1:Dim
         eq = CollocatedEquation(mesh)
         assemble_momentum!(eq, state, prob, d; dt = dt)
+        # Apply cyclic coupling to momentum
+        apply_cyclic_to_equation!(
+            eq, _make_scalar_field(_extract_component(state.U, d), state),
+            mesh, cyclic_pairs,
+        )
         push!(eqs, eq)
     end
 
@@ -63,12 +69,14 @@ function _piso_step!(
         _set_component!(state.U, d, sol.u)
     end
     update_boundary_velocity!(state, prob.bcs, mesh)
+    update_boundary_cyclic!(state, mesh, cyclic_pairs)
 
     # ── 2. Pressure corrector loop ──────────────────────────────────
     for k in 1:n_correctors
         # 2a. Assemble + solve pressure
         p_eq = CollocatedEquation(mesh)
         assemble_pressure!(p_eq, state, prob)
+        apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
@@ -87,6 +95,7 @@ function _piso_step!(
         # 2d. Correct velocity + fluxes
         correct_velocity!(state, mesh)
         update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_cyclic!(state, mesh, cyclic_pairs)
         correct_fluxes!(state, mesh)
 
         # 2e. Re-assemble momentum + extract operators for next corrector
@@ -95,6 +104,10 @@ function _piso_step!(
             for d in 1:Dim
                 eq = CollocatedEquation(mesh)
                 assemble_momentum!(eq, state, prob, d; dt = dt)
+                apply_cyclic_to_equation!(
+                    eq, _make_scalar_field(_extract_component(state.U, d), state),
+                    mesh, cyclic_pairs,
+                )
                 push!(eqs_k, eq)
             end
             extract_momentum_operators!(state, eqs_k, mesh)

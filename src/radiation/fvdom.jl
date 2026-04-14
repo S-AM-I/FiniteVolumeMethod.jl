@@ -20,25 +20,41 @@ reconstructs the incident radiation field as
 - `directions::Vector{SVector{Dim, T}}` --- discrete ordinate directions
 - `weights::Vector{T}` --- quadrature weights
 """
-struct FvDOMModel{Dim, T} <: AbstractRadiationModel
-    a::T
+struct FvDOMModel{Dim, T, A <: Union{T, Vector{T}}} <: AbstractRadiationModel
+    a::A
     directions::Vector{SVector{Dim, T}}
     weights::Vector{T}
 end
 
 """
-    FvDOMModel(; a = 0.1, Dim = 2)
+    FvDOMModel(; a = 0.1, Dim = 2, order = :S2)
 
-Construct an fvDOM radiation model with S2 level-symmetric quadrature.
+Construct an fvDOM radiation model.
 
-For 2D, S2 produces 4 directions at +/-45 degrees with equal weights pi/2.
-For 3D, S2 produces 8 directions (octant corners of the unit sphere) with
-equal weights pi/2.
+`a` may be scalar (uniform) or `Vector` (per-cell).
+`order` selects the quadrature: `:S2` (4/8 dirs) or `:S4` (12/24 dirs).
 """
-function FvDOMModel(; a::Real = 0.1, Dim::Int = 2)
-    T = typeof(Float64(a))
-    directions, weights = _s2_quadrature(Val(Dim), T)
-    return FvDOMModel{Dim, T}(T(a), directions, weights)
+function FvDOMModel(; a = 0.1, Dim::Int = 2, order::Symbol = :S2)
+    if a isa AbstractVector
+        T = eltype(a)
+        directions, weights = _fvdom_quadrature(Val(Dim), T, order)
+        return FvDOMModel{Dim, T, Vector{T}}(Vector{T}(a), directions, weights)
+    else
+        T = typeof(Float64(a))
+        directions, weights = _fvdom_quadrature(Val(Dim), T, order)
+        return FvDOMModel{Dim, T, T}(T(a), directions, weights)
+    end
+end
+
+"""Dispatch to the appropriate quadrature set."""
+function _fvdom_quadrature(dim_val, ::Type{T}, order::Symbol) where {T}
+    if order === :S2
+        return _s2_quadrature(dim_val, T)
+    elseif order === :S4
+        return _s4_quadrature(dim_val, T)
+    else
+        error("Unknown fvDOM quadrature order :$order. Supported: :S2, :S4")
+    end
 end
 
 """Generate S2 quadrature directions and weights for 2D (4 directions)."""
@@ -67,6 +83,65 @@ function _s2_quadrature(::Val{3}, ::Type{T}) where {T}
     end
     w = fill(T(pi) / 2, 8)
     return dirs, w
+end
+
+# ── S4 quadrature ─────────────────────────────────────────────────
+
+"""Generate S4 level-symmetric quadrature for 2D (12 directions).
+
+S4 in 2D uses 3 directions per quadrant at polar angles corresponding
+to the S4 level-symmetric ordinates (Carlson & Lathrop, 1968).
+"""
+function _s4_quadrature(::Val{2}, ::Type{T}) where {T}
+    # S4 2D ordinates: 3 per quadrant = 12 total
+    # Level-symmetric S4: mu values are roots of P_4
+    mu1 = T(0.2958759)
+    mu2 = T(0.9082483)
+    # Remaining direction cosine from normalization: eta = sqrt(1 - mu^2)
+    dirs = SVector{2, T}[]
+    weights = T[]
+    # Weights: w1 for edge ordinates, w2 for mid ordinates
+    w1 = T(pi) / 6  # weight for each direction in 2D S4
+    w2 = T(pi) / 3
+    for (sx, sy) in ((1, 1), (-1, 1), (-1, -1), (1, -1))
+        s = T(sx); t = T(sy)
+        push!(dirs, SVector{2, T}(s * mu1, t * sqrt(one(T) - mu1^2)))
+        push!(weights, w1)
+        push!(dirs, SVector{2, T}(s * mu2, t * sqrt(one(T) - mu2^2)))
+        push!(weights, w1)
+        push!(dirs, SVector{2, T}(s * sqrt(T(0.5)), t * sqrt(T(0.5))))
+        push!(weights, w2)
+    end
+    return dirs, weights
+end
+
+"""Generate S4 level-symmetric quadrature for 3D (24 directions).
+
+S4 in 3D uses 3 directions per octant = 24 total.
+"""
+function _s4_quadrature(::Val{3}, ::Type{T}) where {T}
+    # S4 3D level-symmetric ordinates (Carlson & Lathrop)
+    mu1 = T(0.2958759)
+    mu2 = T(0.9082483)
+    # Weight per ordinate (total solid angle = 4pi, 24 directions)
+    w = T(4) * T(pi) / T(24)
+
+    dirs = SVector{3, T}[]
+    weights = T[]
+    # Generate 3 permutations per octant × 8 octants = 24
+    for sx in (one(T), -one(T))
+        for sy in (one(T), -one(T))
+            for sz in (one(T), -one(T))
+                push!(dirs, SVector{3, T}(sx * mu1, sy * mu1, sz * mu2))
+                push!(weights, w)
+                push!(dirs, SVector{3, T}(sx * mu1, sy * mu2, sz * mu1))
+                push!(weights, w)
+                push!(dirs, SVector{3, T}(sx * mu2, sy * mu1, sz * mu1))
+                push!(weights, w)
+            end
+        end
+    end
+    return dirs, weights
 end
 
 """
@@ -126,15 +201,17 @@ function solve_fvdom_radiation(
         # Convection: div(I_i * s_i) assembled implicitly
         assemble_convection!(eq, dir_flux, mesh, bcs_G)
 
-        # Absorption: a * V_c on diagonal (implicit)
+        # Absorption: a_c * V_c on diagonal (implicit)
         for c in 1:nc
-            eq.A[c, c] += a * mesh.cell_volumes[c]
+            a_c = _cell_absorption(a, c)
+            eq.A[c, c] += a_c * mesh.cell_volumes[c]
         end
 
-        # Emission source: a * sigma * T^4 / pi * V_c (explicit RHS)
+        # Emission source: a_c * sigma * T^4 / pi * V_c (explicit RHS)
         for c in 1:nc
+            a_c = _cell_absorption(a, c)
             T_c = max(T_field.internal[c], zero(T))
-            eq.b[c] += a * sigma * T_c^4 / T(pi) * mesh.cell_volumes[c]
+            eq.b[c] += a_c * sigma * T_c^4 / T(pi) * mesh.cell_volumes[c]
         end
 
         # Solve for I_i
@@ -178,8 +255,9 @@ function compute_radiation_source(
     S_rad = Vector{T}(undef, nc)
 
     for c in 1:nc
+        a_c = _cell_absorption(a, c)
         T_c = max(T_field.internal[c], zero(T))
-        S_rad[c] = a * G.internal[c] - T(4) * a * sigma * T_c^4
+        S_rad[c] = a_c * G.internal[c] - T(4) * a_c * sigma * T_c^4
     end
 
     return S_rad
