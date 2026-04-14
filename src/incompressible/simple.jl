@@ -52,6 +52,9 @@ function solve_simple(
     update_boundary_velocity!(state, prob.bcs, mesh)
     update_boundary_pressure!(state, prob.bcs, mesh)
 
+    # Pre-compute cyclic face pairs (empty vector if no CyclicBC)
+    cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+
     # Residual history
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
@@ -69,6 +72,11 @@ function solve_simple(
         for d in 1:Dim
             eq = CollocatedEquation(mesh)
             assemble_momentum!(eq, state, prob, d)
+            # Apply cyclic coupling to momentum
+            apply_cyclic_to_equation!(
+                eq, _make_scalar_field(_extract_component(state.U, d), state),
+                mesh, cyclic_pairs,
+            )
             push!(eqs, eq)
         end
 
@@ -93,6 +101,7 @@ function solve_simple(
         # ── 5. Assemble + solve pressure ────────────────────────────
         p_eq = CollocatedEquation(mesh)
         assemble_pressure!(p_eq, state, prob)
+        apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
@@ -111,6 +120,7 @@ function solve_simple(
         # ── 8. Correct velocity + fluxes ────────────────────────────
         correct_velocity!(state, mesh)
         update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_cyclic!(state, mesh, cyclic_pairs)
         correct_fluxes!(state, mesh)
 
         # ── 9. Compute residuals + check convergence ────────────────

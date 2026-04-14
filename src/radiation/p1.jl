@@ -15,9 +15,12 @@ The equation `-div(Gamma * grad(G)) + a * G = 4 * a * sigma * T^4` becomes:
 - Absorption `a * V` -> added to diagonal
 - Emission `4 * a * sigma * T^4 * V` -> added to RHS
 """
+_cell_absorption(a::T, ::Int) where {T <: Number} = a
+_cell_absorption(a::Vector{T}, c::Int) where {T} = a[c]
+
 function assemble_p1!(
         eq::CollocatedEquation{T},
-        rad_model::P1Model{T},
+        rad_model::P1Model,
         T_field::CollocatedScalarField{T},
         mesh::UnstructuredFVMMesh{Dim, T},
         bcs_G::Dict{Symbol, <:AbstractBoundaryCondition},
@@ -26,21 +29,28 @@ function assemble_p1!(
     a = rad_model.a
 
     # Radiation diffusivity: Gamma = 1/(3a)
-    gamma = one(T) / (T(3) * a)
+    # For per-cell absorption, diffusivity varies per cell
+    if a isa AbstractVector
+        gamma = [one(T) / (T(3) * max(a[c], T(1.0e-20))) for c in 1:nc]
+    else
+        gamma = one(T) / (T(3) * a)
+    end
 
     # Laplacian: -div(Gamma * grad(G)) assembled as positive-definite operator
     assemble_laplacian!(eq, gamma, mesh, bcs_G)
 
-    # Absorption (implicit): a * V on diagonal
+    # Absorption (implicit): a_c * V on diagonal
     for c in 1:nc
-        eq.A[c, c] += a * mesh.cell_volumes[c]
+        a_c = _cell_absorption(a, c)
+        eq.A[c, c] += a_c * mesh.cell_volumes[c]
     end
 
-    # Emission (explicit RHS): 4 * a * sigma * T^4 * V
+    # Emission (explicit RHS): 4 * a_c * sigma * T^4 * V
     sigma = T(STEFAN_BOLTZMANN)
     for c in 1:nc
+        a_c = _cell_absorption(a, c)
         T_c = max(T_field.internal[c], zero(T))
-        eq.b[c] += T(4) * a * sigma * T_c^4 * mesh.cell_volumes[c]
+        eq.b[c] += T(4) * a_c * sigma * T_c^4 * mesh.cell_volumes[c]
     end
 
     return nothing
@@ -54,7 +64,7 @@ end
 Assemble and solve the P1 radiation equation, returning the G field.
 """
 function solve_p1_radiation(
-        rad_model::P1Model{T},
+        rad_model::P1Model,
         T_field::CollocatedScalarField{T},
         mesh::UnstructuredFVMMesh{Dim, T},
         bcs_G::Dict{Symbol, <:AbstractBoundaryCondition};
@@ -91,7 +101,7 @@ To add to the energy equation (which is scaled by 1/(rho * Cp)):
 `eq.b[c] += S_rad[c] * V_c / (rho * Cp)`
 """
 function compute_radiation_source(
-        rad_model::P1Model{T},
+        rad_model::P1Model,
         G::CollocatedScalarField{T},
         T_field::CollocatedScalarField{T},
     ) where {T}
@@ -101,8 +111,9 @@ function compute_radiation_source(
     S_rad = Vector{T}(undef, nc)
 
     for c in 1:nc
+        a_c = _cell_absorption(a, c)
         T_c = max(T_field.internal[c], zero(T))
-        S_rad[c] = a * G.internal[c] - T(4) * a * sigma * T_c^4
+        S_rad[c] = a_c * G.internal[c] - T(4) * a_c * sigma * T_c^4
     end
 
     return S_rad

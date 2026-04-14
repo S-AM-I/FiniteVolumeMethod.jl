@@ -100,3 +100,216 @@ function turbulence_wall_bc(::SpalartAllmaras)
         :nu_tilde => ParabolicDirichlet(0.0),
     )
 end
+
+# ── Wall function computation ─────────────────────────────────────
+
+# Log-law constants
+const WF_KAPPA = 0.41       # von Karman constant
+const WF_E     = 9.793      # log-law constant
+const WF_C_MU  = 0.09       # k-epsilon model constant
+
+"""
+    spalding_u_tau(U_par, y, nu; max_iter = 20, tol = 1e-6) -> T
+
+Solve for friction velocity `u_tau` using the Spalding law of the wall:
+```
+    y+ = u+ + (1/E)(e^(κ u+) - 1 - κu+ - (κu+)²/2 - (κu+)³/6)
+```
+Uses Newton iteration starting from the log-law estimate.
+"""
+function spalding_u_tau(
+        U_par::T, y::T, nu::T;
+        max_iter::Int = 20,
+        tol::T = T(1.0e-6),
+    ) where {T}
+    kappa = T(WF_KAPPA)
+    E_wf = T(WF_E)
+
+    # Initial estimate from log law: u_tau = kappa * U_par / log(E * y * U_par / nu + 1)
+    y_star = max(y * U_par / nu, T(1))
+    u_plus = log(E_wf * y_star) / kappa
+    u_plus = max(u_plus, T(1))
+    u_tau = U_par / u_plus
+
+    # Newton iteration on Spalding equation:
+    # f(u+) = u+ + (1/E)(exp(κ*u+) - 1 - κ*u+ - (κ*u+)^2/2 - (κ*u+)^3/6) - y+
+    for _ in 1:max_iter
+        u_tau = max(u_tau, T(1.0e-14))
+        u_plus = U_par / u_tau
+        y_plus = y * u_tau / nu
+
+        ku = kappa * u_plus
+        exp_ku = exp(min(ku, T(50)))  # cap to avoid overflow
+        f = u_plus + (exp_ku - one(T) - ku - ku^2 / 2 - ku^3 / 6) / E_wf - y_plus
+        # df/du_tau = df/du+ * du+/du_tau + df/dy+ * dy+/du_tau
+        df_dup = one(T) + (kappa * exp_ku - kappa - kappa^2 * u_plus -
+                           kappa^3 * u_plus^2 / 2) / E_wf
+        dup_dut = -U_par / u_tau^2
+        dyp_dut = y / nu
+        df_dut = df_dup * dup_dut - dyp_dut
+
+        abs(df_dut) < T(1.0e-20) && break
+        u_tau_new = u_tau - f / df_dut
+        u_tau_new = max(u_tau_new, T(1.0e-14))
+
+        if abs(u_tau_new - u_tau) < tol * u_tau
+            u_tau = u_tau_new
+            break
+        end
+        u_tau = u_tau_new
+    end
+
+    return u_tau
+end
+
+"""
+    compute_nut_wall(U_par, y, nu) -> T
+
+Compute turbulent viscosity `nu_t` at a wall-adjacent cell using the
+Spalding wall function (equivalent to OpenFOAM `nutUSpaldingWallFunction`).
+
+```
+    nu_t = nu * (y+ / u+ - 1)
+```
+where `y+` and `u+` are from the converged Spalding iteration.
+"""
+function compute_nut_wall(U_par::T, y::T, nu::T) where {T}
+    u_tau = spalding_u_tau(U_par, y, nu)
+    y_plus = y * u_tau / nu
+    u_plus = max(U_par / u_tau, T(1.0e-10))
+    nut = nu * max(y_plus / u_plus - one(T), zero(T))
+    return nut
+end
+
+"""
+    equilibrium_k_wall(u_tau) -> T
+
+Equilibrium TKE at wall-adjacent cell: `k = u_tau² / sqrt(C_mu)`.
+"""
+equilibrium_k_wall(u_tau::T) where {T} = u_tau^2 / sqrt(T(WF_C_MU))
+
+"""
+    equilibrium_epsilon_wall(u_tau, y, nu) -> T
+
+Equilibrium dissipation at wall-adjacent cell: `ε = u_tau³ / (κ y)`.
+"""
+function equilibrium_epsilon_wall(u_tau::T, y::T, nu::T) where {T}
+    return u_tau^3 / (T(WF_KAPPA) * max(y, T(1.0e-20)))
+end
+
+"""
+    equilibrium_omega_wall(u_tau, y, nu) -> T
+
+Equilibrium specific dissipation: `ω = u_tau / (C_mu^0.25 * κ * y)`.
+"""
+function equilibrium_omega_wall(u_tau::T, y::T, nu::T) where {T}
+    return u_tau / (T(WF_C_MU)^T(0.25) * T(WF_KAPPA) * max(y, T(1.0e-20)))
+end
+
+# ── Apply wall functions to turbulence state ──────────────────────
+
+"""
+    apply_wall_functions!(
+        turb_state, model, U, mesh, nu, wall_patches,
+    )
+
+After solving the turbulence transport equations, update near-wall
+cell values using equilibrium wall functions:
+
+- Compute `u_tau` at each wall face via the Spalding law
+- Set `k` and `ε` (or `ω`) at wall-adjacent cells to equilibrium values
+- Update `nu_t` at wall-adjacent cells
+
+This enforces the log-law boundary condition implicitly without
+requiring explicit Dirichlet BCs on k and ε.
+"""
+function apply_wall_functions!(
+        turb_state::RANSTurbulenceState{T},
+        model::StandardKEpsilon,
+        U::CollocatedVectorField{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        nu::T,
+        wall_patches::Vector{Symbol},
+    ) where {Dim, T}
+    nf = size(mesh.face_cells, 2)
+    wall_set = Set(wall_patches)
+
+    k_field = turb_state.fields[:k]
+    eps_field = turb_state.fields[:epsilon]
+
+    for f in 1:nf
+        is_internal_face(mesh, f) && continue
+        tag = _face_tag(mesh, f)
+        tag in wall_set || continue
+
+        c = owner(mesh, f)
+        y = norm(cell_center(mesh, c) - face_center(mesh, f))
+        U_par = norm(U.internal[c])
+
+        u_tau = spalding_u_tau(U_par, y, nu)
+        k_field.internal[c] = equilibrium_k_wall(u_tau)
+        eps_field.internal[c] = equilibrium_epsilon_wall(u_tau, y, nu)
+        turb_state.nu_t[c] = compute_nut_wall(U_par, y, nu)
+    end
+
+    return nothing
+end
+
+function apply_wall_functions!(
+        turb_state::RANSTurbulenceState{T},
+        model::Union{KOmega, KOmegaSSTModel},
+        U::CollocatedVectorField{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        nu::T,
+        wall_patches::Vector{Symbol},
+    ) where {Dim, T}
+    nf = size(mesh.face_cells, 2)
+    wall_set = Set(wall_patches)
+
+    k_field = turb_state.fields[:k]
+    omega_field = turb_state.fields[:omega]
+
+    for f in 1:nf
+        is_internal_face(mesh, f) && continue
+        tag = _face_tag(mesh, f)
+        tag in wall_set || continue
+
+        c = owner(mesh, f)
+        y = norm(cell_center(mesh, c) - face_center(mesh, f))
+        U_par = norm(U.internal[c])
+
+        u_tau = spalding_u_tau(U_par, y, nu)
+        k_field.internal[c] = equilibrium_k_wall(u_tau)
+        omega_field.internal[c] = equilibrium_omega_wall(u_tau, y, nu)
+        turb_state.nu_t[c] = compute_nut_wall(U_par, y, nu)
+    end
+
+    return nothing
+end
+
+function apply_wall_functions!(
+        turb_state::RANSTurbulenceState{T},
+        model::SpalartAllmaras,
+        U::CollocatedVectorField{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        nu::T,
+        wall_patches::Vector{Symbol},
+    ) where {Dim, T}
+    # SA: nu_tilde = 0 at wall (already set by Dirichlet BC)
+    # Just update nu_t at wall-adjacent cells
+    nf = size(mesh.face_cells, 2)
+    wall_set = Set(wall_patches)
+
+    for f in 1:nf
+        is_internal_face(mesh, f) && continue
+        tag = _face_tag(mesh, f)
+        tag in wall_set || continue
+
+        c = owner(mesh, f)
+        y = norm(cell_center(mesh, c) - face_center(mesh, f))
+        U_par = norm(U.internal[c])
+        turb_state.nu_t[c] = compute_nut_wall(U_par, y, nu)
+    end
+
+    return nothing
+end

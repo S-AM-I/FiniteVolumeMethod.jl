@@ -14,7 +14,7 @@ Supertype for radiation models.
 abstract type AbstractRadiationModel end
 
 """
-    P1Model{T} <: AbstractRadiationModel
+    P1Model{T, A} <: AbstractRadiationModel
 
 P1 radiation approximation. Solves a single diffusion equation for the
 incident radiation field G:
@@ -24,18 +24,27 @@ incident radiation field G:
 where `Gamma = 1/(3a)` and `a` is the absorption coefficient.
 
 # Fields
-- `a::T` --- absorption coefficient [1/m]
+- `a::A` --- absorption coefficient [1/m]: scalar `T` for uniform,
+  or `Vector{T}` for per-cell spatially varying absorption.
 """
-struct P1Model{T} <: AbstractRadiationModel
-    a::T
+struct P1Model{T, A <: Union{T, Vector{T}}} <: AbstractRadiationModel
+    a::A
 end
 
 """
     P1Model(; a = 0.1)
 
-Construct a P1 radiation model with constant absorption coefficient.
+Construct a P1 radiation model. `a` may be a scalar (uniform) or a
+`Vector` (per-cell) absorption coefficient.
 """
-P1Model(; a::Real = 0.1) = P1Model{typeof(Float64(a))}(Float64(a))
+function P1Model(; a = 0.1)
+    if a isa AbstractVector
+        T = eltype(a)
+        return P1Model{T, Vector{T}}(Vector{T}(a))
+    else
+        return P1Model{Float64, Float64}(Float64(a))
+    end
+end
 
 """
     RadiationState{T}
@@ -72,10 +81,12 @@ Marshak boundary condition for an opaque wall at temperature `T_wall`:
 
 Implemented as `ParabolicRobin(1, 2/(3a), 4 * sigma * T^4)`.
 """
-function marshak_wall_bc(rad_model::P1Model{T}, T_wall::Real) where {T}
-    b_coeff = T(2) / (T(3) * rad_model.a)
-    c_val = T(4) * T(STEFAN_BOLTZMANN) * T(T_wall)^4
-    return ParabolicRobin(one(T), b_coeff, c_val)
+function marshak_wall_bc(rad_model::P1Model, T_wall::Real)
+    a_val = rad_model.a isa AbstractVector ? sum(rad_model.a) / length(rad_model.a) : rad_model.a
+    T_fl = typeof(Float64(a_val))
+    b_coeff = T_fl(2) / (T_fl(3) * a_val)
+    c_val = T_fl(4) * T_fl(STEFAN_BOLTZMANN) * T_fl(T_wall)^4
+    return ParabolicRobin(one(T_fl), b_coeff, c_val)
 end
 
 """

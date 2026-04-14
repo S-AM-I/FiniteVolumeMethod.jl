@@ -299,6 +299,7 @@ export
     assemble_ddt!,
     assemble_ddt_euler!,
     assemble_ddt_bdf2!,
+    assemble_ddt_crank_nicolson!,
     # Cyclic BC
     match_cyclic_faces,
     apply_cyclic_bc!,
@@ -345,7 +346,8 @@ export
     correct_velocity!,
     correct_fluxes!,
     momentum_residual,
-    continuity_residual
+    continuity_residual,
+    compute_max_courant
 
 # --- Linear Solver Infrastructure (Phase 5) ---
 export
@@ -377,7 +379,14 @@ export
     compute_strain_rate,
     compute_nu_eff,
     turbulence_inlet_bc,
-    turbulence_wall_bc
+    turbulence_wall_bc,
+    # Wall functions
+    spalding_u_tau,
+    compute_nut_wall,
+    equilibrium_k_wall,
+    equilibrium_epsilon_wall,
+    equilibrium_omega_wall,
+    apply_wall_functions!
 
 # --- LES & Hybrid Turbulence Models (Phase 2b) ---
 export
@@ -481,7 +490,11 @@ export
     compute_edm_reaction_rates,
     compute_edc_reaction_rates,
     compute_heat_release,
-    solve_simple_reacting
+    solve_simple_reacting,
+    # Arrhenius finite-rate chemistry
+    CollocatedArrheniusReaction,
+    compute_arrhenius_reaction_rates,
+    compute_fred_reaction_rates
 
 # --- Lagrangian DPM (Phase 11) ---
 export
@@ -503,13 +516,18 @@ export
     weber_number,
     should_breakup,
     breakup_diameter,
-    apply_breakup!
+    apply_breakup!,
+    # Collisions
+    AbstractCollisionModel,
+    ORourkeCollision,
+    apply_collisions!
 
 # --- Dynamic/Moving Mesh (Phase 10) ---
 export
     AbstractMotionSolver, SolidBodyMotion, LaplacianMotion, MeshMotionState,
     compute_displacement!, update_mesh!, compute_mesh_flux!,
-    ale_corrected_flux, solve_ale
+    ale_corrected_flux, solve_ale,
+    compute_distance_diffusivity
 
 # --- MPI Parallelism (Phase 6) ---
 export

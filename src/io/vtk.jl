@@ -65,22 +65,83 @@ function write_line_vtk(path::AbstractString, mesh::Mesh1D, data::AbstractVector
 end
 
 """
-    write_structured_vtk_3d(args...; kwargs...)
+    write_structured_vtk_3d(path, x, y, z, fields; field_type = :cell)
 
-3D structured VTK output is not implemented in this package.
+Write a 3D structured rectilinear grid with scalar fields to ASCII VTK
+format (.vtk legacy format, RECTILINEAR_GRID).
 
-!!! warning "Deprecated"
-    Use `WriteVTK.jl` for production VTK output:
-    ```julia
-    using WriteVTK
-    vtk_grid("output", x, y, z) do vtk
-        vtk["field"] = data
-    end
-    ```
-!!! compat "Behaviour change"
-    This function now throws an `ArgumentError` instead of silently returning
-    `nothing`, so callers cannot mistake the placeholder for a successful write.
+# Arguments
+- `path::AbstractString` — output file path (`.vtk` extension)
+- `x::AbstractVector` — x-coordinates of grid lines (length `nx + 1` for cell data)
+- `y::AbstractVector` — y-coordinates of grid lines (length `ny + 1`)
+- `z::AbstractVector` — z-coordinates of grid lines (length `nz + 1`)
+- `fields::Dict{String, AbstractVector}` — named scalar fields (cell or point data)
+- `field_type` — `:cell` (cell-centered, default) or `:point`
+
+!!! note "Production use"
+    For binary/XML VTK, use `WriteVTK.jl` instead. This function writes
+    minimal ASCII VTK for quick visualization.
 """
-function write_structured_vtk_3d(args...; kwargs...)
-    throw(ArgumentError("3D structured VTK output is not implemented. Use WriteVTK.jl for structured-grid exports instead."))
+function write_structured_vtk_3d(
+        path::AbstractString,
+        x::AbstractVector{<:Real},
+        y::AbstractVector{<:Real},
+        z::AbstractVector{<:Real},
+        fields::Dict{String, <:AbstractVector{<:Real}};
+        field_type::Symbol = :cell,
+    )
+    nx = length(x)
+    ny = length(y)
+    nz = length(z)
+
+    if field_type === :cell
+        n_data = (nx - 1) * (ny - 1) * (nz - 1)
+    else
+        n_data = nx * ny * nz
+    end
+
+    for (name, data) in fields
+        length(data) == n_data || error(
+            "Field '$name' has $(length(data)) values, expected $n_data for field_type=:$field_type"
+        )
+    end
+
+    open(path, "w") do io
+        println(io, "# vtk DataFile Version 3.0")
+        println(io, "3D structured grid output")
+        println(io, "ASCII")
+        println(io, "DATASET RECTILINEAR_GRID")
+        println(io, "DIMENSIONS $nx $ny $nz")
+
+        println(io, "X_COORDINATES $nx float")
+        for xi in x
+            println(io, xi)
+        end
+
+        println(io, "Y_COORDINATES $ny float")
+        for yi in y
+            println(io, yi)
+        end
+
+        println(io, "Z_COORDINATES $nz float")
+        for zi in z
+            println(io, zi)
+        end
+
+        if field_type === :cell
+            println(io, "CELL_DATA $n_data")
+        else
+            println(io, "POINT_DATA $n_data")
+        end
+
+        for (name, data) in fields
+            println(io, "SCALARS $name float 1")
+            println(io, "LOOKUP_TABLE default")
+            for val in data
+                println(io, val)
+            end
+        end
+    end
+
+    return path
 end

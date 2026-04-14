@@ -86,7 +86,70 @@ function compute_production_k(mesh::Union{Mesh3D, UnstructuredMesh3D}, u::Vector
             Pk[i] = mu_t[i] * S_sq
         end
     else
-        error("Turbulence production for structured Mesh3D not implemented yet.")
+        # Structured Mesh3D: use finite-difference gradients
+        dx = mesh.Lx / mesh.nx
+        dy = mesh.Ly / mesh.ny
+        dz = mesh.Lz / mesh.nz
+        for c in 1:nx
+            # Convert linear index to (i,j,k) using column-major ordering
+            # k = (kz-1)*nx*ny + (ky-1)*nx + kx  where kx,ky,kz are 1-based
+            kx = mod(c - 1, mesh.nx) + 1
+            ky = mod(div(c - 1, mesh.nx), mesh.ny) + 1
+            kz = div(c - 1, mesh.nx * mesh.ny) + 1
+
+            _idx(ix, iy, iz) = (iz - 1) * mesh.nx * mesh.ny + (iy - 1) * mesh.nx + ix
+
+            # Central-difference gradients with one-sided at boundaries
+            if kx == 1
+                dudx = (u[_idx(2, ky, kz)] - u[c]) / dx
+                dvdx = (v[_idx(2, ky, kz)] - v[c]) / dx
+                dwdx = (w[_idx(2, ky, kz)] - w[c]) / dx
+            elseif kx == mesh.nx
+                dudx = (u[c] - u[_idx(mesh.nx - 1, ky, kz)]) / dx
+                dvdx = (v[c] - v[_idx(mesh.nx - 1, ky, kz)]) / dx
+                dwdx = (w[c] - w[_idx(mesh.nx - 1, ky, kz)]) / dx
+            else
+                dudx = (u[_idx(kx + 1, ky, kz)] - u[_idx(kx - 1, ky, kz)]) / (2 * dx)
+                dvdx = (v[_idx(kx + 1, ky, kz)] - v[_idx(kx - 1, ky, kz)]) / (2 * dx)
+                dwdx = (w[_idx(kx + 1, ky, kz)] - w[_idx(kx - 1, ky, kz)]) / (2 * dx)
+            end
+
+            if ky == 1
+                dudy = (u[_idx(kx, 2, kz)] - u[c]) / dy
+                dvdy = (v[_idx(kx, 2, kz)] - v[c]) / dy
+                dwdy = (w[_idx(kx, 2, kz)] - w[c]) / dy
+            elseif ky == mesh.ny
+                dudy = (u[c] - u[_idx(kx, mesh.ny - 1, kz)]) / dy
+                dvdy = (v[c] - v[_idx(kx, mesh.ny - 1, kz)]) / dy
+                dwdy = (w[c] - w[_idx(kx, mesh.ny - 1, kz)]) / dy
+            else
+                dudy = (u[_idx(kx, ky + 1, kz)] - u[_idx(kx, ky - 1, kz)]) / (2 * dy)
+                dvdy = (v[_idx(kx, ky + 1, kz)] - v[_idx(kx, ky - 1, kz)]) / (2 * dy)
+                dwdy = (w[_idx(kx, ky + 1, kz)] - w[_idx(kx, ky - 1, kz)]) / (2 * dy)
+            end
+
+            if kz == 1
+                dudz = (u[_idx(kx, ky, 2)] - u[c]) / dz
+                dvdz = (v[_idx(kx, ky, 2)] - v[c]) / dz
+                dwdz = (w[_idx(kx, ky, 2)] - w[c]) / dz
+            elseif kz == mesh.nz
+                dudz = (u[c] - u[_idx(kx, ky, mesh.nz - 1)]) / dz
+                dvdz = (v[c] - v[_idx(kx, ky, mesh.nz - 1)]) / dz
+                dwdz = (w[c] - w[_idx(kx, ky, mesh.nz - 1)]) / dz
+            else
+                dudz = (u[_idx(kx, ky, kz + 1)] - u[_idx(kx, ky, kz - 1)]) / (2 * dz)
+                dvdz = (v[_idx(kx, ky, kz + 1)] - v[_idx(kx, ky, kz - 1)]) / (2 * dz)
+                dwdz = (w[_idx(kx, ky, kz + 1)] - w[_idx(kx, ky, kz - 1)]) / (2 * dz)
+            end
+
+            S_xx = dudx; S_yy = dvdy; S_zz = dwdz
+            S_xy = 0.5 * (dudy + dvdx)
+            S_xz = 0.5 * (dudz + dwdx)
+            S_yz = 0.5 * (dvdz + dwdy)
+
+            S_sq = 2.0 * (S_xx^2 + S_yy^2 + S_zz^2 + 2.0 * (S_xy^2 + S_xz^2 + S_yz^2))
+            Pk[c] = mu_t[c] * S_sq
+        end
     end
 
     return Pk

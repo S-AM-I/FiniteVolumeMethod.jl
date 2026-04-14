@@ -442,3 +442,77 @@ end
         end
     end
 end
+
+# ===========================================================================
+# 5. Crank-Nicolson Temporal Discretization
+# ===========================================================================
+
+@testset "Crank-Nicolson ddt" begin
+    mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+
+    # -- 5a. assemble_ddt_crank_nicolson! matches Euler for the temporal part --
+    @testset "C-N ddt matches Euler temporal contribution" begin
+        phi_old = rand(nc)
+        rho = 1.2
+        dt = 0.01
+
+        eq_euler = CollocatedEquation(mesh)
+        assemble_ddt_euler!(eq_euler, rho, phi_old, mesh, dt)
+
+        eq_cn = CollocatedEquation(mesh)
+        assemble_ddt_crank_nicolson!(eq_cn, rho, phi_old, mesh, dt)
+
+        # Temporal mass-matrix part is identical
+        @test eq_cn.A ≈ eq_euler.A
+        @test eq_cn.b ≈ eq_euler.b
+    end
+
+    # -- 5b. Diagonal and RHS values are correct --
+    @testset "C-N ddt diagonal and RHS values" begin
+        phi_old = ones(nc)
+        rho = 2.0
+        dt = 0.05
+
+        eq = CollocatedEquation(mesh)
+        assemble_ddt_crank_nicolson!(eq, rho, phi_old, mesh, dt)
+
+        for c in 1:nc
+            expected_coeff = rho * mesh.cell_volumes[c] / dt
+            @test eq.A[c, c] ≈ expected_coeff
+            @test eq.b[c] ≈ expected_coeff * phi_old[c]
+        end
+    end
+
+    # -- 5c. Per-cell density vector works --
+    @testset "C-N ddt with per-cell density" begin
+        phi_old = rand(nc)
+        rho_field = rand(nc) .+ 0.5  # positive densities
+        dt = 0.02
+
+        eq = CollocatedEquation(mesh)
+        assemble_ddt_crank_nicolson!(eq, rho_field, phi_old, mesh, dt)
+
+        for c in 1:nc
+            expected_coeff = rho_field[c] * mesh.cell_volumes[c] / dt
+            @test eq.A[c, c] ≈ expected_coeff
+            @test eq.b[c] ≈ expected_coeff * phi_old[c]
+        end
+    end
+
+    # -- 5d. Unified assemble_ddt! dispatches to C-N --
+    @testset "assemble_ddt! dispatches TIME_CRANK_NICOLSON" begin
+        phi_old = rand(nc)
+        rho = 1.0
+        dt = 0.01
+
+        eq_dispatch = CollocatedEquation(mesh)
+        assemble_ddt!(eq_dispatch, rho, phi_old, mesh, dt; scheme = TIME_CRANK_NICOLSON)
+
+        eq_direct = CollocatedEquation(mesh)
+        assemble_ddt_crank_nicolson!(eq_direct, rho, phi_old, mesh, dt)
+
+        @test eq_dispatch.A ≈ eq_direct.A
+        @test eq_dispatch.b ≈ eq_direct.b
+    end
+end

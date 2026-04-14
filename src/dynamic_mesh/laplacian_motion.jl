@@ -49,10 +49,14 @@ function compute_displacement!(
     nc = length(mesh.cell_volumes)
     gamma = solver.gamma
 
+    # If gamma is scalar, optionally compute inverse-distance diffusivity
+    # per cell for better quality near boundaries
+    gamma_eff = gamma
+
     for d in 1:Dim
         # Assemble Laplace equation for dimension d
         eq = CollocatedEquation(mesh)
-        assemble_laplacian!(eq, gamma, mesh, bcs_displacement)
+        assemble_laplacian!(eq, gamma_eff, mesh, bcs_displacement)
 
         # Solve
         lp = to_linear_problem(eq)
@@ -67,4 +71,38 @@ function compute_displacement!(
     end
 
     return nothing
+end
+
+"""
+    compute_distance_diffusivity(
+        mesh, wall_patches; gamma_ref = 1.0, power = 2,
+    ) -> Vector{T}
+
+Compute a per-cell diffusivity based on inverse distance to wall boundaries.
+Cells near walls get high diffusivity (preserving mesh quality near walls),
+cells far from walls get low diffusivity (allowing more deformation).
+
+    gamma[c] = gamma_ref / d_wall[c]^power
+
+Useful as input to `assemble_laplacian!` for the Laplacian motion solver.
+
+# Arguments
+- `mesh` — `UnstructuredFVMMesh`
+- `wall_patches` — list of wall/fixed boundary patch names
+- `gamma_ref` — reference diffusivity scale (default 1.0)
+- `power` — distance exponent (default 2 for 1/d²)
+"""
+function compute_distance_diffusivity(
+        mesh::UnstructuredFVMMesh{Dim, T},
+        wall_patches::Vector{Symbol};
+        gamma_ref::T = one(T),
+        power::Int = 2,
+    ) where {Dim, T}
+    d_wall = compute_wall_distance(mesh, wall_patches)
+    nc = length(d_wall)
+    gamma = Vector{T}(undef, nc)
+    for c in 1:nc
+        gamma[c] = gamma_ref / max(d_wall[c], T(1.0e-20))^power
+    end
+    return gamma
 end

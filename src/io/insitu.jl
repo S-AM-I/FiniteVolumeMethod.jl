@@ -114,6 +114,37 @@ function compute_integral(monitor::IntegralMonitor, mesh, u::AbstractVector)
         end
         return total
     else
-        error("Boundary integrals not yet implemented in insitu monitoring.")
+        # Boundary integral: sum(u[owner_cell] * face_area) over
+        # boundary faces matching the patch name in monitor.region.
+        patch = monitor.region
+        total = 0.0
+        if hasproperty(mesh, :face_cells) && hasproperty(mesh, :face_areas)
+            nf = size(mesh.face_cells, 2)
+            for f in 1:nf
+                # Boundary face: neighbour == 0
+                mesh.face_cells[2, f] == 0 || continue
+                tag = if hasproperty(mesh, :face_tags) && mesh.face_tags !== nothing
+                    mesh.face_tags[f]
+                else
+                    :boundary
+                end
+                tag === patch || continue
+                P = mesh.face_cells[1, f]
+                if P >= 1 && P <= length(u)
+                    total += u[P] * mesh.face_areas[f]
+                end
+            end
+        elseif hasproperty(mesh, :cells)
+            # Legacy structured mesh: sum boundary face contributions
+            # from cells on the boundary matching the patch name
+            for (i, c) in enumerate(mesh.cells)
+                for face in c.faces
+                    if face.is_boundary
+                        total += u[i] * face.area
+                    end
+                end
+            end
+        end
+        return total
     end
 end

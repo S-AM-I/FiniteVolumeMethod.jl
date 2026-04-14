@@ -38,6 +38,7 @@ function _pimple_step!(
         dt::T;
         linear_solver = nothing,
         solver_config = nothing,
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -54,6 +55,10 @@ function _pimple_step!(
         for d in 1:Dim
             eq = CollocatedEquation(mesh)
             assemble_momentum!(eq, state, prob, d; dt = dt)
+            apply_cyclic_to_equation!(
+                eq, _make_scalar_field(_extract_component(state.U, d), state),
+                mesh, cyclic_pairs,
+            )
             push!(eqs, eq)
         end
 
@@ -74,6 +79,7 @@ function _pimple_step!(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_cyclic!(state, mesh, cyclic_pairs)
 
         # ── 4. PISO inner corrector loop ────────────────────────────
         nc = length(mesh.cell_volumes)
@@ -81,6 +87,7 @@ function _pimple_step!(
             # 4a. Pressure solve
             p_eq = CollocatedEquation(mesh)
             assemble_pressure!(p_eq, state, prob)
+            apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
             if _needs_pressure_reference(prob.bcs)
                 fix_pressure_reference!(p_eq, 1, zero(T))
             end
@@ -104,6 +111,7 @@ function _pimple_step!(
             # 4d. Correct velocity + fluxes
             correct_velocity!(state, mesh)
             update_boundary_velocity!(state, prob.bcs, mesh)
+            update_boundary_cyclic!(state, mesh, cyclic_pairs)
             correct_fluxes!(state, mesh)
         end
     end
@@ -166,6 +174,9 @@ State snapshots are stored every `save_every` time steps.  The returned
 - `save_every::Int` — save a state snapshot every N steps (default: `1`)
 - `linear_solver` — solver algorithm for `LinearProblem` (default: `nothing`)
 - `verbose::Bool` — print progress each time step (default: `false`)
+- `cfl_max::Union{Nothing, T}` — if set, adaptively adjust `dt` each step
+  to keep the maximum face Courant number below this limit (default: `nothing`,
+  i.e. fixed time step)
 
 # Returns
 A [`SolveResult`](@ref) with:
@@ -182,6 +193,7 @@ function solve_incompressible(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        cfl_max::Union{Nothing, T} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     algo = prob.algorithm
@@ -192,8 +204,11 @@ function solve_incompressible(
     update_boundary_velocity!(state, prob.bcs, mesh)
     update_boundary_pressure!(state, prob.bcs, mesh)
 
+    # Pre-compute cyclic face pairs (empty vector if no CyclicBC)
+    cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+
     # Determine step function
-    step_fn! = _select_step_function(algo)
+    step_fn! = _select_step_function(algo, cyclic_pairs)
 
     # Residual + snapshot tracking
     component_labels = _velocity_labels(Val(Dim))
@@ -205,11 +220,20 @@ function solve_incompressible(
     # Time-stepping loop
     t = t_start
     n_steps = 0
+    dt_current = dt
     while t < t_end - eps(T) * abs(t_end)
-        dt_actual = min(dt, t_end - t)
+        dt_actual = min(dt_current, t_end - t)
         step_fn!(state, prob, dt_actual; linear_solver = linear_solver, solver_config = solver_config)
         t += dt_actual
         n_steps += 1
+
+        # Adaptive CFL: adjust dt for next step based on current Courant number
+        if cfl_max !== nothing && n_steps > 1
+            co = compute_max_courant(state, mesh, dt_actual)
+            if co > eps(T)
+                dt_current = min(dt, cfl_max / co * dt_actual)
+            end
+        end
 
         # Record residuals
         r_cont = continuity_residual(state, mesh)
@@ -235,20 +259,28 @@ end
 
 Return the appropriate single-step function for the given algorithm type.
 """
-function _select_step_function(algo::PISO)
+function _select_step_function(
+        algo::PISO,
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
+    )
     n_correctors = algo.n_correctors
     return (state, prob, dt; linear_solver = nothing, solver_config = nothing) ->
     _piso_step!(
         state, prob, dt, n_correctors;
         linear_solver = linear_solver, solver_config = solver_config,
+        cyclic_pairs = cyclic_pairs,
     )
 end
 
-function _select_step_function(algo::PIMPLE)
+function _select_step_function(
+        algo::PIMPLE,
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
+    )
     return (state, prob, dt; linear_solver = nothing, solver_config = nothing) ->
     _pimple_step!(
         state, prob, dt;
         linear_solver = linear_solver, solver_config = solver_config,
+        cyclic_pairs = cyclic_pairs,
     )
 end
 
