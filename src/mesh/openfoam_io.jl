@@ -164,6 +164,29 @@ end
 
 # -- Internal parsers -----------------------------------------------------
 
+"""
+    _detect_foam_format(path) -> Symbol
+
+Detect whether an OpenFOAM file is `:ascii` or `:binary` by inspecting
+the `FoamFile` header's `format` field.
+"""
+function _detect_foam_format(path::AbstractString)
+    open(path) do io
+        for line in eachline(io)
+            stripped = strip(line)
+            if contains(stripped, "format") && contains(stripped, "binary")
+                return :binary
+            end
+            if contains(stripped, "format") && contains(stripped, "ascii")
+                return :ascii
+            end
+            # Stop scanning after we pass the header closing brace
+            stripped == "}" && break
+        end
+    end
+    return :ascii  # default to ASCII
+end
+
 """Skip FoamFile header and comments, return lines of data content."""
 function _skip_foam_header(io::IO)
     lines = String[]
@@ -197,8 +220,56 @@ function _skip_foam_header(io::IO)
     return lines
 end
 
-"""Read OpenFOAM points file -> Matrix{Float64} of size 3 x npoints."""
+"""
+Skip past the FoamFile header in a binary IO stream and return the
+stream positioned at the start of the data content. Also returns
+the number of entries (parsed from the line before the opening `(`).
+"""
+function _skip_foam_header_binary(io::IO)
+    in_header = false
+    brace_depth = 0
+
+    while !eof(io)
+        line = readline(io)
+        stripped = strip(line)
+        isempty(stripped) && continue
+        startswith(stripped, "//") && continue
+
+        if startswith(stripped, "FoamFile")
+            in_header = true
+            continue
+        end
+
+        if in_header
+            brace_depth += count(==('{'), stripped) - count(==('}'), stripped)
+            if brace_depth <= 0
+                in_header = false
+            end
+            continue
+        end
+
+        # First non-header line should be the count
+        n = tryparse(Int, stripped)
+        if n !== nothing
+            # Read past the opening '('
+            while !eof(io)
+                c = read(io, Char)
+                c == '(' && break
+            end
+            return n
+        end
+    end
+    return 0
+end
+
+"""Read OpenFOAM points file -> Matrix{Float64} of size 3 x npoints.
+Auto-detects ASCII vs binary format."""
 function _read_openfoam_points(path::AbstractString)
+    fmt = _detect_foam_format(path)
+    if fmt === :binary
+        return _read_openfoam_points_binary(path)
+    end
+
     lines = open(_skip_foam_header, path)
     npoints = parse(Int, lines[1])
     points = Matrix{Float64}(undef, 3, npoints)
@@ -223,8 +294,14 @@ function _read_openfoam_points(path::AbstractString)
     return points
 end
 
-"""Read OpenFOAM faces file -> Vector{Vector{Int}} (1-indexed vertex indices)."""
+"""Read OpenFOAM faces file -> Vector{Vector{Int}} (1-indexed vertex indices).
+Auto-detects ASCII vs binary format."""
 function _read_openfoam_faces(path::AbstractString)
+    fmt = _detect_foam_format(path)
+    if fmt === :binary
+        return _read_openfoam_faces_binary(path)
+    end
+
     lines = open(_skip_foam_header, path)
     nfaces_total = parse(Int, lines[1])
     faces = Vector{Vector{Int}}(undef, nfaces_total)
@@ -249,8 +326,14 @@ function _read_openfoam_faces(path::AbstractString)
     return faces
 end
 
-"""Read OpenFOAM label list (owner or neighbour) -> Vector{Int} (1-indexed cell indices)."""
+"""Read OpenFOAM label list (owner or neighbour) -> Vector{Int} (1-indexed cell indices).
+Auto-detects ASCII vs binary format."""
 function _read_openfoam_labels(path::AbstractString)
+    fmt = _detect_foam_format(path)
+    if fmt === :binary
+        return _read_openfoam_labels_binary(path)
+    end
+
     lines = open(_skip_foam_header, path)
     nlabels = parse(Int, lines[1])
     labels = Vector{Int}(undef, nlabels)
@@ -311,6 +394,51 @@ function _read_openfoam_boundary(path::AbstractString)
     end
 
     return patches
+end
+
+# -- Binary readers -------------------------------------------------------
+
+"""Read OpenFOAM binary points file -> Matrix{Float64}."""
+function _read_openfoam_points_binary(path::AbstractString)
+    open(path) do io
+        npoints = _skip_foam_header_binary(io)
+        points = Matrix{Float64}(undef, 3, npoints)
+        for i in 1:npoints
+            points[1, i] = read(io, Float64)
+            points[2, i] = read(io, Float64)
+            points[3, i] = read(io, Float64)
+        end
+        return points
+    end
+end
+
+"""Read OpenFOAM binary label list -> Vector{Int} (1-indexed)."""
+function _read_openfoam_labels_binary(path::AbstractString)
+    open(path) do io
+        nlabels = _skip_foam_header_binary(io)
+        labels = Vector{Int}(undef, nlabels)
+        for i in 1:nlabels
+            labels[i] = read(io, Int32) + 1  # 0-indexed → 1-indexed
+        end
+        return labels
+    end
+end
+
+"""Read OpenFOAM binary faces file -> Vector{Vector{Int}} (1-indexed)."""
+function _read_openfoam_faces_binary(path::AbstractString)
+    open(path) do io
+        nfaces_total = _skip_foam_header_binary(io)
+        faces = Vector{Vector{Int}}(undef, nfaces_total)
+        for f in 1:nfaces_total
+            nv = read(io, Int32)
+            verts = Vector{Int}(undef, nv)
+            for j in 1:nv
+                verts[j] = read(io, Int32) + 1
+            end
+            faces[f] = verts
+        end
+        return faces
+    end
 end
 
 # -- Face geometry from vertices ------------------------------------------

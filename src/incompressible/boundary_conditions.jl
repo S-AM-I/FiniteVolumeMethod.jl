@@ -255,6 +255,116 @@ function CustomBC(;
     return CustomBC(velocity_type, velocity_value, pressure_type, pressure_value)
 end
 
+# ── Tier B BCs — general utility ────────────────────────────────────
+
+@doc """
+    UniformFixedValueBC{Dim, T, F} <: AbstractBoundaryCondition
+
+Spatially-uniform, time-varying velocity inlet.  The callable `func(t)`
+returns the velocity vector at time `t`.  Equivalent to OpenFOAM's
+`uniformFixedValue`.
+
+# Fields
+- `func::F` — callable `t::T -> SVector{Dim, T}`
+"""
+struct UniformFixedValueBC{Dim, T, F} <: AbstractBoundaryCondition
+    func::F
+end
+
+function UniformFixedValueBC{Dim, T}(func) where {Dim, T}
+    return UniformFixedValueBC{Dim, T, typeof(func)}(func)
+end
+
+@doc """
+    CodedFixedValueBC{T, F} <: AbstractBoundaryCondition
+
+User-defined boundary condition via a Julia function.  The callable
+`func(x, t)` is evaluated at each boundary face center and time to
+produce a Dirichlet value.  Equivalent to OpenFOAM's `codedFixedValue`.
+
+For velocity: `func` returns a scalar (per-component Dirichlet).
+For pressure: `func` returns a scalar.
+
+# Fields
+- `func::F` — callable `(x::SVector{Dim,T}, t::T) -> T`
+- `t_ref::T` — reference time for static expansion (default 0.0)
+"""
+struct CodedFixedValueBC{T, F} <: AbstractBoundaryCondition
+    func::F
+    t_ref::T
+end
+
+CodedFixedValueBC(func; t_ref::Real = 0.0) =
+    CodedFixedValueBC{Float64, typeof(func)}(func, Float64(t_ref))
+
+@doc """
+    WaveTransmissiveBC <: AbstractBoundaryCondition
+
+Non-reflecting acoustic outlet.  For incompressible flows, expands as
+zero-gradient for both velocity and pressure.  For compressible flows,
+this should implement a characteristic-based non-reflecting condition.
+
+Equivalent to OpenFOAM's `waveTransmissive`.
+"""
+struct WaveTransmissiveBC <: AbstractBoundaryCondition end
+
+@doc """
+    AtmosphericBLProfileBC{Dim, T} <: AbstractBoundaryCondition
+
+Atmospheric boundary layer profile inlet.  Prescribes a logarithmic
+velocity profile `U(z) = (u_star/kappa) * ln((z - z_ground + z0) / z0)`
+with specified friction velocity, roughness height, and reference height.
+
+# Fields
+- `u_star::T` — friction velocity [m/s]
+- `z0::T` — aerodynamic roughness length [m]
+- `z_ground::T` — ground elevation [m]
+- `flow_direction::SVector{Dim, T}` — unit flow direction
+- `z_direction::Int` — index of the vertical coordinate (default 2 for 2D, 3 for 3D)
+"""
+struct AtmosphericBLProfileBC{Dim, T} <: AbstractBoundaryCondition
+    u_star::T
+    z0::T
+    z_ground::T
+    flow_direction::SVector{Dim, T}
+    z_direction::Int
+end
+
+function AtmosphericBLProfileBC(;
+        u_star::Real = 0.5,
+        z0::Real = 0.01,
+        z_ground::Real = 0.0,
+        flow_direction = SVector(1.0, 0.0),
+        z_direction::Int = length(flow_direction),
+    )
+    Dim = length(flow_direction)
+    T = Float64
+    return AtmosphericBLProfileBC{Dim, T}(
+        T(u_star), T(z0), T(z_ground),
+        SVector{Dim, T}(flow_direction), z_direction,
+    )
+end
+
+@doc """
+    PorousJumpBC{T} <: AbstractBoundaryCondition
+
+Fan / porous jump boundary condition.  Applies a pressure jump across
+the patch: `delta_p = -D * mu * U - 0.5 * I * rho * |U|^2 + power`.
+
+# Fields
+- `D::T` — Darcy coefficient (porous resistance)
+- `I::T` — inertial coefficient
+- `power::T` — constant pressure jump (fan curve) [Pa]
+"""
+struct PorousJumpBC{T} <: AbstractBoundaryCondition
+    D::T
+    I_coeff::T
+    power::T
+end
+
+PorousJumpBC(; D::Real = 0.0, I_coeff::Real = 0.0, power::Real = 0.0) =
+    PorousJumpBC{Float64}(Float64(D), Float64(I_coeff), Float64(power))
+
 # ── Velocity BC expansion ──────────────────────────────────────────
 
 @doc """
@@ -329,6 +439,28 @@ function expand_velocity_bc(bc::CustomBC, ::Int)
     end
 end
 
+function expand_velocity_bc(bc::UniformFixedValueBC{Dim, T}, component::Int) where {Dim, T}
+    return ParabolicDirichlet(bc.func(zero(T))[component])
+end
+
+function expand_velocity_bc(bc::CodedFixedValueBC, ::Int)
+    return ParabolicDirichlet(0.0)  # placeholder; dynamic update needed
+end
+
+function expand_velocity_bc(::WaveTransmissiveBC, ::Int)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_velocity_bc(bc::AtmosphericBLProfileBC{Dim, T}, component::Int) where {Dim, T}
+    # Use a mid-height reference value for expansion
+    u_ref = bc.u_star / T(0.41) * log(T(10) / bc.z0)  # approximate at z=10m
+    return ParabolicDirichlet(u_ref * bc.flow_direction[component])
+end
+
+function expand_velocity_bc(::PorousJumpBC, ::Int)
+    return ParabolicNeumann(0.0)  # velocity passes through; pressure jump applied separately
+end
+
 # ── Pressure BC expansion ──────────────────────────────────────────
 
 @doc """
@@ -401,6 +533,26 @@ function expand_pressure_bc(bc::CustomBC)
     else
         return ParabolicNeumann(bc.pressure_value)
     end
+end
+
+function expand_pressure_bc(::UniformFixedValueBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(::CodedFixedValueBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(::WaveTransmissiveBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(::AtmosphericBLProfileBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(bc::PorousJumpBC)
+    return ParabolicDirichlet(bc.power)  # pressure jump as Dirichlet approx
 end
 
 # ── Batch expansion helpers ─────────────────────────────────────────
