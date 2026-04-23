@@ -29,13 +29,14 @@ function compute_interface_heat_flux(
     nf = size(mesh.face_cells, 2)
     flux = Dict{Int, T}()
 
-    pbmap = build_boundary_map(T_field)
+    pbmap = build_boundary_map(T_field, mesh)
 
     for f in 1:nf
         if !is_internal_face(mesh, f)
             tag = _face_tag(mesh, f)
             if tag == interface_patch
                 P = owner(mesh, f)
+                pbmap[f] == 0 && continue
                 T_cell = T_field.internal[P]
                 T_bnd = T_field.boundary[pbmap[f]]
 
@@ -67,13 +68,14 @@ function _extract_interface_temperatures(
         patch::Symbol,
     ) where {Dim, T}
     temps = Dict{Int, T}()
-    pbmap = build_boundary_map(T_field)
+    pbmap = build_boundary_map(T_field, mesh)
     nf = size(mesh.face_cells, 2)
 
     for f in 1:nf
         if !is_internal_face(mesh, f)
             tag = _face_tag(mesh, f)
             if tag == patch
+                pbmap[f] == 0 && continue
                 temps[f] = T_field.boundary[pbmap[f]]
             end
         end
@@ -238,12 +240,12 @@ function _apply_perface_interface_fluxes!(
 
     # Collect solid interface face indices
     nf_s = size(solid_mesh.face_cells, 2)
-    pbmap_s = build_boundary_map(solid_T)
+    pbmap_s = build_boundary_map(solid_T, solid_mesh)
 
     for f_s in 1:nf_s
         is_internal_face(solid_mesh, f_s) && continue
         _face_tag(solid_mesh, f_s) == solid_patch || continue
-        haskey(pbmap_s, f_s) || continue
+        pbmap_s[f_s] != 0 || continue
 
         x_s = face_center(solid_mesh, f_s)
         P_s = owner(solid_mesh, f_s)

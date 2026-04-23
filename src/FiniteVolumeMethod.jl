@@ -594,6 +594,11 @@ export
     HerschelBulkleyRheology,
     CassonRheology
 
+# --- Stage 5b MULES ---
+export mules_limit_flux!
+# --- Stage 5d GCL verification ---
+export verify_gcl
+
 # --- MPI Parallelism (Phase 6 / Stage 2) ---
 export
     distribute_mesh,
