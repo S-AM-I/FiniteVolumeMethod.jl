@@ -1,5 +1,74 @@
 # Changelog
 
+## v3.15.0 — P1 Radiation Slab V&V + `radiation` Promotion
+
+Sixth manifest promotion. `radiation` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of a 1D-slab analytical comparison of the P1 model
+in a cold attenuating medium.
+
+### test/v_and_v_p1_slab.jl
+
+Problem: P1 model in a cold medium (T_m = 0, emission vanishes):
+
+    -(1/3a) ∂²G/∂x² + a G = 0
+
+reduces to G'' = 3 a² G, with closed-form solution for BCs
+G(0) = G₀, G(L) = 0:
+
+    G(x) = G₀ · sinh(√3 a (L − x)) / sinh(√3 a L)
+
+Top and bottom boundaries use zero-gradient (Neumann) BCs so the
+2D problem collapses to strictly 1D. At a = 1, L = 1, G₀ = 1:
+
+- **Monotone shape match.** At 40×4 the field decays monotonically
+  from ≈1 at the left wall to ≈0 at the right wall; every cell
+  strictly positive.
+- **1D invariance.** Under Neumann top/bottom, all cells sharing
+  the same x must produce identical G. Max column spread on 20×8:
+  < 1 × 10⁻¹⁰ (round-off).
+- **O(h²) grid convergence** at N ∈ {20, 40, 80} against the
+  sinh analytical, measured on the interior band 0.1 < x < 0.9
+  (avoids cell-centered Dirichlet boundary-layer error):
+  observed orders in `[1.8, 2.2]`, finest-grid L² < 10⁻⁴.
+
+Total: 9 gates across 3 testsets, ~2 s runtime.
+
+### Manifest promotion
+
+`radiation`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Only P1 with Dirichlet boundaries on a cold medium is
+  convergence-verified.
+- Marshak-wall boundaries, non-zero emission (T⁴ source), fvDOM,
+  and scattering are still smoke-tested.
+- Radiation-flow coupling is lagged one iteration (standard);
+  a coupled radiation + energy + flow benchmark is a v3.16+
+  follow-up.
+
+### Running manifest-promotion tally
+
+Six `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators`    | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`       | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`          | v3.13 | Stokes terminal velocity analytical match |
+| `dynamic_mesh`            | v3.14 | GCL three-pattern round-off-exactness |
+| `radiation`               | v3.15 | P1 slab sinh attenuation O(h²) |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 9 new gates
+wired into default runtests.jl under `V&V: P1 radiation slab`.
+
 ## v3.14.0 — GCL Invariance V&V + `dynamic_mesh` Promotion
 
 Fifth manifest promotion. `dynamic_mesh` advances from
