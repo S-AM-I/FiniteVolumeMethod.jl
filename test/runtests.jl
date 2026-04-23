@@ -302,6 +302,9 @@ end
     @testset verbose = true "V&V: CollocatedEquation" begin
         safe_include("v_and_v_equation_types.jl")
     end
+    @testset verbose = true "V&V: Q_gen volumetric heat" begin
+        safe_include("v_and_v_qgen.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
