@@ -1,5 +1,57 @@
 # Changelog
 
+## v2.9.0 — Stage 8 Mesh Generation + Collocated AMR
+
+Ninth deliverable. Octree-based mesh-generation skeleton plus h-adaptive
+refinement markers and a Zienkiewicz-Zhu error indicator.
+
+### Stage 8a — Octree mesh generation (`src/mesh_generation/octree.jl`)
+
+- `Octree{Dim, T}` recursive spatial-subdivision data structure.
+- `build_octree(bbox_min, bbox_max, max_level)` uniform refinement.
+- `subdivide!`, `is_leaf`, `count_leaves`, `center`, `intersects_sphere`.
+- `refine_near_sphere!` — surface-proxy refinement for simple geometries
+  (ball-in-duct, airfoil approximation via bounding sphere).
+- Full STL-triangle surface refinement + snapping + layer addition are
+  Stage 8a follow-ups matching snappyHexMesh scope.
+
+### Stage 8c — Collocated AMR markers (`src/amr_collocated/adapt.jl`)
+
+- `RefinementMarker` = `Symbol` alias for `:refine`/`:coarsen`/`:keep`.
+- `mark_cells_by_gradient(grad, mesh; refine_threshold, coarsen_threshold)`
+  computes per-cell markers from gradient magnitude × cell size.
+- `flux_correction_factor(parent_area, child_areas)` computes the
+  conservation-preserving ratio applied when child fluxes traverse a
+  non-conforming AMR interface.
+
+### Stage 8d — Zienkiewicz-Zhu error indicator
+
+- `zz_error_indicator(field, mesh)` — recovery-based indicator:
+  compares local gradient to volume-weighted face-neighbour average.
+  Zero for constant-gradient flow (interior); large at step fronts.
+
+### Verification
+
+19 new Stage 8 gates in `test/stage8_meshing_amr.jl`:
+- 10 gates: octree uniform refinement counts (2^(Dim·level)),
+  sphere-driven surface refinement, subdivision idempotence, 2D vs 3D.
+- 5 gates: `mark_cells_by_gradient` response to synthetic gradients,
+  `flux_correction_factor` conservation ratio.
+- 4 gates: ZZ indicator ≈ 0 for interior of linear flow; > 0.1 at step
+  fronts.
+
+All 1530 pre-existing tests pass at identical counts.
+
+### Deferred to Stage 8 follow-ups
+
+- STL-triangle snappyHexMesh-level surface refinement + boundary-layer
+  addition.
+- Gmsh CLI automation pipeline.
+- Tree-augmented `UnstructuredFVMMesh` for actual in-solve h-refinement
+  (current work produces markers only).
+- Residual-based error indicator (Ainsworth-Oden).
+- Benchmarks: hull mesh, automotive aero, HVAC duct, refine-on-shock.
+
 ## v2.8.0 — Stage 7 Coupled Physics (Solid mechanics, FSI, function objects)
 
 Eighth deliverable of the v3 industrial-grade roadmap. Three greenfield

@@ -52,6 +52,9 @@ end
     @testset verbose = true "Coupled Physics (Stage 7)" begin
         safe_include("stage7_coupled.jl")
     end
+    @testset verbose = true "Meshing + AMR (Stage 8)" begin
+        safe_include("stage8_meshing_amr.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end
