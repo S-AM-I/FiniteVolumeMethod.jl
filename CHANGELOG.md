@@ -1,5 +1,49 @@
 # Changelog
 
+## v3.27.0 — EDM Reaction-Rate Algebra (second `combustion` benchmark)
+
+Second independent benchmark for `combustion`, joining species
+advection-diffusion (v3.17). Verifies the Magnussen-Hjertager
+Eddy Dissipation Model reaction-rate closed-form algebra —
+the turbulence-chemistry interaction closure at the core of
+`compute_edm_reaction_rates`.
+
+### test/v_and_v_edm.jl
+
+Five testsets (128 gates, ~0.1 s):
+
+1. **Fuel-limited branch.** `Y_fuel < Y_ox / s` ⇒ rate is
+   −ρ·A·(ε/k)·Y_fuel; verified to rtol 1 × 10⁻¹². Stoichiometric
+   ratios ω_ox = s·ω_fuel and ω_prod = −(1+s)·ω_fuel also match
+   analytically at every cell.
+
+2. **Oxidizer-limited branch.** `Y_ox/s < Y_fuel` ⇒ rate switches
+   to the oxidizer branch; verified identically.
+
+3. **Stoichiometric mass balance.** Σ_i ω_i ≡ 0 at every cell to
+   atol 1 × 10⁻¹⁴ — the one-step reaction conserves total mass by
+   construction.
+
+4. **ε/k proportionality.** Doubling the mixing rate doubles ω;
+   ratio matches 2.0 to rtol 1 × 10⁻¹².
+
+5. **Heat release consistency.** `compute_heat_release` returns
+   −ω_fuel·ΔH, which is positive under fuel consumption
+   (exothermic sign convention). Verified to rtol 1 × 10⁻¹².
+
+### `combustion` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Species AD (exp boundary layer) | v3.17 | `test/v_and_v_species_ad.jl` |
+| EDM reaction-rate algebra        | v3.27 | `test/v_and_v_edm.jl`         |
+| Sandia Flame D / 1D laminar flame | ≥ v3.28 | (needs Cantera)           |
+
+### Verification
+
+No manifest tier change. 128 new gates wired into default
+runtests.jl under `V&V: EDM combustion algebra`.
+
 ## v3.26.0 — Schiller-Naumann Drag (second `lagrangian_dpm` benchmark)
 
 Second independent benchmark for `lagrangian_dpm`, joining Stokes

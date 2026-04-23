@@ -1528,7 +1528,8 @@ limitations = [
   "Three-species (fuel/oxidizer/product) model; multi-step mechanisms deferred.",
   "Constant density (incompressible); variable density combustion deferred.",
   "Published benchmarks (1D laminar premixed flame vs. Cantera, Sandia Flame D) require Cantera interop and are a v3.18+ follow-up.",
-  "Evidence: `test/v_and_v_species_ad.jl` — (1) monotone decay from Y_L to Y_R, no overshoot, Pe = 2; (2) y-direction invariance < 1e-10 under Neumann top/bottom; (3) L² error 1.8e-2 → 9.5e-3 → 5.0e-3 at N ∈ {20, 40, 80} with observed orders in [0.8, 1.5] (first-order upwind on exp(Pe·x/L)), finest-grid interior L² < 5 × 10⁻³.",
+  "Evidence #1: `test/v_and_v_species_ad.jl` — (1) monotone decay from Y_L to Y_R, no overshoot, Pe = 2; (2) y-direction invariance < 1e-10 under Neumann top/bottom; (3) L² error 1.8e-2 → 9.5e-3 → 5.0e-3 at N ∈ {20, 40, 80} with observed orders in [0.8, 1.5] (first-order upwind on exp(Pe·x/L)), finest-grid interior L² < 5 × 10⁻³.",
+  "Evidence #2 (v3.27): `test/v_and_v_edm.jl` — Magnussen-Hjertager EDM reaction-rate closed-form algebra. Five testsets, 128 gates: (1) fuel-limited branch ω = -ρ·A·(ε/k)·Y_fuel to rtol 1e-12; (2) oxidizer-limited branch; (3) stoichiometric mass balance Σω_i ≡ 0 to atol 1e-14; (4) ε/k proportionality (doubling mixing rate doubles ω); (5) heat release S_h = -ω_fuel·ΔH > 0 exothermic consistency.",
 ]
 
 # ── Phase 11: Lagrangian DPM ─────────────────────────────────────────
