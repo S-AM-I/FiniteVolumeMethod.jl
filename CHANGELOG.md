@@ -1,5 +1,64 @@
 # Changelog
 
+## v3.43.0 — Mesh Geometry V&V + `polyhedral_mesh_io` Promotion
+
+**Thirteenth manifest promotion.** `polyhedral_mesh_io` advances
+from `experimental`/`smoke_tested` to `provisional`/
+`convergence_verified` on geometric invariants of the Cartesian
+mesh builder.
+
+### test/v_and_v_mesh_geometry.jl
+
+Five testsets (976 gates, ~0.2 s):
+
+1. **Total volume.** Σ_c V_c = Lx·Ly across three mesh
+   configurations to rtol 1 × 10⁻¹⁴.
+
+2. **Uniform cell volumes.** Every cell on Cartesian mesh has
+   V_c = Lx·Ly/(Nx·Ny) (456 cells across two configs).
+
+3. **Closed-cell face identity.** Σ_f ε(c,f)·S_f = 0 per cell
+   at N ∈ {8, 16, 32} to max-norm < 1 × 10⁻¹² — the
+   divergence-theorem identity on the discrete mesh.
+
+4. **Face-area magnitudes.** Every face on the Nx×Ny mesh
+   matches exactly one of Lx/Nx or Ly/Ny.
+
+5. **Cell-center convexity.** All 512 cell centers lie strictly
+   inside the domain.
+
+### Manifest promotion
+
+`polyhedral_mesh_io`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+
+### Thirteen-feature provisional tally
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 4 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+| `radiation`               | 3 |
+| `multiphase_vof`          | 3 |
+| `combustion`              | 3 |
+| `turbulence_rans`         | 3 |
+| `turbulence_les`          | 3 |
+| `postprocessing`          | 3 |
+| `linear_solver_infra`     | 1 |
+| `polyhedral_mesh_io`      | 1 |
+
+Remaining experimental: `dashboard`, `io_extensions`,
+`mpi_parallel`.
+
+### Verification
+
+976 new gates wired into default runtests.jl under
+`V&V: Mesh geometry invariants`.
+
 ## v3.42.0 — Linear Solvers V&V + `linear_solver_infra` Promotion
 
 **Twelfth manifest promotion**, extending convergence-verified
