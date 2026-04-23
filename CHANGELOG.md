@@ -1,5 +1,57 @@
 # Changelog
 
+## v2.10.0 — Stage 9 SciML Deep Integration
+
+Tenth deliverable. Matrix-free operator interface and boundary-layer
+unit-checking.
+
+### Stage 9e — Matrix-free operator (`src/linear_solvers/matrix_free.jl`)
+
+`MatrixFreeLinearOperator{T, F, Ft, D} <: AbstractLinearOperator{T}`:
+- Backed by a user closure `matvec!(y, x)` implementing `y := A·x`.
+- Optional `transpose_matvec!` and `diagonal` fields for
+  left-preconditioned and adjoint solves.
+- Rectangular dimensions (n, m) supported.
+- Inherits `underlying_matrix → MatrixFreeError` from the
+  `AbstractLinearOperator` interface.
+
+Unlocks Stage 2 follow-ups (PartitionedArrays-backed distributed
+Krylov without explicit matrix assembly) and 10⁷+-cell cases where
+the sparse CSC wouldn't fit memory.
+
+### Stage 9f — Unitful integration (`src/units/units.jl`)
+
+Unit-checking at problem-setup boundary without adding Unitful.jl as
+a runtime dependency:
+- `strip_units(value, target_scale)` converts a (possibly-dimensioned)
+  input to a plain `Float64`; Unitful's own dimension check fires
+  inside the division if mixed units are passed.
+- `is_dimensionless(value)` trait.
+- `as_si_velocity/density/viscosity/temperature` convenience wrappers
+  that default to SI units.
+
+Plain-`Real` inputs pass through unchanged (backward compatibility).
+Users who want strict unit-checking pass a `Unitful.Quantity` target
+reference like `1u"m/s"`; Unitful handles the rest.
+
+### Verification
+
+All 1549 pre-existing tests pass at identical counts. 22 new Stage 9
+gates in `test/stage9_sciml.jl`:
+- 10 gates: MatrixFreeLinearOperator implements AbstractLinearOperator
+  (size/eltype/mul! on square and rectangular, MatrixFreeError).
+- 1 gate: matrix-free equivalent to sparse-matrix path for same operator.
+- 11 gates: `strip_units` identity on plain reals; `as_si_*` convenience
+  wrappers; `is_dimensionless` dispatches correctly.
+
+### Deferred to Stage 9 follow-ups
+
+- Full continuous adjoint for shape optimization.
+- SciMLSensitivity integration for end-to-end differentiability.
+- KernelAbstractions.jl GPU port (CUDA/AMDGPU/Metal) leveraging the
+  Stage 1g abstract-array-parameterized state.
+- Adjoint drag on cylinder vs. finite-difference validation test.
+
 ## v2.9.0 — Stage 8 Mesh Generation + Collocated AMR
 
 Ninth deliverable. Octree-based mesh-generation skeleton plus h-adaptive

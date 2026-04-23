@@ -678,6 +678,18 @@ export
     flux_correction_factor,
     zz_error_indicator
 
+# --- Stage 9e Matrix-free operator ---
+export MatrixFreeLinearOperator
+
+# --- Stage 9f Units integration ---
+export
+    strip_units,
+    is_dimensionless,
+    as_si_velocity,
+    as_si_density,
+    as_si_viscosity,
+    as_si_temperature
+
 # --- MPI Parallelism (Phase 6 / Stage 2) ---
 export
     distribute_mesh,
