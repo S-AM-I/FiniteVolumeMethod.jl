@@ -1,5 +1,38 @@
 # Changelog
 
+## v3.46.0 — CSF Surface Tension (fourth `multiphase_vof` benchmark)
+
+Fourth convergence-verified benchmark for `multiphase_vof`,
+joining disc translation (v3.16), plane-wave advection (v3.24),
+and mixture blending (v3.36). Covers the final VOF closure —
+the Continuum Surface Force coupling to momentum.
+
+### test/v_and_v_csf.jl
+
+F_st = σ · κ · ∇α via five invariants (1682 gates, ~0.3 s):
+
+1. **σ = 0 disables force** (returns nothing).
+2. **Uniform α ⇒ F_st = 0** at 513 cells (atol 1e-12).
+3. **Curvature of uniform α is zero** at 256 cells.
+4. **F_st ∝ σ linear scaling** across two σ values at 112 cells.
+5. **Pointwise algebraic identity** F_st = σ·κ·∇α at 800 cells
+   to rtol 1e-12 — the single most comprehensive identity test
+   in the V&V suite.
+
+### `multiphase_vof` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Disc translation (mass + COM)       | v3.16 | `test/v_and_v_vof_translation.jl` |
+| Plane-wave advection                 | v3.24 | `test/v_and_v_vof_planewave.jl`    |
+| Mixture property blending            | v3.36 | `test/v_and_v_vof_mixture.jl`      |
+| CSF surface-tension coupling         | v3.46 | `test/v_and_v_csf.jl`              |
+
+### Verification
+
+No manifest tier change. 1682 new gates wired into default
+runtests.jl under `V&V: CSF surface tension`.
+
 ## v3.45.0 — TAB Spray Breakup (fourth `lagrangian_dpm` benchmark)
 
 Fourth convergence-verified benchmark for `lagrangian_dpm`,
