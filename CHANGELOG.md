@@ -1,5 +1,52 @@
 # Changelog
 
+## v3.5.0 — Gradient + Divergence Operator MMS
+
+Completes the Phase 0 operator V&V suite started in v3.4.
+
+### Green-Gauss gradient (interior spatial-order verification)
+
+Manufactured φ(x, y) = sin(πx)·sin(πy) with analytical gradient
+∇φ = (π cos(πx) sin(πy), π sin(πx) cos(πy)). Initialize field with
+exact values on cell centers and boundary faces; compute numerical
+gradient via `gradient(phi, mesh)`; measure L² error over interior
+(x, y) ∈ [0.15, 0.85]² (boundary cells pick up O(h) from the
+face-stencil — standard Green-Gauss limitation).
+
+| N | L² err (interior) | L² rate |
+|---|-------------------|---------|
+| 20 | ~2e-2 | — |
+| 40 | ~5e-3 | 2.0 |
+| 80 | ~1.3e-3 | 2.0 |
+
+4 gates pass. Interior O(h²) confirmed.
+
+### Divergence of divergence-free field (exactness test)
+
+For U(x, y) = (sin(πx) cos(πy), -cos(πx) sin(πy)) (div-free
+analytically), constructing face fluxes via midpoint-rule integration
+and summing the FVM divergence sums to **machine zero** (~10⁻¹⁵) at
+every grid size. The operator is exact on this input — a stronger
+property than O(h²) convergence.
+
+3 gates pass: L² of (div/V) < 10⁻¹⁰ at N ∈ {20, 40, 80}.
+
+### Outcome
+
+Three of the four Phase 0 operators are now verified:
+- ✅ **Laplacian** O(h²) on interior (v3.4).
+- ✅ **Gradient** O(h²) on interior (v3.5).
+- ✅ **Divergence** exact on analytical div-free input (v3.5).
+- ⏳ Interpolation (Rhie-Chow) — v3.6 follow-up.
+
+### Deferred to v3.6+
+
+- Rhie-Chow interpolation MMS.
+- Laplacian MMS on skewed mesh (over-relaxed correction check).
+- Ghia Re=400 (stable for the solver at 80×80).
+- Smoothed-lid cavity (SpatialVelocityBC full integration).
+- Poiseuille MMS, TGV decay, backward step.
+
 ## v3.4.0 — Laplacian MMS Order-of-Accuracy V&V + SpatialVelocityBC
 
 First V&V of solver-free operator correctness: the collocated
