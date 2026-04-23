@@ -1,5 +1,54 @@
 # Changelog
 
+## v3.1.0 — First Published-Benchmark V&V
+
+First V&V release of the v3 series. Adds the Ghia 1982 lid-driven
+cavity Re=100 benchmark as the first published-reference gate against
+the collocated incompressible solver.
+
+### Ghia Re=100 benchmark (test/v_and_v_ghia_cavity.jl)
+
+Validates the centerline u(y) profile at x=0.5 against 10 tabulated
+reference points from Ghia, Ghia & Shin (1982), JCP 48, 387-411,
+Table I. Runs the full `IncompressibleProblem` + `SIMPLE()` solve on
+an 80×80 Cartesian mesh with lid velocity 1.0 and ν = 0.01 (Re = 100).
+
+Current qualitative-gate acceptance (honest about v3.0 state):
+- Peak primary-vortex |u| is within 30% of Ghia's −0.206 value and
+  sits in the vertical half [0.3, 0.6].
+- Near-lid u (y > 0.9) matches Ghia within 15%.
+- Interior points match within 30%.
+
+This acceptance tolerance reflects the residual-plateau known issue
+(CLAUDE.md): `SIMPLE` on the unstructured-collocated mesh hits a
+plateau around 2% on velocity residuals after ~1000 iterations, which
+propagates to a ~10-20% quantitative gap against Ghia. The flow field
+is qualitatively correct (primary vortex, zero crossing location,
+near-lid behaviour) but quantitatively too loose for `stable`
+promotion. Tightening the gate to 5% is the headline Stage-3e/V&V
+follow-up.
+
+### How to run
+
+The V&V benchmark is gated behind `FVM_RUN_VANDV=true` so the default
+`runtests.jl` loop stays fast. To run:
+
+    julia --project=test test/v_and_v_ghia_cavity.jl
+    # or
+    FVM_RUN_VANDV=true julia --project=test -e 'using Pkg; Pkg.test()'
+
+Elapsed: ~1.5 min on M-class Apple silicon.
+
+### Deferred to v3.2
+
+- Ghia Re=400, 1000, 3200, 5000, 7500, 10000 extensions.
+- Poiseuille MMS spatial-order convergence study.
+- Taylor-Green 2D kinetic-energy-decay analytical comparison.
+- Backward-facing step Driver-Seegmiller.
+- Flow over a circular cylinder Williamson CL/CD vs. Re.
+- **Upstream solver work to tighten the residual plateau** — the
+  prerequisite for Ghia to pass at 5% gate instead of 30%.
+
 ## v3.0.0 — Industrial-Grade CFD Release
 
 Closes the v3 industrial-grade overhaul (see

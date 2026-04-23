@@ -58,6 +58,14 @@ end
     @testset verbose = true "SciML Deep Integration (Stage 9)" begin
         safe_include("stage9_sciml.jl")
     end
+    # V&V benchmarks run a full pressure-velocity-coupling solve and are
+    # slow (~1-2 min each) — gated behind an env flag so the default
+    # runtests.jl remains fast.
+    if get(ENV, "FVM_RUN_VANDV", "false") == "true"
+        @testset verbose = true "V&V: Ghia lid-driven cavity Re=100" begin
+            safe_include("v_and_v_ghia_cavity.jl")
+        end
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end
