@@ -1,5 +1,39 @@
 # Changelog
 
+## v3.59.0 — VOF Compression Flux (fifth `multiphase_vof` benchmark)
+
+Fifth convergence-verified benchmark for `multiphase_vof`,
+joining disc translation (v3.16), plane-wave (v3.24), mixture
+blending (v3.36), and CSF surface tension (v3.46). Covers the
+interface-compression flux primitive φ_c = C_α·|φ_f|·(n̂·S_f)/|S_f|
+used to counter upwind smearing.
+
+### test/v_and_v_vof_compression.jl
+
+Four invariants (1830 gates, ~0.2 s):
+
+1. **C_α = 0 ⇒ φ_c ≡ 0** at 144 faces.
+2. **Uniform α ⇒ φ_c ≡ 0** at 544 faces (interface normal
+   undefined).
+3. **C_α linear scaling** across three values at 761 faces
+   (rtol 1e-12).
+4. **|φ_f|-linear scaling** at fixed α, C_α at 381 faces.
+
+### `multiphase_vof` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Disc translation (mass + COM)       | v3.16 | `test/v_and_v_vof_translation.jl` |
+| Plane-wave advection                 | v3.24 | `test/v_and_v_vof_planewave.jl`   |
+| Mixture property blending            | v3.36 | `test/v_and_v_vof_mixture.jl`     |
+| CSF surface-tension coupling         | v3.46 | `test/v_and_v_csf.jl`             |
+| Interface-compression flux           | v3.59 | `test/v_and_v_vof_compression.jl` |
+
+### Verification
+
+No manifest tier change. 1830 new gates wired into default
+runtests.jl under `V&V: VOF compression flux`.
+
 ## v3.58.0 — Laplacian Mesh Motion (fifth `dynamic_mesh` benchmark)
 
 Fifth convergence-verified benchmark for `dynamic_mesh`, joining
