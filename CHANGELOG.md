@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.49.0 — ALE-Corrected Flux (fourth `dynamic_mesh` benchmark)
+
+Fourth convergence-verified benchmark for `dynamic_mesh`, joining
+three-pattern GCL (v3.14), rotational GCL (v3.29), and mesh
+sweep-flux (v3.34). Covers the transport-side primitive that
+consumes mesh motion in scalar advection.
+
+### test/v_and_v_ale_flux.jl
+
+`φ_ale[f] = φ[f] − φ_mesh[f]` via five invariants (821 gates, ~0.1 s):
+
+1. **Zero φ_mesh ⇒ φ_ale = φ.** Eulerian-limit invariance at 144 faces.
+
+2. **Zero φ ⇒ φ_ale = −φ_mesh.** Pure mesh-motion contribution.
+
+3. **Algebraic identity.** φ_ale = φ − φ_mesh at 312 faces to
+   rtol 1e-14.
+
+4. **Moving-frame equilibrium.** φ = φ_mesh ⇒ φ_ale ≡ 0 —
+   fluid at rest in the mesh frame.
+
+5. **Dimension-mismatch error-throw.** Length mismatch raises
+   ErrorException.
+
+### `dynamic_mesh` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Three-pattern GCL (zero/trans/scale) | v3.14 | `test/v_and_v_gcl.jl`            |
+| Rotational GCL (∇·d = 0 identity)    | v3.29 | `test/v_and_v_gcl_rotation.jl`   |
+| Mesh sweep-flux primitive             | v3.34 | `test/v_and_v_mesh_flux.jl`      |
+| ALE-corrected flux (transport side)   | v3.49 | `test/v_and_v_ale_flux.jl`       |
+
+### Verification
+
+No manifest tier change. 821 new gates wired into default
+runtests.jl under `V&V: ALE-corrected flux`.
+
 ## v3.48.0 — fvDOM Quadrature (fourth `radiation` benchmark)
 
 Fourth convergence-verified benchmark for `radiation`, joining
