@@ -90,6 +90,9 @@ function update_boundary_velocity!(
 
         if bc isa FixedVelocityBC
             state.U.boundary[i] = bc.value
+        elseif bc isa SpatialVelocityBC
+            x_f = face_center(mesh, f)
+            state.U.boundary[i] = bc.func(x_f)
         elseif bc isa NoSlipWallBC
             state.U.boundary[i] = zero(SVector{Dim, T})
         elseif bc isa InletOutletBC

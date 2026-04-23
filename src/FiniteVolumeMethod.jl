@@ -361,6 +361,7 @@ export
     SolveResult,
     # Boundary conditions
     FixedVelocityBC,
+    SpatialVelocityBC,
     FixedPressureBC,
     NoSlipWallBC,
     SlipWallBC,
