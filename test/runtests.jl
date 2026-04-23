@@ -341,6 +341,9 @@ end
     @testset verbose = true "V&V: continuity residual primitives" begin
         safe_include("v_and_v_continuity.jl")
     end
+    @testset verbose = true "V&V: polyhedral volumes" begin
+        safe_include("v_and_v_polyhedral_volumes.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
