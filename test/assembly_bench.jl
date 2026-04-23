@@ -94,6 +94,53 @@ end
     @test bench2.allocs == 0
 end
 
+@testset "Stage 1c: BlockCollocatedEquation structure + helpers" begin
+    mesh = build_cartesian_unstructured_mesh(5, 4, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+    nf_internal = count(!iszero, @view(mesh.face_cells[2, :]))
+
+    # NBlocks = 1 should produce the same structural nnz as the scalar case.
+    eq1 = BlockCollocatedEquation(mesh, Val(1))
+    @test nblocks(eq1) == 1
+    @test size(eq1.A) == (nc, nc)
+    @test nnz(eq1.A) == nc + 2 * nf_internal
+
+    # NBlocks = 2: nc × 2² on the diagonal, nf_internal × 2² × 2 off-diagonal.
+    eq2 = BlockCollocatedEquation(mesh, Val(2))
+    @test nblocks(eq2) == 2
+    @test size(eq2.A) == (2 * nc, 2 * nc)
+    @test nnz(eq2.A) == nc * 4 + 2 * nf_internal * 4
+
+    # Sanity-check fast-path helpers on a 2-block equation: assembling a
+    # diagonal + internal-face symmetric coupling produces a matrix whose
+    # inner block structure matches the naive `A[i, j] +=` path.
+    reset!(eq2)
+    for c in 1:nc
+        add_block_diag!(eq2, c, 1, 1, 1.0)
+        add_block_diag!(eq2, c, 2, 2, 2.0)
+        add_block_diag!(eq2, c, 1, 2, 0.1)
+    end
+    # Reference via A[i, j] += on a fresh spzeros of the same size
+    ref = SparseArrays.spzeros(Float64, 2 * nc, 2 * nc)
+    for c in 1:nc
+        ref[(c - 1) * 2 + 1, (c - 1) * 2 + 1] += 1.0
+        ref[(c - 1) * 2 + 2, (c - 1) * 2 + 2] += 2.0
+        ref[(c - 1) * 2 + 1, (c - 1) * 2 + 2] += 0.1
+    end
+    @test eq2.A == ref
+
+    # Off-diagonal helpers
+    reset!(eq2)
+    f_internal = findfirst(f -> mesh.face_cells[2, f] != 0, 1:nf)
+    P = mesh.face_cells[1, f_internal]
+    N = mesh.face_cells[2, f_internal]
+    add_block_offdiag_PN!(eq2, f_internal, 1, 1, 3.5)
+    add_block_offdiag_NP!(eq2, f_internal, 2, 2, -2.0)
+    @test eq2.A[(P - 1) * 2 + 1, (N - 1) * 2 + 1] == 3.5
+    @test eq2.A[(N - 1) * 2 + 2, (P - 1) * 2 + 2] == -2.0
+end
+
 @testset "Stage 1b: build_boundary_map returns O(1)-lookup Vector" begin
     mesh = build_cartesian_unstructured_mesh(10, 10, 1.0, 1.0)
     phi = CollocatedScalarField(:phi, mesh; value = 0.0)
