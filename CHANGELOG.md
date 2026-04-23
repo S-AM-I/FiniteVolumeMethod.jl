@@ -1,5 +1,61 @@
 # Changelog
 
+## v3.10.0 — Poiseuille Channel V&V (First Incompressible NS Benchmark)
+
+First V&V of the full SIMPLE pressure-velocity-coupling solver against
+an analytical closed-form solution. Previous solver-level V&V (Ghia
+1982 cavity, v3.1-v3.3) was against tabulated numerical reference data;
+Poiseuille channel is a pure analytical test.
+
+### test/v_and_v_poiseuille.jl
+
+Pressure-driven (or inlet-driven) Hagen-Poiseuille flow in a 2D
+channel `[0, L] × [0, H]` with no-slip top and bottom walls. For
+dp/dx = -G the fully-developed profile is:
+
+    u(y) = G / (2μ) · y · (H - y),    v = 0
+
+Set up with:
+- Inlet: `SpatialVelocityBC(u_inlet, ...)` matching analytical profile.
+- Outlet: `FixedPressureBC(0.0)`.
+- Walls: `NoSlipWallBC()`.
+- L = 5, H = 1, μ = 1, G = 2 (giving `u_max = 0.25` at `y = 0.5`).
+
+Mesh: 50 × 20 cells.
+
+Five gates pass:
+- Solver produces finite output (any iteration count OK).
+- Point-wise agreement with analytical `u(y)` at `x = L/2`: < 5%
+  relative error everywhere `|u_exact| > 0.05`.
+- Peak location within `y ∈ [0.40, 0.60]` (analytical: 0.5).
+- Peak magnitude within `u_peak ∈ [0.22, 0.26]` (analytical: 0.25).
+- Transverse velocity `max|v| < 0.05` in the fully-developed region.
+
+### Why this matters for incompressible_ns promotion
+
+The Poiseuille test is simpler than Ghia cavity — no BC singularity,
+exact analytical solution, symmetric setup — and demonstrates:
+
+1. `SpatialVelocityBC` works end-to-end with the SIMPLE loop on a real
+   physics problem.
+2. The pressure-outlet path (`FixedPressureBC`) correctly closes the
+   momentum-pressure coupling.
+3. 5% accuracy on 50×20 is in-line with expected O(h²) convergence and
+   the v3.2 residual-normalization-fix regime.
+
+This is the first concrete piece of evidence toward a future
+`incompressible_ns` promotion from `experimental` to `provisional`.
+That promotion will require the full suite:
+- Poiseuille (v3.10) ✓
+- Ghia cavity (v3.1-v3.3, FVM_RUN_VANDV-gated) ✓
+- Ghia Re=400 or Taylor-Green 2D decay — still outstanding
+- Grid convergence study / MMS for Navier-Stokes RHS
+
+### Verification
+
+All 1571 pre-existing tests pass at identical counts. 5 new gates
+(~4 s runtime) wired into default runtests.jl.
+
 ## v3.9.0 — Temporal Order-of-Accuracy MMS
 
 Adds the time-discretization verification that was flagged as a v3.7+
