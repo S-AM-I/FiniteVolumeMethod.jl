@@ -106,6 +106,6 @@ Each slated for the stage noted in the roadmap:
 | ~~Error indicators~~ | Landed v2.9.0 (Stage 8d): `zz_error_indicator` (Zienkiewicz-Zhu recovery-based); gradient-based marking already in Stage 8c. Residual-based indicator is a follow-up. | 8d done |
 | Full adjoint (SciMLSensitivity integration) | Absent | 9a–c |
 | GPU backends for collocated | Absent | 9d |
-| Matrix-free linear operators | Absent | 9e |
-| Unitful integration | Absent | 9f |
+| ~~Matrix-free linear operators~~ | Landed v2.10.0 (Stage 9e): `MatrixFreeLinearOperator{T, F, Ft, D}` subtypes `AbstractLinearOperator`; user closure `matvec!(y, x)` with optional transpose and diagonal. Plugs into existing `_dispatch_solve` path. | 9e done |
+| ~~Unitful integration~~ | Landed v2.10.0 (Stage 9f): `strip_units`, `is_dimensionless`, `as_si_velocity/density/viscosity/temperature`. Unit-checking at problem-setup boundary; hot-path remains `Float64`. | 9f done |
 | Binary OpenFOAM polyMesh reader | ASCII only (`src/mesh/openfoam_io.jl:22`) | 3 |

@@ -55,6 +55,9 @@ end
     @testset verbose = true "Meshing + AMR (Stage 8)" begin
         safe_include("stage8_meshing_amr.jl")
     end
+    @testset verbose = true "SciML Deep Integration (Stage 9)" begin
+        safe_include("stage9_sciml.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end
