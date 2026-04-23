@@ -296,6 +296,9 @@ end
     @testset verbose = true "V&V: Field constructors" begin
         safe_include("v_and_v_field_constructors.jl")
     end
+    @testset verbose = true "V&V: PV coupling constructors" begin
+        safe_include("v_and_v_pv_coupling.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
