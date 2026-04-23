@@ -1,5 +1,42 @@
 # Changelog
 
+## v3.65.0 — Thermal Types (sixth `conjugate_heat_transfer` benchmark)
+
+Sixth convergence-verified benchmark for
+`conjugate_heat_transfer`, joining Laplace (v3.12), unsteady
+(v3.21), Boussinesq (v3.32), CHT interface (v3.50), and k_eff
+(v3.56). Covers the thermal property + state type-system
+primitives.
+
+### test/v_and_v_thermal_types.jl
+
+Seven invariants (83 gates, ~0.1 s):
+
+1. **FluidThermalProperties kwargs round-trip.**
+2. **has_buoyancy detection** (β = 0 vs non-zero).
+3. **SolidThermalProperties kwargs round-trip.**
+4. **SolidThermalProperties Q_gen default zero.**
+5. **ThermalState zero/default** (T = 300 K, k = 0.026).
+6. **ThermalState custom T_init + k_init.**
+7. **FluidThermalProperties integer/float type promotion** to
+   Float64.
+
+### `conjugate_heat_transfer` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Steady Laplace series (solid)         | v3.12 | `test/v_and_v_heat_conduction.jl` |
+| Unsteady decay (solid)                 | v3.21 | `test/v_and_v_unsteady_heat.jl`    |
+| Boussinesq buoyancy algebra            | v3.32 | `test/v_and_v_boussinesq.jl`       |
+| CHT interface-flux coupling            | v3.50 | `test/v_and_v_cht_interface.jl`    |
+| Effective conductivity k_eff + α_eff   | v3.56 | `test/v_and_v_k_eff.jl`            |
+| Thermal property + state types          | v3.65 | `test/v_and_v_thermal_types.jl`    |
+
+### Verification
+
+No manifest tier change. 83 new gates wired into default
+runtests.jl under `V&V: Thermal types`.
+
 ## v3.64.0 — remake Parameter-Update (sixth `incompressible_ns` benchmark)
 
 Sixth convergence-verified benchmark for `incompressible_ns`,
