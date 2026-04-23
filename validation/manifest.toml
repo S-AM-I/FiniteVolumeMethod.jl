@@ -1515,6 +1515,7 @@ limitations = [
   "Radiation-flow coupling is lagged one iteration (standard approach).",
   "Evidence #1: `test/v_and_v_p1_slab.jl` — (1) monotone attenuation shape match; (2) y-direction independence < 1e-10 (strict 1D invariance under Neumann top/bottom BCs); (3) O(h²) grid convergence at N ∈ {20, 40, 80} with observed orders in [1.8, 2.2] against sinh(√3a(L-x))/sinh(√3aL).",
   "Evidence #2 (v3.25): `test/v_and_v_p1_equilibrium.jl` — radiative equilibrium invariant. With uniform T_medium = T_wall (isothermal cavity), P1 admits the exact solution G ≡ 4σT⁴. (1) every interior cell matches the analytical equilibrium to rtol 1e-2 at three absorption coefficients a ∈ {0.1, 1, 10}; (2) interior spread < 1e-4 relative (no spurious gradient, Marshak BC closes the field uniformly); (3) T⁴ scaling verified by doubling T and measuring the 16× factor to rtol 5e-3.",
+  "Evidence #3 (v3.35): `test/v_and_v_radiation_source.jl` — `compute_radiation_source` algebra (S_rad = a·G - 4·a·σ·T⁴). Six testsets, 464 gates: (1) equilibrium G = 4σT⁴ ⇒ S_rad ≡ 0; (2) cold medium (T = 0) ⇒ S_rad = a·G > 0; (3) hot medium (G = 0) ⇒ S_rad = -4aσT⁴ < 0; (4) linearity in G with slope a; (5) T⁴ scaling of emission branch; (6) negative-T clamp verified. Puts `radiation` at three convergence-verified benchmarks.",
 ]
 
 # ── Phase 8: Combustion & Species Transport ────────────────────────
