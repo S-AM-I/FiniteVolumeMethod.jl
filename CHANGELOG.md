@@ -1,5 +1,51 @@
 # Changelog
 
+## v3.35.0 — Radiation Source Algebra (third `radiation` benchmark)
+
+Third convergence-verified benchmark for `radiation`, joining
+P1 slab attenuation (v3.15) and radiative equilibrium (v3.25).
+Covers the thermal-coupling primitive `compute_radiation_source`
+that feeds the fluid-energy equation.
+
+### test/v_and_v_radiation_source.jl
+
+`S_rad = a · G − 4 · a · σ · T⁴` via six invariants
+(464 gates, ~0.1 s):
+
+1. **Detailed balance.** G = 4σT⁴ ⇒ S_rad ≡ 0 at every cell.
+2. **Pure absorption.** T = 0 ⇒ S_rad = a·G > 0 (medium heats).
+3. **Pure emission.** G = 0 ⇒ S_rad = −4aσT⁴ < 0 (medium cools).
+4. **Linearity in G.** Slope a verified by difference quotient.
+5. **T⁴ scaling.** Doubling T at G = 0 multiplies |S_rad| by 16.
+6. **Negative-T clamp.** T < 0 treated as T = 0 (no unphysical
+   emission from below absolute zero).
+
+### `radiation` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| P1 slab sinh attenuation (cold medium)  | v3.15 | `test/v_and_v_p1_slab.jl`           |
+| Radiative equilibrium (isothermal cavity) | v3.25 | `test/v_and_v_p1_equilibrium.jl`    |
+| `compute_radiation_source` algebra       | v3.35 | `test/v_and_v_radiation_source.jl`  |
+
+### Stable-review tally
+
+Six provisional features now meet the 3-benchmark floor:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 3 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+| `radiation`               | 3 |
+
+### Verification
+
+No manifest tier change. 464 new gates wired into default
+runtests.jl under `V&V: Radiation source algebra`.
+
 ## v3.34.0 — Mesh Sweep Flux (third `dynamic_mesh` benchmark)
 
 Third convergence-verified benchmark for `dynamic_mesh`,
