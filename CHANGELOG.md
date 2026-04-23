@@ -1,5 +1,78 @@
 # Changelog
 
+## v3.18.0 — k-ε DHIT V&V + `turbulence_rans` Promotion
+
+Ninth manifest promotion. `turbulence_rans` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of a decaying-homogeneous-turbulence study of the
+`StandardKEpsilon` source terms against its closed-form ODE
+solution.
+
+### test/v_and_v_kepsilon_dhit.jl
+
+Problem: with uniform fields, zero mean flow (no production), zero
+flux (no convection), and Neumann BCs everywhere, the k-ε transport
+system reduces to the ODE
+
+    dk/dt = −ε,          dε/dt = −C_ε2 · ε²/k,
+
+whose closed-form solution (with τ = ε_0 · t / k_0, C_ε2 = 1.92) is
+
+    k(t) = k_0 (1 + 0.92 τ)^(−1.087)
+    ε(t) = ε_0 (1 + 0.92 τ)^(−2.087)
+
+Three testsets (10 gates, ~0.8 s):
+
+1. **Realizability invariants.** k, ε, ν_t remain ≥ 0 at every
+   step; both fields decay strictly monotonically (no oscillation,
+   no overshoot from the implicit linearization).
+
+2. **Endpoint agreement.** At 1000 × 0.001 the numerical k(1) and
+   ε(1) match the analytical values within 1 %:
+   - k_an ≈ 0.508, ε_an ≈ 0.264.
+
+3. **First-order Δt convergence.** At dt ∈ {0.01, 0.005, 0.0025}
+   the final-k error decreases monotonically; observed orders fall
+   in [0.8, 1.3] — consistent with implicit Euler first-order
+   discretization of the source ODE.
+
+### Manifest promotion
+
+`turbulence_rans`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Only `StandardKEpsilon` source-term ODE is convergence-verified.
+  Shear production, wall functions, full channel-flow profiles,
+  and k-ω / k-ω-SST / Spalart-Allmaras variants are smoke-tested.
+- Published RANS benchmarks (Moser channel DNS at Reτ ∈ {180, 395,
+  590}, flat-plate boundary layer, periodic hills) are a v3.19+
+  follow-up.
+
+### Running manifest-promotion tally
+
+Nine `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators`    | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`       | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`          | v3.13 | Stokes terminal velocity analytical match |
+| `dynamic_mesh`            | v3.14 | GCL three-pattern round-off-exactness |
+| `radiation`               | v3.15 | P1 slab sinh attenuation O(h²) |
+| `multiphase_vof`          | v3.16 | Disc translation mass + COM invariants |
+| `combustion`              | v3.17 | Species AD exponential BL first-order |
+| `turbulence_rans`         | v3.18 | k-ε DHIT ODE match + O(Δt) |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 10 new gates
+wired into default runtests.jl under `V&V: k-ε DHIT`.
+
 ## v3.17.0 — Species Advection-Diffusion V&V + `combustion` Promotion
 
 Eighth manifest promotion. `combustion` advances from
