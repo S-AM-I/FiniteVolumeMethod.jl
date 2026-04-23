@@ -1,5 +1,60 @@
 # Changelog
 
+## v3.33.0 — Ranz-Marshall Heat Transfer (third `lagrangian_dpm` benchmark)
+
+Third convergence-verified benchmark for `lagrangian_dpm`,
+joining Stokes terminal velocity (v3.13) and Schiller-Naumann
+drag (v3.26). Completes the momentum + thermal closure coverage
+and puts DPM at the 3-benchmark stable-review floor.
+
+### test/v_and_v_ranz_marshall.jl
+
+Verifies the Ranz-Marshall convective-heat-transfer correlation
+
+    Nu = 2 + 0.6 · Re_p^0.5 · Pr^0.33
+    q  = π · d · k_f · Nu · (T_f − T_p)   [W]
+
+via five algebraic invariants (9 gates, ~0.1 s):
+
+1. **Stagnant limit Nu = 2.** Zero slip ⇒ Nu = 2 exactly;
+   q = π·d·k_f·2·ΔT to rtol 1 × 10⁻¹².
+
+2. **Isothermal ⇒ q ≡ 0.** When T_f = T_p, q = 0 identically.
+
+3. **Sign consistency.** T_f > T_p ⇒ q > 0; T_f < T_p ⇒ q < 0;
+   magnitudes equal for equal |ΔT| (rtol 1 × 10⁻¹²).
+
+4. **Linearity in ΔT.** Doubling/tripling ΔT doubles/triples q
+   (rtol 1 × 10⁻¹²).
+
+5. **Non-trivial Re closed-form match.** At Re_p = 10, the
+   computed q matches π·d·k_f·Nu·ΔT where Nu ≈ 3.69 to
+   rtol 1 × 10⁻¹².
+
+### `lagrangian_dpm` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Stokes terminal velocity (drag, Re ≪ 1) | v3.13 | `test/v_and_v_stokes_terminal.jl`  |
+| Schiller-Naumann drag (1 ≲ Re ≲ 1000)   | v3.26 | `test/v_and_v_schiller_naumann.jl` |
+| Ranz-Marshall heat transfer              | v3.33 | `test/v_and_v_ranz_marshall.jl`    |
+
+### Three-benchmark review tally
+
+Four provisional features now meet the 3-benchmark review floor:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 3 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+
+### Verification
+
+No manifest tier change. 9 new gates wired into default
+runtests.jl under `V&V: Ranz-Marshall particle heat`.
+
 ## v3.32.0 — Boussinesq Buoyancy (third `conjugate_heat_transfer` benchmark)
 
 Third convergence-verified benchmark for
