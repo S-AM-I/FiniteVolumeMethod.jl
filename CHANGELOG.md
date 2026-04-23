@@ -1,5 +1,36 @@
 # Changelog
 
+## v3.31.0 — Collocated-Operators Evidence Inventory
+
+No new test in this release. Documentation cleanup: the
+`collocated_operators` manifest entry previously cited only the
+v3.4–v3.6 Cartesian MMS suite, but the repository already carries
+five independent benchmark files shipped across v3.4–v3.9.
+Manifest limitations block updated to enumerate all five with
+their file paths, making the feature's actual 3-benchmark
+stable-promotion eligibility explicit.
+
+### `collocated_operators` benchmark inventory (documented)
+
+| # | File | Version | Coverage |
+|---|------|---------|----------|
+| 1 | `test/v_and_v_laplacian_mms.jl`    | v3.4 | Laplacian O(h²) on Cartesian, Dirichlet/Neumann/Robin BCs |
+| 2 | `test/v_and_v_operator_mms.jl`     | v3.5 | Gradient O(h²) + divergence machine-exact |
+| 3 | `test/v_and_v_rhie_chow.jl`        | v3.6 | Rhie-Chow three-invariant set |
+| 4 | `test/v_and_v_laplacian_skewed.jl` | v3.8 | Skewed-mesh Laplacian, three correction modes |
+| 5 | `test/v_and_v_temporal_mms.jl`     | v3.9 | Temporal O(Δt) MMS for Euler + BDF2 |
+
+Five benchmarks spanning spatial, temporal, non-orthogonal, and
+pressure-velocity-coupling coverage — the most comprehensive
+convergence-verified suite of any provisional feature. Stable-
+promotion review on `collocated_operators` is blocked only on
+integration-level tests (full SIMPLE / coupled solves), not on
+operator primitives.
+
+### Verification
+
+No tests added or changed. Manifest documentation update only.
+
 ## v3.30.0 — Courant + Q-sign (second `postprocessing` benchmark)
 
 Second independent benchmark for `postprocessing`, joining
