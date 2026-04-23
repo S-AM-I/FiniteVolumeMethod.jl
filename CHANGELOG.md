@@ -1,5 +1,42 @@
 # Changelog
 
+## v3.57.0 — Particle State (fifth `lagrangian_dpm` benchmark)
+
+Fifth convergence-verified benchmark for `lagrangian_dpm`,
+joining Stokes (v3.13), Schiller-Naumann (v3.26), Ranz-Marshall
+(v3.33), and TAB breakup (v3.45). Covers the particle-state
+initialization primitive `set_particle_properties!` and the
+mass-diameter-density algebraic consistency.
+
+### test/v_and_v_particle_state.jl
+
+Seven invariants (22 gates, ~0.1 s):
+
+1. **Mass closed form.** m_p = (π/6)·d³·ρ_p (rtol 1e-14).
+2. **Density-linear mass scaling.**
+3. **d³ diameter scaling** (doubling d multiplies m by 8).
+4. **Temperature + Cp round-trip** with custom values.
+5. **`inject_particles!` count** matches request; particles
+   start `active = true`.
+6. **Unique monotone-increasing IDs.**
+7. **Default T = 300 K, Cp = 1000 J/(kg·K)** per the
+   documented signature.
+
+### `lagrangian_dpm` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Stokes terminal velocity              | v3.13 | `test/v_and_v_stokes_terminal.jl`  |
+| Schiller-Naumann drag                  | v3.26 | `test/v_and_v_schiller_naumann.jl` |
+| Ranz-Marshall heat transfer            | v3.33 | `test/v_and_v_ranz_marshall.jl`    |
+| TAB spray breakup algebra              | v3.45 | `test/v_and_v_spray.jl`            |
+| Particle state + mass primitives       | v3.57 | `test/v_and_v_particle_state.jl`   |
+
+### Verification
+
+No manifest tier change. 22 new gates wired into default
+runtests.jl under `V&V: Particle state`.
+
 ## v3.56.0 — Effective Conductivity (fifth `conjugate_heat_transfer` benchmark)
 
 Fifth convergence-verified benchmark for
