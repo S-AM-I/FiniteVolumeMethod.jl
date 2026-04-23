@@ -1,5 +1,69 @@
 # Changelog
 
+## v2.4.0 — Stage 3 Pressure-Based Family MVP
+
+Fourth deliverable of the v3 industrial-grade roadmap. Adds the thermo /
+rheology type hierarchies that the compressible pressure-based solver
+generalization (Stage 3 follow-up) will consume, and upgrades the
+non-orthogonal correction in the existing Laplacian assembly to the
+over-relaxed Jasak (1996) form.
+
+### Stage 3a — Thermo / EOS models (`src/pressure_based/thermo_models.jl`)
+
+- `AbstractThermoModel` umbrella with four concrete types:
+  - `IncompressibleThermo(; rho, mu, cp, beta)` — constant ρ, μ.
+  - `IdealGas(; gamma, R, mu, cp, beta)` — ρ = p/(R·T).
+  - `BoussinesqThermo(; rho0, T0, mu, cp, beta)` — ρ = ρ₀(1 − β(T − T₀)).
+  - `SutherlandGas(; ...)` — ideal gas with Sutherland-law μ(T).
+- Uniform interface: `density_at(model, p, T)`, `viscosity_at(model, T)`,
+  `cp_at(model, T)`, `beta_at(model, T)`, `is_compressible(model)`.
+
+### Stage 3b — Non-Newtonian rheology (`src/pressure_based/rheology.jl`)
+
+- `AbstractRheology` umbrella with five concrete types:
+  - `NewtonianRheology(; mu)`.
+  - `PowerLawRheology(; K, n, gamma_min, gamma_max)`.
+  - `BirdCarreauRheology(; mu_0, mu_inf, lambda, n)`.
+  - `HerschelBulkleyRheology(; tau_y, K, n, gamma_c)` — regularised
+    bi-viscous yield-stress model.
+  - `CassonRheology(; tau_y, mu_inf, gamma_c)`.
+- Uniform interface: `viscosity_at(rheo, strain_rate, T)`.
+
+### Stage 3c — Over-relaxed non-orthogonal correction
+
+- New `NonOrthoCorrectionMode` enum with `NON_ORTHO_MINIMUM`,
+  `NON_ORTHO_ORTHOGONAL`, `NON_ORTHO_OVER_RELAXED` variants.
+- `assemble_laplacian!(...; correction_mode = NON_ORTHO_OVER_RELAXED)` is
+  now the default (was effectively minimum-correction before). Over-relaxed
+  scales the implicit diagonal coefficient by 1/cosθ, accelerating
+  convergence of iterative non-orthogonal correction on skewed meshes
+  (Jasak 1996 PhD thesis, Ch. 4).
+- All three modes produce identical matrices on orthogonal (e.g. Cartesian)
+  meshes; behavioral difference surfaces only on skewed meshes.
+
+### Verification
+
+- All 1266 pre-existing tests pass unchanged at identical counts.
+- 37 new Stage 3 gates in `test/pressure_based_models.jl` covering:
+  - 18 thermo-model assertions (constructor defaults, compressibility
+    trait, p/T dependence where expected).
+  - 13 rheology-model assertions (shear-thinning monotonicity, Newtonian
+    pass-through, yield-stress near-rigid limit, Casson increment).
+  - 6 non-orthogonal correction assertions (three modes identical on
+    Cartesian; over-relaxed implicit diagonal > minimum on skewed mesh).
+
+### Deferred to Stage 3 follow-ups
+
+- Renaming `src/incompressible/` → `src/pressure_based/` + generalizing
+  `IncompressibleProblem` → `PressureBasedProblem{IsCompressible}`.
+- Compressible SIMPLE / PIMPLE solvers (rhoSimpleFoam / rhoPimpleFoam
+  equivalents).
+- Wiring the rheology hook into existing momentum-equation face-viscosity
+  evaluation.
+- Least-squares gradient as an alternative to Green-Gauss.
+- MMS + published benchmark suite (lid-driven cavity Ghia, backward step
+  Driver-Seegmiller, RAE2822, ONERA M6, etc.).
+
 ## v2.3.0 — Stage 2 Real MPI Submesh Decomposition
 
 Third deliverable of the v3 industrial-grade roadmap. Replaces the

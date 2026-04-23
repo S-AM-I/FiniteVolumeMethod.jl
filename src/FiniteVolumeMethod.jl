@@ -289,6 +289,10 @@ export
     # Laplacian
     assemble_laplacian!,
     assemble_laplacian,
+    NonOrthoCorrectionMode,
+    NON_ORTHO_MINIMUM,
+    NON_ORTHO_ORTHOGONAL,
+    NON_ORTHO_OVER_RELAXED,
     # Divergence
     divergence!,
     divergence,
@@ -568,6 +572,27 @@ export
     compute_displacement!, update_mesh!, compute_mesh_flux!,
     ale_corrected_flux, solve_ale,
     compute_distance_diffusivity
+
+# --- Pressure-Based Thermo + Rheology (Stage 3) ---
+export
+    AbstractThermoModel,
+    IncompressibleThermo,
+    IdealGas,
+    BoussinesqThermo,
+    SutherlandGas,
+    SutherlandViscosity,
+    density_at,
+    viscosity_at,
+    cp_at,
+    beta_at,
+    is_compressible,
+    # Rheology
+    AbstractRheology,
+    NewtonianRheology,
+    PowerLawRheology,
+    BirdCarreauRheology,
+    HerschelBulkleyRheology,
+    CassonRheology
 
 # --- MPI Parallelism (Phase 6 / Stage 2) ---
 export

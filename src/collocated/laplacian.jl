@@ -5,6 +5,25 @@
 # both constant and spatially varying diffusivity.
 #
 # Follows OpenFOAM `fvm::laplacian(gamma, phi)` semantics.
+#
+# Non-orthogonal correction modes (Stage 3c, Jasak 1996 Ch. 4):
+#   NON_ORTHO_MINIMUM    — E = (S·d̂) d̂; smallest |E|, gentlest implicit term.
+#   NON_ORTHO_ORTHOGONAL — E = |S| d̂;     fixed magnitude.
+#   NON_ORTHO_OVER_RELAXED — E = |S|² / (S·d̂) · d̂; largest |E|, best
+#                             convergence on skewed meshes (OpenFOAM default).
+#
+# The over-relaxed variant increases the implicit orthogonal coefficient
+# by a factor 1/cosθ (θ = angle between S_f and d̂), which accelerates
+# convergence of the iterative non-orthogonal correction on non-orthogonal
+# meshes. All variants converge to the same continuous Laplacian.
+
+"""
+    NonOrthoCorrectionMode
+
+Selector for the implicit-vs-explicit split of the face flux in
+`assemble_laplacian!`. See file header for details.
+"""
+@enum NonOrthoCorrectionMode NON_ORTHO_MINIMUM NON_ORTHO_ORTHOGONAL NON_ORTHO_OVER_RELAXED
 
 # ── Core assembly ────────────────────────────────────────────────────
 
@@ -47,6 +66,7 @@ function assemble_laplacian!(
         bcs::Dict{Symbol, <:AbstractBoundaryCondition};
         non_ortho_correction::Bool = false,
         grad_phi::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
+        correction_mode::NonOrthoCorrectionMode = NON_ORTHO_OVER_RELAXED,
     ) where {Dim, T}
     nf = size(mesh.face_cells, 2)
 
@@ -62,11 +82,14 @@ function assemble_laplacian!(
             # Diffusivity at face: harmonic mean for variable gamma
             gamma_f = _face_diffusivity(gamma, mesh, f)
 
-            # Orthogonal flux coefficient
-            # |S_f · d̂| / |d| approximation for the orthogonal part
+            # Implicit / explicit split of S_f along d̂ (Jasak 1996).
             d_hat = d_vec / d_mag
+            S_mag2 = dot(S_f, S_f)
             S_dot_d = dot(S_f, d_hat)
-            flux_coeff = gamma_f * S_dot_d / d_mag
+
+            # Magnitude of the implicit component |E| chosen by mode.
+            E_mag = _non_ortho_E_magnitude(correction_mode, S_mag2, S_dot_d)
+            flux_coeff = gamma_f * E_mag / d_mag
 
             # Implicit contribution: flux_coeff * (φ_N - φ_P)
             add_face_coeffs_PN!(
@@ -74,14 +97,14 @@ function assemble_laplacian!(
                 flux_coeff, -flux_coeff, -flux_coeff, flux_coeff,
             )
 
-            # Explicit non-orthogonal correction
+            # Explicit non-orthogonal correction using T_f = S_f - E_f.
+            # Only applied if caller supplies a current gradient estimate.
             if non_ortho_correction && grad_phi !== nothing
                 w = face_weight(mesh, f)
                 grad_f = w * grad_phi[P] + (one(T) - w) * grad_phi[N]
-                # Non-orthogonal correction vector: S_f - (S_f·d̂)*d̂
-                S_ortho = S_dot_d * d_hat
-                S_non_ortho = S_f - S_ortho
-                correction = gamma_f * dot(grad_f, S_non_ortho)
+                E_vec = E_mag * d_hat
+                T_vec = S_f - E_vec
+                correction = gamma_f * dot(grad_f, T_vec)
                 eq.b[P] -= correction
                 eq.b[N] += correction
             end
@@ -92,6 +115,17 @@ function assemble_laplacian!(
     end
 
     return nothing
+end
+
+@inline function _non_ortho_E_magnitude(mode::NonOrthoCorrectionMode, S_mag2, S_dot_d)
+    if mode === NON_ORTHO_MINIMUM
+        return S_dot_d
+    elseif mode === NON_ORTHO_ORTHOGONAL
+        return sqrt(S_mag2)
+    else  # NON_ORTHO_OVER_RELAXED
+        # Avoid division by zero on perfectly-transverse faces
+        return S_mag2 / max(S_dot_d, sqrt(S_mag2) * 1.0e-12)
+    end
 end
 
 # ── Face diffusivity ─────────────────────────────────────────────────
