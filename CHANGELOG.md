@@ -1,5 +1,57 @@
 # Changelog
 
+## v3.6.0 — Rhie-Chow Interpolation V&V — Phase 0 Complete
+
+Completes the Phase 0 operator V&V suite. All four core collocated
+operators — Laplacian, gradient, divergence, Rhie-Chow — are now
+verified against manufactured solutions or analytical invariants.
+
+### Rhie-Chow three invariants (test/v_and_v_rhie_chow.jl)
+
+1. **Linear-pressure identity**: for an affine `p(x, y) = a + bx + cy`,
+   the compact face-normal gradient equals the interpolated
+   cell-center gradient and the Rhie-Chow correction is zero. Corrected
+   flux equals `U · S` to machine precision.
+
+2. **Constant-pressure preservation**: constant `p = 1.234` yields
+   zero correction regardless of velocity. Face flux equals plain
+   linear-interpolated `U · S` to machine precision.
+
+3. **Checkerboard suppression**: for a pressure field with pattern
+   `p_{i,j} = (-1)^(i+j)`, the compact face-normal gradient sees the
+   checkerboard oscillation but the interpolated gradient does not.
+   Rhie-Chow correction is > 10⁻³, confirming the operator suppresses
+   the pressure checkerboard exactly as designed by Rhie & Chow (1983).
+
+All 3 gates pass. Runtime < 0.5 s.
+
+### Phase 0 operator verification status
+
+All four operators now carry publishable-grade machine-checked evidence:
+
+| Operator | File | Verification | Evidence |
+|----------|------|--------------|----------|
+| Laplacian | `src/collocated/laplacian.jl` | MMS O(h²) | v3.4 |
+| Gradient | `src/collocated/gradient.jl` | MMS O(h²) interior | v3.5 |
+| Divergence | `src/collocated/divergence.jl` | div(div-free) ≡ 0 | v3.5 |
+| Rhie-Chow | `src/collocated/interpolation.jl` | 3 analytical invariants | v3.6 |
+
+This closes the `collocated_operators` entry in
+`validation/manifest.toml` from "smoke-tested" to
+"publishable-benchmark-verified" status for the Cartesian case. The
+manifest promotion to `stable` is blocked only on a non-Cartesian
+(skewed-mesh) Laplacian MMS, a v3.7+ follow-up.
+
+### Deferred to v3.7+
+
+- Skewed-mesh Laplacian MMS (exercises over-relaxed correction from
+  Stage 3c).
+- Promote `collocated_operators` in `validation/manifest.toml`.
+- Ghia Re=400 (80×80, stable regime).
+- Smoothed-lid cavity (SpatialVelocityBC full integration).
+- Begin promotion work for `incompressible_ns`: Poiseuille MMS,
+  TGV decay.
+
 ## v3.5.0 — Gradient + Divergence Operator MMS
 
 Completes the Phase 0 operator V&V suite started in v3.4.
