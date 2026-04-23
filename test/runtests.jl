@@ -287,6 +287,9 @@ end
     @testset verbose = true "V&V: Species index lookup" begin
         safe_include("v_and_v_species_index.jl")
     end
+    @testset verbose = true "V&V: find_nearest_cell" begin
+        safe_include("v_and_v_cell_lookup.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
