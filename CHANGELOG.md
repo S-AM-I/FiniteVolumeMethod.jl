@@ -1,5 +1,65 @@
 # Changelog
 
+## v3.39.0 — LES Filter Width + DynamicSmagorinsky (third `turbulence_les`)
+
+Third convergence-verified benchmark for `turbulence_les`,
+joining Smagorinsky (v3.19) and WALE (v3.28). Covers the
+shared `compute_filter_width` primitive used by every LES model
+plus DynamicSmagorinsky realizability invariants.
+
+### test/v_and_v_filter_width.jl
+
+Six testsets (2620 gates, ~0.5 s):
+
+1. **Δ = 1/N on uniform 2D Cartesian.** At N ∈ {4, 8, 16, 32},
+   every cell matches the analytical Δ = V^(1/2) to rtol 1e-12.
+
+2. **Anisotropic Cartesian Δ = √((Lx/Nx)·(Ly/Ny)).** Three aspect
+   ratios verified identically.
+
+3. **Shared Δ across all LES models.** Smagorinsky, WALE,
+   DynamicSmagorinsky construct `delta` from the same primitive;
+   all 144 cells per model agree exactly.
+
+4. **DynamicSmagorinsky zero velocity ⇒ ν_t = 0.**
+
+5. **Uniform velocity ⇒ ν_t = 0** (|S| = 0).
+
+6. **Realizability under shear.** ν_t ≥ 0 at every cell and
+   bounded < 1e-3 on U = (A·y, 0) with A = 2, N = 16.
+
+### `turbulence_les` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Smagorinsky ν_t = (Cs·Δ)²·|S| algebra   | v3.19 | `test/v_and_v_smagorinsky.jl`    |
+| WALE zero-shear design property          | v3.28 | `test/v_and_v_wale.jl`           |
+| Filter width + DynamicSmagorinsky        | v3.39 | `test/v_and_v_filter_width.jl`   |
+
+### Stable-review tally
+
+Ten provisional features now meet the 3-benchmark floor:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 3 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+| `radiation`               | 3 |
+| `multiphase_vof`          | 3 |
+| `combustion`              | 3 |
+| `turbulence_rans`         | 3 |
+| `turbulence_les`          | 3 |
+
+One remaining provisional feature at 2 benchmarks: `postprocessing`.
+
+### Verification
+
+No manifest tier change. 2620 new gates wired into default
+runtests.jl under `V&V: LES filter width`.
+
 ## v3.38.0 — k-ω Wilcox Model (third `turbulence_rans` benchmark)
 
 Third convergence-verified benchmark for `turbulence_rans`,
