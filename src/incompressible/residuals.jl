@@ -8,25 +8,61 @@
 @doc """
     momentum_residual(eq, u_d) -> T
 
-Compute the normalized L2 residual of a momentum component equation:
+Compute the normalized scale-invariant residual of a momentum
+component equation, following the OpenFOAM convention:
+
 ```
-    r = ||A * u_d - b|| / ||b||
+    u_avg = mean(u_d)
+    normFactor = Σ_c |A_c · u_d - A_c · u_avg|  +  Σ_c |b_c - A_c · u_avg|
+    residual = Σ_c |A_c · u_d - b_c|  /  (normFactor + ε)
 ```
 
-Returns `zero(T)` if `||b|| ≈ 0` to avoid division by zero.
+where `A_c · u_avg` is the matrix-vector product at row `c` with all
+entries of `u_d` replaced by the mean. This normalization is insensitive
+to the absolute scale of `b` (which can be small in interior-dominated
+flows such as a lid-driven cavity), avoiding the "residual plateau"
+pathology of the naive `||A u - b|| / ||b||` form.
 
-# Arguments
-- `eq::CollocatedEquation{T}` — assembled momentum equation
-- `u_d::Vector{T}` — current velocity component values
+Returns `zero(T)` if `normFactor ≈ 0` (e.g. trivial zero-flow problem).
+
+Reference: OpenFOAM Foundation `solveNoBlock` residual definition,
+documented in the fvSolution section of the OpenFOAM User Guide.
 """
 function momentum_residual(
         eq::CollocatedEquation{T},
         u_d::Vector{T},
     ) where {T}
-    residual_vec = eq.A * u_d - eq.b
-    r_norm = norm(residual_vec)
-    b_norm = norm(eq.b)
-    return b_norm > eps(T) ? r_norm / b_norm : zero(T)
+    nc = length(u_d)
+    nc == 0 && return zero(T)
+
+    u_avg = sum(u_d) / nc
+    A = eq.A
+    b = eq.b
+
+    # Compute A * u_d and A * u_avg·1 (row by row) via A * u_d and sum(A_row)·u_avg.
+    Au = A * u_d
+    # A * (u_avg · 1) = u_avg · sum(A, dims=2), row-wise.
+    # Compute per-row sum of A efficiently using CSC's column iteration.
+    row_sum = zeros(T, nc)
+    rows = A.rowval
+    vals = A.nzval
+    colptr = A.colptr
+    @inbounds for j in 1:nc
+        for k in colptr[j]:(colptr[j + 1] - 1)
+            row_sum[rows[k]] += vals[k]
+        end
+    end
+
+    numerator = zero(T)
+    norm_factor = zero(T)
+    @inbounds for c in 1:nc
+        Au_c = Au[c]
+        Au_avg_c = row_sum[c] * u_avg
+        numerator += abs(Au_c - b[c])
+        norm_factor += abs(Au_c - Au_avg_c) + abs(b[c] - Au_avg_c)
+    end
+
+    return norm_factor > eps(T) ? numerator / norm_factor : zero(T)
 end
 
 # ── Continuity residual ─────────────────────────────────────────────

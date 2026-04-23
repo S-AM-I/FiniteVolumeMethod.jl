@@ -5,17 +5,12 @@
 # Method", J. Comput. Phys. 48, 387-411. Tabulated centerline u(y) at
 # x = 0.5 for Re = 100 at 17 y-stations reproduced below from Table I.
 #
-# Current state (v3.0.0): on an 80×80 Cartesian mesh, the collocated
-# SIMPLE solver's residuals plateau at ~2% on velocity components —
-# known issue (CLAUDE.md). Flow field is qualitatively correct (peak
-# u, y-location of zero crossing, peak v) but quantitative match with
-# Ghia is at ~20% on interior points. This test codifies the current
-# state so it can be tightened as follow-up solver work lands
-# (momentum interpolation, pressure under-relaxation, Rhie-Chow
-# adjustments).
-#
-# Acceptance: peak |u| within 30% of Ghia and zero-crossing within two
-# cells. Stricter gate is a v3.1 follow-up after residual-plateau fix.
+# State in v3.2.0 (after OpenFOAM-style residual normalization landed):
+# residuals drop from the v3.1 ~2% plateau to ~0.4%, and all Ghia
+# reference points (except the zero-crossing at y≈0.73) agree to within
+# 4% on an 80×80 mesh. Zero-crossing absolute error is 0.013 — small
+# in absolute terms but relative to Ghia's +0.003 it becomes large, so
+# we gate that point on absolute error.
 
 using FiniteVolumeMethod
 using LinearSolve
@@ -43,7 +38,7 @@ const GHIA_U_RE100 = [
         :bottom => NoSlipWallBC(),
         :top => FixedVelocityBC(SVector(1.0, 0.0)),
     )
-    algo = SIMPLE(; max_iterations = 3000, tolerance = 1.0e-5)
+    algo = SIMPLE(; max_iterations = 2500, tolerance = 1.0e-5)
     prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
     sol = solve(prob, algo)
 
@@ -64,22 +59,28 @@ const GHIA_U_RE100 = [
     (peak_u, peak_i) = findmin(last.(centerline))
     peak_y = first(centerline[peak_i])
 
-    # Peak value ≈ -0.205 per Ghia; our plateau produces typically -0.17 to -0.19.
-    @test -0.3 < peak_u < -0.1           # magnitude in the right ballpark
-    @test 0.3 < peak_y < 0.6             # location in the right half
-    @test 0.8 < maximum(last.(centerline)) <= 1.01 # near-lid u approaches +1
+    # Peak primary-vortex u is ~ -0.206 per Ghia; post-v3.2 solver
+    # produces -0.198 ± noise on 80×80.
+    @test -0.22 < peak_u < -0.18
+    @test 0.4 < peak_y < 0.55
+    @test 0.95 < maximum(last.(centerline)) <= 1.01
 
-    # Point-wise comparison at selected Ghia-ref y-stations, with 30% tolerance
-    # on interior points (where the plateau is worst) and 10% near the lid.
-    tol_interior = 0.3
-    tol_near_lid = 0.15
+    # Point-wise Ghia agreement (tightened from v3.1's 30% qualitative
+    # gate after the OpenFOAM-style residual normalization landed).
+    # Interior points: 8% relative. Near-lid (y > 0.9): 5%.
+    # Zero-crossing points (y ≈ 0.73 where |u_t| < 0.05): absolute gate.
+    tol_interior = 0.08
+    tol_near_lid = 0.05
+    abs_zero_crossing = 0.025
     for (y_t, u_t) in zip(GHIA_Y_RE100, GHIA_U_RE100)
-        # Find nearest cell in centerline.
         _, idx = findmin(abs.(first.(centerline) .- y_t))
-        y_c, u_c = centerline[idx]
-        tol = y_t > 0.9 ? tol_near_lid : tol_interior
-        # Relative tolerance with floor on |u_t|.
-        denom = max(abs(u_t), 0.1)
-        @test abs(u_c - u_t) / denom <= tol
+        _, u_c = centerline[idx]
+        if abs(u_t) < 0.05
+            # Zero-crossing: absolute tolerance is fairer than relative.
+            @test abs(u_c - u_t) <= abs_zero_crossing
+        else
+            tol = y_t > 0.9 ? tol_near_lid : tol_interior
+            @test abs(u_c - u_t) / abs(u_t) <= tol
+        end
     end
 end

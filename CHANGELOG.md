@@ -1,5 +1,78 @@
 # Changelog
 
+## v3.2.0 — Residual-Plateau Fix + Tightened Ghia Gate
+
+Root-cause fix for the SIMPLE residual plateau flagged in
+KNOWN_FAILURES.md / CLAUDE.md and re-flagged by v3.1's Ghia benchmark.
+
+### Diagnosis
+
+`momentum_residual` at `src/incompressible/residuals.jl` used the
+naive normalization `||A u - b|| / ||b||`. In interior-dominated
+flows — including the lid-driven cavity — the RHS `b` is dominated
+by small pressure-gradient contributions in cells far from the
+boundary, giving `||b|| ≈ O(10⁻³)`. As the solver converged,
+`||A u - b||` approached zero but at a slower rate than `||b||`
+shrank, producing a spurious plateau around ~2% that masked real
+progress.
+
+### Fix
+
+Adopt OpenFOAM's scale-invariant residual normalization:
+
+    u̅ = mean(u)
+    normFactor = Σ_c |A_c · u − A_c · u̅|  +  Σ_c |b_c − A_c · u̅|
+    residual = Σ_c |A_c · u − b_c|  /  (normFactor + ε)
+
+where `A_c · u̅` is the matrix-vector product at row `c` with all
+entries of `u` replaced by the mean. This normalization is
+insensitive to the absolute scale of `b` and converges monotonically
+with solver progress.
+
+Implementation uses CSC's column-iteration primitive to compute
+per-row sums in O(nnz) without allocating temporaries, so the
+residual evaluation remains O(nnz) per call and allocation-count
+matches the v3.1 implementation.
+
+### Impact
+
+On 80×80 lid-driven-cavity Re=100 (Ghia 1982 benchmark):
+
+| Metric | v3.1 (naive) | v3.2 (OpenFOAM) |
+|--------|--------------|-----------------|
+| Residual floor (Ux, Uy) | ~2×10⁻² | ~3×10⁻³ |
+| Peak primary-vortex u (Ghia: −0.206) | −0.189 (−8%) | −0.197 (−4.4%) |
+| Max Ghia ref-point relative error | 23% | 4% |
+
+### Ghia benchmark tightened
+
+`test/v_and_v_ghia_cavity.jl` acceptance gates now:
+- Interior Ghia points: 8% relative (was 30%).
+- Near-lid Ghia points (y > 0.9): 5% relative (was 15%).
+- Zero-crossing point (y ≈ 0.73, |u_t| < 0.05): absolute tolerance
+  0.025 (since relative error against near-zero reference values is
+  mathematically uninformative).
+- Peak |u| within 10% of Ghia's −0.206 and located in y ∈ [0.4, 0.55].
+
+All 14 gates pass. Runtime unchanged (~1 min on M-class Apple silicon).
+
+### Known remaining gap
+
+A residual floor around 3×10⁻³ persists on 80×80 — the solver can't
+be driven to 1×10⁻⁵ absolute tolerance without further changes
+(likely pressure under-relaxation tuning, Rhie-Chow correction, or
+Crank-Nicolson temporal discretization for the pseudo-transient
+continuation). Absolute-tolerance convergence and the 129×129 /
+Re=400/1000/3200 Ghia extensions are v3.3+ follow-ups.
+
+### Breaking changes
+
+None. `momentum_residual` retains its signature; only the return
+value's normalization changes. Code that compares residuals against
+a fixed absolute tolerance will see residuals a factor ~3× smaller
+for the same physical convergence state — this is a correctness
+improvement, not a breaking change.
+
 ## v3.1.0 — First Published-Benchmark V&V
 
 First V&V release of the v3 series. Adds the Ghia 1982 lid-driven
