@@ -1484,7 +1484,8 @@ limitations = [
   "Boundedness limiter is clip+redistribute, not face-based MULES.",
   "No contact angle model for wall-interface interaction.",
   "Published benchmarks (Martin-Moyce dam break, Hysing rising bubble, Zalesak rotating slot) are a v3.17+ follow-up.",
-  "Evidence: `test/v_and_v_vof_translation.jl` — (1) total mass drift < 1e-8 over 25 steps, < 1e-12 at mid-run (LU-precision conservation saturating as cond-number × eps accumulates); (2) α ∈ [0, 1] strict at every step after clip_alpha!; (3) center-of-mass translates with x_COM(T) − x_COM(0) matching U·T to O(h); lateral drift < 1e-10.",
+  "Evidence #1: `test/v_and_v_vof_translation.jl` — (1) total mass drift < 1e-8 over 25 steps, < 1e-12 at mid-run; (2) α ∈ [0, 1] strict at every step after clip_alpha!; (3) center-of-mass translates with x_COM(T) − x_COM(0) matching U·T to O(h); lateral drift < 1e-10.",
+  "Evidence #2 (v3.24): `test/v_and_v_vof_planewave.jl` — plane-wave α = 0.5 + 0.4·sin(2πx/L) advected at u = 1 for t = 0.25 on an Nx=200 × 10 mesh. (1) amplitude preserved to ≥ 50 % without overshoot, peak-location phase error < 5·h (upwind is non-dispersive); (2) L¹ interior error decreases monotonically at Nx ∈ {100, 200, 400} with observed rates > 0.6 (first-order upwind on smooth sine); (3) strict max-principle: α ∈ [0.1, 0.9] everywhere (TVD under upwind).",
 ]
 
 # ── Phase 9: Radiation ─────────────────────────────────────────────

@@ -1,5 +1,46 @@
 # Changelog
 
+## v3.24.0 — VOF Plane Wave (second `multiphase_vof` benchmark)
+
+Second independent benchmark for `multiphase_vof`, joining disc
+translation (v3.16). Verifies accuracy of the alpha-transport
+solver on a smooth wave — the primary test for advection-scheme
+dissipation and dispersion.
+
+### test/v_and_v_vof_planewave.jl
+
+Problem: α₀(x) = 0.5 + 0.4·sin(2π·x/L) advected at U = 1 for
+t = 0.25 on a 200 × 10 mesh. C_α = 0, Neumann BCs.
+
+Three testsets (8 gates, ~1.7 s):
+
+1. **Amplitude + phase.** Peak-to-peak amplitude of the
+   numerical wave > 0.5 × initial (upwind dissipation bound)
+   and < 1.02 × initial (no overshoot). Peak-location phase
+   error < 5 · h (upwind is non-dispersive).
+
+2. **L¹ error rate.** Interior L¹ error at Nx ∈ {100, 200, 400}
+   (CFL ≈ 0.5 held constant) decreases monotonically with
+   observed rates > 0.6 — first-order upwind on a smooth sine
+   bounded below textbook 1.0 by the zero-gradient inflow BC.
+
+3. **Strict max-principle.** Upwind on linear advection is
+   TVD; α ∈ [0.1, 0.9] strictly at every cell at final time
+   (original range is preserved).
+
+### `multiphase_vof` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Disc translation (mass + COM) | v3.16 | `test/v_and_v_vof_translation.jl` |
+| Plane-wave advection           | v3.24 | `test/v_and_v_vof_planewave.jl`    |
+| Martin-Moyce dam break         | ≥ v3.25 | (pending)                         |
+
+### Verification
+
+No manifest tier change. All pre-existing tests pass. 8 new
+gates wired into default runtests.jl under `V&V: VOF plane wave`.
+
 ## v3.23.0 — k-ε Log-Layer Equilibrium (second `turbulence_rans` benchmark)
 
 Second independent benchmark for `turbulence_rans`, joining DHIT
