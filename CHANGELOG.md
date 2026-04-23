@@ -1,5 +1,49 @@
 # Changelog
 
+## v3.25.0 — P1 Radiative Equilibrium (second `radiation` benchmark)
+
+Second independent benchmark for `radiation`, joining cold-slab
+attenuation (v3.15). Verifies the emission + Marshak BC pathway
+through the canonical radiative-equilibrium invariant.
+
+### test/v_and_v_p1_equilibrium.jl
+
+In a cavity with uniform medium temperature T_m matching all wall
+temperatures, the P1 equation admits the exact solution
+
+    G ≡ 4 σ T_m⁴
+
+regardless of absorption coefficient, because ∇G ≡ 0 makes both
+the Laplacian and the Marshak-wall gradient term vanish.
+
+Three testsets (1206 gates, ~0.4 s):
+
+1. **G ≡ 4σT⁴ invariant.** At T_m = 500 K with a ∈ {0.1, 1, 10},
+   every interior cell matches the analytical equilibrium to
+   rtol 1e-2. > 50 interior cells checked per a value on a
+   32 × 32 mesh.
+
+2. **Uniform solution.** The interior spread
+   (max − min) / mean < 1e-4 — no spurious gradient is generated
+   by the closed-cavity Marshak BC.
+
+3. **T⁴ scaling.** Temperatures 300 / 600 / 1200 K ⇒ G ratios
+   should be 16 = 2⁴. Verified to rtol 5e-3 at both halving
+   transitions.
+
+### `radiation` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| P1 slab cold-medium attenuation | v3.15 | `test/v_and_v_p1_slab.jl`       |
+| P1 radiative equilibrium         | v3.25 | `test/v_and_v_p1_equilibrium.jl`|
+| fvDOM angular quadrature         | ≥ v3.26 | (pending)                     |
+
+### Verification
+
+No manifest tier change. 1206 new gates wired into default
+runtests.jl under `V&V: P1 radiative equilibrium`.
+
 ## v3.24.0 — VOF Plane Wave (second `multiphase_vof` benchmark)
 
 Second independent benchmark for `multiphase_vof`, joining disc
