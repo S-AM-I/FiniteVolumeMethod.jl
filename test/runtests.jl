@@ -305,6 +305,9 @@ end
     @testset verbose = true "V&V: Q_gen volumetric heat" begin
         safe_include("v_and_v_qgen.jl")
     end
+    @testset verbose = true "V&V: SST blending algebra" begin
+        safe_include("v_and_v_sst_blend.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
