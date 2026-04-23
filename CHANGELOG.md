@@ -1,5 +1,37 @@
 # Changelog
 
+## v3.51.0 — Wall Quantities (fourth `postprocessing` benchmark)
+
+Fourth convergence-verified benchmark for `postprocessing`,
+joining vorticity + Q (v3.20), Courant + Q-sign (v3.30), and
+field statistics + TI (v3.40). Covers the wall-quantity
+primitives τ_w and q_w used for engineering quantities-of-interest.
+
+### test/v_and_v_wall_quantities.jl
+
+Five invariants (56 gates, ~0.2 s):
+
+1. **τ_w = 0 at zero velocity** at every face.
+2. **τ_w ∝ ν linear scaling** (rtol 1e-12).
+3. **τ_w direction tangential.** For U = (y, 0) on the :top
+   patch, τ_w[y] = 0 and τ_w[x] ≠ 0.
+4. **q_w = 0 under isothermal T_cell = T_wall.**
+5. **q_w sign (hot wall ⇒ q < 0) + k-linear scaling.**
+
+### `postprocessing` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Vorticity + Q on canonical flows   | v3.20 | `test/v_and_v_postprocessing.jl` |
+| Courant + Q-sign invariants         | v3.30 | `test/v_and_v_courant.jl`         |
+| Field statistics + TI               | v3.40 | `test/v_and_v_field_stats.jl`     |
+| Wall quantities (τ_w + q_w)         | v3.51 | `test/v_and_v_wall_quantities.jl` |
+
+### Verification
+
+No manifest tier change. 56 new gates wired into default
+runtests.jl under `V&V: Wall quantities`.
+
 ## v3.50.0 — CHT Interface Flux (fourth `conjugate_heat_transfer` benchmark)
 
 Fourth convergence-verified benchmark for
