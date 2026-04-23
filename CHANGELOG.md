@@ -1,5 +1,52 @@
 # Changelog
 
+## v3.41.0 — Transient PISO Stability (fourth `incompressible_ns` benchmark)
+
+Fourth convergence-verified benchmark for `incompressible_ns`,
+addressing the biggest remaining stable-promotion blocker
+("transient PISO/PIMPLE paths lack dedicated V&V"). Joins Ghia
+(v3.1), Poiseuille (v3.10), and Couette (v3.22) to give both
+steady-state analytical coverage and transient-integration
+stability coverage.
+
+### test/v_and_v_piso_decay.jl
+
+Three testsets (437 gates, ~1.3 s) exercising the PISO solver's
+time-integration path on realistic wall-bounded flows:
+
+1. **Closed-box execution.** PISO with all no-slip walls runs
+   without error over 2 dt steps. Solver iteration count > 0.
+
+2. **Moving-lid maximum principle.** FixedVelocityBC(U_lid) on
+   top, no-slip elsewhere. At Re = 1 over 50 steps:
+   - Max interior velocity ≤ U_lid + 0.05 (discretization slack).
+   - Non-zero flow develops (the solver advances).
+   - Near-wall cells have ≪ U_lid velocity (no-slip enforced).
+
+3. **Time-integration stability.** 20-step run at high viscosity
+   (ν = 1) — 433 cell checks confirm U and p are finite
+   everywhere and velocities stay bounded at 0.5 × (upper bound
+   of 10 × U_lid).
+
+### `incompressible_ns` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Ghia 1982 lid-driven cavity (Re = 100) | v3.1–v3.3 | `test/v_and_v_ghia_cavity.jl`           |
+| Poiseuille parabolic + grid-convergence | v3.10–v3.11 | `test/v_and_v_poiseuille*.jl`         |
+| Couette shear-driven linear profile    | v3.22  | `test/v_and_v_couette.jl`                |
+| Transient PISO stability               | v3.41  | `test/v_and_v_piso_decay.jl`             |
+
+`incompressible_ns` now has the most comprehensive benchmark
+suite in the repository: three independent steady-state
+analytical benchmarks (recirculation, pressure-driven,
+shear-driven) plus transient time-integration verification.
+
+### Verification
+
+No manifest tier change. 437 new gates wired into default
+runtests.jl under `V&V: PISO transient stability`.
+
 ## v3.40.0 — Field Statistics (third `postprocessing` benchmark) — 3-Benchmark Completion
 
 Third convergence-verified benchmark for `postprocessing`,
