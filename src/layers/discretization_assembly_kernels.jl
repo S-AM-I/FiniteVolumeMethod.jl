@@ -135,6 +135,14 @@ include("../coupling/coupled_solve.jl")
 # Depends on Phase 0 collocated operators from Layer 1.
 include("../pressure_based/thermo_models.jl")
 include("../pressure_based/rheology.jl")
+# Stage 6: greenfield physics modules. Ordered before incompressible/types
+# to keep all physics-trait supertypes available when IncompressibleProblem
+# and its helpers first refer to them.
+include("../mrf/types.jl")
+include("../porous/types.jl")
+include("../cavitation/types.jl")
+include("../aeroacoustics/fwh.jl")
+include("../population_balance/qmom.jl")
 include("../incompressible/types.jl")
 include("../incompressible/boundary_conditions.jl")
 include("../incompressible/momentum.jl")

@@ -599,6 +599,44 @@ export mules_limit_flux!
 # --- Stage 5d GCL verification ---
 export verify_gcl
 
+# --- Stage 6a Moving Reference Frame ---
+export
+    AbstractMRFZone,
+    RotationalMRFZone,
+    angular_velocity_vector,
+    mrf_momentum_source,
+    mrf_momentum_source_2d_planar
+
+# --- Stage 6c Porous media ---
+export
+    AbstractPorousModel,
+    DarcyPorous,
+    DarcyForchheimerPorous,
+    OrthotropicPorous,
+    porous_momentum_source
+
+# --- Stage 6d Cavitation ---
+export
+    AbstractCavitationModel,
+    KunzCavitation,
+    SchnerrSauerCavitation,
+    MerkleCavitation,
+    cavitation_source
+
+# --- Stage 6f Aeroacoustics ---
+export
+    FWHSurface,
+    FWHObserver,
+    curle_dipole_pressure,
+    fwh_monopole_pressure
+
+# --- Stage 6g Population balance moment methods ---
+export
+    qmom_recover_abscissae_weights,
+    qmom_moment_source_growth,
+    qmom_moment_source_aggregation,
+    qmom_moment_source_breakage
+
 # --- MPI Parallelism (Phase 6 / Stage 2) ---
 export
     distribute_mesh,
