@@ -1444,19 +1444,21 @@ limitations = [
 
 [[features]]
 feature = "turbulence_les"
-maturity = "experimental"
-validation = "smoke_tested"
-role = "research_tooling"
+maturity = "provisional"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
-summary = "LES (Smagorinsky, WALE, dynamic Smagorinsky) and hybrid (DDES) turbulence models for incompressible collocated solver."
+summary = "LES (Smagorinsky, WALE, dynamic Smagorinsky) and hybrid (DDES) turbulence models for incompressible collocated solver. Smagorinsky ν_t formula verified against analytical values on prescribed velocity fields (v3.19)."
 limitations = [
-  "Experimental — validated via smoke tests only; decaying turbulence benchmark pending.",
+  "Provisional — only `Smagorinsky` eddy-viscosity algebra ν_t = (C_s·Δ)²·|S| is convergence-verified against its analytical values under prescribed velocity fields. `WALE`, `DynamicSmagorinsky`, and `DDES` models remain smoke-tested.",
   "Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form.",
   "DDES only wraps Spalart-Allmaras; SST-based DDES deferred.",
+  "Published benchmarks (DHIT decay vs. Comte-Bellot–Corrsin, periodic channel Reτ = 395 with WMLES/WRLES, periodic hills) are a v3.20+ follow-up.",
+  "Evidence: `test/v_and_v_smagorinsky.jl` — (1) ν_t ≡ 0 at zero velocity (round-off); (2) uniform interior ν_t = (C_s·Δ)²·A for U = (A·y, 0) matches analytical to rtol 1e-8 on a 16×16 mesh; (3) quadratic scaling ν_t ∝ C_s² verified at three C_s values to rtol 1e-10; (4) Δ² mesh-refinement scaling verified (coarse→fine ratio = 0.25 to rtol 1e-8).",
 ]
 
 # ── Phase 7: Multiphase VOF ───────────────────────────────────────

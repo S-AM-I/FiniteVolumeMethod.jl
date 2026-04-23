@@ -98,6 +98,9 @@ end
     @testset verbose = true "V&V: k-ε DHIT" begin
         safe_include("v_and_v_kepsilon_dhit.jl")
     end
+    @testset verbose = true "V&V: Smagorinsky LES" begin
+        safe_include("v_and_v_smagorinsky.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
