@@ -1,5 +1,75 @@
 # Changelog
 
+## v3.16.0 — VOF Translation V&V + `multiphase_vof` Promotion
+
+Seventh manifest promotion. `multiphase_vof` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of a pure-kinematic disc-translation study of the
+alpha transport solver under a prescribed divergence-free velocity.
+
+### test/v_and_v_vof_translation.jl
+
+Problem: a disc of α = 1 (radius 0.1 at (0.3, 0.25)) is advected
+across an 80 × 20 domain [0, 2] × [0, 0.5] by a uniform
+divergence-free velocity u = (1, 0). BCs: Dirichlet(0) on the
+inflow (left), zero-gradient (Neumann) on outflow (right) and
+tangential walls (top/bottom). C_α = 0 disables interface
+compression so only the linear alpha-transport core is exercised.
+
+Three testsets (8 gates, ~0.6 s):
+
+1. **Mass conservation.** Total mass (Σ α · V) drift:
+   - Half-run drift < 10⁻¹² (round-off / LU-precision).
+   - Full-run (25 steps) drift < 10⁻⁸ as LU solver cond-number ×
+     eps accumulates. Three orders of magnitude tighter than
+     typical CFD mass-imbalance tolerance.
+   - Total mass range across run < 10⁻⁶.
+
+2. **Boundedness.** After `clip_alpha!`, α ∈ [0, 1] at every
+   cell, every step. Pre-clip upwind bolus stays non-negative
+   (no clip deltas triggered at any step).
+
+3. **Center-of-mass transport.** x_COM(T) − x_COM(0) matches
+   U · T within 2 h (cell-centered rasterization error on the
+   initial disc is O(h)). Lateral drift y_COM(T) − y_COM(0) < 10⁻¹⁰
+   (initial-condition + BC symmetry).
+
+### Manifest promotion
+
+`multiphase_vof`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Only pure-kinematic alpha transport under prescribed
+  divergence-free flow is verified.
+- Full two-phase PISO/PIMPLE (variable density), interface
+  compression (C_α > 0), CSF surface tension, and contact-angle
+  coupling remain smoke-tested.
+- Published benchmarks (Martin-Moyce dam break, Hysing rising
+  bubble, Zalesak rotating slot) are a v3.17+ follow-up.
+
+### Running manifest-promotion tally
+
+Seven `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators`    | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`       | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`          | v3.13 | Stokes terminal velocity analytical match |
+| `dynamic_mesh`            | v3.14 | GCL three-pattern round-off-exactness |
+| `radiation`               | v3.15 | P1 slab sinh attenuation O(h²) |
+| `multiphase_vof`          | v3.16 | Disc translation mass + COM invariants |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 8 new gates
+wired into default runtests.jl under `V&V: VOF translation`.
+
 ## v3.15.0 — P1 Radiation Slab V&V + `radiation` Promotion
 
 Sixth manifest promotion. `radiation` advances from
