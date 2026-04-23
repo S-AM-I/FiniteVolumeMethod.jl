@@ -122,6 +122,9 @@ end
     @testset verbose = true "V&V: Schiller-Naumann drag" begin
         safe_include("v_and_v_schiller_naumann.jl")
     end
+    @testset verbose = true "V&V: EDM combustion algebra" begin
+        safe_include("v_and_v_edm.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
