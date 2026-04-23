@@ -215,6 +215,9 @@ end
     @testset verbose = true "V&V: Laplacian mesh motion" begin
         safe_include("v_and_v_laplacian_motion.jl")
     end
+    @testset verbose = true "V&V: VOF compression flux" begin
+        safe_include("v_and_v_vof_compression.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
