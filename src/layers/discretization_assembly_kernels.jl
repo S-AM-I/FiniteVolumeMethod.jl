@@ -145,6 +145,7 @@ include("../incompressible/pimple.jl")
 
 # Linear Solver Infrastructure (Phase 5)
 # Must come after incompressible (provides _solve_linear) and before turbulence.
+include("../linear_solvers/abstract_operator.jl")
 include("../linear_solvers/preconditioners.jl")
 include("../linear_solvers/solver_config.jl")
 

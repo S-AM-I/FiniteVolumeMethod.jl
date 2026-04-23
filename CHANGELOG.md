@@ -1,5 +1,58 @@
 # Changelog
 
+## v2.2.0 — Stage 1 Structural Prerequisites
+
+Second deliverable of the v3 industrial-grade roadmap
+(`plans/i-m-not-sure-of-ticklish-squid.md`). Pure infrastructure release —
+zero numerical-behavior change — that unblocks every later stage.
+
+### Highlights
+
+- **1a** sparsity-pattern reuse: `SparsityPattern` + nzval-indexed assembly
+  (`add_diag!`, `add_face_coeffs_PN!`). 5.2× Laplacian assembly speedup on
+  40k-cell mesh; zero-allocation reset+assemble gate. Commit `dfedc61`.
+- **1b** cached operator context: `build_boundary_map` returns
+  `Vector{Int}` (was `Dict{Int,Int}`); `gradient!` takes optional scratch
+  + bmap for zero-allocation corrected passes. 5 inline Dict sites migrated.
+  Commit `2442e46`.
+- **1c** `BlockCollocatedEquation{T, NBlocks}` infrastructure for
+  Eulerian two-fluid and coupled momentum-energy. Commit `e9b5611`.
+- **1d** `AbstractFiniteVolumeMesh{Dim}` + `AbstractFVMBoundaryCondition`
+  umbrella types; generic `dim_of` / `n_cells` / `n_faces`. Every mesh and
+  BC family now dispatches through shared supertypes. Commit `ae992d8`.
+- **1e** named-entry `SciMLStructures.Tunable` schema
+  (`register_tunable!`, `tunable_schema`, `tunable_namedtuple`); replaces
+  the hardcoded length-5 positional indexing. Commit `0635d32`.
+- **1f** `AbstractFVMSolution` + `is_fvm_solution` trait; family-neutral
+  solution recognition without type piracy. Commit `d8e3114`.
+- **1g** field containers parameterized on `A <: AbstractVector` for
+  future GPU backends. Commit `be1f57b`.
+- **1h** `AbstractLinearOperator{T}` + `SparseMatrixLinearOperator` +
+  `MatrixFreeError` + `as_linear_operator`; interface for Stage 9e
+  matrix-free operators.
+
+### Verification
+
+- All 1266 tests pass at identical pass counts across collocated,
+  parabolic-vertex, hyperbolic, AMR, and governance suites.
+- 61 new gates in `test/sciml_contract_uniform.jl` and
+  `test/assembly_bench.jl` lock in the Stage 1 invariants.
+- Zero runtime-allocation gates on Laplacian assembly and gradient
+  computation (BenchmarkTools-backed).
+
+### Breaking changes
+
+Per the "break freely" posture:
+- `build_boundary_map(field)` return type: `Dict{Int, Int}` → `Vector{Int}`.
+  Call syntax `bmap[f]` unchanged; `haskey(bmap, f)` callers switch to
+  `bmap[f] != 0`.
+- `CollocatedScalarField`, `CollocatedVectorField`, `FaceFluxField` gain a
+  new trailing type parameter `A`. `CollocatedScalarField{T}` as a type
+  annotation still matches any container via UnionAll dispatch.
+- `AbstractFVMMesh{Dim, T}` now subtypes `AbstractFiniteVolumeMesh{Dim}`
+  (was `AbstractParabolicMesh`). No `::AbstractParabolicMesh` dispatch
+  sites exist in `src/`, so this is transparent in practice.
+
 ## v2.1.0 — Stage 0 Cleanup
 
 First deliverable of the v3 industrial-grade roadmap
