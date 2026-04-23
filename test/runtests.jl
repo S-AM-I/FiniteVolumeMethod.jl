@@ -77,6 +77,9 @@ end
     @testset verbose = true "V&V: Poiseuille channel" begin
         safe_include("v_and_v_poiseuille.jl")
     end
+    @testset verbose = true "V&V: Heat conduction analytical" begin
+        safe_include("v_and_v_heat_conduction.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
