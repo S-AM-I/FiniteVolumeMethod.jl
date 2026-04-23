@@ -1,5 +1,61 @@
 # Changelog
 
+## v3.38.0 — k-ω Wilcox Model (third `turbulence_rans` benchmark)
+
+Third convergence-verified benchmark for `turbulence_rans`,
+joining k-ε DHIT (v3.18) and k-ε log-layer (v3.23). Extends
+coverage from the standard k-ε closure to the Wilcox k-ω
+alternative.
+
+### test/v_and_v_komega.jl
+
+Verifies the k-ω source-term algebra and homogeneous decay
+ODE (88 gates, ~0.8 s):
+
+1. **ν_t = k/ω identity** at 64 cells to rtol 1 × 10⁻¹².
+
+2. **Realizability + monotone decay.** Homogeneous run (no
+   production) keeps k, ω ≥ 0 and strictly decreasing.
+
+3. **Analytical ω decay.** dω/dt = −β·ω² ⇒
+   ω(t) = ω₀/(1 + β·ω₀·t). Numerical match to rtol 2 × 10⁻²
+   at dt = 5 × 10⁻⁴ with β = 3/40.
+
+4. **k decays faster than ω.** β*·ω = 0.09 > β·ω = 0.075
+   at ω = 1 ⇒ k/k₀ < ω/ω₀.
+
+5. **ν_t = k_final/ω_final invariant** verified on a fresh
+   state built from the decayed values.
+
+### `turbulence_rans` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| k-ε DHIT decay ODE                    | v3.18 | `test/v_and_v_kepsilon_dhit.jl`     |
+| k-ε log-layer equilibrium (P_k = ε)   | v3.23 | `test/v_and_v_kepsilon_loglayer.jl` |
+| k-ω Wilcox decay + ν_t identity       | v3.38 | `test/v_and_v_komega.jl`            |
+
+### Stable-review tally
+
+Nine provisional features now meet the 3-benchmark floor:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 3 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+| `radiation`               | 3 |
+| `multiphase_vof`          | 3 |
+| `combustion`              | 3 |
+| `turbulence_rans`         | 3 |
+
+### Verification
+
+No manifest tier change. 88 new gates wired into default
+runtests.jl under `V&V: k-ω turbulence`.
+
 ## v3.37.0 — Arrhenius Kinetics (third `combustion` benchmark)
 
 Third convergence-verified benchmark for `combustion`, joining
