@@ -1,5 +1,81 @@
 # Changelog
 
+## v3.13.0 — Stokes Terminal-Velocity V&V + `lagrangian_dpm` Promotion
+
+Fourth manifest promotion. `lagrangian_dpm` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of an analytical Stokes-terminal-velocity study of
+the forward-Euler particle integrator under `StokesDrag`.
+
+### test/v_and_v_stokes_terminal.jl
+
+Problem: a single particle settles from rest in a quiescent fluid
+under uniform gravity. In the Stokes regime (Re_p ≪ 1) the equation
+of motion is
+
+    dv/dt = g - v/τ_p,   τ_p = ρ_p d² / (18 μ_f)
+
+with closed-form solution
+
+    v(t) = v_t (1 - exp(-t/τ_p)),   v_t = g τ_p.
+
+Test parameters (10 μm water droplet in air):
+
+    d = 10 μm,  ρ_p = 1000 kg/m³,  ρ_f = 1.2 kg/m³,
+    μ_f = 1.81 × 10⁻⁵ Pa·s,  g = 9.81 m/s²
+    ⇒  τ_p = 3.07 × 10⁻⁴ s,  v_t = 3.01 × 10⁻³ m/s
+    ⇒  Re_p(v_t) ≈ 2.0 × 10⁻³  (Stokes regime holds).
+
+Nine gates pass across three testsets:
+
+1. **Steady-state asymptote.** 500 sub-steps at Δt/τ_p = 0.01 drive
+   `v_final` within 1% of analytical `v_t (1 - e⁻⁵) ≈ 0.9933 v_t`.
+   No lateral drift (x-position and x-velocity preserve machine
+   precision). Descent is monotone and bounded by v_t.
+
+2. **Mid-transient accuracy.** After t = τ_p the vertical velocity
+   matches `v_t (1 - e⁻¹) = 0.632 v_t` to within 2%.
+
+3. **Euler first-order rate in Δt.** Δt/τ_p ∈ {0.04, 0.02, 0.01}
+   gives a monotone error decrease with observed orders in `[0.8, 1.3]`,
+   confirming the documented forward-Euler discretization.
+
+### Manifest promotion
+
+`lagrangian_dpm`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Only `StokesDrag` with forward-Euler integration is verified.
+  `SchillerNaumann` and spray-breakup models (`TABBreakup`,
+  `KHRTBreakup`) remain `smoke_tested`.
+- Buoyancy is not applied automatically — users must pass the
+  effective gravity `g·(1 - ρ_f/ρ_p)` if it matters. Documented
+  in the limitations block of the manifest entry.
+- Two-way PSI-cell coupling is smoke-tested only; a
+  momentum-source verification against an analytical pipe-flow
+  solution is a v3.14+ follow-up.
+
+### Running manifest-promotion tally
+
+Four `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators` | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`    | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`       | v3.13 | Stokes terminal velocity analytical match |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 9 new gates
+(~0.5 s runtime) wired into default runtests.jl under
+`V&V: Stokes terminal velocity`.
+
 ## v3.12.0 — Heat-Conduction V&V + `conjugate_heat_transfer` Promotion
 
 Third manifest promotion. `conjugate_heat_transfer` advances from
