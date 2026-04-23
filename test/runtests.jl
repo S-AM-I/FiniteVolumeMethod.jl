@@ -335,6 +335,9 @@ end
     @testset verbose = true "V&V: mesh quality report" begin
         safe_include("v_and_v_mesh_quality.jl")
     end
+    @testset verbose = true "V&V: temporal ddt assembly" begin
+        safe_include("v_and_v_ddt.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
