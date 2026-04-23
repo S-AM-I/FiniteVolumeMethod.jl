@@ -1,5 +1,48 @@
 # Changelog
 
+## v3.28.0 — WALE LES Model (second `turbulence_les` benchmark)
+
+Second independent benchmark for `turbulence_les`, joining
+Smagorinsky (v3.19). Verifies the qualitatively different
+invariants of the Wall-Adapting Local Eddy-viscosity model,
+specifically WALE's design feature of vanishing in pure-shear
+flows (unlike Smagorinsky).
+
+### test/v_and_v_wale.jl
+
+Five testsets (210 gates, ~0.4 s):
+
+1. **Zero velocity ⇒ ν_t ≡ 0** to atol 1 × 10⁻¹⁴.
+
+2. **Pure shear U = (A·y, 0) ⇒ ν_t = 0** — the defining WALE
+   property. Gradient tensor squares to zero deviatoric part,
+   so the S_d tensor vanishes. This is why WALE gives zero
+   ν_t at walls in channel flow without damping functions.
+
+3. **Solid-body rotation ⇒ ν_t = 0.** (g² is isotropic
+   −Ω²·I, traceless symmetric part vanishes.)
+
+4. **Non-trivial flow U = (x·y, 0).** Gradient tensor has
+   non-zero deviatoric square; ν_t > 0 and scales as Δ²
+   under mesh refinement (coarse→fine ratio ≈ 0.25 to
+   rtol 5 × 10⁻²).
+
+5. **Cw² scaling.** At three Cw values, ν_t ratios match
+   4.0 to rtol 1 × 10⁻¹⁰.
+
+### `turbulence_les` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Smagorinsky ν_t = (C_s·Δ)²·|S| | v3.19 | `test/v_and_v_smagorinsky.jl` |
+| WALE zero-shear invariants    | v3.28 | `test/v_and_v_wale.jl`        |
+| DHIT vs. Comte-Bellot–Corrsin  | ≥ v3.29 | (pending)                  |
+
+### Verification
+
+No manifest tier change. 210 new gates wired into default
+runtests.jl under `V&V: WALE LES model`.
+
 ## v3.27.0 — EDM Reaction-Rate Algebra (second `combustion` benchmark)
 
 Second independent benchmark for `combustion`, joining species

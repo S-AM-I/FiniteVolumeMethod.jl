@@ -125,6 +125,9 @@ end
     @testset verbose = true "V&V: EDM combustion algebra" begin
         safe_include("v_and_v_edm.jl")
     end
+    @testset verbose = true "V&V: WALE LES model" begin
+        safe_include("v_and_v_wale.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

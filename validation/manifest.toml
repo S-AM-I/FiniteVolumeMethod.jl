@@ -1463,7 +1463,8 @@ limitations = [
   "Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form.",
   "DDES only wraps Spalart-Allmaras; SST-based DDES deferred.",
   "Published benchmarks (DHIT decay vs. Comte-Bellot–Corrsin, periodic channel Reτ = 395 with WMLES/WRLES, periodic hills) are a v3.20+ follow-up.",
-  "Evidence: `test/v_and_v_smagorinsky.jl` — (1) ν_t ≡ 0 at zero velocity (round-off); (2) uniform interior ν_t = (C_s·Δ)²·A for U = (A·y, 0) matches analytical to rtol 1e-8 on a 16×16 mesh; (3) quadratic scaling ν_t ∝ C_s² verified at three C_s values to rtol 1e-10; (4) Δ² mesh-refinement scaling verified (coarse→fine ratio = 0.25 to rtol 1e-8).",
+  "Evidence #1: `test/v_and_v_smagorinsky.jl` — (1) ν_t ≡ 0 at zero velocity (round-off); (2) uniform interior ν_t = (C_s·Δ)²·A for U = (A·y, 0) matches analytical to rtol 1e-8 on a 16×16 mesh; (3) quadratic scaling ν_t ∝ C_s² verified at three C_s values to rtol 1e-10; (4) Δ² mesh-refinement scaling verified.",
+  "Evidence #2 (v3.28): `test/v_and_v_wale.jl` — WALE model invariants. (1) Zero velocity ⇒ ν_t ≡ 0 (atol 1e-14); (2) pure shear U = (A·y, 0) ⇒ ν_t = 0 — WALE's design property that distinguishes it from Smagorinsky and enables zero ν_t at walls without damping; (3) solid-body rotation ⇒ ν_t = 0 (g² is isotropic, traceless symmetric part vanishes); (4) non-trivial flow U = (xy, 0) gives ν_t > 0 with correct Δ² mesh scaling; (5) Cw² scaling at three Cw values to rtol 1e-10.",
 ]
 
 # ── Phase 7: Multiphase VOF ───────────────────────────────────────
