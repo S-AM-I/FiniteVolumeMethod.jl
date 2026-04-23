@@ -1,5 +1,40 @@
 # Changelog
 
+## v3.50.0 — CHT Interface Flux (fourth `conjugate_heat_transfer` benchmark)
+
+Fourth convergence-verified benchmark for
+`conjugate_heat_transfer`, joining Laplace-series solid
+conduction (v3.12), unsteady decay (v3.21), and Boussinesq
+buoyancy (v3.32). Covers the Dirichlet-Neumann coupling
+primitive at the solid-fluid interface.
+
+### test/v_and_v_cht_interface.jl
+
+`compute_interface_heat_flux` returns per-face q_f via
+q_f = −k · (T_bnd − T_cell) / d. Four invariants
+(41 gates, ~0.1 s):
+
+1. **Isothermal ⇒ q ≡ 0** at every interface face.
+2. **k-linear scaling.** Doubling k doubles q pointwise.
+3. **Sign convention.** Hot boundary ⇒ q < 0 (heat flows
+   into the solid).
+4. **Algebraic closed form.** q matches −k·(T_bnd−T_cell)/d
+   at every face to rtol 1 × 10⁻¹².
+
+### `conjugate_heat_transfer` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Steady Laplace series (solid)      | v3.12 | `test/v_and_v_heat_conduction.jl` |
+| Unsteady decay (solid)              | v3.21 | `test/v_and_v_unsteady_heat.jl`    |
+| Boussinesq buoyancy algebra         | v3.32 | `test/v_and_v_boussinesq.jl`       |
+| CHT interface-flux coupling         | v3.50 | `test/v_and_v_cht_interface.jl`   |
+
+### Verification
+
+No manifest tier change. 41 new gates wired into default
+runtests.jl under `V&V: CHT interface flux`.
+
 ## v3.49.0 — ALE-Corrected Flux (fourth `dynamic_mesh` benchmark)
 
 Fourth convergence-verified benchmark for `dynamic_mesh`, joining
