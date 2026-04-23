@@ -389,6 +389,7 @@ export
     extract_momentum_operators!,
     correct_velocity!,
     correct_fluxes!,
+    continuity_residual_interior,
     momentum_residual,
     continuity_residual,
     compute_max_courant
