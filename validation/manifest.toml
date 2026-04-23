@@ -1539,19 +1539,22 @@ limitations = [
 
 [[features]]
 feature = "dynamic_mesh"
-maturity = "experimental"
-validation = "smoke_tested"
-role = "research_tooling"
+maturity = "provisional"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "ALE mesh motion with solid-body and Laplacian displacement solvers, mesh geometry update, face sweep flux, and ALE-corrected transport for incompressible NS."
+summary = "ALE mesh motion with solid-body and Laplacian displacement solvers, mesh geometry update, face sweep flux, and ALE-corrected transport for incompressible NS. Geometric Conservation Law verified to round-off under three analytical motion patterns (v3.14)."
 limitations = [
-  "Experimental — first-order GCL volume approximation; not yet suitable for large deformations.",
+  "Provisional — GCL exactness verified for zero motion, rigid translation, and isotropic linear scaling; large-deformation and rotational motion remain smoke-tested.",
+  "Laplacian motion solver is smoke-tested only; its GCL behaviour for a full fluid-coupled ALE run is not yet convergence-verified.",
+  "`_approximate_volumes!` uses a first-order divergence-of-displacement approximation; exact for linear displacement fields, O(α²) for nonlinear fields.",
   "Laplacian motion uses uniform diffusivity; distance-based weighting deferred.",
   "No topology change (remeshing) support.",
+  "Evidence: `test/v_and_v_gcl.jl` — (1) zero motion: phi_mesh ≡ 0 and residual < 1e-14; (2) rigid translation on 10×10: volume drift < 1e-12, GCL residual < 1e-11 per cell; (3) isotropic α=0.05 scaling: GCL residual < 1e-10·V̄/Δt and (ΔV / V₀) matches `1 + Dim·α` to within 5α²; (4) residual / (V_cell/Δt) < 1e-10 at N ∈ {8, 16, 32}.",
 ]
 
 # ── Phase 6: MPI Parallelism ──────────────────────────────────────
