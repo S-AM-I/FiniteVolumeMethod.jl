@@ -1,5 +1,56 @@
 # Changelog
 
+## v3.8.0 — Skewed-Mesh Laplacian MMS + Non-Orthogonal Baseline
+
+Extends Phase 0 operator verification to non-Cartesian (skewed) meshes.
+Exercises the three `NonOrthoCorrectionMode` variants
+(MINIMUM / ORTHOGONAL / OVER_RELAXED) from Stage 3c and documents the
+expected one-pass behaviour on meshes where `S_f · d̂ ≠ |S_f|`.
+
+### test/v_and_v_laplacian_skewed.jl
+
+Builds a non-orthogonal discrete stencil by taking a uniform Cartesian
+mesh and displacing interior cell centers with a sinusoidal offset,
+while keeping face geometry unchanged. This gives `d_PN` a tangential
+component relative to `S_f` — the textbook non-orthogonal case that
+the over-relaxed correction is designed for.
+
+Three gate sets (17 assertions total):
+
+- **Finite-error robustness**: all three correction modes produce
+  bounded L² errors at N = 20, 40 and skewness 0.05. Over-relaxed in
+  particular does NOT diverge.
+- **Plateau documentation**: on a fixed-skewness mesh, refining N
+  does NOT drive error to zero — the truncation error is set by the
+  non-orthogonality itself (not h). This codifies the observed
+  behaviour for future work on iterative non-orthogonal correction.
+- **Zero-skew identity**: at skewness = 0 (pure Cartesian), all three
+  correction modes produce bit-identical matrices and therefore
+  bit-identical MMS errors.
+
+### Known gap
+
+The iterative non-orthogonal-correction path
+(`non_ortho_correction=true, grad_phi=...`) exists in
+`assemble_laplacian!` but the explicit-source feedback loop doesn't
+converge with naive Picard iteration in this setup — needs
+under-relaxation tuning or a dedicated fixed-point accelerator.
+This is a v3.9+ follow-up. In the meantime, the one-pass behaviour
+is correct and the V&V suite documents it explicitly.
+
+### Impact on manifest
+
+`collocated_operators` remains at `provisional` / `convergence_verified`
+(v3.7). Full `stable` promotion requires:
+- The iterative-correction convergence result (v3.9+).
+- 3D Laplacian MMS.
+- Temporal-order MMS for BDF2 / Crank-Nicolson.
+
+### Verification
+
+All 1571 pre-existing tests pass at identical counts. 17 new gates in
+`test/v_and_v_laplacian_skewed.jl` wired into default runtests.jl.
+
 ## v3.7.0 — First Manifest Promotion (`collocated_operators` → provisional)
 
 First time a feature in `validation/manifest.toml` advances past the
