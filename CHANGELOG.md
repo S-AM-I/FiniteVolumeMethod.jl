@@ -1,5 +1,40 @@
 # Changelog
 
+## v3.62.0 — Nusselt + y+ (fifth `postprocessing` benchmark)
+
+Fifth convergence-verified benchmark for `postprocessing`,
+joining vorticity + Q (v3.20), Courant + Q-sign (v3.30), field
+stats + TI (v3.40), and wall quantities (v3.51). Covers
+`compute_nusselt_number` + `compute_y_plus` wall diagnostics.
+
+### test/v_and_v_nusselt.jl
+
+Seven invariants (88 gates, ~0.2 s):
+
+1. **Isothermal T_wall = T_ref ⇒ Nu = 0** fallback (division-by-
+   zero guard).
+2. **k = 0 ⇒ Nu = 0** fallback.
+3. **L_ref linear scaling** (rtol 1e-12).
+4. **Nu > 0 under ΔT = 200** (sign consistency).
+5. **Zero velocity ⇒ y+ = 0**.
+6. **y+ ≥ 0 realizability.**
+7. **y+ finite and bounded on linear shear.**
+
+### `postprocessing` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Vorticity + Q on canonical flows    | v3.20 | `test/v_and_v_postprocessing.jl` |
+| Courant + Q-sign invariants          | v3.30 | `test/v_and_v_courant.jl`         |
+| Field statistics + TI                | v3.40 | `test/v_and_v_field_stats.jl`     |
+| Wall quantities (τ_w + q_w)          | v3.51 | `test/v_and_v_wall_quantities.jl` |
+| Nusselt + y+ wall diagnostics        | v3.62 | `test/v_and_v_nusselt.jl`         |
+
+### Verification
+
+No manifest tier change. 88 new gates wired into default
+runtests.jl under `V&V: Nusselt + y+`.
+
 ## v3.61.0 — Combustion Properties (fifth `combustion` benchmark)
 
 Fifth convergence-verified benchmark for `combustion`, joining
