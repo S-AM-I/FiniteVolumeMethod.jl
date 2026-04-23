@@ -1331,9 +1331,10 @@ precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
-summary = "Incompressible Navier-Stokes with SIMPLE, PISO, and PIMPLE pressure-velocity coupling on unstructured meshes. Steady-flow verification against Poiseuille analytical + Ghia 1982 lid-driven cavity."
+summary = "Incompressible Navier-Stokes with SIMPLE, PISO, and PIMPLE pressure-velocity coupling on unstructured meshes. Steady-flow verification against three independent benchmarks: Poiseuille parabolic, Ghia 1982 lid-driven cavity, and Couette shear-driven linear."
 limitations = [
   "Promoted from experimental → provisional in v3.11.0 after Poiseuille grid-convergence study (test/v_and_v_poiseuille_convergence.jl) showed O(h²) spatial order on 3 successive refinements (observed rate ≈ 1.95) and Ghia Re=100 cavity (test/v_and_v_ghia_cavity.jl) matched 10 reference points to ≤8% interior / ≤5% near-lid.",
+  "Third benchmark added in v3.22.0: plane Couette flow (test/v_and_v_couette.jl) — linear u(y) = U_top·y/H profile, slope and intercept matched to < 5% (least-squares fit), residual from linear fit < 0.02, no streamwise pressure drop. With the Poiseuille + Ghia + Couette triple, the solver meets the 3-benchmark evidence floor for future stable-promotion review — gate still blocked on transient PISO V&V and higher-Re reliability.",
   "Steady SIMPLE only. Transient PISO/PIMPLE paths exist but lack dedicated V&V.",
   "Higher Reynolds numbers (Re ≥ 400) currently destabilise the solver without deferred-correction convection schemes — Stage 2a follow-up.",
   "Kovasznay flow and other steady NS analytical benchmarks beyond Poiseuille are outside the current reliable envelope (solver diverges at Re≥10 for this problem; v3.12+ follow-up).",
