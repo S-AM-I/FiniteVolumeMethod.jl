@@ -118,8 +118,30 @@ function turbulent_viscosity!(
     _fill_uiuj!(uiuj, U_comp, nc, Val(Dim))
     uiuj_filtered = [_test_filter(uiuj[k], mesh) for k in 1:n_sym]
 
-    # ── 4. Test-filtered strain rate ────────────────────────────────
-    S_mag_filtered = _test_filter(S_mag, mesh)
+    # ── 4. Full-tensor test filtering (Stage 4c fix) ────────────────
+    #
+    # Previously S̃_ij was approximated as S_ij · (|S̃| / |S|), which is
+    # only exact when S_ij is proportional to its own test-filtered
+    # version. That "scalar Germano" simplification breaks on anisotropic
+    # flows where S̃_ij has a genuinely different principal direction than
+    # S_ij. The fix: test-filter each component of S_ij independently.
+    n_comp = Dim == 2 ? 3 : 6
+    S_comp = [Vector{T}(undef, nc) for _ in 1:n_comp]
+    for c in 1:nc
+        S_grid_c = _strain_components(grad_U, c, Val(Dim))
+        for k in 1:n_comp
+            S_comp[k][c] = S_grid_c[k]
+        end
+    end
+    S_comp_filtered = [_test_filter(S_comp[k], mesh) for k in 1:n_comp]
+
+    # Test-filtered strain-rate magnitude from the test-filtered tensor
+    # itself (not from filtering |S|). This is the Lilly form.
+    S_mag_filtered = Vector{T}(undef, nc)
+    for c in 1:nc
+        S_filt_c = ntuple(k -> S_comp_filtered[k][c], n_comp)
+        S_mag_filtered[c] = sqrt(max(_sym_self_magnitude_sq(S_filt_c, Val(Dim)), zero(T)))
+    end
 
     # ── 5. Germano-Lilly with full tensor contraction ──────────────
     for c in 1:nc
@@ -130,18 +152,15 @@ function turbulent_viscosity!(
             uiuj_filtered, U_filtered, c, nc, Val(Dim),
         )
 
-        # Grid-level S_ij components
+        # Grid-level S_ij components and full test-filtered S̃_ij.
         S_grid = _strain_components(grad_U, c, Val(Dim))
-
-        # Test-filtered S_ij: approximate from filtered velocity gradients
-        # For efficiency, use |S̃| and directional proportions from grid level
-        S_filt = S_grid .* (S_mag_filtered[c] / max(S_mag[c], eps(T)))
+        S_filt = ntuple(k -> S_comp_filtered[k][c], n_comp)
 
         # M_ij = 2Δ²(α² |S̃| S̃_ij - |S| S_ij)
-        M = ntuple(length(S_grid)) do k
+        M = ntuple(n_comp) do k
             T(2) * delta_c^2 * (
                 alpha^2 * S_mag_filtered[c] * S_filt[k] -
-                S_mag[c] * S_grid[k]
+                    S_mag[c] * S_grid[k]
             )
         end
 
@@ -162,6 +181,16 @@ function turbulent_viscosity!(
     return nothing
 end
 
+"""Magnitude-squared of a symmetric strain tensor in the reduced-component
+form used throughout this file: |S|² = 2 S_ij S_ij."""
+@inline _sym_self_magnitude_sq(S, ::Val{2}) =
+    typeof(S[1])(2) * (S[1]^2 + S[2]^2 + typeof(S[1])(2) * S[3]^2)
+@inline _sym_self_magnitude_sq(S, ::Val{3}) =
+    typeof(S[1])(2) * (
+    S[1]^2 + S[2]^2 + S[4]^2 +
+        typeof(S[1])(2) * (S[3]^2 + S[5]^2 + S[6]^2)
+)
+
 # ── Tensor helpers for Germano identity ────────────────────────────
 
 """Fill u_i*u_j product arrays (symmetric components only)."""
@@ -171,6 +200,7 @@ function _fill_uiuj!(uiuj, U_comp, nc, ::Val{2})
         uiuj[2][c] = U_comp[2][c] * U_comp[2][c]  # vv
         uiuj[3][c] = U_comp[1][c] * U_comp[2][c]  # uv
     end
+    return
 end
 
 function _fill_uiuj!(uiuj, U_comp, nc, ::Val{3})
@@ -182,6 +212,7 @@ function _fill_uiuj!(uiuj, U_comp, nc, ::Val{3})
         uiuj[5][c] = U_comp[1][c] * U_comp[3][c]  # uw
         uiuj[6][c] = U_comp[2][c] * U_comp[3][c]  # vw
     end
+    return
 end
 
 """Compute Leonard stress components at cell c."""
@@ -229,5 +260,5 @@ end
 
 function _sym_contract(A, B, ::Val{3})
     return A[1] * B[1] + A[2] * B[2] + A[4] * B[4] +
-           typeof(A[1])(2) * (A[3] * B[3] + A[5] * B[5] + A[6] * B[6])
+        typeof(A[1])(2) * (A[3] * B[3] + A[5] * B[5] + A[6] * B[6])
 end

@@ -77,6 +77,11 @@ struct StandardKEpsilon{T <: Real}
     C1_epsilon::T
     C2_epsilon::T
     kappa::T
+    # Stage 4a: Durbin realizability bound on the eddy viscosity,
+    # ν_t ≤ α · k / |S|. `realizability_alpha = 0` disables the cap and
+    # recovers the classical high-Re formulation. Typical values in the
+    # literature are 2/3 (Schwarz inequality), 0.6 (Durbin 1996).
+    realizability_alpha::T
 end
 
 function StandardKEpsilon(;
@@ -85,13 +90,18 @@ function StandardKEpsilon(;
         sigma_epsilon::Real = 1.3,
         C1_epsilon::Real = 1.44,
         C2_epsilon::Real = 1.92,
-        kappa::Real = 0.41
+        kappa::Real = 0.41,
+        realizability_alpha::Real = 0.0,
     )
     T = promote_type(
         typeof(C_mu), typeof(sigma_k), typeof(sigma_epsilon),
-        typeof(C1_epsilon), typeof(C2_epsilon), typeof(kappa)
+        typeof(C1_epsilon), typeof(C2_epsilon), typeof(kappa),
+        typeof(realizability_alpha),
     )
-    return StandardKEpsilon{T}(T(C_mu), T(sigma_k), T(sigma_epsilon), T(C1_epsilon), T(C2_epsilon), T(kappa))
+    return StandardKEpsilon{T}(
+        T(C_mu), T(sigma_k), T(sigma_epsilon),
+        T(C1_epsilon), T(C2_epsilon), T(kappa), T(realizability_alpha),
+    )
 end
 
 @doc raw"""
