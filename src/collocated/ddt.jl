@@ -54,7 +54,7 @@ function assemble_ddt_euler!(
     for c in 1:nc
         rho_c = _cell_density(rho, c)
         coeff = rho_c * mesh.cell_volumes[c] / dt
-        eq.A[c, c] += coeff
+        add_diag!(eq, c, coeff)
         eq.b[c] += coeff * phi_old[c]
     end
     return nothing
@@ -90,7 +90,7 @@ function assemble_ddt_bdf2!(
     for c in 1:nc
         rho_c = _cell_density(rho, c)
         coeff = rho_c * mesh.cell_volumes[c] / (2 * dt)
-        eq.A[c, c] += 3 * coeff
+        add_diag!(eq, c, 3 * coeff)
         eq.b[c] += 4 * coeff * phi_old[c] - coeff * phi_old_old[c]
     end
     return nothing
@@ -130,7 +130,7 @@ function assemble_ddt_crank_nicolson!(
     for c in 1:nc
         rho_c = _cell_density(rho, c)
         coeff = rho_c * mesh.cell_volumes[c] / dt
-        eq.A[c, c] += coeff
+        add_diag!(eq, c, coeff)
         eq.b[c] += coeff * phi_old[c]
     end
     return nothing

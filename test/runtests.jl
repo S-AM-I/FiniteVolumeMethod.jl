@@ -28,6 +28,9 @@ end
     @testset verbose = true "Parabolic Mesh" begin
         safe_include("parabolic_mesh.jl")
     end
+    @testset verbose = true "Collocated Assembly Benchmark (Stage 1a)" begin
+        safe_include("assembly_bench.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end

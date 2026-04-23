@@ -163,6 +163,129 @@ end
 
 nfaces(field::FaceFluxField) = length(field.values)
 
+# ── Sparsity pattern ─────────────────────────────────────────────────
+
+"""
+    SparsityPattern
+
+Pre-computed `nzval` index tables for a `CollocatedEquation`'s matrix `A`.
+Built once from the mesh's `face_cells` connectivity so every `assemble_*!`
+operation can write into `A.nzval[idx]` in O(1) rather than going through
+Julia's sparse `setindex!` (which does a binary search on the column and,
+if the entry is new, grows the arrays).
+
+# Fields
+- `diag_idx::Vector{Int}` — `nzval` index of `A[c, c]` for each cell `c`.
+- `offdiag_PN::Vector{Int}` — `nzval` index of `A[P, N]` for each internal
+  face `f` (P = owner, N = neighbour). `0` for boundary faces.
+- `offdiag_NP::Vector{Int}` — `nzval` index of `A[N, P]` for each internal
+  face `f`. `0` for boundary faces.
+
+Read-only after construction; `reset!` and subsequent assemblies only touch
+`A.nzval` values, never structure.
+"""
+struct SparsityPattern
+    diag_idx::Vector{Int}
+    offdiag_PN::Vector{Int}
+    offdiag_NP::Vector{Int}
+end
+
+"""
+    build_collocated_sparsity(mesh::UnstructuredFVMMesh{Dim, T}) -> (A, pattern)
+
+Build the empty matrix `A` (with all cell-neighbour structural entries
+already present) and a `SparsityPattern` of `nzval` indices. After this,
+an assembly kernel can write `A.nzval[pattern.diag_idx[c]] += …` etc.
+without any structural changes to `A`.
+"""
+function build_collocated_sparsity(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+
+    # Phase 1: compute how many nonzeros each column has.
+    # Columns in CSC correspond to the "input" index j of A[i, j]. For our
+    # stencil each cell has one diagonal entry plus one off-diagonal per
+    # internal face touching it. So each column j (cell j) has 1 + degree(j)
+    # structural nonzeros.
+    nnz_per_col = Vector{Int}(undef, nc)
+    fill!(nnz_per_col, 1)  # diagonal contribution
+    for f in 1:nf
+        if mesh.face_cells[2, f] != 0
+            P = mesh.face_cells[1, f]
+            N = mesh.face_cells[2, f]
+            # A[P, N] lives in column N; A[N, P] lives in column P.
+            nnz_per_col[N] += 1
+            nnz_per_col[P] += 1
+        end
+    end
+
+    total_nnz = sum(nnz_per_col)
+    colptr = Vector{Int}(undef, nc + 1)
+    colptr[1] = 1
+    for j in 1:nc
+        colptr[j + 1] = colptr[j] + nnz_per_col[j]
+    end
+
+    rowval = Vector{Int}(undef, total_nnz)
+    nzval = zeros(T, total_nnz)
+
+    # Phase 2: for each column j, collect the row indices that touch j.
+    # We know: row j itself (diagonal) plus every owner P with neighbour j
+    # plus every neighbour N of owner j.
+    col_rows = [Int[] for _ in 1:nc]
+    for j in 1:nc
+        push!(col_rows[j], j)  # diagonal
+    end
+    for f in 1:nf
+        if mesh.face_cells[2, f] != 0
+            P = mesh.face_cells[1, f]
+            N = mesh.face_cells[2, f]
+            # A[P, N] → row P in column N
+            push!(col_rows[N], P)
+            # A[N, P] → row N in column P
+            push!(col_rows[P], N)
+        end
+    end
+
+    # Sort each column's rows and fill rowval
+    for j in 1:nc
+        sort!(col_rows[j])
+        k = colptr[j]
+        for r in col_rows[j]
+            rowval[k] = r
+            k += 1
+        end
+    end
+
+    A = SparseMatrixCSC{T, Int}(nc, nc, colptr, rowval, nzval)
+
+    # Phase 3: build the nzval-index lookup tables.
+    function find_nzidx(col::Int, row::Int)
+        for k in colptr[col]:(colptr[col + 1] - 1)
+            rowval[k] == row && return k
+        end
+        return 0  # should not happen if structure was built correctly
+    end
+
+    diag_idx = Vector{Int}(undef, nc)
+    for c in 1:nc
+        diag_idx[c] = find_nzidx(c, c)
+    end
+
+    offdiag_PN = zeros(Int, nf)
+    offdiag_NP = zeros(Int, nf)
+    for f in 1:nf
+        if mesh.face_cells[2, f] != 0
+            P = mesh.face_cells[1, f]
+            N = mesh.face_cells[2, f]
+            offdiag_PN[f] = find_nzidx(N, P)  # A[P, N] — column N, row P
+            offdiag_NP[f] = find_nzidx(P, N)  # A[N, P] — column P, row N
+        end
+    end
+
+    return A, SparsityPattern(diag_idx, offdiag_PN, offdiag_NP)
+end
+
 # ── Assembled equation ───────────────────────────────────────────────
 
 """
@@ -174,27 +297,34 @@ their contributions into `A` and `b`, then the equation is solved
 via `LinearProblem(eq.A, eq.b)` from SciMLBase.
 
 # Fields
-- `A::SparseMatrixCSC{T, Int}` — system matrix
+- `A::SparseMatrixCSC{T, Int}` — system matrix, structure built eagerly
+  from the mesh's cell-neighbour connectivity.
 - `b::Vector{T}` — right-hand side
 - `source::Vector{T}` — explicit source terms (added to `b` before solve)
+- `pattern::SparsityPattern` — nzval index lookup tables for fast
+  assembly via `add_diag!` / `add_offdiag!`.
 """
 mutable struct CollocatedEquation{T}
     A::SparseMatrixCSC{T, Int}
     b::Vector{T}
     source::Vector{T}
+    pattern::SparsityPattern
 end
 
 """
     CollocatedEquation(mesh::UnstructuredFVMMesh{Dim, T})
 
 Construct an empty equation (zero matrix + zero RHS) sized for `mesh`.
+The sparsity structure of `A` is built eagerly from the mesh's
+cell-neighbour connectivity, so subsequent `assemble_*!` calls never
+modify `A`'s structure — they only write into `A.nzval`.
 """
 function CollocatedEquation(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim, T}
     nc = length(mesh.cell_volumes)
-    A = spzeros(T, nc, nc)
+    A, pattern = build_collocated_sparsity(mesh)
     b = zeros(T, nc)
     source = zeros(T, nc)
-    return CollocatedEquation{T}(A, b, source)
+    return CollocatedEquation{T}(A, b, source, pattern)
 end
 
 """
@@ -206,6 +336,87 @@ function reset!(eq::CollocatedEquation{T}) where {T}
     fill!(eq.A.nzval, zero(T))
     fill!(eq.b, zero(T))
     fill!(eq.source, zero(T))
+    return nothing
+end
+
+# ── Fast-path assembly helpers (use these in new assembly code) ─────
+
+"""
+    add_diag!(eq::CollocatedEquation, c::Int, coeff)
+
+Accumulate `coeff` into the diagonal entry `A[c, c]` via the pre-computed
+`nzval` index. O(1) regardless of matrix size.
+"""
+@inline function add_diag!(eq::CollocatedEquation{T}, c::Int, coeff) where {T}
+    eq.A.nzval[eq.pattern.diag_idx[c]] += T(coeff)
+    return nothing
+end
+
+"""
+    add_offdiag_PN!(eq, f, coeff)
+
+Accumulate `coeff` into `A[P, N]` for internal face `f` (P = owner,
+N = neighbour). O(1).
+"""
+@inline function add_offdiag_PN!(eq::CollocatedEquation{T}, f::Int, coeff) where {T}
+    eq.A.nzval[eq.pattern.offdiag_PN[f]] += T(coeff)
+    return nothing
+end
+
+"""
+    add_offdiag_NP!(eq, f, coeff)
+
+Accumulate `coeff` into `A[N, P]` for internal face `f`. O(1).
+"""
+@inline function add_offdiag_NP!(eq::CollocatedEquation{T}, f::Int, coeff) where {T}
+    eq.A.nzval[eq.pattern.offdiag_NP[f]] += T(coeff)
+    return nothing
+end
+
+"""
+    add_face_coeffs!(eq, f, c_PP, c_PN, c_NP, c_NN)
+
+Accumulate the four face-contributions for internal face `f` into
+`A[P,P] += c_PP`, `A[P,N] += c_PN`, `A[N,P] += c_NP`, `A[N,N] += c_NN`.
+Uses the pre-computed `nzval` indices; convenient for Laplacian and
+divergence kernels that always touch the same four entries per face.
+"""
+@inline function add_face_coeffs!(
+        eq::CollocatedEquation{T}, f::Int,
+        c_PP, c_PN, c_NP, c_NN,
+    ) where {T}
+    nz = eq.A.nzval
+    pat = eq.pattern
+    nz[pat.diag_idx[_owner_of_face(eq, f)]] += T(c_PP)
+    nz[pat.offdiag_PN[f]] += T(c_PN)
+    nz[pat.offdiag_NP[f]] += T(c_NP)
+    nz[pat.diag_idx[_neighbour_of_face(eq, f)]] += T(c_NN)
+    return nothing
+end
+
+# Helpers — cached owner/neighbour lookups bound to the equation would
+# cost per-call work; instead we ask assemblers to pass owner/neighbour
+# directly. Keep these as placeholders for now (unused) until we decide
+# to cache mesh refs in the equation itself.
+_owner_of_face(::CollocatedEquation, ::Int) = error("internal: owner lookup not cached on equation; pass P, N to add_face_coeffs_PN!")
+_neighbour_of_face(::CollocatedEquation, ::Int) = error("internal: neighbour lookup not cached on equation")
+
+"""
+    add_face_coeffs_PN!(eq, f, P, N, c_PP, c_PN, c_NP, c_NN)
+
+Accumulate the four face-contributions when the caller already has `P`
+and `N` in scope. Preferred for hot loops.
+"""
+@inline function add_face_coeffs_PN!(
+        eq::CollocatedEquation{T}, f::Int, P::Int, N::Int,
+        c_PP, c_PN, c_NP, c_NN,
+    ) where {T}
+    nz = eq.A.nzval
+    pat = eq.pattern
+    nz[pat.diag_idx[P]] += T(c_PP)
+    nz[pat.offdiag_PN[f]] += T(c_PN)
+    nz[pat.offdiag_NP[f]] += T(c_NP)
+    nz[pat.diag_idx[N]] += T(c_NN)
     return nothing
 end
 

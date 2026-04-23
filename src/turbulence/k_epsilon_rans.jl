@@ -72,7 +72,7 @@ function solve_turbulence!(
     for c in 1:nc
         k_safe = max(k_field.internal[c], T(1.0e-10))
         k_eq.b[c] += P_k[c] * mesh.cell_volumes[c]
-        k_eq.A[c, c] += eps_field.internal[c] / k_safe * mesh.cell_volumes[c]
+        add_diag!(k_eq, c, eps_field.internal[c] / k_safe * mesh.cell_volumes[c])
     end
 
     # Solve k
@@ -106,7 +106,7 @@ function solve_turbulence!(
         k_safe = max(k_field.internal[c], T(1.0e-10))
         eps_by_k = eps_field.internal[c] / k_safe
         eps_eq.b[c] += model.C1_epsilon * eps_by_k * P_k[c] * mesh.cell_volumes[c]
-        eps_eq.A[c, c] += model.C2_epsilon * eps_by_k * mesh.cell_volumes[c]
+        add_diag!(eps_eq, c, model.C2_epsilon * eps_by_k * mesh.cell_volumes[c])
     end
 
     # Solve ε

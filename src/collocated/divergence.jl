@@ -125,7 +125,7 @@ function assemble_convection!(
     ) where {Dim, T}
     nf = size(mesh.face_cells, 2)
 
-    for f in 1:nf
+    @inbounds for f in 1:nf
         F_f = flux.values[f]
         P = owner(mesh, f)
 
@@ -134,11 +134,11 @@ function assemble_convection!(
             w = face_weight(mesh, f)
 
             if scheme == CONV_UPWIND
-                _assemble_upwind_face!(eq, F_f, P, N)
+                _assemble_upwind_face!(eq, f, F_f, P, N)
             elseif scheme == CONV_LINEAR
-                _assemble_linear_face!(eq, F_f, P, N, w)
+                _assemble_linear_face!(eq, f, F_f, P, N, w)
             else  # CONV_BLENDED
-                _assemble_blended_face!(eq, F_f, P, N, w, blend)
+                _assemble_blended_face!(eq, f, F_f, P, N, w, blend)
             end
         else
             # Boundary face
@@ -152,54 +152,52 @@ end
 # ── Internal face assembly helpers ───────────────────────────────���───
 
 """Upwind: full flux goes to upwind cell coefficient."""
-function _assemble_upwind_face!(
-        eq::CollocatedEquation{T}, F_f::T, P::Int, N::Int,
+@inline function _assemble_upwind_face!(
+        eq::CollocatedEquation{T}, f::Int, F_f::T, P::Int, N::Int,
     ) where {T}
     if F_f >= zero(T)
         # Flow from P → N: upwind cell is P
-        eq.A[P, P] += F_f
-        eq.A[N, P] -= F_f
+        add_face_coeffs_PN!(eq, f, P, N, F_f, zero(T), -F_f, zero(T))
     else
-        # Flow from N → P: upwind cell is N
-        eq.A[P, N] += F_f  # F_f < 0, so this subtracts
-        eq.A[N, N] -= F_f  # F_f < 0, so this adds
+        # Flow from N → P: upwind cell is N; F_f < 0
+        add_face_coeffs_PN!(eq, f, P, N, zero(T), F_f, zero(T), -F_f)
     end
     return nothing
 end
 
 """Linear (central): weighted contribution from both cells."""
-function _assemble_linear_face!(
-        eq::CollocatedEquation{T}, F_f::T, P::Int, N::Int, w::T,
+@inline function _assemble_linear_face!(
+        eq::CollocatedEquation{T}, f::Int, F_f::T, P::Int, N::Int, w::T,
     ) where {T}
     # φ_f = w * φ_P + (1-w) * φ_N
     # Owner equation: +F_f * φ_f
-    eq.A[P, P] += F_f * w
-    eq.A[P, N] += F_f * (one(T) - w)
     # Neighbour equation: -F_f * φ_f
-    eq.A[N, P] -= F_f * w
-    eq.A[N, N] -= F_f * (one(T) - w)
+    add_face_coeffs_PN!(
+        eq, f, P, N,
+        F_f * w, F_f * (one(T) - w),
+        -F_f * w, -F_f * (one(T) - w),
+    )
     return nothing
 end
 
 """Blended: mix upwind and linear."""
-function _assemble_blended_face!(
-        eq::CollocatedEquation{T}, F_f::T, P::Int, N::Int, w::T, beta::T,
+@inline function _assemble_blended_face!(
+        eq::CollocatedEquation{T}, f::Int, F_f::T, P::Int, N::Int, w::T, beta::T,
     ) where {T}
-    # Linear part (weight beta)
-    eq.A[P, P] += beta * F_f * w
-    eq.A[P, N] += beta * F_f * (one(T) - w)
-    eq.A[N, P] -= beta * F_f * w
-    eq.A[N, N] -= beta * F_f * (one(T) - w)
-
-    # Upwind part (weight 1-beta)
     alpha = one(T) - beta
+    # Combined coefficients: linear part (weight beta) + upwind part (weight alpha)
+    c_PP = beta * F_f * w
+    c_PN = beta * F_f * (one(T) - w)
+    c_NP = -beta * F_f * w
+    c_NN = -beta * F_f * (one(T) - w)
     if F_f >= zero(T)
-        eq.A[P, P] += alpha * F_f
-        eq.A[N, P] -= alpha * F_f
+        c_PP += alpha * F_f
+        c_NP -= alpha * F_f
     else
-        eq.A[P, N] += alpha * F_f
-        eq.A[N, N] -= alpha * F_f
+        c_PN += alpha * F_f
+        c_NN -= alpha * F_f
     end
+    add_face_coeffs_PN!(eq, f, P, N, c_PP, c_PN, c_NP, c_NN)
     return nothing
 end
 
@@ -218,14 +216,8 @@ function _apply_convection_bc!(
         # Known boundary value: explicit contribution to RHS
         eq.b[P] -= F_f * bc.value
     elseif bc isa ParabolicNeumann
-        # Zero-gradient outflow: flux uses interior value
-        if F_f >= zero(T)
-            eq.A[P, P] += F_f
-        end
-        # For inflow with Neumann: treat as zero-gradient (φ_f = φ_P)
-        if F_f < zero(T)
-            eq.A[P, P] += F_f
-        end
+        # Zero-gradient: φ_f = φ_P for both inflow and outflow
+        add_diag!(eq, P, F_f)
     else
         error("Unsupported boundary condition type $(typeof(bc)) for convection")
     end

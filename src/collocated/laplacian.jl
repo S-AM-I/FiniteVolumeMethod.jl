@@ -50,7 +50,7 @@ function assemble_laplacian!(
     ) where {Dim, T}
     nf = size(mesh.face_cells, 2)
 
-    for f in 1:nf
+    @inbounds for f in 1:nf
         P = owner(mesh, f)
         S_f = face_normal_area(mesh, f)
         A_f = mesh.face_areas[f]
@@ -69,10 +69,10 @@ function assemble_laplacian!(
             flux_coeff = gamma_f * S_dot_d / d_mag
 
             # Implicit contribution: flux_coeff * (φ_N - φ_P)
-            eq.A[P, P] += flux_coeff
-            eq.A[P, N] -= flux_coeff
-            eq.A[N, N] += flux_coeff
-            eq.A[N, P] -= flux_coeff
+            add_face_coeffs_PN!(
+                eq, f, P, N,
+                flux_coeff, -flux_coeff, -flux_coeff, flux_coeff,
+            )
 
             # Explicit non-orthogonal correction
             if non_ortho_correction && grad_phi !== nothing
@@ -139,7 +139,7 @@ function _apply_laplacian_bc!(
     if bc isa ParabolicDirichlet
         # Fixed value: implicit contribution + source
         flux_coeff = gamma_f * A_f / d_n
-        eq.A[P, P] += flux_coeff
+        add_diag!(eq, P, flux_coeff)
         eq.b[P] += flux_coeff * bc.value
     elseif bc isa ParabolicNeumann
         # Fixed gradient: explicit flux added to RHS
@@ -149,12 +149,12 @@ function _apply_laplacian_bc!(
         # → flux = gamma * (c - a*φ_P) / b  (if b ≠ 0)
         if abs(bc.b) > eps(T)
             flux_coeff = gamma_f * bc.a / bc.b * A_f
-            eq.A[P, P] += flux_coeff
+            add_diag!(eq, P, flux_coeff)
             eq.b[P] += gamma_f * bc.c / bc.b * A_f
         else
             # Pure Dirichlet when b == 0: a*φ = c → φ = c/a
             flux_coeff = gamma_f * A_f / d_n
-            eq.A[P, P] += flux_coeff
+            add_diag!(eq, P, flux_coeff)
             eq.b[P] += flux_coeff * bc.c / bc.a
         end
     else
