@@ -1,5 +1,41 @@
 # Changelog
 
+## v3.64.0 — remake Parameter-Update (sixth `incompressible_ns` benchmark)
+
+Sixth convergence-verified benchmark for `incompressible_ns`,
+joining Ghia (v3.1), Poiseuille (v3.10), Couette (v3.22), PISO
+(v3.41), SciML interface (v3.55). Covers the `SciMLBase.remake`
+parameter-update path supporting sensitivity + optimization
+workflows.
+
+### test/v_and_v_incompressible_remake.jl
+
+Seven invariants (17 gates, ~0.1 s):
+
+1. **remake(; nu)** updates ν only.
+2. **remake(; density)** updates ρ only.
+3. **remake(; nu, density)** both together.
+4. **Immutability** — original problem unchanged.
+5. **Algorithm swap** via remake(; algorithm).
+6. **Chained remakes** compose.
+7. **Type preserved** across remake.
+
+### `incompressible_ns` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Ghia 1982 lid-driven cavity (Re = 100) | v3.1–v3.3 | `test/v_and_v_ghia_cavity.jl`             |
+| Poiseuille parabolic + grid-convergence | v3.10–v3.11 | `test/v_and_v_poiseuille*.jl`           |
+| Couette shear-driven linear profile    | v3.22  | `test/v_and_v_couette.jl`                   |
+| Transient PISO stability               | v3.41  | `test/v_and_v_piso_decay.jl`                |
+| SciML interface (symbolic + retcode)    | v3.55  | `test/v_and_v_incompressible_sciml.jl`      |
+| remake parameter-update contract        | v3.64  | `test/v_and_v_incompressible_remake.jl`     |
+
+### Verification
+
+No manifest tier change. 17 new gates wired into default
+runtests.jl under `V&V: Incompressible remake`.
+
 ## v3.63.0 — LES Turbulence State (fifth `turbulence_les` benchmark)
 
 Fifth convergence-verified benchmark for `turbulence_les`,
