@@ -1,5 +1,41 @@
 # Changelog
 
+## v3.56.0 — Effective Conductivity (fifth `conjugate_heat_transfer` benchmark)
+
+Fifth convergence-verified benchmark for
+`conjugate_heat_transfer`, joining Laplace conduction (v3.12),
+unsteady decay (v3.21), Boussinesq (v3.32), and interface flux
+(v3.50). Covers thermal-property primitives `update_k_eff!` and
+`compute_alpha_eff`.
+
+### test/v_and_v_k_eff.jl
+
+Six invariants (292 gates, ~0.1 s):
+
+1. **`ν_t = nothing` ⇒ k_eff ≡ k_lam** (laminar fallback).
+2. **`ν_t = 0` ⇒ k_eff = k_lam**.
+3. **Linear in ν_t** at fixed ρ, Cp, Pr_t (rtol 1e-12).
+4. **Closed-form `k_eff = k_lam + ρ·Cp·ν_t/Pr_t`** at every
+   cell (rtol 1e-14).
+5. **`α_eff = k_eff/(ρ·Cp)`** algebraic identity (rtol 1e-14).
+6. **Pr_t inverse scaling** (doubling Pr_t halves turbulent
+   contribution).
+
+### `conjugate_heat_transfer` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Steady Laplace series (solid)       | v3.12 | `test/v_and_v_heat_conduction.jl` |
+| Unsteady decay (solid)               | v3.21 | `test/v_and_v_unsteady_heat.jl`    |
+| Boussinesq buoyancy algebra          | v3.32 | `test/v_and_v_boussinesq.jl`       |
+| CHT interface-flux coupling          | v3.50 | `test/v_and_v_cht_interface.jl`    |
+| Effective conductivity k_eff + α_eff | v3.56 | `test/v_and_v_k_eff.jl`            |
+
+### Verification
+
+No manifest tier change. 292 new gates wired into default
+runtests.jl under `V&V: Effective conductivity k_eff`.
+
 ## v3.55.0 — SciML Interface (fifth `incompressible_ns` benchmark)
 
 Fifth convergence-verified benchmark for `incompressible_ns`,
