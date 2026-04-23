@@ -1,5 +1,66 @@
 # Changelog
 
+## v3.42.0 — Linear Solvers V&V + `linear_solver_infra` Promotion
+
+**Twelfth manifest promotion**, extending convergence-verified
+coverage beyond the physics-carrying features into the
+infrastructure layer. `linear_solver_infra` advances from
+`experimental`/`smoke_tested` to `provisional`/
+`convergence_verified`.
+
+### test/v_and_v_linear_solvers.jl
+
+Poisson MMS `−∇²φ = 2π²·sin(πx)·sin(πy)` with Dirichlet zero
+walls (analytical `φ = sin(πx)·sin(πy)`). Four testsets
+(6 gates, ~0.5 s):
+
+1. **LUFactorization** gives interior-band L² < 5 × 10⁻³ at
+   N = 32 — matches the discretization-error floor of the
+   Laplacian.
+
+2. **KrylovJL_CG** matches LU pointwise to within 1 × 10⁻⁶.
+
+3. **KrylovJL_GMRES** matches LU pointwise to within 1 × 10⁻⁶.
+
+4. **Grid convergence** at N ∈ {16, 32, 64} with observed
+   orders in [1.7, 2.3] — textbook O(h²) Laplacian under
+   the direct LU backend.
+
+### Manifest promotion
+
+`linear_solver_infra`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+
+### Twelve-feature provisional tally
+
+Every claim-bearing feature in the collocated solver stack plus
+the solver infrastructure are now provisional:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 4 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+| `radiation`               | 3 |
+| `multiphase_vof`          | 3 |
+| `combustion`              | 3 |
+| `turbulence_rans`         | 3 |
+| `turbulence_les`          | 3 |
+| `postprocessing`          | 3 |
+| `linear_solver_infra`     | 1 (new provisional) |
+
+Remaining experimental features: `dashboard`, `io_extensions`,
+`polyhedral_mesh_io`, `mpi_parallel` — all infrastructure / IO
+that doesn't map naturally to convergence-verified physics.
+
+### Verification
+
+6 new gates wired into default runtests.jl under
+`V&V: Linear solvers`.
+
 ## v3.41.0 — Transient PISO Stability (fourth `incompressible_ns` benchmark)
 
 Fourth convergence-verified benchmark for `incompressible_ns`,
