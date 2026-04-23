@@ -107,6 +107,9 @@ end
     @testset verbose = true "V&V: Unsteady heat" begin
         safe_include("v_and_v_unsteady_heat.jl")
     end
+    @testset verbose = true "V&V: Couette flow" begin
+        safe_include("v_and_v_couette.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

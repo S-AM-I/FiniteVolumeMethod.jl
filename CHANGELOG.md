@@ -1,5 +1,61 @@
 # Changelog
 
+## v3.22.0 — Couette Flow V&V (third `incompressible_ns` benchmark)
+
+Third independent benchmark for `incompressible_ns`, establishing
+the 3-benchmark evidence floor for future `stable`-promotion
+review. Joins Ghia 1982 lid-driven cavity (v3.1–v3.3, Re = 100)
+and Poiseuille parabolic + grid convergence (v3.10–v3.11).
+
+### test/v_and_v_couette.jl
+
+Problem: plane Couette flow between parallel plates with the top
+plate moving at `U_top`. Analytical solution:
+
+    u(y) = U_top · y / H,    v(y) = 0,    p = const.
+
+Domain [0, 4] × [0, 1] with N × N/2 Cartesian mesh:
+
+- **Left inlet**: `SpatialVelocityBC` prescribing the linear
+  analytical profile.
+- **Right outlet**: `FixedPressureBC(0)`.
+- **Bottom wall**: `NoSlipWallBC`.
+- **Top wall**: `FixedVelocityBC((U_top, 0))`.
+
+Three testsets (8 gates, ~6 s):
+
+1. **Linear-profile agreement.** Max relative u error in the
+   interior band < 5 %; v ≤ 0.05; monotone u(y).
+
+2. **No streamwise pressure drop.** Couette has ∂p/∂x = 0;
+   measured p_left − p_right < 0.05 (< 10 % of (1/2)·ρ·U²).
+
+3. **Linear regression on centerline u(y).** Fit
+   u ≈ a + b·y on the interior band. Slope b matches
+   U_top / H = 1 within 0.05; intercept a < 0.05; residual
+   from the linear fit < 0.02 (confirms the profile is linear,
+   not just "close to linear").
+
+### `incompressible_ns` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Ghia 1982 lid-driven cavity (Re = 100) | v3.1–v3.3 | `test/v_and_v_ghia_cavity.jl` |
+| Poiseuille parabolic + grid convergence | v3.10–v3.11 | `test/v_and_v_poiseuille*.jl` |
+| Couette linear shear-driven | v3.22 | `test/v_and_v_couette.jl` |
+
+Three independent steady-flow benchmarks: recirculation,
+pressure-driven laminar, and shear-driven. The 3-benchmark gate
+for stable-promotion review is now met; remaining blockers are
+transient PISO/PIMPLE V&V and higher-Re reliability (both noted
+in the provisional limitations).
+
+### Verification
+
+No manifest-tier change (still provisional). All pre-existing
+tests pass at identical counts. 8 new gates wired into default
+runtests.jl under `V&V: Couette flow`.
+
 ## v3.21.0 — Unsteady Heat V&V (second CHT benchmark)
 
 First *second-benchmark* release — adds a transient
