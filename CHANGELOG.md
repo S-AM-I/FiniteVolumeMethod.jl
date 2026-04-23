@@ -1,5 +1,64 @@
 # Changelog
 
+## v3.12.0 — Heat-Conduction V&V + `conjugate_heat_transfer` Promotion
+
+Third manifest promotion. `conjugate_heat_transfer` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of a solid-conduction grid-convergence study against
+the analytical Laplace series solution.
+
+### test/v_and_v_heat_conduction.jl
+
+Problem: `-∇²T = 0` on `[0, 1]²` with `T(x, 0) = T(0, y) = T(1, y) = 0`
+and `T(x, 1) = 1`. Analytical solution (Fourier series):
+
+    T(x, y) = (4/π) Σ_{n odd} (1/n) sin(n π x) sinh(n π y) / sinh(n π)
+
+Refine N ∈ {20, 40, 80} and measure L² error in the interior band
+(x, y) ∈ [0.1, 0.9]² (excludes the corner singularities at
+(0, 1) and (1, 1) where T is multi-valued):
+
+    N=20    L²(T) = 5.60 × 10⁻⁴
+    N=40    L²(T) = 1.44 × 10⁻⁴   (rate: 1.96)
+    N=80    L²(T) = 3.63 × 10⁻⁵   (rate: 1.99)
+
+Five gates pass:
+- Two monotone-transition rates each in `[1.8, 2.2]` (textbook O(h²)).
+- All errors monotone-decreasing.
+- Finest-grid L² < 10⁻⁴.
+- Center-cell `T(0.5, 0.5)` within 3% of the analytical 0.25
+  (symmetry gives this exactly).
+
+### Manifest promotion
+
+`conjugate_heat_transfer`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Only `solve_solid_conduction` is verified; full
+  `solve_conjugate_ht` (fluid-solid Dirichlet-Neumann iteration)
+  lacks a dedicated analytical benchmark.
+- Fluid-energy equation (forced-convection / buoyancy) verification
+  is a v3.13+ follow-up — target: De Vahl Davis natural convection.
+
+### Running manifest-promotion tally
+
+Three `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators` | v3.7 | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns` | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+
+### Verification
+
+All 1571 pre-existing tests pass at identical counts. 5 new gates
+(~2 s runtime) wired into default runtests.jl.
+
 ## v3.11.0 — Poiseuille Grid-Convergence + `incompressible_ns` Promotion
 
 **First order-of-accuracy verification of the full Navier-Stokes
