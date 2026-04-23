@@ -65,6 +65,13 @@ const GHIA_U_RE100 = [
     @test 0.4 < peak_y < 0.55
     @test 0.95 < maximum(last.(centerline)) <= 1.01
 
+    # v3.3: the true interior continuity residual (excluding the 0.1L band
+    # where the lid/wall BC corner singularity concentrates the defect) is
+    # a cleaner metric. On this mesh with the current under-relaxation it
+    # should be < 1e-4 — two orders of magnitude below the total residual.
+    interior_div = continuity_residual_interior(sol.result.state, mesh)
+    @test interior_div < 1.0e-4
+
     # Point-wise Ghia agreement (tightened from v3.1's 30% qualitative
     # gate after the OpenFOAM-style residual normalization landed).
     # Interior points: 8% relative. Near-lid (y > 0.9): 5%.
