@@ -314,7 +314,15 @@ export
     add_diag!,
     add_offdiag_PN!,
     add_offdiag_NP!,
-    add_face_coeffs_PN!
+    add_face_coeffs_PN!,
+    # Block-coupled equation + assembly helpers (Stage 1c)
+    BlockCollocatedEquation,
+    BlockSparsityPattern,
+    build_block_collocated_sparsity,
+    add_block_diag!,
+    add_block_offdiag_PN!,
+    add_block_offdiag_NP!,
+    nblocks
 
 # --- Incompressible Navier-Stokes (Phase 1) ---
 export

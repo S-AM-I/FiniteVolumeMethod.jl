@@ -431,6 +431,231 @@ function to_linear_problem(eq::CollocatedEquation)
     return LinearProblem(eq.A, rhs)
 end
 
+# ── Block-coupled equation (Stage 1c) ────────────────────────────────
+
+"""
+    BlockCollocatedEquation{T, NBlocks}
+
+Block-coupled linear system `A_block * x = b` for `NBlocks` scalar-per-cell
+unknowns assembled together (e.g. Eulerian two-fluid α₁/α₂, coupled
+momentum-energy, or RANS k/ε solved monolithically).
+
+The block layout is cell-major with `NBlocks` unknowns per cell:
+- `A_block::SparseMatrixCSC{T, Int}` has shape `(NBlocks * ncells, NBlocks * ncells)`.
+- Row `(c - 1) * NBlocks + b` corresponds to block-unknown `b` at cell `c`.
+- Sparsity structure copies the single-block `SparsityPattern` into each
+  `(b_row, b_col)` block, giving `NBlocks²` structural entries per
+  `(P, N)` face pair and `NBlocks²` per diagonal.
+
+Reuses the same build-once-pre-compute-nzval-indices strategy as the
+scalar `CollocatedEquation`. Intended to be wired into Eulerian two-fluid
+(Stage 6e) and coupled momentum-energy for compressible flows (Stage 3).
+
+# Fields
+- `A::SparseMatrixCSC{T, Int}` — block system matrix.
+- `b::Vector{T}` — right-hand side of length `NBlocks * ncells`.
+- `source::Vector{T}` — explicit source terms (added to `b` before solve).
+- `pattern::BlockSparsityPattern{NBlocks}` — nzval lookup tables.
+"""
+struct BlockSparsityPattern{NBlocks}
+    # For each (block_row, block_col) in 1:NBlocks × 1:NBlocks, we store
+    # the scalar-pattern-style tables shifted into the block position.
+    diag_idx::Array{Int, 3}      # (NBlocks, NBlocks, ncells)
+    offdiag_PN::Array{Int, 3}    # (NBlocks, NBlocks, nfaces)
+    offdiag_NP::Array{Int, 3}    # (NBlocks, NBlocks, nfaces)
+end
+
+mutable struct BlockCollocatedEquation{T, NBlocks}
+    A::SparseMatrixCSC{T, Int}
+    b::Vector{T}
+    source::Vector{T}
+    pattern::BlockSparsityPattern{NBlocks}
+end
+
+"""
+    build_block_collocated_sparsity(mesh, ::Val{NBlocks}) -> (A, pattern)
+
+Build the block CSC skeleton and nzval lookup tables for a block-coupled
+equation with `NBlocks` unknowns per cell. The block layout is cell-major:
+cell `c`'s `NBlocks` unknowns occupy rows `(c-1)*NBlocks+1 : c*NBlocks`.
+"""
+function build_block_collocated_sparsity(
+        mesh::UnstructuredFVMMesh{Dim, T}, ::Val{NBlocks},
+    ) where {Dim, T, NBlocks}
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+    N = NBlocks * nc  # total system size
+
+    # Column degree: each block column j (cell_col, block_col) has
+    # NBlocks entries for the cell diagonal + NBlocks * degree(cell_col)
+    # for the neighbour contributions.
+    nnz_per_col = zeros(Int, N)
+    for c in 1:nc
+        for bc in 1:NBlocks
+            col = (c - 1) * NBlocks + bc
+            nnz_per_col[col] += NBlocks  # diagonal block contributes NBlocks rows
+        end
+    end
+    for f in 1:nf
+        if mesh.face_cells[2, f] != 0
+            P = mesh.face_cells[1, f]
+            Nc = mesh.face_cells[2, f]
+            for bc in 1:NBlocks
+                col_P = (P - 1) * NBlocks + bc
+                col_N = (Nc - 1) * NBlocks + bc
+                nnz_per_col[col_N] += NBlocks  # block A[P, N]
+                nnz_per_col[col_P] += NBlocks  # block A[N, P]
+            end
+        end
+    end
+
+    total_nnz = sum(nnz_per_col)
+    colptr = Vector{Int}(undef, N + 1)
+    colptr[1] = 1
+    for j in 1:N
+        colptr[j + 1] = colptr[j] + nnz_per_col[j]
+    end
+
+    rowval = Vector{Int}(undef, total_nnz)
+    nzval = zeros(T, total_nnz)
+
+    # Collect rows per column, then sort
+    col_rows = [Int[] for _ in 1:N]
+    for c in 1:nc
+        for bc in 1:NBlocks
+            col = (c - 1) * NBlocks + bc
+            for br in 1:NBlocks
+                row = (c - 1) * NBlocks + br
+                push!(col_rows[col], row)
+            end
+        end
+    end
+    for f in 1:nf
+        if mesh.face_cells[2, f] != 0
+            P = mesh.face_cells[1, f]
+            Nc = mesh.face_cells[2, f]
+            for bc in 1:NBlocks
+                col_N = (Nc - 1) * NBlocks + bc
+                col_P = (P - 1) * NBlocks + bc
+                for br in 1:NBlocks
+                    row_P = (P - 1) * NBlocks + br
+                    row_N = (Nc - 1) * NBlocks + br
+                    push!(col_rows[col_N], row_P)  # A[P, N]
+                    push!(col_rows[col_P], row_N)  # A[N, P]
+                end
+            end
+        end
+    end
+    for j in 1:N
+        sort!(col_rows[j])
+        k = colptr[j]
+        for r in col_rows[j]
+            rowval[k] = r
+            k += 1
+        end
+    end
+
+    A = SparseMatrixCSC{T, Int}(N, N, colptr, rowval, nzval)
+
+    function find_nzidx(col::Int, row::Int)
+        for k in colptr[col]:(colptr[col + 1] - 1)
+            rowval[k] == row && return k
+        end
+        return 0
+    end
+
+    diag_idx = Array{Int}(undef, NBlocks, NBlocks, nc)
+    for c in 1:nc, bc in 1:NBlocks, br in 1:NBlocks
+        row = (c - 1) * NBlocks + br
+        col = (c - 1) * NBlocks + bc
+        diag_idx[br, bc, c] = find_nzidx(col, row)
+    end
+
+    offdiag_PN = zeros(Int, NBlocks, NBlocks, nf)
+    offdiag_NP = zeros(Int, NBlocks, NBlocks, nf)
+    for f in 1:nf
+        if mesh.face_cells[2, f] != 0
+            P = mesh.face_cells[1, f]
+            Nc = mesh.face_cells[2, f]
+            for bc in 1:NBlocks, br in 1:NBlocks
+                row_P = (P - 1) * NBlocks + br
+                col_N = (Nc - 1) * NBlocks + bc
+                row_N = (Nc - 1) * NBlocks + br
+                col_P = (P - 1) * NBlocks + bc
+                offdiag_PN[br, bc, f] = find_nzidx(col_N, row_P)
+                offdiag_NP[br, bc, f] = find_nzidx(col_P, row_N)
+            end
+        end
+    end
+
+    return A, BlockSparsityPattern{NBlocks}(diag_idx, offdiag_PN, offdiag_NP)
+end
+
+"""
+    BlockCollocatedEquation(mesh, ::Val{NBlocks})
+
+Construct an empty block-coupled equation for `NBlocks` unknowns per cell.
+The sparsity structure is built eagerly so subsequent assembly writes
+through `A.nzval[pattern.diag_idx[br, bc, c]]` without structural changes.
+"""
+function BlockCollocatedEquation(
+        mesh::UnstructuredFVMMesh{Dim, T}, ::Val{NBlocks},
+    ) where {Dim, T, NBlocks}
+    nc = length(mesh.cell_volumes)
+    A, pattern = build_block_collocated_sparsity(mesh, Val(NBlocks))
+    b = zeros(T, NBlocks * nc)
+    source = zeros(T, NBlocks * nc)
+    return BlockCollocatedEquation{T, NBlocks}(A, b, source, pattern)
+end
+
+function reset!(eq::BlockCollocatedEquation{T}) where {T}
+    fill!(eq.A.nzval, zero(T))
+    fill!(eq.b, zero(T))
+    fill!(eq.source, zero(T))
+    return nothing
+end
+
+"""
+    add_block_diag!(eq::BlockCollocatedEquation, c, br, bc, coeff)
+
+Accumulate `coeff` into the `(br, bc)` entry of the diagonal block at
+cell `c`. O(1).
+"""
+@inline function add_block_diag!(
+        eq::BlockCollocatedEquation{T, NBlocks}, c::Int, br::Int, bc::Int, coeff,
+    ) where {T, NBlocks}
+    eq.A.nzval[eq.pattern.diag_idx[br, bc, c]] += T(coeff)
+    return nothing
+end
+
+"""
+    add_block_offdiag_PN!(eq, f, br, bc, coeff)
+
+Accumulate `coeff` into the `(br, bc)` entry of the off-diagonal block at
+A[P_block, N_block] for internal face `f`. O(1).
+"""
+@inline function add_block_offdiag_PN!(
+        eq::BlockCollocatedEquation{T, NBlocks}, f::Int, br::Int, bc::Int, coeff,
+    ) where {T, NBlocks}
+    eq.A.nzval[eq.pattern.offdiag_PN[br, bc, f]] += T(coeff)
+    return nothing
+end
+
+@inline function add_block_offdiag_NP!(
+        eq::BlockCollocatedEquation{T, NBlocks}, f::Int, br::Int, bc::Int, coeff,
+    ) where {T, NBlocks}
+    eq.A.nzval[eq.pattern.offdiag_NP[br, bc, f]] += T(coeff)
+    return nothing
+end
+
+function to_linear_problem(eq::BlockCollocatedEquation)
+    rhs = eq.b .+ eq.source
+    return LinearProblem(eq.A, rhs)
+end
+
+"""Number of scalar unknowns per cell."""
+nblocks(::BlockCollocatedEquation{T, NB}) where {T, NB} = NB
+
 # ── Mesh helpers ─────────────────────────────────────────────────────
 
 """
