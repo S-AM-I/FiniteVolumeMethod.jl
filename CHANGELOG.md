@@ -1,5 +1,59 @@
 # Changelog
 
+## v3.9.0 — Temporal Order-of-Accuracy MMS
+
+Adds the time-discretization verification that was flagged as a v3.7+
+prerequisite for `collocated_operators` full `stable` promotion.
+Implicit Euler and BDF2 are both exercised on a manufactured
+transient-diffusion solution.
+
+### test/v_and_v_temporal_mms.jl
+
+Heat equation on `[0, 1]²` with Dirichlet-0 BCs and sinusoidal initial
+condition:
+
+    φ(x, y, 0) = sin(πx) · sin(πy)
+    φ_exact(x, y, t) = sin(πx) · sin(πy) · exp(-2π²t)
+
+Three gate sets (8 assertions total):
+
+- **Implicit Euler first-order convergence**: on N = 20 spatial grid,
+  sweep Δt ∈ {10⁻³, 5·10⁻⁴, 2.5·10⁻⁴} at T = 0.01, error halves at
+  each refinement (order > 0.5 at each transition; exact rate is ~1
+  in the dt-dominated regime).
+- **BDF2 monotone convergence + first-order-or-better at coarsest
+  transition**: with spatial-error floor at ~2·10⁻⁴ on N = 20, BDF2's
+  nominal O(Δt²) rate is contaminated by spatial error at fine Δt.
+  The coarsest-transition order (Δt = 2·10⁻³ → 10⁻³) is > 1.0 (we
+  observe ~1.1), confirming a temporal contribution distinct from
+  Euler's 1.0 floor.
+- **BDF2 strictly outperforms Euler at the same Δt**: same spatial
+  mesh, same dt, BDF2 error ≤ Euler error.
+
+### Why the gate is "monotone + first-order-or-better" not "second-order"
+
+Asymptotic O(Δt²) for BDF2 requires either finer spatial resolution
+(N = 80+) so spatial error doesn't set the floor, or a final time T
+large enough that the spatial error at `t = 0` dominates equally at
+all dt (so cancels out of the dt-ratio). At the chosen T = 0.01 and
+N = 20, both competing errors are similar magnitudes, and the
+temporal rate saturates around 1.1-1.3. Tightening this to an
+asymptotic-order gate is a v3.10+ follow-up needing a larger spatial
+mesh (and correspondingly longer runtime).
+
+### Verification
+
+All 1571 pre-existing tests pass at identical counts. 8 new gates in
+test/v_and_v_temporal_mms.jl, runtime ~2 s, wired into default
+runtests.jl.
+
+### Manifest status
+
+`collocated_operators` remains at `provisional` / `convergence_verified`
+(v3.7). Temporal-MMS evidence now exists (v3.9) but the asymptotic
+second-order gate for BDF2 is deferred; full `stable` promotion
+awaits that + skewed-mesh iterative correction + 3D operator MMS.
+
 ## v3.8.0 — Skewed-Mesh Laplacian MMS + Non-Orthogonal Baseline
 
 Extends Phase 0 operator verification to non-Cartesian (skewed) meshes.
