@@ -1,5 +1,78 @@
 # Changelog
 
+## v3.14.0 — GCL Invariance V&V + `dynamic_mesh` Promotion
+
+Fifth manifest promotion. `dynamic_mesh` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of a round-off-exact Geometric Conservation Law
+study across three analytically tractable motion patterns.
+
+### test/v_and_v_gcl.jl
+
+Problem: the GCL is the identity
+
+    (V_new[c] − V_old[c]) / Δt  ≡  Σ_f ε(c, f) · phi_mesh[f]
+
+for every cell `c`. Failure manifests as artificial mass/energy
+creation under mesh motion. This V&V verifies GCL exactness (to
+round-off) on patterns whose continuum answer is known:
+
+1. **Zero motion.** Displacement ≡ 0, `phi_mesh ≡ 0`, volumes
+   unchanged. GCL residual < 1 × 10⁻¹⁴.
+
+2. **Rigid translation.** Uniform `d(t) = (0.25 t, −0.10 t)` on a
+   10 × 10 mesh. Volumes preserved to < 1 × 10⁻¹², per-cell GCL
+   residual < 1 × 10⁻¹¹, per-cell net face-flux < 1 × 10⁻¹²
+   (closed-cell divergence-theorem identity).
+
+3. **Isotropic linear scaling `d(x) = α(x − x₀)`.** At α = 0.05
+   on a 16 × 16 mesh:
+   - GCL residual < 10⁻¹⁰ · V̄ / Δt (machine-zero by construction).
+   - Total volume ratio matches `1 + Dim · α` within `5α²` — the
+     discretization is exact for linear displacement fields, so
+     the only non-trivial error is the Taylor-truncation of
+     `V_new = V_old(1 + Dim α + …)`.
+
+4. **Translation invariance across refinement.** At
+   N ∈ {8, 16, 32}, the non-dimensional residual
+   `max_res · Δt / V_cell < 1 × 10⁻¹⁰` at every refinement level
+   (the divergence-theorem identity is mesh-independent).
+
+Total: 111 passing gates across 4 testsets, ~0.5 s runtime.
+
+### Manifest promotion
+
+`dynamic_mesh`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Verified motion patterns cover zero, rigid translation, and
+  isotropic linear scaling — the patterns for which the
+  implementation is exact by construction.
+- Rotational mesh motion, large-deformation Laplacian motion, and
+  full fluid-coupled ALE runs are still smoke-tested only.
+- A Turek-Hron FSI case is a v3.15+ follow-up.
+
+### Running manifest-promotion tally
+
+Five `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators`    | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`       | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`          | v3.13 | Stokes terminal velocity analytical match |
+| `dynamic_mesh`            | v3.14 | GCL three-pattern round-off-exactness |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 111 new gates
+wired into default runtests.jl under `V&V: GCL invariances`.
+
 ## v3.13.0 — Stokes Terminal-Velocity V&V + `lagrangian_dpm` Promotion
 
 Fourth manifest promotion. `lagrangian_dpm` advances from
