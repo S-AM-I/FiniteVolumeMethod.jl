@@ -71,6 +71,9 @@ end
     @testset verbose = true "V&V: Laplacian on skewed mesh" begin
         safe_include("v_and_v_laplacian_skewed.jl")
     end
+    @testset verbose = true "V&V: Temporal ddt MMS" begin
+        safe_include("v_and_v_temporal_mms.jl")
+    end
     # Slow V&V (full SIMPLE solve, ~1-2 min each) gated behind an env flag.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
         @testset verbose = true "V&V: Ghia lid-driven cavity Re=100" begin
