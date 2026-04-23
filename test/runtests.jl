@@ -140,6 +140,9 @@ end
     @testset verbose = true "V&V: Ranz-Marshall particle heat" begin
         safe_include("v_and_v_ranz_marshall.jl")
     end
+    @testset verbose = true "V&V: Mesh sweep flux" begin
+        safe_include("v_and_v_mesh_flux.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
