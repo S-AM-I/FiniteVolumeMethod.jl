@@ -1,5 +1,54 @@
 # Changelog
 
+## v3.26.0 — Schiller-Naumann Drag (second `lagrangian_dpm` benchmark)
+
+Second independent benchmark for `lagrangian_dpm`, joining Stokes
+terminal velocity (v3.13). Extends coverage from the Re ≪ 1
+Stokes limit to the moderate-Re regime where the Schiller-Naumann
+correlation applies.
+
+### test/v_and_v_schiller_naumann.jl
+
+The Schiller-Naumann drag law
+
+    C_d = (24/Re) · (1 + 0.15 · Re^0.687),
+    F   = (m_p/τ_p) · f(Re) · (U_f − U_p)
+
+carries four analytical invariants:
+
+Four testsets (16 gates, ~0.3 s):
+
+1. **Algebraic f(Re).** Across slip ∈ {0.01, 0.1, 0.5, 1, 5} m/s
+   (Re from ~0.07 to ~33), the computed drag matches
+   `(m_p/τ_p)·f(Re)·ΔU` to rtol 1 × 10⁻¹². Transverse component
+   vanishes identically.
+
+2. **Re cap at 1000.** At Re_raw = 2000, the implementation
+   uses f(1000), not f(2000) — verified by comparing to the
+   expected capped force.
+
+3. **Stokes-limit agreement.** At Re < 0.02 (1 μm droplet, air),
+   Schiller-Naumann matches Stokes to rtol 2 % (the correction
+   factor is 1.011 in this regime).
+
+4. **Exponential relaxation to fluid velocity.** Quiescent
+   particle, uniform moving fluid U = 1 m/s. After 2000 sub-steps
+   the particle velocity matches U_f within 1 % with monotone
+   approach (no overshoot).
+
+### `lagrangian_dpm` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Stokes terminal velocity (Re ≪ 1) | v3.13 | `test/v_and_v_stokes_terminal.jl` |
+| Schiller-Naumann (1 ≲ Re ≲ 1000)   | v3.26 | `test/v_and_v_schiller_naumann.jl`|
+| Engine Combustion Network Spray A  | ≥ v3.27 | (pending)                       |
+
+### Verification
+
+No manifest tier change. 16 new gates wired into default
+runtests.jl under `V&V: Schiller-Naumann drag`.
+
 ## v3.25.0 — P1 Radiative Equilibrium (second `radiation` benchmark)
 
 Second independent benchmark for `radiation`, joining cold-slab

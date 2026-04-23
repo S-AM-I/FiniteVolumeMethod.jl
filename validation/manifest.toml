@@ -1550,7 +1550,8 @@ limitations = [
   "No buoyancy correction is applied automatically — users must pass effective gravity g·(1 - ρ_f/ρ_p) if needed.",
   "PSI-cell coupling (volume-weighted); no particle-source smoothing.",
   "TAB and KHRT breakup models; collision models deferred.",
-  "Evidence: `test/v_and_v_stokes_terminal.jl` — (1) steady-state asymptote within 1% of analytical v_t at t=5τ_p; (2) mid-transient v(τ_p) within 2% of v_t·(1 - e⁻¹); (3) Euler first-order grid convergence in Δt/τ_p ∈ {0.04, 0.02, 0.01}; (4) strictly monotone descent with no lateral drift.",
+  "Evidence #1: `test/v_and_v_stokes_terminal.jl` — (1) steady-state asymptote within 1% of analytical v_t at t=5τ_p; (2) mid-transient v(τ_p) within 2% of v_t·(1 - e⁻¹); (3) Euler first-order grid convergence in Δt/τ_p ∈ {0.04, 0.02, 0.01}; (4) strictly monotone descent with no lateral drift.",
+  "Evidence #2 (v3.26): `test/v_and_v_schiller_naumann.jl` — moderate-Re regime. (1) Algebraic f(Re) = 1 + 0.15·Re^0.687 verified across slip ∈ {0.01, 0.1, 0.5, 1, 5} to rtol 1e-12 against the closed-form F = (m/τ_p)·f·ΔU; (2) Re cap at 1000 verified — at Re_raw = 2000 the implementation uses f(1000); (3) Stokes-limit agreement at Re < 0.02 within 2 %; (4) exponential relaxation of slip to U_f under quiescent-to-moving flow step, terminal match within 1 %, monotone approach.",
 ]
 
 # ── Phase 10: Dynamic/Moving Mesh ────────────────────────────────────
