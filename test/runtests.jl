@@ -317,6 +317,9 @@ end
     @testset verbose = true "V&V: P1 solver invariants" begin
         safe_include("v_and_v_p1_solver.jl")
     end
+    @testset verbose = true "V&V: EDC reaction rates" begin
+        safe_include("v_and_v_edc.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
