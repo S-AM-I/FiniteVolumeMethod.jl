@@ -1304,18 +1304,19 @@ reason = "This tutorial remains excluded from automated CI and is not part of th
 
 [[features]]
 feature = "collocated_operators"
-maturity = "experimental"
-validation = "smoke_tested"
-role = "research_support_tooling"
+maturity = "provisional"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
-required_ladder_stages = ["verification"]
-summary = "Collocated cell-centered FVM operators on unstructured polyhedral meshes: Laplacian, divergence, gradient, temporal, interpolation."
+required_ladder_stages = ["verification", "benchmark"]
+summary = "Collocated cell-centered FVM operators on unstructured polyhedral meshes: Laplacian, divergence, gradient, Rhie-Chow interpolation, temporal schemes. Machine-checked via MMS and analytical invariants."
 limitations = [
-  "Experimental — operators tested via unit tests only; no MMS convergence verification yet.",
-  "Requires UnstructuredFVMMesh with cell_faces and face_tags populated.",
+  "Promoted from experimental → provisional in v3.6.0 after Phase 0 MMS suite landed: Laplacian O(h²) (v3.4), gradient O(h²) interior (v3.5), divergence exact on div-free input (v3.5), Rhie-Chow three-invariant set (v3.6).",
+  "Convergence verification is on uniform Cartesian meshes only. Skewed / non-orthogonal mesh MMS is a v3.7+ follow-up before 'stable' promotion.",
+  "Temporal schemes (Euler, BDF2, Crank-Nicolson) have unit-test coverage but no dedicated temporal-order MMS yet.",
 ]
 
 # ── Phase 1: Incompressible Navier-Stokes ────────────────────────────

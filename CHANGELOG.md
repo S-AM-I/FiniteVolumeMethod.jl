@@ -1,5 +1,75 @@
 # Changelog
 
+## v3.7.0 — First Manifest Promotion (`collocated_operators` → provisional)
+
+First time a feature in `validation/manifest.toml` advances past the
+`experimental` / `smoke_tested` tier since v2.0. The `collocated_operators`
+entry moves from:
+
+    maturity = "experimental"
+    validation = "smoke_tested"
+    role = "research_support_tooling"
+    required_ladder_stages = ["verification"]
+
+to:
+
+    maturity = "provisional"
+    validation = "convergence_verified"
+    role = "claim_bearing_solver"
+    required_ladder_stages = ["verification", "benchmark"]
+
+### Evidence backing the promotion
+
+Five V&V test files landed in v3.4–v3.6 provide publishable-grade
+machine-checked evidence on a uniform Cartesian mesh:
+
+1. `test/v_and_v_laplacian_mms.jl` (v3.4): Laplacian MMS
+   `-∇²(sin πx sin πy) = 2π² sin πx sin πy` with Dirichlet-0 BCs.
+   Observed L² order 2.00 at all refinement transitions
+   N ∈ {10, 20, 40, 80}.
+2. `test/v_and_v_operator_mms.jl` — gradient (v3.5): Green-Gauss
+   gradient of sin(πx)sin(πy) achieves L² O(h²) in interior.
+3. Same file — divergence (v3.5): div of an analytically div-free
+   field is machine zero (~10⁻¹⁵) at every N.
+4. `test/v_and_v_rhie_chow.jl` (v3.6): three analytical invariants
+   (linear-pressure identity, constant-pressure preservation,
+   checkerboard suppression) all pass.
+5. `test/v_and_v_ghia_cavity.jl` (v3.1–v3.3, gated by `FVM_RUN_VANDV`):
+   Ghia 1982 Re=100 lid-driven cavity centerline u(y) matches 10
+   reference points to ≤8% interior, ≤5% near-lid, with
+   `continuity_residual_interior < 10⁻⁴`.
+
+### What 'provisional' means
+
+Per the v2.0 contract (CHANGELOG.md v2.0.0-rc1 section):
+
+> `provisional` features are solver families whose numerical behavior
+> is verified against published or manufactured references on a
+> restricted regime (typically Cartesian mesh + low Reynolds + simple
+> topology), but where full `stable` promotion requires additional
+> evidence on the expanded regime.
+
+### What's still missing for 'stable' promotion
+
+- **Skewed-mesh Laplacian MMS**: exercises the Stage 3c over-relaxed
+  non-orthogonal correction. Currently all MMS runs on Cartesian
+  meshes where that correction is a no-op.
+- **Temporal-order MMS for BDF2 / Crank-Nicolson**: unit tests cover
+  correctness; no dedicated time-order-of-accuracy study.
+- **3D Laplacian / gradient / divergence MMS**: 2D-only in v3.6.
+- **Performance benchmarks**: convergence rate is necessary but not
+  sufficient — `stable` also implies stable runtime performance.
+
+Each is a v3.7+ follow-up.
+
+### Related work (non-blocking)
+
+- Other collocated features (`incompressible_ns`, `turbulence_rans`,
+  etc.) remain at `experimental` / `smoke_tested`. They benefit
+  transitively from the operator verification but need their own
+  V&V (Poiseuille MMS, Ghia Re=400/1000 stability fix, Moser channel
+  DNS comparison, etc.) before individual promotion.
+
 ## v3.6.0 — Rhie-Chow Interpolation V&V — Phase 0 Complete
 
 Completes the Phase 0 operator V&V suite. All four core collocated
