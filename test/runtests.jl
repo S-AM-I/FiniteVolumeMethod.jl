@@ -257,6 +257,9 @@ end
     @testset verbose = true "V&V: Force coefficients" begin
         safe_include("v_and_v_force_coefficients.jl")
     end
+    @testset verbose = true "V&V: LES dispatch" begin
+        safe_include("v_and_v_les_dispatch.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
