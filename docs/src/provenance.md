@@ -44,6 +44,7 @@ without provenance.
 
 | Module | Algorithm | Reference |
 |--------|-----------|-----------|
+| `src/collocated/types.jl` | CSC sparsity pre-build + `nzval`-indexed assembly via `SparsityPattern` | Standard sparse-matrix techniques: Saad (2003), *Iterative Methods for Sparse Linear Systems*, Ch. 3. The pre-compute-structure-once-then-fill-in-place pattern is how every mature FVM/FEM code avoids CSC random-pattern insertion in its inner loop. |
 | `src/collocated/gradient.jl` | Green-Gauss gradient with iterative non-orthogonal correction | Jasak (1996), *Error analysis and estimation for the finite volume method with applications to fluid flows*, PhD thesis, Imperial College, Ch. 3. |
 | `src/collocated/laplacian.jl` | Cell-centered Laplacian with non-orthogonal correction | Jasak (1996), Ch. 3–4. |
 | `src/collocated/divergence.jl` | Cell-centered divergence via Gauss's theorem | Ferziger & Perić (2002), Ch. 8. |

@@ -70,7 +70,7 @@ green in CI.
 
 | Component | File:Line | Issue | Fix Stage |
 |-----------|-----------|-------|-----------|
-| CollocatedEquation assembly | `src/collocated/types.jl:181,192`, `src/collocated/laplacian.jl`, every `assemble_*!` | Random-pattern CSC insertion `A[P,N] += …` on every SIMPLE outer iteration — dominates wall-clock at industrial cell counts | 1a |
+| ~~CollocatedEquation assembly~~ | ~~`src/collocated/types.jl:181,192`, `src/collocated/laplacian.jl`, every `assemble_*!`~~ | ~~Random-pattern CSC insertion `A[P,N] += …` on every SIMPLE outer iteration~~ | **Fixed in v2.2.0-dev (Stage 1a)**: `SparsityPattern` pre-computes nzval indices at mesh-bind time; `add_diag!` / `add_face_coeffs_PN!` write `A.nzval[idx]` in O(1). 5× speedup on 40k-cell Laplacian; zero-allocation gate in `test/assembly_bench.jl`. Cyclic BCs + pressure ref-cell pinning still use slow path until cyclic pairs are plumbed into `build_collocated_sparsity` (Stage 1a follow-up). |
 | Operator hot-loop allocation | `src/collocated/gradient.jl:126-130`, `src/collocated/interpolation.jl:96` | `fill(…)` buffer and `Dict{Int,Int}` constructed on every call | 1b |
 | CollocatedEquation is scalar-only | `src/collocated/types.jl:181` | Single `Vector{T}` for `b`; two-fluid and coupled momentum-energy need a `BlockCollocatedEquation` | 1c |
 | No AbstractFVMMesh supertype | `src/mesh/abstract_mesh.jl` | `FVMGeometry`, `StructuredMesh{1,2,3}D`, `UnstructuredFVMMesh` have no common supertype; conversion paths sparse | 1d |

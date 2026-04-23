@@ -204,7 +204,7 @@ function solve_fvdom_radiation(
         # Absorption: a_c * V_c on diagonal (implicit)
         for c in 1:nc
             a_c = _cell_absorption(a, c)
-            eq.A[c, c] += a_c * mesh.cell_volumes[c]
+            add_diag!(eq, c, a_c * mesh.cell_volumes[c])
         end
 
         # Emission source: a_c * sigma * T^4 / pi * V_c (explicit RHS)

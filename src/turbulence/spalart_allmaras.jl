@@ -172,7 +172,7 @@ function solve_turbulence!(
         r_val = min(nt / (S_tilde * model.kappa^2 * d^2), T(10))
         fw = _sa_fw(r_val, model.cw2, model.cw3)
         # D = cw1 * fw * (nt/d^2) * nt → S_P = cw1 * fw * nt / d^2
-        nt_eq.A[c, c] += cw1 * fw * nt / d^2 * mesh.cell_volumes[c]
+        add_diag!(nt_eq, c, cw1 * fw * nt / d^2 * mesh.cell_volumes[c])
     end
 
     # cb2/sigma * |grad(nu_tilde)|^2 term (explicit source)

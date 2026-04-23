@@ -307,7 +307,14 @@ export
     # SciML bridge
     to_linear_problem,
     collocated_to_odefunction,
-    reset!
+    reset!,
+    # Sparsity pattern + fast-path assembly helpers (Stage 1a)
+    SparsityPattern,
+    build_collocated_sparsity,
+    add_diag!,
+    add_offdiag_PN!,
+    add_offdiag_NP!,
+    add_face_coeffs_PN!
 
 # --- Incompressible Navier-Stokes (Phase 1) ---
 export

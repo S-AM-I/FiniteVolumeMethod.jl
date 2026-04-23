@@ -97,7 +97,7 @@ function solve_turbulence!(
     for c in 1:nc
         omega_val = max(omega_field.internal[c], T(1.0e-10))
         k_eq.b[c] += P_k[c] * mesh.cell_volumes[c]
-        k_eq.A[c, c] += model.beta_star * omega_val * mesh.cell_volumes[c]
+        add_diag!(k_eq, c, model.beta_star * omega_val * mesh.cell_volumes[c])
     end
 
     lp_k = to_linear_problem(k_eq)
@@ -127,7 +127,7 @@ function solve_turbulence!(
         k_safe = max(k_field.internal[c], T(1.0e-10))
         omega_val = max(omega_field.internal[c], T(1.0e-10))
         omega_eq.b[c] += model.alpha * (omega_val / k_safe) * P_k[c] * mesh.cell_volumes[c]
-        omega_eq.A[c, c] += model.beta * omega_val * mesh.cell_volumes[c]
+        add_diag!(omega_eq, c, model.beta * omega_val * mesh.cell_volumes[c])
     end
 
     lp_omega = to_linear_problem(omega_eq)

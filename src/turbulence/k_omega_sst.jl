@@ -178,7 +178,7 @@ function solve_turbulence!(
     for c in 1:nc
         omega_val = max(omega_field.internal[c], T(1.0e-10))
         k_eq.b[c] += P_k[c] * mesh.cell_volumes[c]
-        k_eq.A[c, c] += co.beta_star * omega_val * mesh.cell_volumes[c]
+        add_diag!(k_eq, c, co.beta_star * omega_val * mesh.cell_volumes[c])
     end
 
     lp_k = to_linear_problem(k_eq)
@@ -209,7 +209,7 @@ function solve_turbulence!(
         # Production
         omega_eq.b[c] += alpha_blend[c] * (omega_val / k_safe) * P_k[c] * mesh.cell_volumes[c]
         # Destruction
-        omega_eq.A[c, c] += beta_blend[c] * omega_val * mesh.cell_volumes[c]
+        add_diag!(omega_eq, c, beta_blend[c] * omega_val * mesh.cell_volumes[c])
         # Cross-diffusion (explicit, only in k-ε region where F1 < 1)
         gk_dot_gw = dot(grad_k[c], grad_omega[c])
         cd_term = T(2) * (one(T) - F1[c]) * co.sigma_omega2 / omega_val * gk_dot_gw
