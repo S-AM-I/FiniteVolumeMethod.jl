@@ -1,6 +1,6 @@
 name = "FiniteVolumeMethod"
 uuid = "d4f04ab7-4f65-4d72-8a28-7087bc7f46f4"
-version = "3.47.0"
+version = "3.48.0"
 authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>", "cx-xd contributors"]
 
 [deps]

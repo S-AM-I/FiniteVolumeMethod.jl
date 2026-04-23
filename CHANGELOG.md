@@ -1,5 +1,40 @@
 # Changelog
 
+## v3.48.0 — fvDOM Quadrature (fourth `radiation` benchmark)
+
+Fourth convergence-verified benchmark for `radiation`, joining
+P1 slab attenuation (v3.15), P1 equilibrium (v3.25), and
+source-term algebra (v3.35). Covers the fvDOM angular-quadrature
+infrastructure supporting the discrete-ordinates solver.
+
+### test/v_and_v_fvdom_quadrature.jl
+
+Seven testsets (38 gates, ~0.2 s) verifying the S2 and S4
+level-symmetric quadrature rules in 2D and 3D:
+
+1. **2D S2.** 4 unit directions.
+2. **3D S2.** 8 unit directions.
+3. **S2 isotropy.** Σ w·Ω̂ = 0 in 2D and 3D to 1e-12.
+4. **S2 total weight.** 2π (2D) and 4π (3D) to rtol 1e-14.
+5. **2D S4.** 12 unit directions to rtol 1e-6.
+6. **S4 isotropy + total weight.**
+7. **FvDOMModel constructor** produces correct direction counts
+   at both orders.
+
+### `radiation` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| P1 slab sinh attenuation (cold medium)  | v3.15 | `test/v_and_v_p1_slab.jl`           |
+| P1 radiative equilibrium                  | v3.25 | `test/v_and_v_p1_equilibrium.jl`    |
+| Radiation source algebra                  | v3.35 | `test/v_and_v_radiation_source.jl`  |
+| fvDOM angular-quadrature                  | v3.48 | `test/v_and_v_fvdom_quadrature.jl`  |
+
+### Verification
+
+No manifest tier change. 38 new gates wired into default
+runtests.jl under `V&V: fvDOM quadrature`.
+
 ## v3.47.0 — FR/ED Blending (fourth `combustion` benchmark)
 
 Fourth convergence-verified benchmark for `combustion`, joining
