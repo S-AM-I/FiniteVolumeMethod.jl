@@ -175,7 +175,7 @@ The repo is in a v2→v3 overhaul; the authoritative issue list is `test/KNOWN_F
 ### Correctness / simplifications
 - WENO5 has a ghost-cell bug in the 1D solver (`nghost=3` unsupported at small grid sizes)
 - Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L∞, not O(h^2)
-- Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `‖b‖` denominator)
+- ~~Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `‖b‖` denominator)~~ **Fixed v3.2.0** via OpenFOAM-style scale-invariant normalization in `src/incompressible/residuals.jl`. Residual floor on 80×80 now ~3e-3 (was ~2e-2); Ghia Re=100 ≤8% interior, ≤5% near-lid
 - `k-ε` uses simple `max()` floor for `ν_t`, no Durbin realizability (`src/turbulence/k_epsilon_rans.jl:24`)
 - Dynamic Smagorinsky uses simplified scalar Germano, not full tensor form (`src/turbulence/dynamic_smagorinsky.jl`)
 - Wall functions assume aligned cells; no skew penalty (`src/turbulence/wall_functions.jl`)
