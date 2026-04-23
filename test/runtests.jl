@@ -188,6 +188,9 @@ end
     @testset verbose = true "V&V: ALE-corrected flux" begin
         safe_include("v_and_v_ale_flux.jl")
     end
+    @testset verbose = true "V&V: CHT interface flux" begin
+        safe_include("v_and_v_cht_interface.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
