@@ -1,5 +1,41 @@
 # Changelog
 
+## v3.54.0 — Wall Functions (fifth `turbulence_rans` benchmark)
+
+Fifth convergence-verified benchmark for `turbulence_rans`,
+joining k-ε DHIT (v3.18), k-ε log-layer (v3.23), k-ω decay
+(v3.38), and Spalart-Allmaras (v3.44). Covers the Spalding
+wall-function primitives used by every wall-bounded RANS solve.
+
+### test/v_and_v_wall_functions.jl
+
+Seven testsets (38 gates, ~0.1 s) verifying the wall-function
+kernels:
+
+1. **k_wall = u_τ²/√C_μ** at six u_τ values to rtol 1e-14.
+2. **ε_wall = u_τ³/(κ·y)** algebraic identity (rtol 1e-14).
+3. **k_wall ∝ u_τ² scaling** (doubling u_τ ⇒ 4× k).
+4. **ε_wall ∝ u_τ³/y scaling** in both independent variables.
+5. **Spalding Newton iteration** converges to the log-law
+   u⁺·κ = log(E·y⁺) at y·U/ν = 10⁵ within 5 %.
+6. **ν_t_wall ≥ 0** realizability across 16 (U, y) combinations.
+7. **u_τ monotonically increasing in U_par** at fixed y, ν.
+
+### `turbulence_rans` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| k-ε DHIT decay ODE                 | v3.18 | `test/v_and_v_kepsilon_dhit.jl`     |
+| k-ε log-layer equilibrium           | v3.23 | `test/v_and_v_kepsilon_loglayer.jl` |
+| k-ω Wilcox decay + identity         | v3.38 | `test/v_and_v_komega.jl`            |
+| Spalart-Allmaras χ/fv1 algebra      | v3.44 | `test/v_and_v_spalart_allmaras.jl`  |
+| Spalding wall functions              | v3.54 | `test/v_and_v_wall_functions.jl`    |
+
+### Verification
+
+No manifest tier change. 38 new gates wired into default
+runtests.jl under `V&V: Wall functions`.
+
 ## v3.53.0 — Strain-Rate Primitive (fourth `turbulence_les` benchmark)
 
 Fourth convergence-verified benchmark for `turbulence_les`,
