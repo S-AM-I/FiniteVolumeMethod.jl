@@ -146,6 +146,9 @@ end
     @testset verbose = true "V&V: Radiation source algebra" begin
         safe_include("v_and_v_radiation_source.jl")
     end
+    @testset verbose = true "V&V: VOF mixture properties" begin
+        safe_include("v_and_v_vof_mixture.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
