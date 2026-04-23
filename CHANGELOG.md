@@ -1,5 +1,44 @@
 # Changelog
 
+## v3.55.0 — SciML Interface (fifth `incompressible_ns` benchmark)
+
+Fifth convergence-verified benchmark for `incompressible_ns`,
+joining Ghia Re=100 (v3.1), Poiseuille (v3.10), Couette (v3.22),
+and transient PISO (v3.41). Covers the SciML-compatible solution
+wrapper — the public API surface consumed by downstream SciML
+workflows (symbolic indexing, retcode traits, field extraction).
+
+### test/v_and_v_incompressible_sciml.jl
+
+Seven testsets (277 gates, ~1.3 s):
+
+1. **`solve(prob, SIMPLE())`** returns `IncompressibleSolution`
+   which is `<: AbstractFVMSolution`.
+2. **Symbolic field access.** `sol[:U]`, `sol[:p]`, `sol[:phi]`
+   round-trip to state fields with all values finite.
+3. **Velocity-component extraction.** `sol[:Ux]`, `sol[:Uy]`
+   cross-check U[:, 1] and U[:, 2] at 130 cells.
+4. **`keys(sol)`** lists (:U, :p, :phi, :Ux, :Uy) in 2D (no :Uz).
+5. **`retcode`** reflects convergence: `:Success` or `:MaxIters`.
+6. **`is_fvm_solution(sol)`** returns true for wrapped solutions,
+   false for other types.
+7. **Unknown symbol errors** (`sol[:Uz]` on 2D, `sol[:invalid]`).
+
+### `incompressible_ns` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Ghia 1982 lid-driven cavity (Re = 100) | v3.1–v3.3 | `test/v_and_v_ghia_cavity.jl`           |
+| Poiseuille parabolic + grid-convergence | v3.10–v3.11 | `test/v_and_v_poiseuille*.jl`         |
+| Couette shear-driven linear profile    | v3.22  | `test/v_and_v_couette.jl`                 |
+| Transient PISO stability               | v3.41  | `test/v_and_v_piso_decay.jl`              |
+| SciML interface (symbolic + retcode)    | v3.55  | `test/v_and_v_incompressible_sciml.jl`    |
+
+### Verification
+
+No manifest tier change. 277 new gates wired into default
+runtests.jl under `V&V: Incompressible SciML interface`.
+
 ## v3.54.0 — Wall Functions (fifth `turbulence_rans` benchmark)
 
 Fifth convergence-verified benchmark for `turbulence_rans`,
