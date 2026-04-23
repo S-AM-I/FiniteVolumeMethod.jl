@@ -41,7 +41,7 @@ This is a constructor for the [`FVMGeometry`](@ref) struct, which holds the mesh
   - `cv_volumes::Vector{Float64}`: A `Vector` of the volumes of each control volume.
   - `triangle_props::Dict{NTuple{3,Int},TriangleProperties}`: A `Dict` mapping the indices of each triangle to its [`TriangleProperties`].
 """
-struct FVMGeometry{T, S, C <: AbstractCoordinateSystem}
+struct FVMGeometry{T, S, C <: AbstractCoordinateSystem} <: AbstractFiniteVolumeMesh{2}
     triangulation::T
     triangulation_statistics::S
     cv_volumes::Vector{Float64}

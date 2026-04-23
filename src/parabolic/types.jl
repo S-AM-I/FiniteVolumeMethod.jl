@@ -174,9 +174,11 @@ abstract type AbstractPhysicsOperator end
 """
     AbstractBoundaryCondition
 
-Abstract type for boundary condition specifications.
+Abstract type for boundary condition specifications. Subtypes the Stage 1d
+umbrella `AbstractFVMBoundaryCondition` so generic dispatch on
+`::AbstractFVMBoundaryCondition` matches parabolic and collocated BCs.
 """
-abstract type AbstractBoundaryCondition end
+abstract type AbstractBoundaryCondition <: AbstractFVMBoundaryCondition end
 
 """
     AbstractInitialCondition

@@ -4,8 +4,9 @@ using StaticArrays: SVector
     AbstractHyperbolicBC
 
 Abstract supertype for ghost-cell boundary conditions in the hyperbolic solver.
+Subtypes the Stage 1d umbrella `AbstractFVMBoundaryCondition`.
 """
-abstract type AbstractHyperbolicBC end
+abstract type AbstractHyperbolicBC <: AbstractFVMBoundaryCondition end
 
 """
     apply_bc!(U_ghost, bc, law, U_interior, t) -> Nothing

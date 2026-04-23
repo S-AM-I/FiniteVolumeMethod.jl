@@ -42,6 +42,7 @@ export
     CT_Pyramid,
     CT_Polyhedron,
     # Boundary and Initial Conditions
+    AbstractFVMBoundaryCondition,
     AbstractBoundaryCondition,
     AbstractInitialCondition,
     UnsupportedBCError,
@@ -98,7 +99,11 @@ export
     check_mesh_quality,
     refine_uniform,
     # FVM Mesh Wrappers
+    AbstractFiniteVolumeMesh,
     AbstractFVMMesh,
+    dim_of,
+    n_cells,
+    n_faces,
     StructuredFVMMesh,
     CurvilinearFVMMesh,
     UnstructuredFVMMesh,
