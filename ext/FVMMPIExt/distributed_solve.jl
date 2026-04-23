@@ -92,7 +92,12 @@ function FiniteVolumeMethod.solve_simple_distributed(
         FiniteVolumeMethod.update_boundary_velocity!(state, prob.bcs, mesh)
         FiniteVolumeMethod.correct_fluxes!(state, mesh)
 
-        # Global residual via MPI reduction
+        # Global residual via MPI reduction. `continuity_residual` runs
+        # on the local submesh; owned-cell contributions are summed across
+        # ranks. (A future Stage 2e enhancement will weight by owned-cell
+        # count so the returned value is a proper L^2 norm over the global
+        # domain; for now it's the domain-sum divergence residual, which
+        # is what the serial path also returns.)
         local_cont = FiniteVolumeMethod.continuity_residual(state, mesh)
         global_cont = MPI.Allreduce(local_cont, MPI.SUM, dmesh.comm)
         push!(residuals[:continuity], global_cont)

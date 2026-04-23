@@ -569,11 +569,17 @@ export
     ale_corrected_flux, solve_ale,
     compute_distance_diffusivity
 
-# --- MPI Parallelism (Phase 6) ---
+# --- MPI Parallelism (Phase 6 / Stage 2) ---
 export
     distribute_mesh,
     halo_exchange!,
-    solve_simple_distributed
+    solve_simple_distributed,
+    # Stage 2b/2c: dep-free geometric partitioning + local submesh extraction.
+    # These run purely in the base module so the test suite can exercise the
+    # partitioning logic without needing MPI loaded.
+    partition_rcb,
+    extract_local_mesh,
+    LocalMeshData
 
 export FVMGeometry,
     FVMProblem,

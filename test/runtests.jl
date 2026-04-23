@@ -34,6 +34,9 @@ end
     @testset verbose = true "SciML Contract Uniform (Stage 1d)" begin
         safe_include("sciml_contract_uniform.jl")
     end
+    @testset verbose = true "MPI Partition (Stage 2)" begin
+        safe_include("mpi_partition.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end
