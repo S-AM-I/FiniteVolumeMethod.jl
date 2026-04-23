@@ -1374,11 +1374,12 @@ precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
-summary = "Fluid energy equation, Boussinesq buoyancy, solid conduction, and Dirichlet-Neumann conjugate heat transfer coupling. Solid conduction verified against analytical Laplace series solution."
+summary = "Fluid energy equation, Boussinesq buoyancy, solid conduction, and Dirichlet-Neumann conjugate heat transfer coupling. Solid conduction verified against two independent analytical benchmarks (steady Laplace series + unsteady decay)."
 limitations = [
   "Promoted from experimental → provisional in v3.12.0 after solid-conduction grid-convergence study (test/v_and_v_heat_conduction.jl) against Laplace series solution on unit square. Observed spatial rates 1.96 and 1.99 across N ∈ {20, 40, 80}; center-cell matches analytical 0.25 to < 3% on 80×80.",
-  "Solid conduction path (solve_solid_conduction) verified; full conjugate Dirichlet-Neumann coupling (solve_conjugate_ht) lacks a dedicated analytical benchmark (v3.13+ follow-up).",
-  "Fluid-energy equation verification (De Vahl Davis natural convection, Rayleigh-Bénard) is a v3.13+ follow-up before stable promotion.",
+  "Second benchmark in v3.21.0 (test/v_and_v_unsteady_heat.jl): transient `solve_solid_conduction` verified against T(x, t) = sin(πx/L)·exp(-π²αt/L²). Spatial O(h²) rate at fine dt, endpoint L² < 5e-3 at 40×8, first-order Δt temporal convergence.",
+  "Solid conduction path (solve_solid_conduction, steady + transient) verified; full conjugate Dirichlet-Neumann coupling (solve_conjugate_ht) lacks a dedicated analytical benchmark (v3.22+ follow-up).",
+  "Fluid-energy equation verification (De Vahl Davis natural convection, Rayleigh-Bénard) is a v3.22+ follow-up before stable promotion.",
   "Constant fluid properties (rho, Cp) only; temperature-dependent properties deferred.",
   "Per-face CHT correction landed in v2.6.0 (Stage 5a) but dedicated per-face accuracy gate is outstanding.",
 ]
