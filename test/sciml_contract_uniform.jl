@@ -113,6 +113,36 @@ end
     filter!(e -> e.name !== :demo_const, entries)
 end
 
+@testset "Stage 1g: Abstract-array-parameterized field types" begin
+    mesh = build_cartesian_unstructured_mesh(3, 3, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+
+    # Default constructors still give Vector-backed fields.
+    s = CollocatedScalarField(:phi, mesh; value = 0.0)
+    @test s.internal isa Vector{Float64}
+    @test s isa CollocatedScalarField{Float64}  # UnionAll dispatch matches
+
+    v = CollocatedVectorField(:U, mesh)
+    @test v.internal isa Vector  # concrete SVector element type
+    @test v isa CollocatedVectorField{2, Float64}
+
+    phi = FaceFluxField(:phi, mesh; value = 0.0)
+    @test phi.values isa Vector{Float64}
+    @test phi isa FaceFluxField{Float64}
+
+    # Custom container type — use a `Base.ReinterpretArray` wrapper to
+    # prove the API accepts any `AbstractVector{T}` for `internal` /
+    # `boundary` as long as types agree. A real GPU port would swap in a
+    # `CuVector{T}` here without any other change.
+    bface_idxs = [f for f in 1:size(mesh.face_cells, 2) if mesh.face_cells[2, f] == 0]
+    internal = view(zeros(Float64, nc), :)
+    boundary = view(zeros(Float64, length(bface_idxs)), :)
+    s2 = CollocatedScalarField{Float64}(:alt, internal, boundary, bface_idxs)
+    @test s2 isa CollocatedScalarField{Float64}
+    @test s2.internal === internal
+    @test s2.boundary === boundary
+end
+
 @testset "Stage 1f: is_fvm_solution trait + AbstractFVMSolution" begin
     # Non-FVM values: false
     @test !is_fvm_solution(42)

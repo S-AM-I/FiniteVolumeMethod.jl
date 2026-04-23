@@ -53,21 +53,41 @@ end
 # ── Collocated scalar field ──────────────────────────────────────────
 
 """
-    CollocatedScalarField{T} <: AbstractCollocatedField
+    CollocatedScalarField{T, A <: AbstractVector{T}} <: AbstractCollocatedField
 
 Cell-centered scalar field with explicit boundary face values.
 
+Parameterized on the array container type `A` (defaults to `Vector{T}`) so
+a future GPU backend can instantiate `CollocatedScalarField{Float32, CuVector{Float32}}`
+without changing any downstream method signatures: callsites written as
+`::CollocatedScalarField{T}` match any container type via Julia's UnionAll
+dispatch (Stage 1g).
+
 # Fields
 - `name::Symbol` — human-readable identifier (e.g. `:p`, `:T`, `:k`)
-- `internal::Vector{T}` — values at cell centers, length `ncells`
-- `boundary::Vector{T}` — values at boundary faces, length `n_boundary_faces`
+- `internal::A` — values at cell centers, length `ncells`
+- `boundary::A` — values at boundary faces, length `n_boundary_faces`
 - `boundary_face_indices::Vector{Int}` — mesh face index for each boundary entry
 """
-struct CollocatedScalarField{T} <: AbstractCollocatedField
+struct CollocatedScalarField{T, A <: AbstractVector{T}} <: AbstractCollocatedField
     name::Symbol
-    internal::Vector{T}
-    boundary::Vector{T}
+    internal::A
+    boundary::A
     boundary_face_indices::Vector{Int}
+end
+
+# Preserve the old 1-parameter constructor form by inferring A from
+# the supplied arrays. Existing code like
+# `CollocatedScalarField{T}(name, internal, boundary, bface_idxs)` continues
+# to work.
+function CollocatedScalarField{T}(
+        name::Symbol, internal::AbstractVector{T}, boundary::AbstractVector{T},
+        boundary_face_indices::Vector{Int},
+    ) where {T}
+    A = typeof(internal)
+    typeof(boundary) === A ||
+        error("CollocatedScalarField: internal and boundary must have same container type")
+    return CollocatedScalarField{T, A}(name, internal, boundary, boundary_face_indices)
 end
 
 """
@@ -83,7 +103,7 @@ function CollocatedScalarField(
     bface_idxs = [f for f in 1:nf if mesh.face_cells[2, f] == 0]
     internal = fill(value, ncells)
     boundary = fill(value, length(bface_idxs))
-    return CollocatedScalarField{T}(name, internal, boundary, bface_idxs)
+    return CollocatedScalarField{T, typeof(internal)}(name, internal, boundary, bface_idxs)
 end
 
 """Number of interior cells."""
@@ -95,21 +115,35 @@ n_boundary_faces(field::CollocatedScalarField) = length(field.boundary)
 # ── Collocated vector field ──────────────────────────────────────────
 
 """
-    CollocatedVectorField{Dim, T} <: AbstractCollocatedField
+    CollocatedVectorField{Dim, T, A <: AbstractVector{SVector{Dim, T}}} <: AbstractCollocatedField
 
-Cell-centered vector field stored as `Vector{SVector{Dim, T}}`.
+Cell-centered vector field stored as an abstract-container sequence of
+`SVector{Dim, T}`. Parameterised on the container type `A` for future GPU
+dispatch (Stage 1g). `CollocatedVectorField{Dim, T}` still matches any
+container via Julia's UnionAll dispatch.
 
 # Fields
 - `name::Symbol`
-- `internal::Vector{SVector{Dim, T}}` — cell-center values, length `ncells`
-- `boundary::Vector{SVector{Dim, T}}` — boundary face values
+- `internal::A` — cell-center values, length `ncells`
+- `boundary::A` — boundary face values
 - `boundary_face_indices::Vector{Int}`
 """
-struct CollocatedVectorField{Dim, T} <: AbstractCollocatedField
+struct CollocatedVectorField{Dim, T, A <: AbstractVector{<:SVector{Dim, T}}} <: AbstractCollocatedField
     name::Symbol
-    internal::Vector{SVector{Dim, T}}
-    boundary::Vector{SVector{Dim, T}}
+    internal::A
+    boundary::A
     boundary_face_indices::Vector{Int}
+end
+
+function CollocatedVectorField{Dim, T}(
+        name::Symbol, internal::AbstractVector{<:SVector{Dim, T}},
+        boundary::AbstractVector{<:SVector{Dim, T}},
+        boundary_face_indices::Vector{Int},
+    ) where {Dim, T}
+    A = typeof(internal)
+    typeof(boundary) === A ||
+        error("CollocatedVectorField: internal and boundary must have same container type")
+    return CollocatedVectorField{Dim, T, A}(name, internal, boundary, boundary_face_indices)
 end
 
 """
@@ -126,7 +160,7 @@ function CollocatedVectorField(
     bface_idxs = [f for f in 1:nf if mesh.face_cells[2, f] == 0]
     internal = fill(value, ncells_val)
     boundary = fill(value, length(bface_idxs))
-    return CollocatedVectorField{Dim, T}(name, internal, boundary, bface_idxs)
+    return CollocatedVectorField{Dim, T, typeof(internal)}(name, internal, boundary, bface_idxs)
 end
 
 ncells(field::CollocatedVectorField) = length(field.internal)
@@ -135,18 +169,26 @@ n_boundary_faces(field::CollocatedVectorField) = length(field.boundary)
 # ── Face flux field ──────────────────────────────────────────────────
 
 """
-    FaceFluxField{T}
+    FaceFluxField{T, A <: AbstractVector{T}}
 
 Scalar face-normal flux field.  Stores one value per mesh face
 (both internal and boundary).  Positive flux is in the direction
 of `face_normals[:, f]`, i.e. from owner to neighbour.
 
+Parameterised on array container `A` (Stage 1g); defaults to `Vector{T}`.
+Existing `::FaceFluxField{T}` method signatures match any container via
+UnionAll dispatch.
+
 Used for the volumetric flux `phi = U_f . S_f` in the incompressible
 solver and for any advective transport operator.
 """
-struct FaceFluxField{T}
+struct FaceFluxField{T, A <: AbstractVector{T}}
     name::Symbol
-    values::Vector{T}
+    values::A
+end
+
+function FaceFluxField{T}(name::Symbol, values::AbstractVector{T}) where {T}
+    return FaceFluxField{T, typeof(values)}(name, values)
 end
 
 """
@@ -158,7 +200,8 @@ function FaceFluxField(
         name::Symbol, mesh::UnstructuredFVMMesh{Dim, T}; value = zero(T),
     ) where {Dim, T}
     nf = size(mesh.face_cells, 2)
-    return FaceFluxField{T}(name, fill(value, nf))
+    values = fill(value, nf)
+    return FaceFluxField{T, typeof(values)}(name, values)
 end
 
 nfaces(field::FaceFluxField) = length(field.values)
