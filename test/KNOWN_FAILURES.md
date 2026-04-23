@@ -41,8 +41,8 @@ green in CI.
 
 | Component | File:Line | Simplification | Fix Stage |
 |-----------|-----------|----------------|-----------|
-| Non-orthogonal correction | `src/collocated/gradient.jl:144-149` | Interpolated-gradient only; no over-relaxed variant, no least-squares gradient fallback | 3d |
-| Laplacian skewness | `src/collocated/laplacian.jl` | No face-skewness correction term; accuracy drops on non-orthogonal meshes | 3d |
+| ~~Non-orthogonal correction~~ | ~~`src/collocated/gradient.jl:144-149`~~ | ~~Interpolated-gradient only; no over-relaxed variant~~ | **Partially fixed in v2.4.0 (Stage 3c)**: `assemble_laplacian!` now supports `NON_ORTHO_MINIMUM` / `NON_ORTHO_ORTHOGONAL` / `NON_ORTHO_OVER_RELAXED` modes via a `correction_mode` keyword; default is over-relaxed (Jasak 1996 Ch. 4). On orthogonal meshes all three are identical; on skewed meshes the over-relaxed implicit coefficient scales by 1/cosθ. Least-squares gradient alternative is a Stage 3 follow-up. |
+| Laplacian skewness | `src/collocated/laplacian.jl` | No face-skewness correction term; accuracy drops on heavily skewed meshes | 3 follow-up |
 | k-ε realizability | `src/turbulence/k_epsilon_rans.jl:24` | `ν_t = C_μ k²/ε` with simple `max()` floor; no Durbin bound | 4a |
 | k-ε production | `src/turbulence/k_epsilon_rans.jl` | Scalar strain magnitude `|S|²`, not full tensor contraction `S_ij S_ij` | 4a |
 | k-ε / k-ω low-Re | — | High-Re form only; no Launder-Sharma, Abid, or other low-Re damping functions | 4a |

@@ -133,6 +133,8 @@ include("../coupling/coupled_solve.jl")
 
 # Incompressible Navier-Stokes — SIMPLE/PISO/PIMPLE (Phase 1)
 # Depends on Phase 0 collocated operators from Layer 1.
+include("../pressure_based/thermo_models.jl")
+include("../pressure_based/rheology.jl")
 include("../incompressible/types.jl")
 include("../incompressible/boundary_conditions.jl")
 include("../incompressible/momentum.jl")

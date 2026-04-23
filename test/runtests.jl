@@ -37,6 +37,9 @@ end
     @testset verbose = true "MPI Partition (Stage 2)" begin
         safe_include("mpi_partition.jl")
     end
+    @testset verbose = true "Pressure-Based Thermo + Rheology (Stage 3)" begin
+        safe_include("pressure_based_models.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end
