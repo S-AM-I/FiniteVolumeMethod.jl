@@ -1320,6 +1320,7 @@ limitations = [
   "Benchmark #3: `test/v_and_v_rhie_chow.jl` (v3.6) — Rhie-Chow three-invariant set: zero dissipation on exactly-resolved linear flow, linearity preservation, non-negative damping on chequerboard pressure.",
   "Benchmark #4: `test/v_and_v_laplacian_skewed.jl` (v3.8) — Laplacian on shear-skewed meshes at three skew levels with all three non-orthogonal correction modes (MINIMUM, ORTHOGONAL, OVER_RELAXED), verifying the over-relaxed default beats the alternatives on finite-error convergence.",
   "Benchmark #5: `test/v_and_v_temporal_mms.jl` (v3.9) — temporal-order MMS for Euler (first-order) and BDF2 (monotone improvement over Euler with documented spatial-error-floor saturation).",
+  "Benchmark #6: `test/v_and_v_mesh_accessors.jl` (v3.74) — mesh accessor primitives (face_weight ∈ [0,1] and = 0.5 on uniform Cartesian, cell/face centers inside domain, face_normal_area ↔ face_areas consistency, is_internal_face partition completeness). Six testsets, 879 gates.",
   "Stable-promotion review remains blocked on integration-level tests (full SIMPLE with operators), not on operator-primitive coverage.",
 ]
 
