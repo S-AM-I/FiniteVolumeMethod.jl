@@ -1,5 +1,41 @@
 # Changelog
 
+## v3.60.0 — Marshak Wall BC (fifth `radiation` benchmark)
+
+Fifth convergence-verified benchmark for `radiation`, joining
+P1 slab (v3.15), equilibrium (v3.25), source algebra (v3.35),
+and fvDOM quadrature (v3.48). Covers the `marshak_wall_bc` and
+`radiation_inlet_bc` constructor primitives that encode the
+Stefan-Boltzmann-weighted boundary treatment.
+
+### test/v_and_v_marshak.jl
+
+Six invariants (11 gates, ~0.05 s):
+
+1. **marshak_wall_bc → ParabolicRobin(1, 2/(3a), 4σT⁴)**
+   coefficients match rtol 1e-14.
+2. **T⁴ scaling of c coefficient** (doubling T ⇒ 16× c).
+3. **1/a scaling of b coefficient.**
+4. **radiation_inlet_bc → ParabolicDirichlet(4σT⁴).**
+5. **T = 0 ⇒ G = 0.**
+6. **Marshak c = inlet value** at matching T (Stefan-Boltzmann
+   consistency across BC types).
+
+### `radiation` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| P1 slab sinh attenuation           | v3.15 | `test/v_and_v_p1_slab.jl`           |
+| P1 radiative equilibrium            | v3.25 | `test/v_and_v_p1_equilibrium.jl`    |
+| compute_radiation_source algebra    | v3.35 | `test/v_and_v_radiation_source.jl`  |
+| fvDOM angular-quadrature            | v3.48 | `test/v_and_v_fvdom_quadrature.jl`  |
+| Marshak + radiation_inlet BC algebra | v3.60 | `test/v_and_v_marshak.jl`          |
+
+### Verification
+
+No manifest tier change. 11 new gates wired into default
+runtests.jl under `V&V: Marshak wall BC`.
+
 ## v3.59.0 — VOF Compression Flux (fifth `multiphase_vof` benchmark)
 
 Fifth convergence-verified benchmark for `multiphase_vof`,
