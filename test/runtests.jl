@@ -326,6 +326,9 @@ end
     @testset verbose = true "V&V: verify_gcl diagnostic" begin
         safe_include("v_and_v_verify_gcl.jl")
     end
+    @testset verbose = true "V&V: field sampling" begin
+        safe_include("v_and_v_sampling.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
