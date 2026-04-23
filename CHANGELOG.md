@@ -1,5 +1,45 @@
 # Changelog
 
+## v3.44.0 — Spalart-Allmaras (fourth `turbulence_rans` benchmark)
+
+Fourth convergence-verified benchmark for `turbulence_rans`,
+joining k-ε DHIT (v3.18), k-ε log-layer (v3.23), and k-ω decay
+(v3.38). Completes coverage of all three canonical RANS model
+families used in external-aero workflows.
+
+### test/v_and_v_spalart_allmaras.jl
+
+Five testsets (108 gates, ~0.2 s) verifying the Spalart-Allmaras
+one-equation closure primitives (χ, fv1, ν_t relations):
+
+1. **ν̃ = 0 ⇒ ν_t = 0** across 64 cells (atol 1e-14).
+
+2. **High-χ asymptote.** ν̃ >> ν (χ = 10⁴) ⇒ fv1 > 0.9999,
+   ν_t → ν̃ to rtol 1e-12.
+
+3. **Low-χ asymptote.** ν̃ << ν (χ = 1e-4) ⇒ fv1 ≈ χ³/cv1³ <
+   1e-10, closed-form match.
+
+4. **Monotonicity in ν̃.** At fixed ν, increasing ν̃ across
+   four decades monotonically increases ν_t.
+
+5. **fv1(χ) = χ³/(χ³ + cv1³) algebra** at six χ values spanning
+   four decades to rtol 1e-14.
+
+### `turbulence_rans` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| k-ε DHIT decay ODE              | v3.18 | `test/v_and_v_kepsilon_dhit.jl`     |
+| k-ε log-layer equilibrium       | v3.23 | `test/v_and_v_kepsilon_loglayer.jl` |
+| k-ω Wilcox decay + identity     | v3.38 | `test/v_and_v_komega.jl`            |
+| Spalart-Allmaras χ/fv1 algebra  | v3.44 | `test/v_and_v_spalart_allmaras.jl`  |
+
+### Verification
+
+No manifest tier change. 108 new gates wired into default
+runtests.jl under `V&V: Spalart-Allmaras`.
+
 ## v3.43.0 — Mesh Geometry V&V + `polyhedral_mesh_io` Promotion
 
 **Thirteenth manifest promotion.** `polyhedral_mesh_io` advances
