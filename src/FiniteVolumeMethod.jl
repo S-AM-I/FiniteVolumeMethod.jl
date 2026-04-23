@@ -44,6 +44,7 @@ export
     # Boundary and Initial Conditions
     AbstractBoundaryCondition,
     AbstractInitialCondition,
+    UnsupportedBCError,
     ParabolicDirichlet,
     ParabolicNeumann,
     ParabolicRobin,

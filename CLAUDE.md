@@ -21,6 +21,8 @@ The capability matrix (`docs/src/capability_matrix.md`) and validation manifest 
 julia --project -e 'using Pkg; Pkg.test()'
 
 # Single test file (test env must have FiniteVolumeMethod dev'd)
+# Recommended fast-iteration loop — collocated test files ship their own
+# `build_cartesian_unstructured_mesh` helper so they run standalone.
 julia --project=test test/<filename>.jl
 
 # Single test file via Docker
@@ -31,7 +33,7 @@ julia --project=test test/scientific_evidence.jl
 ```
 
 ### Formatting (Runic)
-All `.jl` files must pass Runic formatting. A pre-commit hook enforces this.
+All `.jl` files must pass Runic formatting. A pre-commit hook at `.git/hooks/pre-commit` enforces this locally; CI runs `fredrikekre/runic-action@v1` on every push/PR.
 ```bash
 # Check formatting (Runic lives in the global/default Julia env, not the project env)
 julia -e 'using Runic; Runic.main(["--check", "."])'
@@ -84,7 +86,7 @@ The main module (`src/FiniteVolumeMethod.jl`) loads code through four layer file
 ### Key Source Directories
 - `src/parabolic/` — Cell-vertex solver: types, mesh variants, assembly, boundary conditions, gradients, limiters, turbulence models
 - `src/hyperbolic/` — Cell-centered solver: conservation laws, Riemann solvers (HLL/HLLC/HLLD), reconstruction (MUSCL/PPM/WENO), plus advanced physics (Navier-Stokes, MHD variants, GRMHD, IMEX)
-- `src/core/` — SciML bridge: semidiscrete caches, state mapping, CFL callback, ODE problem construction, symbolic indexing (`symbolic_indexing.jl`), SciMLStructures parameter partitioning (`sciml_structures.jl`), `remake` support (`remake.jl`)
+- `src/core/` — SciML bridge: semidiscrete caches, state mapping, CFL callback, ODE problem construction, symbolic indexing (`symbolic_indexing.jl`), SciMLStructures parameter partitioning (`sciml_structures.jl`), `remake` support (`remake.jl`). `sciml_problem(prob)` returns the underlying `ODEProblem` for hyperbolic solvers (used to access `p`/`u0` for e.g. `compute_initial_dt`).
 - `src/collocated/` — Phase 0: Cell-centered operators on `UnstructuredFVMMesh` (types, interpolation, gradient, laplacian, divergence, ddt, cyclic BC assembly). Foundation for all OpenFOAM-style solvers
 - `src/incompressible/` — Phase 1: SIMPLE/PISO/PIMPLE pressure-velocity coupling (types, BCs, momentum, pressure, correction, residuals, solver loops, SciML interface with `CommonSolve.solve` dispatch and `IncompressibleSolution`)
 - `src/turbulence/` — Phase 2a/2b: RANS (k-ε, k-ω, k-ω SST, SA), LES (Smagorinsky, WALE, dynamic), hybrid (DDES). Interface, strain rate, wall distance, wall functions, solver wrappers
@@ -132,7 +134,7 @@ Defined in `Project.toml` under `[extensions]`:
 ### Test Organization
 `test/runtests.jl` orchestrates all tests via `safe_include()`, which runs each test file in its own anonymous module to prevent namespace pollution between tests. The test suite includes:
 
-- **Unit tests** — `test/geometry.jl`, `test/conditions.jl`, `test/hyperbolic.jl`, `test/mhd.jl`, etc.
+- **Unit tests** — `test/geometry.jl`, `test/conditions.jl`, `test/hyperbolic.jl`, `test/mhd.jl`, `test/advanced_bcs.jl` (parabolic boundary gradient / segment utilities), `test/advanced_numerics.jl` (Phase 13: PPM, positivity-preserving limiter), `test/extended_physics.jl` (extended conservation laws), etc.
 - **Collocated solver tests** — `test/incompressible.jl` (94 tests), `test/incompressible_sciml.jl` (58 tests), `test/turbulence_rans.jl` (127), `test/turbulence_les.jl` (92), `test/thermal.jl` (132), `test/mesh_io.jl` (37), `test/linear_solvers.jl` (35), `test/multiphase_vof.jl` (57), `test/combustion.jl` (49), `test/radiation.jl` (71), `test/lagrangian_dpm.jl` (53), `test/dynamic_mesh.jl` (72), `test/postprocessing.jl` (100), `test/remaining_features.jl` (116)
 - **Tutorials as tests** — Literate.jl scripts from `docs/src/literate_tutorials/` and `docs/src/literate_wyos/` are executed as testsets (docs are tested code)
 - **Verification cases** — driven by `validation/manifest.toml` via the `RepoValidationManifest` module; scripts from `docs/src/literate_verification/`
@@ -141,7 +143,7 @@ Defined in `Project.toml` under `[extensions]`:
 
 Note: `keller_segel_chemotaxis.jl` is explicitly excluded from the tutorials testset. Each collocated solver test file includes its own `build_cartesian_unstructured_mesh` helper due to `safe_include` module isolation.
 
-To add a new test file, create it in `test/` and add a `safe_include("filename.jl")` entry in `test/runtests.jl` under the appropriate testset. Orphaned test files (`test/parabolic_solver.jl`, `test/parabolic_mesh.jl`) exist but are NOT included in `runtests.jl`.
+To add a new test file, create it in `test/` and add a `safe_include("filename.jl")` entry in `test/runtests.jl` under the appropriate testset. Orphaned test files (`test/parabolic_solver.jl`, `test/parabolic_mesh.jl`, `test/io.jl`, `test/engine.jl`) exist but are NOT included in `runtests.jl`.
 
 ### Validation Infrastructure
 - `validation/manifest.toml` — Machine-readable source of truth for feature maturity, V&V status, and CI inclusion. Features are `stable`, `experimental`, or `deprecated`.
@@ -167,11 +169,31 @@ To add a new test file, create it in `test/` and add a `safe_include("filename.j
 - Optional physics via keyword args: `solve(prob, SIMPLE(); turb_model=StandardKEpsilon(), thermal_props=..., bcs_T=..., rad_model=P1Model(), ...)`
 
 ## Known Issues
-- WENO5 has a ghost cell bug in the 1D solver (`nghost=3` not supported at small grid sizes)
-- Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L-inf norm, not O(h^2)
-- Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `||b||` denominator)
-- Conjugate heat transfer uses scalar (face-averaged) interface temperature, not per-face
-- Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form
-- CyclicBC: face matching and cell coupling are wired into SIMPLE/PISO/PIMPLE solver loops; convergence on coarse meshes may still be slow
-- MPI extension uses full mesh per rank (not memory-efficient) — production MPI needs true submesh decomposition
-- All collocated solver features are `experimental` maturity — not yet validated against published benchmarks
+
+The repo is in a v2→v3 overhaul; the authoritative issue list is `test/KNOWN_FAILURES.md`. High-level summary:
+
+### Correctness / simplifications
+- WENO5 has a ghost-cell bug in the 1D solver (`nghost=3` unsupported at small grid sizes)
+- Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L∞, not O(h^2)
+- Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `‖b‖` denominator)
+- `k-ε` uses simple `max()` floor for `ν_t`, no Durbin realizability (`src/turbulence/k_epsilon_rans.jl:24`)
+- Dynamic Smagorinsky uses simplified scalar Germano, not full tensor form (`src/turbulence/dynamic_smagorinsky.jl`)
+- Wall functions assume aligned cells; no skew penalty (`src/turbulence/wall_functions.jl`)
+- Conjugate heat transfer uses scalar face-averaged interface temperature (`src/thermal/conjugate.jl`)
+- VOF boundedness is hard clipping — no MULES, no isoAdvector (`src/multiphase/boundedness.jl`)
+- Combustion: one-step EDM only, Lewis-unity implicit (`src/combustion/edm.jl:8`)
+- Radiation: fvDOM angular quadrature is skeleton-only, scattering absent (`src/radiation/fvdom.jl`)
+- Non-orthogonal correction is interpolated-only — no over-relaxed, no least-squares (`src/collocated/gradient.jl:144-149`)
+- CyclicBC face matching converges slowly on coarse meshes
+
+### Structural
+- `CollocatedEquation.A` assembles via `A[P,P] +=` CSC random-pattern insertion at every SIMPLE iteration — dominates wall-clock at 10⁵+ cells (`src/collocated/types.jl:192`, `src/collocated/laplacian.jl`)
+- Operator hot loops allocate: `gradient.jl:126-130` allocates each call, `interpolation.jl:96` builds `Dict{Int,Int}` per call
+- MPI extension stores full mesh AND assembles full matrix on every rank; halo exchange decorative (`ext/FVMMPIExt/distributed_mesh.jl:44`, `distributed_solve.jl:49-53`) — not true submesh decomposition
+- `SciMLStructures.Tunable` is hardcoded length-5 — adding a closure constant breaks every `remake` caller (`src/core/sciml_structures.jl:130-144`)
+- `CollocatedEquation.b` is a single `Vector{T}` — not block-capable; two-fluid and coupled momentum-energy need a block-matrix generalization (`src/collocated/types.jl:181`)
+- OpenFOAM mesh reader is ASCII only; binary polyMesh is declared but not implemented (`src/mesh/openfoam_io.jl:22`)
+
+### Validation status
+- All features in `src/{incompressible,turbulence,thermal,multiphase,combustion,radiation,lagrangian,dynamic_mesh}/` are marked `experimental`/`smoke_tested` in `validation/manifest.toml` — tests are shape/arithmetic only with no published-benchmark comparison
+- v3 roadmap (24–36 months FTE) is to fix all of the above, add missing OpenFOAM features, and promote each feature to `stable` via a 3+ published-benchmark suite. Plan: `plans/i-m-not-sure-of-ticklish-squid.md`

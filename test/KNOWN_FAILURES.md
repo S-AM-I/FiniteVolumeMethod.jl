@@ -27,3 +27,84 @@ is `validation/manifest.toml`; this document is a human-readable companion.
 
 - Scripts marked `run_in_ci = false` in `validation/manifest.toml` are excluded from CI due to memory or runtime constraints. They are exercised in the Nightly and Release workflows.
 - All numerical acceptance criteria use fixed `@test` assertions. Image regression tests use `JULIA_REFERENCETESTS_UPDATE=true` and are not part of the scientific contract.
+
+## Simplifications in the Collocated / OpenFOAM-Style Solver Stack
+
+Every item below is a known simplification or incorrect implementation; each
+is scheduled for a specific stage of the v3 roadmap
+(`plans/i-m-not-sure-of-ticklish-squid.md`). Promotion of a feature from
+`experimental` to `stable` in `validation/manifest.toml` requires the
+corresponding entry to be fixed *and* a 3+ published-benchmark suite to be
+green in CI.
+
+### Numerical correctness
+
+| Component | File:Line | Simplification | Fix Stage |
+|-----------|-----------|----------------|-----------|
+| Non-orthogonal correction | `src/collocated/gradient.jl:144-149` | Interpolated-gradient only; no over-relaxed variant, no least-squares gradient fallback | 3d |
+| Laplacian skewness | `src/collocated/laplacian.jl` | No face-skewness correction term; accuracy drops on non-orthogonal meshes | 3d |
+| k-ε realizability | `src/turbulence/k_epsilon_rans.jl:24` | `ν_t = C_μ k²/ε` with simple `max()` floor; no Durbin bound | 4a |
+| k-ε production | `src/turbulence/k_epsilon_rans.jl` | Scalar strain magnitude `|S|²`, not full tensor contraction `S_ij S_ij` | 4a |
+| k-ε / k-ω low-Re | — | High-Re form only; no Launder-Sharma, Abid, or other low-Re damping functions | 4a |
+| k-ω-SST blending | `src/turbulence/k_omega_sst.jl` | Simplified scalar blending; should be full F1/F2 blending with proper limiter | 4a |
+| Dynamic Smagorinsky | `src/turbulence/dynamic_smagorinsky.jl` | Scalar Germano identity, not full tensor form | 4a |
+| Wall functions | `src/turbulence/wall_functions.jl` | Assumes cells aligned with boundary normal; no skew/tangential projection | 4a |
+| Conjugate HT interface | `src/thermal/conjugate.jl` | Scalar face-averaged interface temperature, not per-face | 5a |
+| VOF boundedness | `src/multiphase/boundedness.jl` | Hard clipping `clamp(α, 0, 1)` — not MULES (Multidimensional Universal Limiter with Explicit Solution) | 5b |
+| VOF interface reconstruction | `src/multiphase/` | No isoAdvector / sharp interface reconstruction | 5b |
+| VOF contact angles | `src/multiphase/surface_tension.jl` | Static/dynamic contact-angle models absent | 5b |
+| Combustion chemistry | `src/combustion/edm.jl` | One-step EDM only; no multi-step mechanisms, no FGM, no Cantera interface | 5c |
+| Combustion diffusion | `src/combustion/species_transport.jl` | Lewis-unity implicit; no per-species Le exposure | 5c |
+| Radiation quadrature | `src/radiation/fvdom.jl` | fvDOM angular quadrature is skeleton; LSn/Tn sets absent | 5d |
+| Radiation scattering | `src/radiation/fvdom.jl` | Scattering term absent | 5d |
+| Radiation wall BCs | `src/radiation/fvdom.jl` | Basic Dirichlet/Neumann only; no wavelength-banded emissivity | 5d |
+| DPM collision | `src/lagrangian/collisions.jl` | Binary elastic only; no hard/soft-sphere DEM, no agglomeration/coalescence | 5e |
+| DPM breakup | `src/lagrangian/spray.jl` | Secondary breakup only (TAB/KHRT); no primary breakup (KH-ACT, LISA) | 5e, 7c |
+| DPM injection | — | No cone/hollow-cone/flat-fan injection patterns or rate-of-injection profiles | 5e |
+| Dynamic-mesh GCL | `src/dynamic_mesh/ale.jl` | Geometric conservation law not verified for large deformation | 5f |
+| Dynamic-mesh 6-DOF | — | No 6-DOF rigid-body solver | 5f |
+| Dynamic-mesh topology | — | No dynamic refinement/coarsening or topology changes during a run | 5f |
+| Overset / chimera | — | Absent | 5f |
+
+### Structural / performance
+
+| Component | File:Line | Issue | Fix Stage |
+|-----------|-----------|-------|-----------|
+| CollocatedEquation assembly | `src/collocated/types.jl:181,192`, `src/collocated/laplacian.jl`, every `assemble_*!` | Random-pattern CSC insertion `A[P,N] += …` on every SIMPLE outer iteration — dominates wall-clock at industrial cell counts | 1a |
+| Operator hot-loop allocation | `src/collocated/gradient.jl:126-130`, `src/collocated/interpolation.jl:96` | `fill(…)` buffer and `Dict{Int,Int}` constructed on every call | 1b |
+| CollocatedEquation is scalar-only | `src/collocated/types.jl:181` | Single `Vector{T}` for `b`; two-fluid and coupled momentum-energy need a `BlockCollocatedEquation` | 1c |
+| No AbstractFVMMesh supertype | `src/mesh/abstract_mesh.jl` | `FVMGeometry`, `StructuredMesh{1,2,3}D`, `UnstructuredFVMMesh` have no common supertype; conversion paths sparse | 1d |
+| SciMLStructures.Tunable length-5 | `src/core/sciml_structures.jl:130-144` | Hardcoded `[nu, density, alpha_U, alpha_p, tolerance]`; adding one tunable breaks all `remake` callers | 1e |
+| State containers non-generic | `src/incompressible/types.jl` | `Vector{T}` baked in; blocks KA.jl / GPU port without a rewrite | 1g |
+| No AbstractLinearOperator | `src/linear_solvers/` | `_dispatch_solve` takes `SparseMatrixCSC` directly; no matrix-free path | 1h |
+| MPI is full-mesh-per-rank | `ext/FVMMPIExt/distributed_mesh.jl:44`, `ext/FVMMPIExt/distributed_solve.jl:49-53` | Each rank stores full mesh AND assembles full matrix; halo exchange is decorative; only residual `Allreduce` uses MPI | 2 |
+| `test/mpi_test.jl` not in runtests.jl | — | Requires manual `mpiexec -n 2 julia …`; no parallel/serial parity check | 2 |
+
+### Missing OpenFOAM features
+
+Each slated for the stage noted in the roadmap:
+
+| Feature | Status | Stage |
+|---------|--------|-------|
+| Compressible pressure-based solvers (rhoSimpleFoam, rhoPimpleFoam, rhoReactingFoam) | Absent | 3 |
+| Real-gas EOS (Peng-Robinson, Redlich-Kwong, tabulated) | Absent | 3b |
+| Non-Newtonian rheology (power-law, Bird-Carreau, Herschel-Bulkley, Casson) | Absent | 3c |
+| Moving Reference Frame (MRF) | Absent | 6a |
+| Arbitrary Mesh Interface (AMI) / sliding mesh | Absent | 6b |
+| Porous media (Darcy-Forchheimer) | Absent | 6c |
+| Cavitation (Kunz, Schnerr-Sauer, Merkle) | Absent | 6d |
+| Eulerian two-fluid | Absent | 6e |
+| Aeroacoustics (FW-H, sponge zones) | Absent | 6f |
+| Population balance modeling | Absent | 6g |
+| Wall-modeled LES (WMLES) | Absent | 4a |
+| Solid mechanics / FSI | Absent | 7a/b |
+| Function objects / coded BCs / expression BCs | Absent | 7d |
+| snappyHexMesh-equivalent mesh generation | Absent | 8a |
+| Gmsh automation pipeline | Absent | 8b |
+| AMR on collocated side | Absent | 8c |
+| Error indicators | Absent | 8d |
+| Full adjoint (SciMLSensitivity integration) | Absent | 9a–c |
+| GPU backends for collocated | Absent | 9d |
+| Matrix-free linear operators | Absent | 9e |
+| Unitful integration | Absent | 9f |
+| Binary OpenFOAM polyMesh reader | ASCII only (`src/mesh/openfoam_io.jl:22`) | 3 |

@@ -25,6 +25,9 @@ end
     @testset verbose = true "Robin BCs" begin
         safe_include("robin.jl")
     end
+    @testset verbose = true "Parabolic Mesh" begin
+        safe_include("parabolic_mesh.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end

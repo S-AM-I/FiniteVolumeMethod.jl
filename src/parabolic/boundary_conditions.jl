@@ -421,6 +421,28 @@ end
 # 4. Utilities
 # ==============================================================================
 
+"""
+    UnsupportedBCError(bc, context)
+
+Thrown when a routine is asked to evaluate or apply a boundary condition that
+it does not know how to handle. `bc` is the offending BC instance; `context`
+is a short string identifying the caller (e.g. `"evaluate_bc(bc, solution, mesh, cell_idx, side, t)"`).
+"""
+struct UnsupportedBCError <: Exception
+    bc::Any
+    context::String
+end
+
+function Base.showerror(io::IO, e::UnsupportedBCError)
+    print(io, "UnsupportedBCError: no ", e.context, " implementation for ")
+    print(io, typeof(e.bc))
+    print(io, ". ")
+    print(io, "Either (a) add a method dispatching on this concrete type, ")
+    print(io, "or (b) use one of the BC types with implemented evaluators: ")
+    print(io, "ParabolicDirichlet, ParabolicNeumann, TimeDependentDirichlet.")
+    return
+end
+
 function evaluate_bc(bc::AbstractBoundaryCondition, solution, mesh, cell_idx, side, t = 0.0)
     if bc isa ParabolicDirichlet
         return bc.value
@@ -429,7 +451,7 @@ function evaluate_bc(bc::AbstractBoundaryCondition, solution, mesh, cell_idx, si
     elseif bc isa TimeDependentDirichlet
         return evaluate_bc(bc, t).value
     else
-        error("BC evaluation not implemented for $(typeof(bc))")
+        throw(UnsupportedBCError(bc, "evaluate_bc(bc, solution, mesh, cell_idx, side, t)"))
     end
 end
 
