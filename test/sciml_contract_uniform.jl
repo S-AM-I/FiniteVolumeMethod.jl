@@ -113,6 +113,44 @@ end
     filter!(e -> e.name !== :demo_const, entries)
 end
 
+@testset "Stage 1h: AbstractLinearOperator wrapper" begin
+    using LinearAlgebra: mul!
+    using SparseArrays: sparse
+
+    A = sparse([1 2 0; 0 3 4; 5 0 6] .|> Float64)
+    op = SparseMatrixLinearOperator(A)
+
+    @test op isa AbstractLinearOperator{Float64}
+    @test size(op) == (3, 3)
+    @test size(op, 1) == 3
+    @test eltype(op) == Float64
+
+    # mul!(y, op, x) matches mul!(y, A, x)
+    x = [1.0, 2.0, 3.0]
+    y_op = zeros(3)
+    y_A = zeros(3)
+    mul!(y_op, op, x)
+    mul!(y_A, A, x)
+    @test y_op ≈ y_A
+
+    # underlying_matrix round-trips
+    @test underlying_matrix(op) === A
+
+    # as_linear_operator idempotent on operators; wraps raw matrices
+    @test as_linear_operator(op) === op
+    wrapped = as_linear_operator(A)
+    @test wrapped isa SparseMatrixLinearOperator
+    @test underlying_matrix(wrapped) === A
+
+    # MatrixFreeError path: an abstract subtype without underlying_matrix overload
+    # should throw (caught by catch_backtrace in user code). Simulate by
+    # defining a no-op matrix-free subtype.
+    struct _TestMatrixFreeOp{T} <: AbstractLinearOperator{T}
+        n::Int
+    end
+    @test_throws MatrixFreeError underlying_matrix(_TestMatrixFreeOp{Float64}(4))
+end
+
 @testset "Stage 1g: Abstract-array-parameterized field types" begin
     mesh = build_cartesian_unstructured_mesh(3, 3, 1.0, 1.0)
     nc = length(mesh.cell_volumes)

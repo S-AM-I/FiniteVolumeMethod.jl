@@ -321,6 +321,12 @@ export
     # Unified solution wrapper (Stage 1f)
     AbstractFVMSolution,
     is_fvm_solution,
+    # Linear operator abstraction (Stage 1h)
+    AbstractLinearOperator,
+    SparseMatrixLinearOperator,
+    MatrixFreeError,
+    underlying_matrix,
+    as_linear_operator,
     # Sparsity pattern + fast-path assembly helpers (Stage 1a)
     SparsityPattern,
     build_collocated_sparsity,
