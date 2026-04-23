@@ -1,5 +1,46 @@
 # Changelog
 
+## v3.47.0 — FR/ED Blending (fourth `combustion` benchmark)
+
+Fourth convergence-verified benchmark for `combustion`, joining
+species AD (v3.17), EDM algebra (v3.27), and Arrhenius kinetics
+(v3.37). Covers the industrial-grade FR/ED blending closure —
+`max(ω_Arrhenius, ω_EDM)` picking the rate-limiting (slowest)
+branch per cell.
+
+### test/v_and_v_fred.jl
+
+Four invariants (64 gates, ~0.1 s):
+
+1. **Cold regime ⇒ Arrhenius limits.** At T = 300 K the
+   exp(−E_a/RT) factor makes Arrhenius ω slower than EDM's
+   ε/k mixing rate, so FR/ED returns ω_arr.
+
+2. **Hot regime ⇒ EDM limits.** At T = 2500 K with low ε/k
+   (slow mixing), EDM is the limiting branch, so FR/ED returns
+   ω_edm.
+
+3. **Blended rate = max(ω_arr, ω_edm).** Core FR/ED invariant:
+   branch selection is pointwise max (both rates are negative)
+   to rtol 1e-12.
+
+4. **Stoichiometric mass balance.** Σω_i ≡ 0 at every cell
+   regardless of branch selection (atol 1e-14).
+
+### `combustion` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Species AD (exponential BL)             | v3.17 | `test/v_and_v_species_ad.jl`  |
+| EDM reaction-rate algebra                | v3.27 | `test/v_and_v_edm.jl`         |
+| Arrhenius finite-rate kinetics           | v3.37 | `test/v_and_v_arrhenius.jl`   |
+| FR/ED turbulence-chemistry blending      | v3.47 | `test/v_and_v_fred.jl`        |
+
+### Verification
+
+No manifest tier change. 64 new gates wired into default
+runtests.jl under `V&V: FR/ED combustion`.
+
 ## v3.46.0 — CSF Surface Tension (fourth `multiphase_vof` benchmark)
 
 Fourth convergence-verified benchmark for `multiphase_vof`,
