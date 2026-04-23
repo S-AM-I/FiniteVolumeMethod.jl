@@ -1453,7 +1453,8 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "Configurable iterative linear solvers with AMG and ILU preconditioners via package extensions for the incompressible collocated solver. Poisson MMS verified across LU, CG, and GMRES backends (v3.42)."
 limitations = [
-  "Promoted from experimental → provisional in v3.42.0. Evidence: `test/v_and_v_linear_solvers.jl` — four testsets, 6 gates: (1) LUFactorization gives L² < 5e-3 on Poisson MMS at N = 32; (2) CG matches LU within 1e-6; (3) GMRES matches LU within 1e-6; (4) O(h²) grid convergence across N ∈ {16, 32, 64}.",
+  "Evidence #1 (v3.42.0): `test/v_and_v_linear_solvers.jl` — four testsets, 6 gates. (1) LUFactorization gives L² < 5e-3 on Poisson MMS at N = 32; (2) CG matches LU within 1e-6; (3) GMRES matches LU within 1e-6; (4) O(h²) grid convergence across N ∈ {16, 32, 64}.",
+  "Evidence #2 (v3.52.0): `test/v_and_v_solver_config.jl` — six testsets, 21 gates: (1) default pressure routing to :cg + :amg with rtol 1e-6; (2) default fallback to :bicgstab + :ilu with rtol 1e-5; (3) custom FieldSolverConfig overrides; (4) :direct resolves to nothing (backslash path); (5) unknown solver symbol errors; (6) non-Symbol arguments pass through unchanged. Second convergence-verified benchmark for the solver-infrastructure layer.",
   "AMG and ILU require loading AlgebraicMultigrid.jl and IncompleteLU.jl as weak deps.",
   "Krylov solver symbols require LinearSolve.jl to be loaded by the user.",
   "Solver config not yet auto-integrated into solver wrappers — users call _dispatch_solve or pass config manually.",
