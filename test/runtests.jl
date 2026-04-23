@@ -263,6 +263,9 @@ end
     @testset verbose = true "V&V: Mesh accessors" begin
         safe_include("v_and_v_mesh_accessors.jl")
     end
+    @testset verbose = true "V&V: IncompressibleState" begin
+        safe_include("v_and_v_inc_state.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
