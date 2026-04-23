@@ -8,6 +8,11 @@
 
 include("../core/backends.jl")
 
+# Stage 1d: the umbrella `AbstractFiniteVolumeMesh{Dim}` supertype must be
+# declared before any concrete mesh type or any abstract sub-hierarchy that
+# needs to subtype it. Keep this include first.
+include("../mesh/abstract_mesh.jl")
+
 include("../parabolic/types.jl")
 include("../parabolic/mesh/types.jl")
 include("../parabolic/mesh/structured.jl")
@@ -64,3 +69,8 @@ include("../coordinate_systems.jl")
 include("../geometry.jl")
 include("../conditions.jl")
 include("../problem.jl")
+
+# Stage 1d: umbrella-type `n_cells` / `n_faces` overloads. Loaded last so
+# every concrete mesh type (UnstructuredFVMMesh, StructuredFVMMesh,
+# CurvilinearFVMMesh, FVMGeometry) is already declared.
+include("../mesh/generic_interface.jl")

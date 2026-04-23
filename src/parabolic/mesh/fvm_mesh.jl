@@ -5,8 +5,12 @@ using LinearAlgebra: norm, cross, det
 
 # --- FVM Mesh Types ---
 
-"""Abstract supertype for finite-volume mesh implementations, parameterised by dimension and element type."""
-abstract type AbstractFVMMesh{Dim, T} <: AbstractParabolicMesh end
+"""Abstract supertype for finite-volume mesh implementations, parameterised by dimension and element type.
+
+Subtypes the Stage 1d umbrella `AbstractFiniteVolumeMesh{Dim}` so generic
+library code dispatching on `::AbstractFiniteVolumeMesh` includes
+`StructuredFVMMesh`, `CurvilinearFVMMesh`, and `UnstructuredFVMMesh`."""
+abstract type AbstractFVMMesh{Dim, T} <: AbstractFiniteVolumeMesh{Dim} end
 
 """Axis-aligned structured finite-volume mesh with per-dimension cell centers, spacings, and face areas."""
 struct StructuredFVMMesh{Dim, T, A <: AbstractArray{T, Dim}} <: AbstractFVMMesh{Dim, T}

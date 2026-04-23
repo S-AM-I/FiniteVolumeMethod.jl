@@ -30,7 +30,6 @@ include("../specific_problems/anisotropic_diffusion.jl")
 
 include("../physics/turbulence/k_epsilon.jl")
 
-include("../mesh/abstract_mesh.jl")
 include("../mesh/structured_mesh.jl")
 include("../eos/eos_interface.jl")
 include("../eos/ideal_gas.jl")

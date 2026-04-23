@@ -28,8 +28,11 @@ end
     @testset verbose = true "Parabolic Mesh" begin
         safe_include("parabolic_mesh.jl")
     end
-    @testset verbose = true "Collocated Assembly Benchmark (Stage 1a)" begin
+    @testset verbose = true "Collocated Assembly Benchmark (Stage 1a-c)" begin
         safe_include("assembly_bench.jl")
+    end
+    @testset verbose = true "SciML Contract Uniform (Stage 1d)" begin
+        safe_include("sciml_contract_uniform.jl")
     end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
