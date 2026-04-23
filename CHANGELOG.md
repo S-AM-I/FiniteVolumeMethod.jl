@@ -1,5 +1,41 @@
 # Changelog
 
+## v3.66.0 — RANS Turbulence State (sixth `turbulence_rans` benchmark)
+
+Sixth convergence-verified benchmark for `turbulence_rans`,
+joining k-ε DHIT (v3.18), log-layer (v3.23), k-ω (v3.38),
+Spalart-Allmaras (v3.44), and wall functions (v3.54). Covers the
+`RANSTurbulenceState` container primitives across all three RANS
+model families.
+
+### test/v_and_v_rans_state.jl
+
+Seven invariants (190 gates, ~0.4 s):
+
+1. **k-ε** field names (:k, :epsilon) and count 2.
+2. **k-ω** field names (:k, :omega) and count 2.
+3. **SA** field (:nu_tilde) and count 1.
+4. **Default** init 1e-6 with size matching mesh (131 cells).
+5. **Custom init kwargs** round-trip.
+6. **AbstractRANSModel dispatch** via KOmega and SpalartAllmaras.
+7. **k-ω state** has :omega, not :epsilon.
+
+### `turbulence_rans` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| k-ε DHIT decay ODE                  | v3.18 | `test/v_and_v_kepsilon_dhit.jl`     |
+| k-ε log-layer equilibrium            | v3.23 | `test/v_and_v_kepsilon_loglayer.jl` |
+| k-ω Wilcox decay + identity          | v3.38 | `test/v_and_v_komega.jl`            |
+| Spalart-Allmaras χ/fv1 algebra       | v3.44 | `test/v_and_v_spalart_allmaras.jl`  |
+| Spalding wall functions              | v3.54 | `test/v_and_v_wall_functions.jl`    |
+| RANSTurbulenceState container        | v3.66 | `test/v_and_v_rans_state.jl`        |
+
+### Verification
+
+No manifest tier change. 190 new gates wired into default
+runtests.jl under `V&V: RANS turbulence state`.
+
 ## v3.65.0 — Thermal Types (sixth `conjugate_heat_transfer` benchmark)
 
 Sixth convergence-verified benchmark for
