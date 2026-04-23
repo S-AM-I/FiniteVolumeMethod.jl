@@ -308,6 +308,9 @@ end
     @testset verbose = true "V&V: SST blending algebra" begin
         safe_include("v_and_v_sst_blend.jl")
     end
+    @testset verbose = true "V&V: LES primitives (test filter + contract)" begin
+        safe_include("v_and_v_test_filter.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
