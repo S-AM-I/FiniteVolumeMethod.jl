@@ -1,5 +1,60 @@
 # Changelog
 
+## v3.11.0 — Poiseuille Grid-Convergence + `incompressible_ns` Promotion
+
+**First order-of-accuracy verification of the full Navier-Stokes
+solver** — observed spatial convergence rate ≈ 1.95, textbook second
+order. Based on this evidence, `incompressible_ns` is promoted from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+in the validation manifest.
+
+### test/v_and_v_poiseuille_convergence.jl
+
+Runs Poiseuille channel (from v3.10) on three successive refinements
+Nx × Ny ∈ {25×10, 50×20, 100×40} and measures the L² error against the
+analytical `u(y) = G/(2μ) y(H-y)` at the mid-channel column in the
+fully-developed interior (0.1 < y < 0.9).
+
+Observed:
+
+    N_x=25   L²(u) = 8.05 × 10⁻⁴
+    N_x=50   L²(u) = 2.09 × 10⁻⁴   (rate: 1.95)
+    N_x=100  L²(u) = 5.46 × 10⁻⁵   (rate: 1.94)
+
+Four gates pass:
+- All error transitions monotone-decreasing.
+- Each observed order satisfies 1.7 < p < 2.3 (textbook O(h²) with
+  floating-point slack).
+- Finest-grid L² < 10⁻⁴.
+
+Runtime ~11 s — gated behind `FVM_RUN_VANDV=true` (like Ghia).
+
+### Manifest promotion
+
+`incompressible_ns`:
+- `maturity` experimental → **provisional**.
+- `validation` smoke_tested → **convergence_verified**.
+- `role` research_tooling → **claim_bearing_solver**.
+
+Evidence backing the promotion:
+- Poiseuille grid-convergence (v3.11): O(h²) verified, three
+  refinements, observed rate 1.95.
+- Poiseuille single-mesh (v3.10): 5% agreement with analytical at
+  50×20, peak location and magnitude match.
+- Ghia 1982 Re=100 (v3.1-v3.3): 10 centerline reference points agree
+  to ≤8% interior, ≤5% near-lid, interior divergence residual < 10⁻⁴.
+
+### Noted limitations (to reach `stable`)
+
+- Steady SIMPLE only. Transient PISO/PIMPLE paths exist but lack
+  dedicated V&V.
+- Higher Reynolds (Re ≥ 400) destabilises without deferred-correction
+  convection — Stage 2a follow-up.
+- Kovasznay and other steady NS analytical benchmarks beyond
+  Poiseuille are outside the current reliable envelope (solver
+  diverges at Re ≥ 10 on Kovasznay); v3.12+ follow-up.
+- Fixed time step only; adaptive CFL deferred.
+
 ## v3.10.0 — Poiseuille Channel V&V (First Incompressible NS Benchmark)
 
 First V&V of the full SIMPLE pressure-velocity-coupling solver against

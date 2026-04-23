@@ -77,6 +77,13 @@ end
     @testset verbose = true "V&V: Poiseuille channel" begin
         safe_include("v_and_v_poiseuille.jl")
     end
+    # Grid-convergence study runs three full SIMPLE solves — slower.
+    # Gated behind FVM_RUN_VANDV like Ghia.
+    if get(ENV, "FVM_RUN_VANDV", "false") == "true"
+        @testset verbose = true "V&V: Poiseuille grid convergence" begin
+            safe_include("v_and_v_poiseuille_convergence.jl")
+        end
+    end
     # Slow V&V (full SIMPLE solve, ~1-2 min each) gated behind an env flag.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
         @testset verbose = true "V&V: Ghia lid-driven cavity Re=100" begin
