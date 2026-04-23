@@ -1,5 +1,49 @@
 # Changelog
 
+## v3.29.0 — GCL Rotation (second `dynamic_mesh` benchmark)
+
+Second independent benchmark for `dynamic_mesh`, joining
+three-pattern GCL (v3.14). Extends coverage to **infinitesimal
+rigid-body rotation**, a non-uniform displacement field whose
+divergence vanishes analytically.
+
+### test/v_and_v_gcl_rotation.jl
+
+The rotational displacement `d(x, y) = θ·(−y, x)` about the
+domain center has ∇·d = 0 exactly. The discrete volume
+approximation V_new ≈ V_old·(1 + ∇·d) therefore returns
+V_new ≡ V_old, and the closed-cell identity
+Σ_f ε(c,f)·<d_f, S_f> = 0 gives a machine-zero GCL residual.
+
+Four testsets (773 gates, ~0.1 s):
+
+1. **Volume preservation at θ = 0.05 rad.** All 256 cell
+   volumes preserved to atol 1 × 10⁻¹²; total volume to
+   rtol 1 × 10⁻¹⁴.
+
+2. **Machine-zero GCL residual** on a 20×20 mesh:
+   max_res · dt / V̄ < 1 × 10⁻¹⁰.
+
+3. **Refinement invariance.** At N ∈ {8, 16, 32} the
+   non-dimensional residual remains < 1 × 10⁻¹⁰ — the
+   divergence-theorem identity is mesh-independent.
+
+4. **Cell-center placement.** 512 cell centers (x and y
+   coordinates) match the prescribed rotation to atol 1 × 10⁻¹⁴.
+
+### `dynamic_mesh` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Three-pattern GCL (zero, trans, scale) | v3.14 | `test/v_and_v_gcl.jl`         |
+| Rotational GCL (∇·d = 0)               | v3.29 | `test/v_and_v_gcl_rotation.jl`|
+| Turek-Hron FSI (fluid-structure)        | ≥ v3.30 | (pending)                   |
+
+### Verification
+
+No manifest tier change. 773 new gates wired into default
+runtests.jl under `V&V: GCL rotation`.
+
 ## v3.28.0 — WALE LES Model (second `turbulence_les` benchmark)
 
 Second independent benchmark for `turbulence_les`, joining
