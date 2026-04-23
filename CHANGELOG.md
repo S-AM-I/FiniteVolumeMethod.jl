@@ -1,5 +1,57 @@
 # Changelog
 
+## v3.23.0 — k-ε Log-Layer Equilibrium (second `turbulence_rans` benchmark)
+
+Second independent benchmark for `turbulence_rans`, joining DHIT
+(v3.18). Verifies the standard k-ε model in the wall-bounded
+log-layer regime where it admits a closed-form production-
+dissipation equilibrium.
+
+### test/v_and_v_kepsilon_loglayer.jl
+
+In the inertial sublayer, the log-law scalings
+
+    U(y) = (u_τ/κ)·log(y/y₀)
+    k(y) = u_τ²/√C_μ
+    ε(y) = u_τ³/(κ·y)
+
+admit three analytical identities that the numerical code must
+reproduce cell-by-cell:
+
+1. **P_k / ε ≡ 1 (production-dissipation balance).**
+   Prescribe U, k, ε analytically on a 8×40 mesh; evaluate |S|
+   via `compute_strain_rate` and form P_k = ν_t·|S|². The ratio
+   P_k/ε matches 1 to within 15 % at 66 interior cells (the
+   tolerance absorbs the O(h²·d²U/dy²) gradient truncation on
+   the log-curved velocity field).
+
+2. **ν_t = κ·y·u_τ algebraic identity.** Independent of any FVM
+   discretization: the k-ε formula ν_t = C_μ·k²/ε evaluated at
+   the log-layer k, ε reduces algebraically to κ·y·u_τ.
+   Verified at 20 y-stations to rtol 1e-12.
+
+3. **Durbin realizability inactive in equilibrium.** With α = 0.6
+   (Durbin 1996), the realizability cap ν_t ≤ α·k/|S| evaluates
+   to ~2× the equilibrium ν_t at every y — the cap is
+   analytically inactive in the log layer, confirming the
+   closure does not engage under its designed operating regime.
+
+Three testsets, 106 gates, ~0.3 s.
+
+### `turbulence_rans` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| DHIT decay ODE          | v3.18 | `test/v_and_v_kepsilon_dhit.jl`    |
+| Log-layer equilibrium   | v3.23 | `test/v_and_v_kepsilon_loglayer.jl`|
+| Moser channel DNS (Reτ) | ≥ v3.24 | (pending)                        |
+
+### Verification
+
+No manifest tier change (still provisional). All pre-existing
+tests pass at identical counts. 106 new gates wired into default
+runtests.jl under `V&V: k-ε log-layer equilibrium`.
+
 ## v3.22.0 — Couette Flow V&V (third `incompressible_ns` benchmark)
 
 Third independent benchmark for `incompressible_ns`, establishing
