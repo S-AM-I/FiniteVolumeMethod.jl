@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.67.0 — SolidBodyMotion (sixth `dynamic_mesh` benchmark)
+
+Five testsets (176 gates) verifying the SolidBodyMotion
+displacement-function dispatch primitive.
+
 ## v3.66.0 — RANS Turbulence State (sixth `turbulence_rans` benchmark)
 
 Sixth convergence-verified benchmark for `turbulence_rans`,
