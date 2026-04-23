@@ -1,5 +1,58 @@
 # Changelog
 
+## v3.32.0 — Boussinesq Buoyancy (third `conjugate_heat_transfer` benchmark)
+
+Third convergence-verified benchmark for
+`conjugate_heat_transfer`, joining steady Laplace (v3.12) and
+unsteady decay (v3.21). CHT now satisfies the 3-benchmark floor
+for stable-promotion review, joining `incompressible_ns` (v3.22)
+and `collocated_operators` (v3.31) in that club.
+
+### test/v_and_v_boussinesq.jl
+
+Five testsets (1218 gates, ~0.2 s) covering the Boussinesq
+buoyancy source algebra
+
+    F_b[c] = −ρ · β · (T[c] − T_ref) · g
+
+which is the sole coupling point between the temperature field
+and the momentum equation in the provisional CHT stack:
+
+1. **β = 0 disables buoyancy** — `compute_buoyancy_source`
+   returns `nothing` for `beta == 0`, matching the documented
+   no-buoyancy fast path.
+
+2. **T ≡ T_ref ⇒ F_b ≡ 0.** Every cell in a uniform
+   T_ref = 293.15 K field produces atol 1 × 10⁻¹⁴.
+
+3. **Algebraic identity.** For T(y) = T_ref + 50·y with
+   β = 3.4 × 10⁻³, ρ = 1.2, g = (0, −9.81), every cell
+   matches the closed form to rtol 1 × 10⁻¹².
+
+4. **Linearity in (T − T_ref).** Doubling ΔT doubles F_b
+   (rtol 1 × 10⁻¹²).
+
+5. **β and g scaling.** Independently doubling β or |g|
+   doubles F_b (rtol 1 × 10⁻¹²).
+
+### `conjugate_heat_transfer` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Steady Laplace series (solid)   | v3.12 | `test/v_and_v_heat_conduction.jl` |
+| Unsteady decay (solid)          | v3.21 | `test/v_and_v_unsteady_heat.jl`    |
+| Boussinesq buoyancy algebra     | v3.32 | `test/v_and_v_boussinesq.jl`       |
+
+CHT is the third provisional feature to meet the 3-benchmark
+floor for stable review. Remaining blocker: integrated fluid-
+solid conjugate run (De Vahl Davis natural convection) and
+per-face (rather than face-averaged) interface temperature.
+
+### Verification
+
+No manifest tier change. 1218 new gates wired into default
+runtests.jl under `V&V: Boussinesq buoyancy`.
+
 ## v3.31.0 — Collocated-Operators Evidence Inventory
 
 No new test in this release. Documentation cleanup: the
