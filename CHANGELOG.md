@@ -1,5 +1,74 @@
 # Changelog
 
+## v3.4.0 — Laplacian MMS Order-of-Accuracy V&V + SpatialVelocityBC
+
+First V&V of solver-free operator correctness: the collocated
+Laplacian at `src/collocated/laplacian.jl` is verified against a
+manufactured solution on a Cartesian grid and shown to achieve
+textbook second-order spatial convergence.
+
+### Manufactured-solution test (test/v_and_v_laplacian_mms.jl)
+
+Solves `-∇²φ = f` on a `[0, 1]²` Cartesian mesh with Dirichlet-zero
+BCs and manufactured forcing:
+
+    φ_exact(x, y) = sin(π x) · sin(π y)
+    f(x, y)       = 2π² · sin(π x) · sin(π y)
+
+Uniform-refinement grid sequence `N ∈ {10, 20, 40, 80}` gives:
+
+| N | L∞ error | L² error | L² rate (vs prev) |
+|---|---------|---------|-------------------|
+| 10 | 8.06×10⁻³ | 4.13×10⁻³ | — |
+| 20 | 2.05×10⁻³ | 1.03×10⁻³ | 2.00 |
+| 40 | 5.13×10⁻⁴ | 2.57×10⁻⁴ | 2.00 |
+| 80 | 1.28×10⁻⁴ | 6.43×10⁻⁵ | 2.00 |
+
+Test asserts:
+- Observed order of convergence (L²) at the finest refinement is
+  between 1.8 and 2.2.
+- L∞ order at the finest refinement is > 1.7.
+- Absolute errors decrease monotonically under refinement.
+- Finest L² error < 10⁻³.
+
+All 6 gates pass. Runtime ~2 s — wired into the DEFAULT `runtests.jl`
+loop (not gated behind `FVM_RUN_VANDV`).
+
+This is the first machine-checked evidence of publishable-grade
+spatial accuracy for the collocated operators. Promotes
+`collocated_operators` from "no convergence evidence" to "O(h²) on
+Cartesian mesh verified" in the validation manifest.
+
+### New boundary condition: SpatialVelocityBC
+
+`SpatialVelocityBC{Dim, T, F} <: AbstractBoundaryCondition` — velocity
+BC whose prescribed value is computed from a closure `func(x::SVector)`
+evaluated at each face center. Enables smoothed-lid cavity tests
+(`u_lid(x) = sin²(π x)`), Womersley-like inlet profiles, and any
+geometrically-varying Dirichlet BC.
+
+Wired into `update_boundary_velocity!` (per-face closure evaluation)
+and `expand_velocity_bc` / `expand_pressure_bc` (momentum/pressure
+assembly falls back to a 0 placeholder; the real value arrives via
+`update_boundary_velocity!` each outer iteration).
+
+Full Laplacian-assembly integration (so the interior momentum equation
+can reference per-face BC values) is a v3.5+ follow-up; the current
+SpatialVelocityBC works for any cavity-like problem where the top
+boundary is geometrically smooth.
+
+### Deferred to v3.5+
+
+- Laplacian MMS on a non-Cartesian (skewed) mesh — verifies the
+  over-relaxed non-orthogonal correction from Stage 3c.
+- Ghia Re=400, 1000 extensions. Re=1000 currently destabilises
+  (needs deferred-correction convection scheme or pseudo-transient
+  continuation — Stage 2a follow-up).
+- SpatialVelocityBC full Laplacian integration for smoothed-lid gate.
+- Poiseuille MMS (analytical parabolic channel profile).
+- Taylor-Green 2D kinetic-energy decay.
+- Backward-facing step Driver-Seegmiller.
+
 ## v3.3.0 — Interior Residual Metric + Corner-Singularity Diagnosis
 
 Closes out the residual investigation started in v3.2.

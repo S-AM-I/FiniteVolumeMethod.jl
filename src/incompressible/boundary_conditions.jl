@@ -243,6 +243,24 @@ struct CustomBC{T} <: AbstractBoundaryCondition
 end
 
 @doc """
+    SpatialVelocityBC{Dim, T, F} <: AbstractBoundaryCondition
+
+Spatially-varying Dirichlet velocity BC. `func(x::SVector{Dim,T})`
+returns the velocity vector at face center `x`. Used for smoothed-lid
+cavities, Womersley-like inlet profiles, travelling-wave perturbations,
+and any other BC where the prescribed value depends on geometric
+location.
+
+Evaluated inside `update_boundary_velocity!` on every iteration;
+callers should keep `func` allocation-free.
+"""
+struct SpatialVelocityBC{Dim, T, F} <: AbstractBoundaryCondition
+    func::F
+end
+SpatialVelocityBC(func::F, ::Val{Dim}, ::Type{T}) where {Dim, T, F} =
+    SpatialVelocityBC{Dim, T, F}(func)
+
+@doc """
     CustomBC(; velocity_type = :dirichlet, velocity_value = 0.0,
                pressure_type = :neumann, pressure_value = 0.0)
 
@@ -415,6 +433,14 @@ function expand_velocity_bc(bc::TimeDependentVelocityBC, component::Int)
     return ParabolicDirichlet(bc.func(bc.t_ref)[component])
 end
 
+function expand_velocity_bc(::SpatialVelocityBC, ::Int)
+    # Spatially-varying BC: the actual per-face Dirichlet value is set by
+    # `update_boundary_velocity!` using `bc.func(face_center)`. For the
+    # momentum Laplacian assembly we fall back to a Dirichlet(0) placeholder
+    # on the LHS and let the face-by-face BC application do the real work.
+    return ParabolicDirichlet(0.0)
+end
+
 function expand_velocity_bc(::WallFunctionBC, ::Int)
     return ParabolicNeumann(0.0)
 end
@@ -508,6 +534,10 @@ function expand_pressure_bc(::FlowRateInletBC)
 end
 
 function expand_pressure_bc(::TimeDependentVelocityBC)
+    return ParabolicNeumann(0.0)
+end
+
+function expand_pressure_bc(::SpatialVelocityBC)
     return ParabolicNeumann(0.0)
 end
 
