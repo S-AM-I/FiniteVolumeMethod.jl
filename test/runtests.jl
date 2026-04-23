@@ -239,6 +239,9 @@ end
     @testset verbose = true "V&V: RANS turbulence state" begin
         safe_include("v_and_v_rans_state.jl")
     end
+    @testset verbose = true "V&V: SolidBodyMotion" begin
+        safe_include("v_and_v_solid_body_motion.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
