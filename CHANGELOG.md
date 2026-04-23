@@ -1,5 +1,37 @@
 # Changelog
 
+## v3.53.0 — Strain-Rate Primitive (fourth `turbulence_les` benchmark)
+
+Fourth convergence-verified benchmark for `turbulence_les`,
+joining Smagorinsky (v3.19), WALE (v3.28), and filter width +
+DynamicSmagorinsky (v3.39). Covers the shared `compute_strain_rate`
+kernel used by every LES and RANS production term.
+
+### test/v_and_v_strain_rate.jl
+
+|S| = √(2 S_ij S_ij) via six invariants (402 gates, ~0.4 s):
+
+1. **Zero velocity ⇒ |S| = 0.**
+2. **Uniform velocity ⇒ |S| = 0** (translation invariance).
+3. **Rigid rotation ⇒ |S| = 0** (rotations are strain-free).
+4. **Simple shear U = (A·y, 0) ⇒ |S| = |A|** (rtol 1e-10).
+5. **Biaxial stretching U = (αx, −αy) ⇒ |S| = 2|α|.**
+6. **A-linear scaling** (|S| ∝ velocity magnitude) at 100 cells.
+
+### `turbulence_les` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Smagorinsky algebra                     | v3.19 | `test/v_and_v_smagorinsky.jl`    |
+| WALE zero-shear design property          | v3.28 | `test/v_and_v_wale.jl`           |
+| Filter width + DynamicSmagorinsky        | v3.39 | `test/v_and_v_filter_width.jl`   |
+| Strain-rate primitive (shared kernel)    | v3.53 | `test/v_and_v_strain_rate.jl`    |
+
+### Verification
+
+No manifest tier change. 402 new gates wired into default
+runtests.jl under `V&V: Strain rate primitive`.
+
 ## v3.52.0 — Solver Config Dispatch (second `linear_solver_infra` benchmark)
 
 Second convergence-verified benchmark for `linear_solver_infra`,
