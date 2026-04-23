@@ -89,12 +89,43 @@ function boundary_value(
 end
 
 """
-    build_boundary_map(phi::CollocatedScalarField) -> Dict{Int, Int}
+    build_boundary_map(field[, mesh]) -> Vector{Int}
 
-Build a mapping from mesh face index → index into `phi.boundary`.
+Build a mapping from mesh face index → index into `field.boundary`.
+
+Returns a `Vector{Int}` of length equal to the total number of mesh faces
+(`size(mesh.face_cells, 2)` if `mesh` is given, otherwise the largest
+boundary face index seen). Entry `f` is the 1-based index into
+`field.boundary` if face `f` is one of the field's boundary faces, and `0`
+otherwise. `bmap[f]` has the same call syntax as a `Dict{Int, Int}` for
+existing callers, but is O(1) with no hashing and allocates exactly once.
+
+Hot-loop rule: allocate this once per solver iteration (or cache it on a
+state object) and reuse for every face-value / Rhie-Chow / gradient call.
 """
-function build_boundary_map(phi::CollocatedScalarField)
-    return Dict(f => i for (i, f) in enumerate(phi.boundary_face_indices))
+function build_boundary_map(field::Union{CollocatedScalarField, CollocatedVectorField})
+    # Size-to-max-boundary-index path — safe because every caller guards
+    # `bmap[f]` behind an `is_internal_face(mesh, f)` check, so `f` is
+    # always a boundary face when this vector is indexed.
+    max_idx = isempty(field.boundary_face_indices) ? 0 :
+        maximum(field.boundary_face_indices)
+    bmap = zeros(Int, max_idx)
+    @inbounds for (i, f) in pairs(field.boundary_face_indices)
+        bmap[f] = i
+    end
+    return bmap
+end
+
+function build_boundary_map(
+        field::Union{CollocatedScalarField, CollocatedVectorField},
+        mesh::UnstructuredFVMMesh,
+    )
+    nf = size(mesh.face_cells, 2)
+    bmap = zeros(Int, nf)
+    @inbounds for (i, f) in pairs(field.boundary_face_indices)
+        bmap[f] = i
+    end
+    return bmap
 end
 
 """
@@ -105,7 +136,7 @@ internal faces, boundary lookup (via `bmap`) for boundary faces.
 """
 function face_value(
         phi::CollocatedScalarField{T}, mesh::UnstructuredFVMMesh, f::Int,
-        bmap::Dict{Int, Int},
+        bmap::AbstractVector{Int},
     ) where {T}
     if is_internal_face(mesh, f)
         return interpolate_linear(phi, mesh, f)
@@ -129,9 +160,9 @@ function compute_face_flux!(
         mesh::UnstructuredFVMMesh{Dim, T},
     ) where {Dim, T}
     nf = size(mesh.face_cells, 2)
-    ubmap = Dict(f => i for (i, f) in enumerate(U.boundary_face_indices))
+    ubmap = build_boundary_map(U, mesh)
 
-    for f in 1:nf
+    @inbounds for f in 1:nf
         S_f = face_normal_area(mesh, f)
         if is_internal_face(mesh, f)
             U_f = interpolate_linear(U, mesh, f)
@@ -182,13 +213,12 @@ function rhie_chow_correction!(
         under_relax::T = one(T),
     ) where {Dim, T}
     nf = size(mesh.face_cells, 2)
-    pbmap = build_boundary_map(p)
-    ubmap = Dict(f => i for (i, f) in enumerate(U.boundary_face_indices))
+    ubmap = build_boundary_map(U, mesh)
 
     # Compute cell-center pressure gradient for Rhie-Chow
     grad_p = gradient(p, mesh)
 
-    for f in 1:nf
+    @inbounds for f in 1:nf
         S_f = face_normal_area(mesh, f)
 
         if is_internal_face(mesh, f)

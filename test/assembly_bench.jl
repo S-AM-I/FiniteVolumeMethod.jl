@@ -16,6 +16,7 @@ using FiniteVolumeMethod
 using Test
 using BenchmarkTools
 using SparseArrays
+using StaticArrays: SVector
 
 include("TestHelpers.jl")
 
@@ -64,4 +65,50 @@ include("TestHelpers.jl")
     nf_internal = count(!iszero, @view(mesh.face_cells[2, :]))
     expected_nnz = 10_000 + 2 * nf_internal
     @test nnz(eq.A) == expected_nnz
+end
+
+@testset "Stage 1b: Zero-allocation gradient! with cached scratch + bmap" begin
+    mesh = build_cartesian_unstructured_mesh(100, 100, 1.0, 1.0)
+    phi = CollocatedScalarField(:phi, mesh; value = 1.0)
+    nc = length(mesh.cell_volumes)
+    grad = Vector{SVector{2, Float64}}(undef, nc)
+    scratch = Vector{SVector{2, Float64}}(undef, nc)
+    bmap = build_boundary_map(phi, mesh)
+
+    # Warm up
+    gradient!(grad, phi, mesh; n_corrections = 0, scratch = scratch, bmap = bmap)
+    gradient!(grad, phi, mesh; n_corrections = 2, scratch = scratch, bmap = bmap)
+
+    # Zero-corrections path: no scratch needed, bmap re-used
+    bench0 = @benchmark gradient!(
+        $grad, $phi, $mesh; n_corrections = 0, bmap = $bmap,
+    ) samples = 20 evals = 1
+    @test bench0.memory == 0
+    @test bench0.allocs == 0
+
+    # Corrected path: scratch re-used
+    bench2 = @benchmark gradient!(
+        $grad, $phi, $mesh; n_corrections = 2, scratch = $scratch, bmap = $bmap,
+    ) samples = 20 evals = 1
+    @test bench2.memory == 0
+    @test bench2.allocs == 0
+end
+
+@testset "Stage 1b: build_boundary_map returns O(1)-lookup Vector" begin
+    mesh = build_cartesian_unstructured_mesh(10, 10, 1.0, 1.0)
+    phi = CollocatedScalarField(:phi, mesh; value = 0.0)
+    bmap = build_boundary_map(phi, mesh)
+    nf = size(mesh.face_cells, 2)
+
+    @test bmap isa Vector{Int}
+    @test length(bmap) == nf
+    # Internal faces map to 0; boundary faces map to a valid phi.boundary index.
+    for f in 1:nf
+        if mesh.face_cells[2, f] == 0  # boundary face
+            @test 1 <= bmap[f] <= length(phi.boundary)
+            @test phi.boundary_face_indices[bmap[f]] == f
+        else
+            @test bmap[f] == 0
+        end
+    end
 end

@@ -24,7 +24,7 @@ function compute_HbyA_flux(
     ) where {Dim, T}
     nf = size(mesh.face_cells, 2)
     phi_HbyA = Vector{T}(undef, nf)
-    ubmap = Dict(f => i for (i, f) in enumerate(state.U.boundary_face_indices))
+    ubmap = build_boundary_map(state.U, mesh)
 
     for f in 1:nf
         S_f = face_normal_area(mesh, f)

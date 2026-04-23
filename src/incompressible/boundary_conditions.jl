@@ -674,8 +674,8 @@ function update_boundary_cyclic!(
     isempty(cyclic_pairs) && return nothing
 
     # Build reverse lookup: boundary face index → position in boundary array
-    ubmap_U = Dict(f => i for (i, f) in enumerate(state.U.boundary_face_indices))
-    ubmap_p = Dict(f => i for (i, f) in enumerate(state.p.boundary_face_indices))
+    ubmap_U = build_boundary_map(state.U, mesh)
+    ubmap_p = build_boundary_map(state.p, mesh)
 
     for pairs in cyclic_pairs
         for (f1, f2) in pairs
@@ -683,16 +683,16 @@ function update_boundary_cyclic!(
             c2 = owner(mesh, f2)
 
             # f1 boundary gets c2's value, f2 boundary gets c1's value
-            if haskey(ubmap_U, f1)
+            if ubmap_U[f1] != 0
                 state.U.boundary[ubmap_U[f1]] = state.U.internal[c2]
             end
-            if haskey(ubmap_U, f2)
+            if ubmap_U[f2] != 0
                 state.U.boundary[ubmap_U[f2]] = state.U.internal[c1]
             end
-            if haskey(ubmap_p, f1)
+            if ubmap_p[f1] != 0
                 state.p.boundary[ubmap_p[f1]] = state.p.internal[c2]
             end
-            if haskey(ubmap_p, f2)
+            if ubmap_p[f2] != 0
                 state.p.boundary[ubmap_p[f2]] = state.p.internal[c1]
             end
         end

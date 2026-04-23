@@ -9,7 +9,7 @@
 """
     green_gauss_gradient(
         phi::CollocatedScalarField, mesh::UnstructuredFVMMesh{Dim, T},
-        cell::Int, bmap::Dict{Int, Int},
+        cell::Int, bmap::AbstractVector{Int},
     ) -> SVector{Dim, T}
 
 Compute the Green-Gauss gradient of scalar `phi` at cell `cell`:
@@ -25,7 +25,7 @@ function green_gauss_gradient(
         phi::CollocatedScalarField{T},
         mesh::UnstructuredFVMMesh{Dim, T},
         cell::Int,
-        bmap::Dict{Int, Int},
+        bmap::AbstractVector{Int},
     ) where {Dim, T}
     mesh.cell_faces === nothing && error("cell_faces required for gradient reconstruction")
     grad = zero(SVector{Dim, T})
@@ -80,16 +80,18 @@ function gradient!(
         phi::CollocatedScalarField{T},
         mesh::UnstructuredFVMMesh{Dim, T};
         n_corrections::Int = 0,
+        scratch::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
+        bmap::Union{Nothing, Vector{Int}} = nothing,
     ) where {Dim, T}
     mesh.cell_faces === nothing && error("cell_faces required for gradient reconstruction")
     nc = length(mesh.cell_volumes)
     nf = size(mesh.face_cells, 2)
-    bmap = build_boundary_map(phi)
+    bmap_eff = bmap === nothing ? build_boundary_map(phi, mesh) : bmap
 
     # --- Initial Green-Gauss pass ---
     fill!(grad_phi, zero(SVector{Dim, T}))
-    for f in 1:nf
-        phi_f = face_value(phi, mesh, f, bmap)
+    @inbounds for f in 1:nf
+        phi_f = face_value(phi, mesh, f, bmap_eff)
         S_f = face_normal_area(mesh, f)
 
         P = owner(mesh, f)
@@ -101,13 +103,17 @@ function gradient!(
         end
     end
 
-    for c in 1:nc
+    @inbounds for c in 1:nc
         grad_phi[c] = grad_phi[c] / mesh.cell_volumes[c]
     end
 
     # --- Iterative non-orthogonal correction ---
-    for _ in 1:n_corrections
-        _corrected_gradient_pass!(grad_phi, phi, mesh, bmap)
+    if n_corrections > 0
+        scratch_buf = scratch === nothing ? Vector{SVector{Dim, T}}(undef, nc) : scratch
+        length(scratch_buf) == nc || error("scratch buffer length $(length(scratch_buf)) ≠ ncells $nc")
+        for _ in 1:n_corrections
+            _corrected_gradient_pass!(grad_phi, scratch_buf, phi, mesh, bmap_eff)
+        end
     end
 
     return nothing
@@ -115,21 +121,22 @@ end
 
 """
 Internal helper: one correction pass of the iterative Green-Gauss scheme.
-Returns nothing; mutates `grad_phi` in-place.
+`scratch` is a caller-provided buffer of length `ncells`; it is overwritten
+then copied back into `grad_phi`. No per-call allocation.
 """
 function _corrected_gradient_pass!(
         grad_phi::Vector{SVector{Dim, T}},
+        scratch::Vector{SVector{Dim, T}},
         phi::CollocatedScalarField{T},
         mesh::UnstructuredFVMMesh{Dim, T},
-        bmap::Dict{Int, Int},
+        bmap::Vector{Int},
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
     nf = size(mesh.face_cells, 2)
 
-    # Temporary accumulator
-    grad_new = fill(zero(SVector{Dim, T}), nc)
+    fill!(scratch, zero(SVector{Dim, T}))
 
-    for f in 1:nf
+    @inbounds for f in 1:nf
         P = owner(mesh, f)
         S_f = face_normal_area(mesh, f)
 
@@ -151,16 +158,16 @@ function _corrected_gradient_pass!(
             phi_f = phi.boundary[bmap[f]]
         end
 
-        grad_new[P] = grad_new[P] + phi_f * S_f
+        scratch[P] = scratch[P] + phi_f * S_f
 
         N = neighbour(mesh, f)
         if N != 0
-            grad_new[N] = grad_new[N] - phi_f * S_f
+            scratch[N] = scratch[N] - phi_f * S_f
         end
     end
 
-    for c in 1:nc
-        grad_phi[c] = grad_new[c] / mesh.cell_volumes[c]
+    @inbounds for c in 1:nc
+        grad_phi[c] = scratch[c] / mesh.cell_volumes[c]
     end
 
     return nothing
