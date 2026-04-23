@@ -5,6 +5,12 @@
 
 using Printf: @sprintf
 
+# Phase-7 add-ons owned by Wave-1 Agent D. Loading via `include` here
+# keeps the main layer file (`src/layers/discretization_assembly_kernels.jl`)
+# unchanged while ensuring the symbols are available whenever the VOF
+# solver is loaded.
+include("iso_advector.jl")
+
 """
     solve_vof(mesh, props, bcs_U, bcs_p, bcs_alpha, tspan, dt; kwargs...)
 
@@ -32,6 +38,13 @@ Each time step:
 - `C_alpha` — compression coefficient (default: 1.0)
 - `algorithm` — `PISO()` or `PIMPLE()` (default: `PISO()`)
 - `linear_solver` — LinearSolve.jl algorithm
+- `use_mules` — enable MULES flux limiting in α-transport (default: true)
+- `use_iso_advector` — use geometric isoAdvector reconstruction for the
+  α-flux instead of the upwind/compressive blend (default: false)
+- `contact_angle` — optional `AbstractContactAngleModel` for CSF wall
+  adhesion (default: `nothing`)
+- `wall_patches` — list of face-tag symbols treated as walls for the
+  contact-angle correction (default: empty)
 - `save_every` — save interval
 - `verbose` — print progress
 
@@ -52,6 +65,10 @@ function solve_vof(
         algorithm::AbstractPVCoupling = PISO(),
         linear_solver = nothing,
         solver_config = nothing,
+        use_mules::Bool = true,
+        use_iso_advector::Bool = false,
+        contact_angle::Union{Nothing, AbstractContactAngleModel} = nothing,
+        wall_patches::Vector{Symbol} = Symbol[],
         save_every::Int = 1,
         verbose::Bool = false,
     ) where {Dim, T}
@@ -88,17 +105,37 @@ function solve_vof(
         dt_actual = min(dt, t_end - t)
 
         # -- 1. Alpha transport -------------------------------------------
-        alpha_eq = CollocatedEquation(mesh)
-        assemble_alpha!(
-            alpha_eq, vof_state.alpha, state.phi, mesh, bcs_alpha;
-            dt = dt_actual, C_alpha = C_alpha,
-        )
-        alpha_sol = _dispatch_solve(to_linear_problem(alpha_eq), linear_solver, solver_config, :alpha)
-        for c in 1:nc
-            vof_state.alpha.internal[c] = alpha_sol.u[c]
+        if use_iso_advector
+            # Geometric interface reconstruction — bypasses the linear
+            # system entirely; α advances by explicit Euler with the
+            # reconstructed α-face flux.
+            phi_alpha = FaceFluxField(:phi_alpha_iso, mesh; value = zero(T))
+            assemble_isoadvector_flux!(
+                phi_alpha, vof_state.alpha, state.U, mesh, dt_actual,
+            )
+            nf = size(mesh.face_cells, 2)
+            for f in 1:nf
+                F = phi_alpha.values[f] * dt_actual
+                P = owner(mesh, f)
+                vof_state.alpha.internal[P] -= F / mesh.cell_volumes[P]
+                if is_internal_face(mesh, f)
+                    N = neighbour(mesh, f)
+                    vof_state.alpha.internal[N] += F / mesh.cell_volumes[N]
+                end
+            end
+        else
+            alpha_eq = CollocatedEquation(mesh)
+            assemble_alpha!(
+                alpha_eq, vof_state.alpha, state.phi, mesh, bcs_alpha;
+                dt = dt_actual, C_alpha = C_alpha, use_mules = use_mules,
+            )
+            alpha_sol = _dispatch_solve(to_linear_problem(alpha_eq), linear_solver, solver_config, :alpha)
+            for c in 1:nc
+                vof_state.alpha.internal[c] = alpha_sol.u[c]
+            end
         end
 
-        # -- 2. Boundedness limiter ---------------------------------------
+        # -- 2. Boundedness limiter (post-solve safety net) ---------------
         clip_alpha!(vof_state.alpha, mesh)
 
         # -- 3. Update mixture properties ---------------------------------
@@ -110,8 +147,11 @@ function solve_vof(
             body_force[c] = vof_state.rho[c] * g
         end
 
-        # Surface tension
-        F_st = compute_surface_tension_force(vof_state.alpha, props, mesh)
+        # Surface tension (with optional wall-adhesion via contact angle)
+        F_st = compute_surface_tension_force(
+            vof_state.alpha, props, mesh;
+            contact_angle = contact_angle, wall_patches = wall_patches,
+        )
         if F_st !== nothing
             for c in 1:nc
                 body_force[c] = body_force[c] + F_st[c]
