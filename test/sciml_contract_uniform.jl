@@ -113,6 +113,27 @@ end
     filter!(e -> e.name !== :demo_const, entries)
 end
 
+@testset "Stage 1f: is_fvm_solution trait + AbstractFVMSolution" begin
+    # Non-FVM values: false
+    @test !is_fvm_solution(42)
+    @test !is_fvm_solution("hello")
+    @test !is_fvm_solution(nothing)
+
+    # IncompressibleSolution: true
+    mesh = build_cartesian_unstructured_mesh(3, 3, 1.0, 1.0)
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => NoSlipWallBC(),
+        :right => NoSlipWallBC(),
+        :bottom => NoSlipWallBC(),
+        :top => NoSlipWallBC(),
+    )
+    prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, density = 1.0)
+    sol = solve(prob, SIMPLE())
+    @test sol isa IncompressibleSolution
+    @test sol isa AbstractFVMSolution
+    @test is_fvm_solution(sol)
+end
+
 @testset "Stage 1d: Generic dispatch on umbrella type" begin
     # A downstream consumer can write one method on `::AbstractFiniteVolumeMesh`
     # and have it match every mesh family without knowing concrete types.
