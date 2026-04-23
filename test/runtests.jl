@@ -221,6 +221,9 @@ end
     @testset verbose = true "V&V: Marshak wall BC" begin
         safe_include("v_and_v_marshak.jl")
     end
+    @testset verbose = true "V&V: Combustion properties" begin
+        safe_include("v_and_v_combustion_props.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

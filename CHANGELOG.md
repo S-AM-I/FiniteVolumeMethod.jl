@@ -1,5 +1,40 @@
 # Changelog
 
+## v3.61.0 — Combustion Properties (fifth `combustion` benchmark)
+
+Fifth convergence-verified benchmark for `combustion`, joining
+species AD (v3.17), EDM algebra (v3.27), Arrhenius kinetics
+(v3.37), and FR/ED blending (v3.47). Covers the
+`CombustionProperties` + `SpeciesState` type-system primitives.
+
+### test/v_and_v_combustion_props.jl
+
+Seven invariants (116 gates, ~0.1 s):
+
+1. **Defaults** match CH4/O2/CO2 documented values.
+2. **Custom kwargs round-trip** at H2/O2/H2O scale.
+3. **Integer/float type promotion** to Float64.
+4. **SpeciesState defaults to zero**.
+5. **Y_init kwargs round-trip** to field values across all 48
+   cells for every species.
+6. **Stoichiometry consistency** (s > 0 and (1+s) accessible).
+7. **Field sizes match mesh cell count**.
+
+### `combustion` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Species AD (exponential BL)          | v3.17 | `test/v_and_v_species_ad.jl`      |
+| EDM reaction-rate algebra             | v3.27 | `test/v_and_v_edm.jl`             |
+| Arrhenius finite-rate kinetics        | v3.37 | `test/v_and_v_arrhenius.jl`       |
+| FR/ED blending                         | v3.47 | `test/v_and_v_fred.jl`            |
+| CombustionProperties + SpeciesState   | v3.61 | `test/v_and_v_combustion_props.jl` |
+
+### Verification
+
+No manifest tier change. 116 new gates wired into default
+runtests.jl under `V&V: Combustion properties`.
+
 ## v3.60.0 — Marshak Wall BC (fifth `radiation` benchmark)
 
 Fifth convergence-verified benchmark for `radiation`, joining
