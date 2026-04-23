@@ -89,13 +89,13 @@ Each slated for the stage noted in the roadmap:
 | Compressible pressure-based solvers (rhoSimpleFoam, rhoPimpleFoam, rhoReactingFoam) | Absent | 3 |
 | Real-gas EOS (Peng-Robinson, Redlich-Kwong, tabulated) | Absent | 3b |
 | Non-Newtonian rheology (power-law, Bird-Carreau, Herschel-Bulkley, Casson) | Absent | 3c |
-| Moving Reference Frame (MRF) | Absent | 6a |
-| Arbitrary Mesh Interface (AMI) / sliding mesh | Absent | 6b |
-| Porous media (Darcy-Forchheimer) | Absent | 6c |
-| Cavitation (Kunz, Schnerr-Sauer, Merkle) | Absent | 6d |
-| Eulerian two-fluid | Absent | 6e |
-| Aeroacoustics (FW-H, sponge zones) | Absent | 6f |
-| Population balance modeling | Absent | 6g |
+| ~~Moving Reference Frame (MRF)~~ | Landed v2.7.0 (Stage 6a): `RotationalMRFZone`, `mrf_momentum_source`, `mrf_momentum_source_2d_planar`. Verified Coriolis+centrifugal for planar rotation. | 6a done |
+| Arbitrary Mesh Interface (AMI) / sliding mesh | Absent — still Stage 6 follow-up | 6b |
+| ~~Porous media (Darcy-Forchheimer)~~ | Landed v2.7.0 (Stage 6c): `DarcyPorous`, `DarcyForchheimerPorous`, `OrthotropicPorous` with `porous_momentum_source`. | 6c done |
+| ~~Cavitation (Kunz, Schnerr-Sauer, Merkle)~~ | Landed v2.7.0 (Stage 6d): three concrete cavitation models under `AbstractCavitationModel`; `cavitation_source` returns `(m_plus, m_minus)` per cell. | 6d done |
+| Eulerian two-fluid | Absent — requires block-coupled equation (Stage 1c present, solver wiring is Stage 6 follow-up) | 6e |
+| ~~Aeroacoustics (FW-H, sponge zones)~~ | Landed v2.7.0 (Stage 6f): `FWHSurface`, `FWHObserver`, `curle_dipole_pressure`, `fwh_monopole_pressure`. Stationary-surface Curle + monopole; moving-surface + porous-FW-H are follow-ups. Sponge-zones still pending. | 6f partial |
+| ~~Population balance modeling~~ | Landed v2.7.0 (Stage 6g): `qmom_recover_abscissae_weights` (Wheeler/PD algorithm) + moment sources for growth, binary aggregation, binary breakage. CM + DQMoM extensions are follow-ups. | 6g done |
 | Wall-modeled LES (WMLES) | Absent | 4a |
 | Solid mechanics / FSI | Absent | 7a/b |
 | Function objects / coded BCs / expression BCs | Absent | 7d |

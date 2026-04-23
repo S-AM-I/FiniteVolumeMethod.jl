@@ -1,5 +1,75 @@
 # Changelog
 
+## v2.7.0 — Stage 6 Industrial Physics (MRF, porous, cavitation, FW-H, PBM)
+
+Seventh deliverable of the v3 industrial-grade roadmap. Five greenfield
+physics modules added to the pressure-based family at infrastructure +
+contract-test depth.
+
+### Stage 6a — Moving Reference Frame
+
+`src/mrf/types.jl`:
+- `AbstractMRFZone{Dim, T}` umbrella; `RotationalMRFZone` concrete.
+- `mrf_momentum_source(zone, c, x, u, ρ)` — per-cell Coriolis +
+  centrifugal source `-ρ (2 ω×u + ω×(ω×r))`.
+- `mrf_momentum_source_2d_planar(omega_scalar, x, u, origin, ρ)` —
+  convenience for 2D problems with out-of-plane rotation.
+
+### Stage 6c — Porous media
+
+`src/porous/types.jl`:
+- `AbstractPorousModel` umbrella.
+- `DarcyPorous` (linear resistance), `DarcyForchheimerPorous` (linear +
+  quadratic), `OrthotropicPorous` (diagonal tensor form).
+- `porous_momentum_source(model, c, u, ρ, μ)` — per-cell momentum sink.
+
+### Stage 6d — Cavitation
+
+`src/cavitation/types.jl`:
+- `AbstractCavitationModel` umbrella.
+- `KunzCavitation`, `MerkleCavitation` (ad-hoc source-term models) and
+  `SchnerrSauerCavitation` (physics-based bubble-density model).
+- `cavitation_source(model, p, α_l, ρ_l, ρ_v, p_sat) → (m_plus, m_minus)`.
+
+### Stage 6f — Aeroacoustics (FW-H)
+
+`src/aeroacoustics/fwh.jl`:
+- `FWHSurface` control surface + `FWHObserver` far-field probe.
+- `curle_dipole_pressure` — stationary-surface Curle dipole
+  approximation.
+- `fwh_monopole_pressure` — FW-H thickness (mass-flux) contribution.
+- Moving-surface and porous-FW-H variants are Stage 6 follow-ups.
+
+### Stage 6g — Population balance moment methods
+
+`src/population_balance/qmom.jl`:
+- `qmom_recover_abscissae_weights` — N-abscissa / N-weight recovery
+  from 2N moments via Wheeler / product-difference (clean-room from
+  McGraw 1997 description).
+- Moment sources for growth, binary aggregation (volume-conservative
+  merging), and binary breakage with caller-supplied kernel functions.
+
+### Deferred to Stage 6 follow-ups
+
+- Arbitrary Mesh Interface (AMI) for rotor-stator sliding.
+- Eulerian two-fluid solver (requires block-coupled equation wiring).
+- FW-H moving-surface integration + porous variants.
+- CM and DQMoM extensions to PBM.
+- Published benchmarks: Gulich centrifugal pump, Francis turbine
+  passage, packed-bed DF analytical profile, NACA0015 cavitating
+  hydrofoil, BANC trailing-edge noise.
+
+### Verification
+
+All 1477 pre-existing tests pass at identical counts. 24 new Stage 6
+gates in `test/stage6_physics.jl`:
+- 4: MRF planar and 3D Coriolis/centrifugal directions.
+- 3: Darcy / Darcy-Forchheimer / Orthotropic momentum sinks.
+- 7: Kunz / Merkle / Schnerr-Sauer evaporation vs. condensation.
+- 3: FW-H Curle dipole symmetry + monopole closed-form.
+- 5: QMoM Wheeler recovery of a bi-disperse input.
+- 2: QMoM growth moment source vs. analytical.
+
 ## v2.6.0 — Stage 5 Phase Correctness (CHT, VOF MULES, fvDOM, GCL)
 
 Sixth deliverable of the v3 industrial-grade roadmap. Correctness fixes
