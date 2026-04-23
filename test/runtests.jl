@@ -43,6 +43,9 @@ end
     @testset verbose = true "Turbulence Correctness (Stage 4)" begin
         safe_include("turbulence_correctness.jl")
     end
+    @testset verbose = true "Phase Correctness (Stage 5)" begin
+        safe_include("stage5_correctness.jl")
+    end
     @testset verbose = true "Problem" begin
         safe_include("problem.jl")
     end

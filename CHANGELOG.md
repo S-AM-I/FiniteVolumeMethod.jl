@@ -1,5 +1,79 @@
 # Changelog
 
+## v2.6.0 — Stage 5 Phase Correctness (CHT, VOF MULES, fvDOM, GCL)
+
+Sixth deliverable of the v3 industrial-grade roadmap. Correctness fixes
+across the thermal / multiphase / radiation / dynamic-mesh modules
+flagged in KNOWN_FAILURES.
+
+### Stage 5a — Conjugate heat transfer
+
+`src/thermal/conjugate.jl`:
+- Fixed latent post-Stage-1b regression: `haskey(pbmap, f)` on a
+  `Dict{Int,Int}` is no longer valid after `build_boundary_map` started
+  returning `Vector{Int}`. Switched all three sites to
+  `pbmap[f] != 0`.
+- Upgraded `build_boundary_map(T_field)` calls to the mesh-sized form
+  `build_boundary_map(T_field, mesh)` for robust out-of-range lookup
+  behaviour.
+- Per-face heat-flux correction (`_apply_perface_interface_fluxes!`)
+  was already present; the Stage 5a claim in KNOWN_FAILURES was
+  outdated and is now struck through.
+
+### Stage 5b — MULES flux limiter for VOF
+
+New `mules_limit_flux!` in `src/multiphase/boundedness.jl` implementing
+Zalesak's flux-corrected-transport limiter (Weller 2006, Rusche 2002,
+clean-room). Given a monotone upwind flux and a high-order
+(anti-diffusive) flux, produces a λ-blended face flux guaranteeing
+α ∈ [0, 1] after one explicit Euler step. Keeps interface sharper than
+the existing clip-then-redistribute `clip_alpha!`, which stays as a
+safety net.
+
+### Stage 5c — fvDOM angular quadrature
+
+`src/radiation/fvdom.jl:60-135` already wired proper Carlson-Lathrop
+level-symmetric S2 (4 dirs in 2D, 8 in 3D) and S4 (12 / 24 dirs)
+quadratures. The "skeleton-only" claim in KNOWN_FAILURES was outdated;
+verified and struck through. S8 / S12 / T-sets remain Stage 5c
+follow-ups.
+
+### Stage 5d — GCL verification
+
+New `verify_gcl(phi_mesh, V_old, V_new, mesh, dt)` in
+`src/dynamic_mesh/mesh_update.jl` computes the per-cell residual of the
+discrete Geometric Conservation Law:
+
+    (V_new[c] − V_old[c]) / Δt  =  Σ_f ε(c, f) · phi_mesh[f]
+
+A GCL-consistent mesh motion produces zero residual to machine
+precision; non-zero values diagnose inconsistent face-flux / volume
+updates before they corrupt tracer transport on large deformations.
+
+### Verification
+
+All 1329 pre-existing tests pass at identical counts. 148 new Stage 5
+gates in `test/stage5_correctness.jl`:
+- 144 gates: MULES output sits between upwind and high-order for every
+  face of an 8×8 mesh with an overshooting anti-diffusive high-order flux.
+- 1 gate: MULES with identical inputs is identity (no anti-diffusion).
+- 2 gates: `verify_gcl` returns zero residual for a GCL-consistent trio
+  (phi_mesh, V_old, V_new constructed to satisfy the relation exactly).
+- 1 gate: `verify_gcl` detects non-zero residual when V_new is inconsistent
+  with phi_mesh.
+
+### Deferred to Stage 5 follow-ups
+
+- Wire MULES into the default `solve_simple_thermal` + VOF solvers
+  (currently a standalone helper).
+- Add S8 / T-set quadratures to fvDOM.
+- Multi-step combustion (Cantera.jl bridge).
+- Full DPM particle-wall collision DEM.
+- Primary spray breakup (KH-ACT, LISA).
+- Benchmark suites: De Vahl Davis CHT, dam break + Hysing rising bubble,
+  Zalesak rotating disk, Sandia Flame D (needs multi-step chemistry),
+  radiative equilibrium, turbomachinery MRF (Stage 6).
+
 ## v2.5.0 — Stage 4 Turbulence Correctness
 
 Fifth deliverable of the v3 industrial-grade roadmap. Corrects four

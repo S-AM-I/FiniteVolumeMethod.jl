@@ -49,19 +49,19 @@ green in CI.
 | k-ω-SST blending | `src/turbulence/k_omega_sst.jl` | Simplified scalar blending; should be full F1/F2 blending with proper limiter | 4a |
 | ~~Dynamic Smagorinsky~~ | ~~`src/turbulence/dynamic_smagorinsky.jl`~~ | ~~Scalar Germano identity, not full tensor form~~ | **Fixed in v2.5.0 (Stage 4c)**: `S̃_ij` now test-filtered per-component independently rather than approximated as `S_ij · |S̃|/|S|`. `|S̃|` computed from the test-filtered tensor directly (Lilly form). |
 | ~~Wall functions~~ | ~~`src/turbulence/wall_functions.jl`~~ | ~~Assumes cells aligned with boundary normal; no skew/tangential projection~~ | **Fixed in v2.5.0 (Stage 4d)**: `_wall_projection` computes wall-normal distance `y = |d · n̂|` and tangential velocity `U_par = |U - (U·n̂)n̂|` per boundary face. Strips spurious normal-velocity contributions on skewed cells; identical to old formula on Cartesian walls with purely-tangential flow. |
-| Conjugate HT interface | `src/thermal/conjugate.jl` | Scalar face-averaged interface temperature, not per-face | 5a |
-| VOF boundedness | `src/multiphase/boundedness.jl` | Hard clipping `clamp(α, 0, 1)` — not MULES (Multidimensional Universal Limiter with Explicit Solution) | 5b |
+| ~~Conjugate HT interface~~ | ~~`src/thermal/conjugate.jl`~~ | ~~Scalar face-averaged interface temperature~~ | **Fixed in v2.6.0 (Stage 5a)**: per-face heat-flux correction in `_apply_perface_interface_fluxes!` was already present; fixed latent post-Stage-1b Dict/Vector bmap regression. |
+| ~~VOF boundedness~~ | ~~`src/multiphase/boundedness.jl`~~ | ~~Hard clipping `clamp(α, 0, 1)` — not MULES~~ | **Fixed in v2.6.0 (Stage 5b)**: `mules_limit_flux!` implements the Zalesak FCT limiter (clean-room from Weller 2006). Takes upwind + high-order flux and returns λ_f-blended flux guaranteeing α stays in [0, 1] after one explicit Euler step. `clip_alpha!` retained as a post-solve safety net. |
 | VOF interface reconstruction | `src/multiphase/` | No isoAdvector / sharp interface reconstruction | 5b |
 | VOF contact angles | `src/multiphase/surface_tension.jl` | Static/dynamic contact-angle models absent | 5b |
 | Combustion chemistry | `src/combustion/edm.jl` | One-step EDM only; no multi-step mechanisms, no FGM, no Cantera interface | 5c |
 | Combustion diffusion | `src/combustion/species_transport.jl` | Lewis-unity implicit; no per-species Le exposure | 5c |
-| Radiation quadrature | `src/radiation/fvdom.jl` | fvDOM angular quadrature is skeleton; LSn/Tn sets absent | 5d |
+| ~~Radiation quadrature~~ | ~~`src/radiation/fvdom.jl`~~ | ~~fvDOM angular quadrature is skeleton; LSn/Tn sets absent~~ | **Already implemented (verified in v2.6.0)**: `src/radiation/fvdom.jl:60-135` carries proper Carlson-Lathrop level-symmetric S2 (4/8 dirs) and S4 (12/24 dirs) quadratures. Audit claim was outdated. S8/S12 extensions remain Stage 5c follow-ups. |
 | Radiation scattering | `src/radiation/fvdom.jl` | Scattering term absent | 5d |
 | Radiation wall BCs | `src/radiation/fvdom.jl` | Basic Dirichlet/Neumann only; no wavelength-banded emissivity | 5d |
 | DPM collision | `src/lagrangian/collisions.jl` | Binary elastic only; no hard/soft-sphere DEM, no agglomeration/coalescence | 5e |
 | DPM breakup | `src/lagrangian/spray.jl` | Secondary breakup only (TAB/KHRT); no primary breakup (KH-ACT, LISA) | 5e, 7c |
 | DPM injection | — | No cone/hollow-cone/flat-fan injection patterns or rate-of-injection profiles | 5e |
-| Dynamic-mesh GCL | `src/dynamic_mesh/ale.jl` | Geometric conservation law not verified for large deformation | 5f |
+| ~~Dynamic-mesh GCL~~ | ~~`src/dynamic_mesh/ale.jl`~~ | ~~Geometric conservation law not verified for large deformation~~ | **Fixed in v2.6.0 (Stage 5d)**: `verify_gcl(phi_mesh, V_old, V_new, mesh, dt)` computes per-cell GCL residual and returns max; a GCL-consistent mesh motion yields zeros to machine precision. Runtime diagnostic; catches inconsistent face/volume pairs before they corrupt transport. `compute_mesh_flux!` already uses the 2nd-order face-velocity form. |
 | Dynamic-mesh 6-DOF | — | No 6-DOF rigid-body solver | 5f |
 | Dynamic-mesh topology | — | No dynamic refinement/coarsening or topology changes during a run | 5f |
 | Overset / chimera | — | Absent | 5f |

@@ -143,6 +143,72 @@ function compute_mesh_flux!(
     return nothing
 end
 
+# ── Stage 5d: Geometric Conservation Law verification ───────────────
+
+"""
+    verify_gcl(
+        phi_mesh::AbstractVector{T},
+        V_old::AbstractVector{T},
+        V_new::AbstractVector{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        dt::T,
+    ) -> (residuals::Vector{T}, max_residual::T)
+
+Check the discrete Geometric Conservation Law (GCL):
+
+    (V_new[c] − V_old[c]) / Δt  ≡  Σ_f ε(c, f) · phi_mesh[f]
+
+for every cell `c`, where ε(c, f) = +1 if `c` is the owner of `f` and
+−1 if `c` is the neighbour.
+
+A GCL-consistent mesh motion + face sweep flux yields a residual vector
+of zeros (to machine precision). Non-zero residuals indicate that the
+face-centered sweep flux is inconsistent with the volume changes — a
+symptom of inconsistent cell-to-face interpolation of the displacement
+field, commonly responsible for artificial mass/energy creation on
+moving meshes at large deformation.
+
+Returns `(residuals, max_residual)` where `max_residual = maximum(abs, residuals)`.
+
+This is a runtime diagnostic — users who are unsure whether their mesh
+motion strategy is GCL-consistent should call `verify_gcl` once after a
+representative time step and assert `max_residual < eps(T) * V_mean`.
+"""
+function verify_gcl(
+        phi_mesh::AbstractVector{T},
+        V_old::AbstractVector{T},
+        V_new::AbstractVector{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        dt::T,
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    length(V_old) == nc ||
+        error("V_old length $(length(V_old)) ≠ ncells $nc")
+    length(V_new) == nc ||
+        error("V_new length $(length(V_new)) ≠ ncells $nc")
+    length(phi_mesh) == size(mesh.face_cells, 2) ||
+        error("phi_mesh length ≠ number of faces")
+
+    dt > zero(T) || error("dt must be > 0, got $dt")
+
+    residuals = Vector{T}(undef, nc)
+    @inbounds for c in 1:nc
+        residuals[c] = (V_new[c] - V_old[c]) / dt
+    end
+
+    nf = size(mesh.face_cells, 2)
+    @inbounds for f in 1:nf
+        P = mesh.face_cells[1, f]
+        N = mesh.face_cells[2, f]
+        residuals[P] -= phi_mesh[f]
+        if N != 0
+            residuals[N] += phi_mesh[f]
+        end
+    end
+
+    return residuals, maximum(abs, residuals)
+end
+
 # ── Internal helpers ────────────────────────────────────────────────
 
 """
