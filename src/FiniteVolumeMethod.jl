@@ -661,6 +661,23 @@ export
     evaluate_expression_bc,
     FieldStatistics
 
+# --- Stage 8a Mesh generation ---
+export
+    Octree,
+    is_leaf,
+    subdivide!,
+    build_octree,
+    count_leaves,
+    intersects_sphere,
+    refine_near_sphere!
+
+# --- Stage 8c/d Collocated AMR + indicators ---
+export
+    RefinementMarker,
+    mark_cells_by_gradient,
+    flux_correction_factor,
+    zz_error_indicator
+
 # --- MPI Parallelism (Phase 6 / Stage 2) ---
 export
     distribute_mesh,

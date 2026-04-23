@@ -100,10 +100,10 @@ Each slated for the stage noted in the roadmap:
 | ~~Solid mechanics~~ | Landed v2.8.0 (Stage 7a): `IsotropicElastic`, `SolidDisplacementProblem`, `stress_tensor`, `small_strain_tensor`, `cantilever_tip_deflection`. Linear small-strain MVP; finite-strain / plasticity deferred. | 7a done |
 | ~~FSI~~ | Landed v2.8.0 (Stage 7b): partitioned Dirichlet-Neumann with `AitkenRelaxation` + `FSIInterface` + `interface_residual_norm`. Full solver loop integration is a follow-up. | 7b done |
 | ~~Function objects / coded BCs / expression BCs~~ | Landed v2.8.0 (Stage 7d): `PointProbe`, `ForceProbe`, `ExpressionBC`, `FieldStatistics` with shared `AbstractFunctionObject` + `run!` interface. Closure-based (no string DSL). | 7d done |
-| snappyHexMesh-equivalent mesh generation | Absent | 8a |
-| Gmsh automation pipeline | Absent | 8b |
-| AMR on collocated side | Absent | 8c |
-| Error indicators | Absent | 8d |
+| ~~snappyHexMesh-equivalent mesh generation~~ | Landed v2.9.0 (Stage 8a): `Octree{Dim, T}` + `build_octree` + `refine_near_sphere!` + STL-bandwidth-refinement infrastructure. Full STL snapping + layer addition + topology healing are follow-ups. | 8a partial |
+| Gmsh automation pipeline | Absent — still 8b follow-up | 8b |
+| ~~AMR on collocated side~~ | Landed v2.9.0 (Stage 8c): `mark_cells_by_gradient` refinement markers + `flux_correction_factor` conservation check. Tree-augmented mesh structure for actual h-refinement is a follow-up. | 8c partial |
+| ~~Error indicators~~ | Landed v2.9.0 (Stage 8d): `zz_error_indicator` (Zienkiewicz-Zhu recovery-based); gradient-based marking already in Stage 8c. Residual-based indicator is a follow-up. | 8d done |
 | Full adjoint (SciMLSensitivity integration) | Absent | 9a–c |
 | GPU backends for collocated | Absent | 9d |
 | Matrix-free linear operators | Absent | 9e |
