@@ -1397,17 +1397,18 @@ limitations = [
 
 [[features]]
 feature = "polyhedral_mesh_io"
-maturity = "experimental"
-validation = "smoke_tested"
+maturity = "provisional"
+validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "OpenFOAM polyMesh reader, UnstructuredMesh3D converter, correct polyhedral volumes, and mesh quality metrics."
+summary = "OpenFOAM polyMesh reader, UnstructuredMesh3D converter, correct polyhedral volumes, and mesh quality metrics. Cartesian mesh-builder geometric invariants verified (v3.43)."
 limitations = [
-  "Experimental — ASCII OpenFOAM format only; gzip-compressed files must be decompressed first.",
+  "Promoted from experimental → provisional in v3.43.0. Evidence: `test/v_and_v_mesh_geometry.jl` — 976 gates across five testsets: (1) total volume = Lx·Ly across three mesh configurations rtol 1e-14; (2) uniform cell volumes V_c = Lx·Ly/(Nx·Ny) at 456 cells; (3) closed-cell face-area identity Σ_f ε(c,f)·S_f = 0 per cell at N ∈ {8, 16, 32}; (4) every face area matches either Lx/Nx or Ly/Ny; (5) 512 cell centers lie strictly inside the domain.",
+  "ASCII OpenFOAM format only; gzip-compressed files must be decompressed first.",
   "OpenFOAM writer, Gmsh v4 reader, and blockMesh equivalent deferred to Phase 4b.",
   "Mesh quality aspect ratio uses approximate formula (max_face_area / V^(2/3)).",
 ]
