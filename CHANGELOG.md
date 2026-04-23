@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.63.0 — LES Turbulence State (fifth `turbulence_les` benchmark)
+
+Fifth convergence-verified benchmark for `turbulence_les`,
+joining Smagorinsky (v3.19), WALE (v3.28), filter width +
+DynamicSmagorinsky (v3.39), and strain-rate (v3.53). Covers the
+`LESTurbulenceState` state container and end-to-end
+`turbulent_viscosity!` dispatch across all three LES models.
+
+### test/v_and_v_les_state.jl
+
+Six invariants (257 gates, ~0.5 s):
+
+1. **Zero initialization** and size match mesh cell count.
+2. **LESTurbulenceState size** at N ∈ {4, 8, 16, 32}.
+3. **All three LES models (Smagorinsky, WALE, DynamicSmagorinsky)
+   produce ν_t ≥ 0** on shear flow.
+4. **Smagorinsky > WALE in pure shear** at 101 interior cells —
+   WALE's zero-shear design feature distinguishes it.
+5. **Pre-computed δ** matches `compute_filter_width` at
+   construction.
+6. **Abstract-type hierarchy** verified — all three models
+   dispatch via `AbstractLESModel`.
+
+### `turbulence_les` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Smagorinsky algebra                     | v3.19 | `test/v_and_v_smagorinsky.jl`    |
+| WALE zero-shear design property          | v3.28 | `test/v_and_v_wale.jl`           |
+| Filter width + DynamicSmagorinsky        | v3.39 | `test/v_and_v_filter_width.jl`   |
+| Strain-rate primitive                    | v3.53 | `test/v_and_v_strain_rate.jl`    |
+| LES state + abstract-type dispatch       | v3.63 | `test/v_and_v_les_state.jl`      |
+
+### Verification
+
+No manifest tier change. 257 new gates wired into default
+runtests.jl under `V&V: LES turbulence state`.
+
 ## v3.62.0 — Nusselt + y+ (fifth `postprocessing` benchmark)
 
 Fifth convergence-verified benchmark for `postprocessing`,
