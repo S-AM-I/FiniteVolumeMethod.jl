@@ -1460,19 +1460,21 @@ limitations = [
 
 [[features]]
 feature = "multiphase_vof"
-maturity = "experimental"
-validation = "smoke_tested"
-role = "research_tooling"
+maturity = "provisional"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
-summary = "Volume of Fluid two-phase flow with alpha transport, interface compression, CSF surface tension, and mixture property blending."
+summary = "Volume of Fluid two-phase flow with alpha transport, interface compression, CSF surface tension, and mixture property blending. Alpha transport verified against analytical mass-conservation and center-of-mass translation invariants (v3.16)."
 limitations = [
-  "Experimental — validated via smoke tests only; dam break benchmark pending.",
+  "Provisional — only pure-kinematic alpha transport under a prescribed divergence-free velocity field is convergence-verified. Two-phase PISO/PIMPLE with variable density, interface compression (C_α > 0), CSF surface tension, and contact-angle coupling remain smoke-tested only.",
   "Boundedness limiter is clip+redistribute, not face-based MULES.",
   "No contact angle model for wall-interface interaction.",
+  "Published benchmarks (Martin-Moyce dam break, Hysing rising bubble, Zalesak rotating slot) are a v3.17+ follow-up.",
+  "Evidence: `test/v_and_v_vof_translation.jl` — (1) total mass drift < 1e-8 over 25 steps, < 1e-12 at mid-run (LU-precision conservation saturating as cond-number × eps accumulates); (2) α ∈ [0, 1] strict at every step after clip_alpha!; (3) center-of-mass translates with x_COM(T) − x_COM(0) matching U·T to O(h); lateral drift < 1e-10.",
 ]
 
 # ── Phase 9: Radiation ─────────────────────────────────────────────
