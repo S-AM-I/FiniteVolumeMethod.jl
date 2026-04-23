@@ -1506,7 +1506,8 @@ limitations = [
   "Constant absorption coefficient only; WSGGM deferred.",
   "P1 and fvDOM (S2 quadrature); higher-order SN deferred.",
   "Radiation-flow coupling is lagged one iteration (standard approach).",
-  "Evidence: `test/v_and_v_p1_slab.jl` — (1) monotone attenuation shape match; (2) y-direction independence < 1e-10 (strict 1D invariance under Neumann top/bottom BCs); (3) O(h²) grid convergence at N ∈ {20, 40, 80} with observed orders in [1.8, 2.2] against sinh(√3a(L-x))/sinh(√3aL).",
+  "Evidence #1: `test/v_and_v_p1_slab.jl` — (1) monotone attenuation shape match; (2) y-direction independence < 1e-10 (strict 1D invariance under Neumann top/bottom BCs); (3) O(h²) grid convergence at N ∈ {20, 40, 80} with observed orders in [1.8, 2.2] against sinh(√3a(L-x))/sinh(√3aL).",
+  "Evidence #2 (v3.25): `test/v_and_v_p1_equilibrium.jl` — radiative equilibrium invariant. With uniform T_medium = T_wall (isothermal cavity), P1 admits the exact solution G ≡ 4σT⁴. (1) every interior cell matches the analytical equilibrium to rtol 1e-2 at three absorption coefficients a ∈ {0.1, 1, 10}; (2) interior spread < 1e-4 relative (no spurious gradient, Marshak BC closes the field uniformly); (3) T⁴ scaling verified by doubling T and measuring the 16× factor to rtol 5e-3.",
 ]
 
 # ── Phase 8: Combustion & Species Transport ────────────────────────
