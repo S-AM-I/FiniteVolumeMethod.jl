@@ -313,6 +313,11 @@ export
     to_linear_problem,
     collocated_to_odefunction,
     reset!,
+    # Tunable schema (Stage 1e)
+    register_tunable!,
+    tunable_schema,
+    tunable_names,
+    tunable_namedtuple,
     # Sparsity pattern + fast-path assembly helpers (Stage 1a)
     SparsityPattern,
     build_collocated_sparsity,
