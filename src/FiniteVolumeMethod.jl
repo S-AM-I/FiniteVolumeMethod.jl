@@ -637,6 +637,30 @@ export
     qmom_moment_source_aggregation,
     qmom_moment_source_breakage
 
+# --- Stage 7a Solid mechanics ---
+export
+    IsotropicElastic,
+    SolidDisplacementProblem,
+    stress_tensor,
+    small_strain_tensor,
+    cantilever_tip_deflection
+
+# --- Stage 7b FSI ---
+export
+    AitkenRelaxation,
+    update_aitken!,
+    FSIInterface,
+    interface_residual_norm
+
+# --- Stage 7d Function objects ---
+export
+    AbstractFunctionObject,
+    PointProbe,
+    ForceProbe,
+    ExpressionBC,
+    evaluate_expression_bc,
+    FieldStatistics
+
 # --- MPI Parallelism (Phase 6 / Stage 2) ---
 export
     distribute_mesh,

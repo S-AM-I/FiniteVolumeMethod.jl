@@ -1,5 +1,62 @@
 # Changelog
 
+## v2.8.0 — Stage 7 Coupled Physics (Solid mechanics, FSI, function objects)
+
+Eighth deliverable of the v3 industrial-grade roadmap. Three greenfield
+modules plus the FSI coupling primitive.
+
+### Stage 7a — Solid mechanics linear elasticity
+
+`src/solid_mechanics/types.jl`:
+- `IsotropicElastic(; E, nu)` derives Lamé constants λ and μ.
+- `SolidDisplacementProblem{Dim, T, Mesh, Mat}` carries mesh, material,
+  body force, and Dirichlet / traction BC dicts.
+- `stress_tensor(mat, ε)` → σ = λ tr(ε) I + 2μ ε.
+- `small_strain_tensor(∇u)` → ε = (∇u + ∇u^T) / 2.
+- `cantilever_tip_deflection(E, I, L, P)` — Euler-Bernoulli analytical
+  reference for benchmark tests.
+
+### Stage 7b — Partitioned FSI
+
+`src/fsi/coupling.jl`:
+- `AitkenRelaxation` state with `update_aitken!` that adapts the
+  under-relaxation factor across coupling iterations
+  (Küttler-Wall 2008).
+- `FSIInterface{Dim, T}` with matched fluid/solid face lists and
+  exchange arrays for displacement/traction.
+- `interface_residual_norm` L2 convergence metric.
+- Full solver loop wiring is a Stage 7 follow-up.
+
+### Stage 7d — Function objects
+
+`src/function_objects/types.jl`:
+- `AbstractFunctionObject` umbrella.
+- `PointProbe`, `ForceProbe`, `FieldStatistics` concrete monitors
+  with a uniform `run!(fo, state, t, iter)` interface.
+- `ExpressionBC{Dim, T, Fn}` — BC whose prescribed value is computed
+  from a closure `(x, t) → value`. Subtypes `AbstractFVMBoundaryCondition`.
+- Closure-based; no string DSL (safer and faster than `eval`).
+
+### Verification
+
+All 1501 pre-existing tests pass at identical counts. 29 new Stage 7
+gates in `test/stage7_coupled.jl`:
+- 7a: 10 gates (Lamé constants, stress formula, strain symmetrization,
+  cantilever analytical).
+- 7b: 8 gates (Aitken adaptation, FSIInterface shapes, residual norm).
+- 7d: 11 gates (PointProbe/ForceProbe history, ExpressionBC closure,
+  FieldStatistics running average).
+
+### Deferred to Stage 7 follow-ups
+
+- Finite-strain + plasticity + contact in solid mechanics.
+- Full FSI solver loop wiring (per-iteration fluid+solid+Aitken).
+- String-expression DSL for ExpressionBC.
+- Primary spray breakup coupling (needs solid mechanics in liquid
+  column region).
+- Benchmarks: cantilever beam eigenfrequency, Cook's membrane,
+  Turek-Hron FSI-1/FSI-2/FSI-3.
+
 ## v2.7.0 — Stage 6 Industrial Physics (MRF, porous, cavitation, FW-H, PBM)
 
 Seventh deliverable of the v3 industrial-grade roadmap. Five greenfield

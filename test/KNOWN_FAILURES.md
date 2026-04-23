@@ -97,8 +97,9 @@ Each slated for the stage noted in the roadmap:
 | ~~Aeroacoustics (FW-H, sponge zones)~~ | Landed v2.7.0 (Stage 6f): `FWHSurface`, `FWHObserver`, `curle_dipole_pressure`, `fwh_monopole_pressure`. Stationary-surface Curle + monopole; moving-surface + porous-FW-H are follow-ups. Sponge-zones still pending. | 6f partial |
 | ~~Population balance modeling~~ | Landed v2.7.0 (Stage 6g): `qmom_recover_abscissae_weights` (Wheeler/PD algorithm) + moment sources for growth, binary aggregation, binary breakage. CM + DQMoM extensions are follow-ups. | 6g done |
 | Wall-modeled LES (WMLES) | Absent | 4a |
-| Solid mechanics / FSI | Absent | 7a/b |
-| Function objects / coded BCs / expression BCs | Absent | 7d |
+| ~~Solid mechanics~~ | Landed v2.8.0 (Stage 7a): `IsotropicElastic`, `SolidDisplacementProblem`, `stress_tensor`, `small_strain_tensor`, `cantilever_tip_deflection`. Linear small-strain MVP; finite-strain / plasticity deferred. | 7a done |
+| ~~FSI~~ | Landed v2.8.0 (Stage 7b): partitioned Dirichlet-Neumann with `AitkenRelaxation` + `FSIInterface` + `interface_residual_norm`. Full solver loop integration is a follow-up. | 7b done |
+| ~~Function objects / coded BCs / expression BCs~~ | Landed v2.8.0 (Stage 7d): `PointProbe`, `ForceProbe`, `ExpressionBC`, `FieldStatistics` with shared `AbstractFunctionObject` + `run!` interface. Closure-based (no string DSL). | 7d done |
 | snappyHexMesh-equivalent mesh generation | Absent | 8a |
 | Gmsh automation pipeline | Absent | 8b |
 | AMR on collocated side | Absent | 8c |
