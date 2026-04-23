@@ -42,8 +42,26 @@ function solve_turbulence!(
     k_field = turb_state.fields[:k]
     eps_field = turb_state.fields[:epsilon]
 
-    # Compute production
+    # Compute production. Strain-rate magnitude is |S| = √(2 S_ij S_ij)
+    # — a full tensor contraction; production is ν_t · |S|².
     S_mag = compute_strain_rate(U, mesh)
+
+    # Stage 4a: Durbin realizability cap. When `model.realizability_alpha > 0`
+    # we enforce ν_t ≤ α · k / |S| before computing production. This keeps
+    # the eddy viscosity bounded in regions of strong strain and suppresses
+    # the non-physical ν_t spikes that break convergence on flows like the
+    # Sandia-flame near-nozzle region or backward-facing step just past
+    # reattachment.
+    if model.realizability_alpha > zero(T)
+        k_field_internal = k_field.internal
+        for c in 1:nc
+            k_val = max(k_field_internal[c], T(1.0e-10))
+            s_val = max(S_mag[c], T(1.0e-10))
+            nu_t_cap = model.realizability_alpha * k_val / s_val
+            turb_state.nu_t[c] = min(turb_state.nu_t[c], nu_t_cap)
+        end
+    end
+
     P_k = Vector{T}(undef, nc)
     for c in 1:nc
         P_k[c] = turb_state.nu_t[c] * S_mag[c]^2

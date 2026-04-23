@@ -1,5 +1,74 @@
 # Changelog
 
+## v2.5.0 — Stage 4 Turbulence Correctness
+
+Fifth deliverable of the v3 industrial-grade roadmap. Corrects four
+simplifications the Plan agent flagged in the turbulence stack.
+
+### Stage 4a — k-ε Durbin realizability
+
+`StandardKEpsilon` gains an optional `realizability_alpha` field (default
+`0`, disabled). When set > 0, the eddy viscosity is capped at
+`ν_t ≤ α · k / |S|` inside `solve_turbulence!` right before production
+is computed. Suppresses non-physical `ν_t` spikes at high strain rates
+(e.g. reattachment point in a backward-facing step). Typical α values
+from the literature: 2/3 (Schwarz), 0.6 (Durbin 1996).
+
+### Stage 4a — k-ε production verified correct
+
+The earlier audit claim that production used a "scalar |S|²" was
+imprecise. `src/turbulence/strain_rate.jl:21` has always computed the
+full-tensor contraction `|S| = √(2 S_ij S_ij)`; production at
+`src/turbulence/k_epsilon_rans.jl:49` uses `ν_t · |S|²` which is the
+correct Boussinesq form. No code change needed — KNOWN_FAILURES.md now
+reflects this.
+
+### Stage 4c — Full-tensor dynamic Smagorinsky
+
+`src/turbulence/dynamic_smagorinsky.jl` previously approximated the
+test-filtered strain tensor as `S̃_ij ≈ S_ij · (|S̃| / |S|)`. This
+"scalar Germano" simplification collapses the direction of `S̃` onto
+`S`, which is exact only on flows where the two share principal axes.
+
+Fixed: per-component test-filtering of `S_ij` (6 independent scalar
+filters in 3D, 3 in 2D). `|S̃|` computed from the test-filtered tensor
+itself (`_sym_self_magnitude_sq`), matching the Lilly form of the
+Germano identity.
+
+### Stage 4d — Skewed-mesh wall functions
+
+`apply_wall_functions!` used `y = norm(x_c - x_f)` and `U_par = |U_cell|`,
+which is only correct on Cartesian walls with purely-tangential flow.
+
+Fixed: new `_wall_projection` helper computes wall-normal distance
+`y = |d · n̂|` and wall-tangential velocity magnitude
+`U_par = |U - (U·n̂)n̂|` per face. Threads through k-ε, k-ω, and
+k-ω-SST wall-function sites. Strips spurious normal-velocity
+contributions that appeared during early-iteration solves on non-Cartesian
+meshes or flows with non-zero wall-normal velocity.
+
+### Verification
+
+All 1303 pre-existing tests pass at identical counts. 13 new Stage 4
+gates in `test/turbulence_correctness.jl`:
+- 3 gates: `StandardKEpsilon` default `realizability_alpha = 0`
+  preserved; opting in sets the cap constant correctly.
+- 5 gates: `_wall_projection` returns correct `(y, U_par)` on a
+  Cartesian bottom-wall face with mixed normal+tangential velocity.
+- 2 gates: projection strips normal velocity; `U_par < |U|` when
+  normal component present.
+- 3 gates: full-tensor dynamic Smagorinsky finite + non-negative + in
+  Cs² cap range on a planar shear flow.
+
+### Deferred to Stage 4 follow-ups
+
+- Launder-Sharma low-Re damping functions (additional `RealizableKEpsilon`
+  type).
+- k-ω-SST full F1/F2 blending improvement.
+- WMLES / equilibrium-stress wall models.
+- DNS-backed benchmark suite (Moser channel Reτ = 180/395/590, flat plate
+  Schlatter-Örlü, periodic hill Breuer-Peller-Rapp, DHIT Comte-Bellot).
+
 ## v2.4.0 — Stage 3 Pressure-Based Family MVP
 
 Fourth deliverable of the v3 industrial-grade roadmap. Adds the thermo /

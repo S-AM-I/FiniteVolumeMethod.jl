@@ -105,8 +105,8 @@ end
 
 # Log-law constants
 const WF_KAPPA = 0.41       # von Karman constant
-const WF_E     = 9.793      # log-law constant
-const WF_C_MU  = 0.09       # k-epsilon model constant
+const WF_E = 9.793      # log-law constant
+const WF_C_MU = 0.09       # k-epsilon model constant
 
 """
     spalding_u_tau(U_par, y, nu; max_iter = 20, tol = 1e-6) -> T
@@ -142,8 +142,10 @@ function spalding_u_tau(
         exp_ku = exp(min(ku, T(50)))  # cap to avoid overflow
         f = u_plus + (exp_ku - one(T) - ku - ku^2 / 2 - ku^3 / 6) / E_wf - y_plus
         # df/du_tau = df/du+ * du+/du_tau + df/dy+ * dy+/du_tau
-        df_dup = one(T) + (kappa * exp_ku - kappa - kappa^2 * u_plus -
-                           kappa^3 * u_plus^2 / 2) / E_wf
+        df_dup = one(T) + (
+            kappa * exp_ku - kappa - kappa^2 * u_plus -
+                kappa^3 * u_plus^2 / 2
+        ) / E_wf
         dup_dut = -U_par / u_tau^2
         dyp_dut = y / nu
         df_dut = df_dup * dup_dut - dyp_dut
@@ -223,6 +225,43 @@ cell values using equilibrium wall functions:
 This enforces the log-law boundary condition implicitly without
 requiring explicit Dirichlet BCs on k and ε.
 """
+# Stage 4d: project the cell-center-to-wall offset and the cell-center
+# velocity onto the wall-normal / wall-tangential axes of face `f`.
+#
+# Returns `(y, U_par)` where:
+# - `y = |(x_c - x_f) · n̂|` is the wall-normal distance from cell `c`
+#   to boundary face `f`. On a Cartesian mesh this is identical to the
+#   straight-line distance; on skewed cells it is strictly smaller and
+#   is the physically-correct wall-normal coordinate for the log law.
+# - `U_par = |U_cell - (U_cell · n̂) n̂|` is the wall-tangential
+#   velocity magnitude. On a Cartesian no-slip wall with flow parallel
+#   to the wall, this equals `|U_cell|` (the old formula); on skewed
+#   cells or cells with residual wall-normal velocity during an
+#   iterative solve, it removes the spurious normal-component
+#   contribution.
+#
+# Both values are robust to the outward-vs-inward normal convention.
+@inline function _wall_projection(
+        mesh::UnstructuredFVMMesh{Dim, T}, c::Int, f::Int,
+        U_cell::SVector{Dim, T},
+    ) where {Dim, T}
+    # Unit normal to face `f`. face_normal_area stores A·n̂.
+    A_f = mesh.face_areas[f]
+    S_f = face_normal_area(mesh, f)
+    n_hat = S_f / A_f
+
+    x_c = cell_center(mesh, c)
+    x_f = face_center(mesh, f)
+    d = x_c - x_f
+    y = abs(dot(d, n_hat))
+
+    U_normal = dot(U_cell, n_hat) * n_hat
+    U_par_vec = U_cell - U_normal
+    U_par = norm(U_par_vec)
+
+    return y, U_par
+end
+
 function apply_wall_functions!(
         turb_state::RANSTurbulenceState{T},
         model::StandardKEpsilon,
@@ -243,8 +282,7 @@ function apply_wall_functions!(
         tag in wall_set || continue
 
         c = owner(mesh, f)
-        y = norm(cell_center(mesh, c) - face_center(mesh, f))
-        U_par = norm(U.internal[c])
+        y, U_par = _wall_projection(mesh, c, f, U.internal[c])
 
         u_tau = spalding_u_tau(U_par, y, nu)
         k_field.internal[c] = equilibrium_k_wall(u_tau)
@@ -275,8 +313,7 @@ function apply_wall_functions!(
         tag in wall_set || continue
 
         c = owner(mesh, f)
-        y = norm(cell_center(mesh, c) - face_center(mesh, f))
-        U_par = norm(U.internal[c])
+        y, U_par = _wall_projection(mesh, c, f, U.internal[c])
 
         u_tau = spalding_u_tau(U_par, y, nu)
         k_field.internal[c] = equilibrium_k_wall(u_tau)
