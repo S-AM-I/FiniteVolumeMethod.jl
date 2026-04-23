@@ -55,6 +55,64 @@ end
     @test ReflectiveBC() isa AbstractFVMBoundaryCondition
 end
 
+@testset "Stage 1e: Extensible SciMLStructures.Tunable schema" begin
+    using LinearSolve
+    using SciMLBase.SciMLStructures: Tunable, canonicalize, replace as ss_replace
+
+    mesh = build_cartesian_unstructured_mesh(3, 3, 1.0, 1.0)
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => NoSlipWallBC(),
+        :right => NoSlipWallBC(),
+        :bottom => NoSlipWallBC(),
+        :top => NoSlipWallBC(),
+    )
+    prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, density = 1.25)
+
+    # Named schema matches the canonical vector length.
+    names = FiniteVolumeMethod.tunable_names(prob)
+    @test names == [:nu, :density, :alpha_U, :alpha_p, :tolerance]
+
+    # NamedTuple introspection matches the registered getters.
+    nt = FiniteVolumeMethod.tunable_namedtuple(prob)
+    @test nt.nu == 1.0e-3
+    @test nt.density == 1.25
+    @test nt.alpha_U == prob.algorithm.alpha_U
+    @test nt.alpha_p == prob.algorithm.alpha_p
+    @test nt.tolerance == prob.algorithm.tolerance
+
+    # Canonicalize returns the same-ordered values.
+    vals, repack, aliasing = canonicalize(Tunable(), prob)
+    @test length(vals) == length(names)
+    @test vals ≈ [nt[n] for n in names]
+    @test !aliasing
+
+    # repack(new_vals) reconstructs with updated values.
+    new_vals = copy(vals)
+    new_vals[1] = 5.0e-4  # new nu
+    new_vals[3] = 0.8     # new alpha_U
+    new_prob = repack(new_vals)
+    @test new_prob.nu == 5.0e-4
+    @test new_prob.algorithm.alpha_U == 0.8
+    @test new_prob.density == 1.25  # untouched
+
+    # Adding a new tunable at runtime extends the schema without breaking
+    # existing consumers (the new entry just appends to the end).
+    # Use a dummy "roughness" tunable on a scratch scalar field of the problem.
+    const_box = Ref(0.7)
+    FiniteVolumeMethod.register_tunable!(
+        IncompressibleProblem, :demo_const,
+        _ -> const_box[],
+        (p, v) -> (const_box[] = v; p),
+    )
+    names2 = FiniteVolumeMethod.tunable_names(prob)
+    @test :demo_const in names2
+    @test length(FiniteVolumeMethod.tunable_namedtuple(prob)) == length(names2)
+
+    # Clean up the registry so the test is idempotent.
+    entries = FiniteVolumeMethod._TUNABLE_REGISTRY[IncompressibleProblem]
+    filter!(e -> e.name !== :demo_const, entries)
+end
+
 @testset "Stage 1d: Generic dispatch on umbrella type" begin
     # A downstream consumer can write one method on `::AbstractFiniteVolumeMesh`
     # and have it match every mesh family without knowing concrete types.
