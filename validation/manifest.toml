@@ -1423,7 +1423,8 @@ limitations = [
   "Wall quantities use linear near-wall approximation; wall functions not integrated.",
   "Force coefficients assume rho = 1 for viscous contribution.",
   "Line sampling uses 0th-order nearest-cell interpolation; higher-order deferred.",
-  "Evidence: `test/v_and_v_postprocessing.jl` — (1) uniform flow: ω = 0, Q = 0 to atol 1e-10; (2) simple shear U = (A·y, 0): ω = −A, Q = 0 to rtol 1e-8; (3) solid-body rotation U = (−Ω·y, Ω·x): ω = 2Ω, Q = Ω² to rtol 1e-8; (4) enstrophy density |ω|² matches (2Ω)² under rotation. 448 interior-cell gates across 4 testsets.",
+  "Evidence #1: `test/v_and_v_postprocessing.jl` — (1) uniform flow: ω = 0, Q = 0 to atol 1e-10; (2) simple shear U = (A·y, 0): ω = −A, Q = 0 to rtol 1e-8; (3) solid-body rotation U = (−Ω·y, Ω·x): ω = 2Ω, Q = Ω² to rtol 1e-8; (4) enstrophy density |ω|² matches (2Ω)² under rotation. 448 interior-cell gates across 4 testsets.",
+  "Evidence #2 (v3.30): `test/v_and_v_courant.jl` — Courant number + Q-sign invariants. (1) Zero flow ⇒ Co ≡ 0 (atol 1e-14); (2) uniform flow u = (U, 0) matches Co = dt·U/dx at N ∈ {8, 16, 32} with rtol 1e-10 on > 500 interior cells; (3) diagonal flow u = (U, U) matches Co = 2·dt·U/h on 145 interior cells; (4) Q sign distinguishes rotation (Q > 0.9·Ω²) from shear (|Q| < 1e-8) at 128 interior cells. 793 gates total.",
 ]
 
 # ── Phase 5: Linear Solver Infrastructure ──────────────────────────

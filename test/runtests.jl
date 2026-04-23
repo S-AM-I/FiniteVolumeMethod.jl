@@ -131,6 +131,9 @@ end
     @testset verbose = true "V&V: GCL rotation" begin
         safe_include("v_and_v_gcl_rotation.jl")
     end
+    @testset verbose = true "V&V: Courant + Q-sign" begin
+        safe_include("v_and_v_courant.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
