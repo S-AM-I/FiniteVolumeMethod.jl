@@ -323,6 +323,9 @@ end
     @testset verbose = true "V&V: PSI-cell two-way coupling" begin
         safe_include("v_and_v_psi_cell.jl")
     end
+    @testset verbose = true "V&V: verify_gcl diagnostic" begin
+        safe_include("v_and_v_verify_gcl.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
