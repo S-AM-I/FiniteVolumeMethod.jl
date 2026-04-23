@@ -173,6 +173,9 @@ end
     @testset verbose = true "V&V: Spalart-Allmaras" begin
         safe_include("v_and_v_spalart_allmaras.jl")
     end
+    @testset verbose = true "V&V: Spray breakup" begin
+        safe_include("v_and_v_spray.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

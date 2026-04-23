@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.45.0 — TAB Spray Breakup (fourth `lagrangian_dpm` benchmark)
+
+Fourth convergence-verified benchmark for `lagrangian_dpm`,
+joining Stokes terminal velocity (v3.13), Schiller-Naumann drag
+(v3.26), and Ranz-Marshall heat transfer (v3.33). Completes
+coverage of the particle-physics closures: drag, heat transfer,
+and primary breakup.
+
+### test/v_and_v_spray.jl
+
+TAB droplet breakup algebra (Weber number + child-diameter
+formula) via eight invariants (26 gates, ~0.1 s):
+
+1. **We ≡ 0 at zero slip.**
+2. **We ∝ |U_rel|² scaling** (3× in |U| gives 9× in We).
+3. **We ∝ d linear scaling.**
+4. **Closed-form We = ρ_f·|U|²·d/σ** at rtol 1e-14.
+5. **should_breakup strict threshold** (We > We_crit).
+6. **d_child = d_parent at We = We_crit** (no breakup).
+7. **d_child < d_parent at We > We_crit** matching the
+   analytical (We_crit/We)^(1/3) power law.
+8. **Conserved algebraic invariant d_child³·We = d_parent³·We_crit**
+   holds independently of We (rtol 1e-12).
+
+### `lagrangian_dpm` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Stokes terminal velocity          | v3.13 | `test/v_and_v_stokes_terminal.jl`  |
+| Schiller-Naumann drag             | v3.26 | `test/v_and_v_schiller_naumann.jl` |
+| Ranz-Marshall heat transfer        | v3.33 | `test/v_and_v_ranz_marshall.jl`    |
+| TAB spray breakup algebra         | v3.45 | `test/v_and_v_spray.jl`            |
+
+### Verification
+
+No manifest tier change. 26 new gates wired into default
+runtests.jl under `V&V: Spray breakup`.
+
 ## v3.44.0 — Spalart-Allmaras (fourth `turbulence_rans` benchmark)
 
 Fourth convergence-verified benchmark for `turbulence_rans`,
