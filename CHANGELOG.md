@@ -1,5 +1,38 @@
 # Changelog
 
+## v3.58.0 — Laplacian Mesh Motion (fifth `dynamic_mesh` benchmark)
+
+Fifth convergence-verified benchmark for `dynamic_mesh`, joining
+three-pattern GCL (v3.14), rotational GCL (v3.29), mesh sweep-
+flux (v3.34), and ALE-corrected flux (v3.49). Covers the
+`LaplacianMotion` diffusion-based displacement solver.
+
+### test/v_and_v_laplacian_motion.jl
+
+Four invariants (912 gates, ~0.3 s):
+
+1. **Zero-BC ⇒ d ≡ 0** at every cell (Laplace trivial solution).
+2. **Uniform-BC d₀ ⇒ interior d ≡ d₀** (Laplace constancy).
+3. **γ-invariance.** Pure-Laplace solution independent of
+   constant γ; rtol 1e-6 between γ = 1.0 and γ = 10.0.
+4. **Max-principle.** Interior displacement bounded by
+   boundary values at 512 cells.
+
+### `dynamic_mesh` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Three-pattern GCL                     | v3.14 | `test/v_and_v_gcl.jl`              |
+| Rotational GCL                         | v3.29 | `test/v_and_v_gcl_rotation.jl`     |
+| Mesh sweep-flux primitive              | v3.34 | `test/v_and_v_mesh_flux.jl`        |
+| ALE-corrected flux                     | v3.49 | `test/v_and_v_ale_flux.jl`         |
+| LaplacianMotion displacement solver    | v3.58 | `test/v_and_v_laplacian_motion.jl` |
+
+### Verification
+
+No manifest tier change. 912 new gates wired into default
+runtests.jl under `V&V: Laplacian mesh motion`.
+
 ## v3.57.0 — Particle State (fifth `lagrangian_dpm` benchmark)
 
 Fifth convergence-verified benchmark for `lagrangian_dpm`,
