@@ -1,5 +1,76 @@
 # Changelog
 
+## v3.19.0 — Smagorinsky LES V&V + `turbulence_les` Promotion
+
+Tenth manifest promotion. `turbulence_les` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of an analytical verification of the Smagorinsky
+eddy-viscosity formula
+
+    ν_t = (C_s · Δ)² · |S|
+
+against its closed-form values on prescribed velocity fields.
+
+### test/v_and_v_smagorinsky.jl
+
+Four testsets (106 gates, ~0.5 s):
+
+1. **Zero velocity ⇒ ν_t ≡ 0.** Trivial invariance: |S| = 0 gives
+   ν_t = 0 to round-off at every cell.
+
+2. **Linear shear ν_t = (C_s·Δ)²·A.** For U = (A·y, 0) on a 16×16
+   Cartesian mesh, the analytical strain magnitude is |S| = A
+   (exact, since FVM gradient is exact on linear fields). Every
+   interior cell (0.2 < x, y < 0.8; 100 cells) matches the
+   analytical ν_t to rtol 1 × 10⁻⁸.
+
+3. **ν_t ∝ C_s² scaling.** At fixed A and Δ, ν_t scales
+   quadratically with C_s. Verified at C_s ∈ {0.05, 0.10, 0.20};
+   ratios match 4.0 to rtol 1 × 10⁻¹⁰.
+
+4. **Δ² mesh-refinement scaling.** Coarse (8×8) → fine (16×16)
+   at fixed flow and C_s. The ν_t ratio should be (Δ_fine/Δ_coarse)²
+   = 0.25; measured to rtol 1 × 10⁻⁸ in the interior.
+
+### Manifest promotion
+
+`turbulence_les`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Only `Smagorinsky` is convergence-verified. `WALE`,
+  `DynamicSmagorinsky`, and `DDES` are smoke-tested only.
+- Dynamic Smagorinsky uses a simplified scalar Germano identity,
+  not the full tensor form.
+- DDES only wraps Spalart-Allmaras; SST-based DDES is deferred.
+- Published benchmarks (DHIT vs. Comte-Bellot–Corrsin, periodic
+  channel at Reτ = 395, periodic hills) are a v3.20+ follow-up.
+
+### Running manifest-promotion tally
+
+Ten `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators`    | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`       | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`          | v3.13 | Stokes terminal velocity analytical match |
+| `dynamic_mesh`            | v3.14 | GCL three-pattern round-off-exactness |
+| `radiation`               | v3.15 | P1 slab sinh attenuation O(h²) |
+| `multiphase_vof`          | v3.16 | Disc translation mass + COM invariants |
+| `combustion`              | v3.17 | Species AD exponential BL first-order |
+| `turbulence_rans`         | v3.18 | k-ε DHIT ODE match + O(Δt) |
+| `turbulence_les`          | v3.19 | Smagorinsky ν_t = (C_s·Δ)²·|S| analytical |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 106 new gates
+wired into default runtests.jl under `V&V: Smagorinsky LES`.
+
 ## v3.18.0 — k-ε DHIT V&V + `turbulence_rans` Promotion
 
 Ninth manifest promotion. `turbulence_rans` advances from
