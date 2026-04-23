@@ -1,5 +1,64 @@
 # Changelog
 
+## v3.30.0 — Courant + Q-sign (second `postprocessing` benchmark)
+
+Second independent benchmark for `postprocessing`, joining
+vorticity + Q-criterion on canonical flows (v3.20). Every
+provisional physics feature now carries at least two
+convergence-verified benchmarks. Infrastructure features
+(dashboard, io_extensions, polyhedral_mesh_io,
+linear_solver_infra, mpi_parallel) remain on their original
+validation tracks (targeted-tests or smoke-tests).
+
+### test/v_and_v_courant.jl
+
+Four testsets (793 gates, ~0.3 s):
+
+1. **Zero flow ⇒ Co ≡ 0** to atol 1 × 10⁻¹⁴.
+
+2. **Uniform flow u = (U, 0) matches analytical Co = dt·U/dx.**
+   Verified at N ∈ {8, 16, 32} on every interior cell (> 500
+   total) to rtol 1 × 10⁻¹⁰.
+
+3. **Diagonal flow u = (U, U) activates all four faces.**
+   Co = 2·dt·U/h at every interior cell to rtol 1 × 10⁻¹⁰.
+
+4. **Q-criterion sign discriminates vortex vs. shear.**
+   Solid-body rotation: Q > 0.9·Ω²; pure shear: |Q| < 1 × 10⁻⁸.
+   128 interior cells checked per flow.
+
+### `postprocessing` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Vorticity + Q on canonical flows | v3.20 | `test/v_and_v_postprocessing.jl` |
+| Courant + Q-sign invariants       | v3.30 | `test/v_and_v_courant.jl`         |
+| Wall quantities (τ_w, y+, Nusselt) | ≥ v3.31 | (pending)                      |
+
+### Two-benchmark completion
+
+Every provisional physics feature now carries at least two
+independent convergence-verified benchmarks:
+
+| Feature | 1st benchmark | 2nd benchmark |
+|---------|---------------|---------------|
+| `collocated_operators`    | Laplacian+grad+div+Rhie-Chow (v3.7) | (bundled) |
+| `incompressible_ns`       | Ghia (v3.1) | Poiseuille (v3.10) + Couette (v3.22) |
+| `conjugate_heat_transfer` | Laplace series (v3.12) | Unsteady decay (v3.21) |
+| `lagrangian_dpm`          | Stokes terminal (v3.13) | Schiller-Naumann (v3.26) |
+| `dynamic_mesh`            | 3-pattern GCL (v3.14) | Rotational GCL (v3.29) |
+| `radiation`               | P1 slab (v3.15) | P1 equilibrium (v3.25) |
+| `multiphase_vof`          | Disc translation (v3.16) | Plane wave (v3.24) |
+| `combustion`              | Species AD (v3.17) | EDM algebra (v3.27) |
+| `turbulence_rans`         | DHIT ODE (v3.18) | Log-layer equilibrium (v3.23) |
+| `turbulence_les`          | Smagorinsky (v3.19) | WALE (v3.28) |
+| `postprocessing`          | Vorticity + Q (v3.20) | Courant + Q-sign (v3.30) |
+
+### Verification
+
+No manifest tier change. 793 new gates wired into default
+runtests.jl under `V&V: Courant + Q-sign`.
+
 ## v3.29.0 — GCL Rotation (second `dynamic_mesh` benchmark)
 
 Second independent benchmark for `dynamic_mesh`, joining
