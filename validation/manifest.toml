@@ -1479,19 +1479,21 @@ limitations = [
 
 [[features]]
 feature = "radiation"
-maturity = "experimental"
-validation = "smoke_tested"
-role = "research_tooling"
+maturity = "provisional"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "P1 and fvDOM radiation models with absorption/emission, Marshak BCs, and coupled thermal+radiation solver."
+summary = "P1 and fvDOM radiation models with absorption/emission, Marshak BCs, and coupled thermal+radiation solver. P1 model verified against 1D slab analytical solution (v3.15)."
 limitations = [
-  "Experimental — constant absorption coefficient only; WSGGM deferred.",
+  "Provisional — only the P1 model with Dirichlet boundaries on a cold medium is convergence-verified. Marshak walls, non-zero emission, and fvDOM are smoke-tested only.",
+  "Constant absorption coefficient only; WSGGM deferred.",
   "P1 and fvDOM (S2 quadrature); higher-order SN deferred.",
   "Radiation-flow coupling is lagged one iteration (standard approach).",
+  "Evidence: `test/v_and_v_p1_slab.jl` — (1) monotone attenuation shape match; (2) y-direction independence < 1e-10 (strict 1D invariance under Neumann top/bottom BCs); (3) O(h²) grid convergence at N ∈ {20, 40, 80} with observed orders in [1.8, 2.2] against sinh(√3a(L-x))/sinh(√3aL).",
 ]
 
 # ── Phase 8: Combustion & Species Transport ────────────────────────
