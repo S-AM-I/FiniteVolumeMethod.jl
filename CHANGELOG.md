@@ -1,5 +1,57 @@
 # Changelog
 
+## v3.37.0 — Arrhenius Kinetics (third `combustion` benchmark)
+
+Third convergence-verified benchmark for `combustion`, joining
+species AD (v3.17) and EDM algebra (v3.27). Covers finite-rate
+chemistry — the complementary closure to mixing-limited EDM.
+
+### test/v_and_v_arrhenius.jl
+
+`k_f = A·T^b·exp(−E_a/(R·T)), ω = −ρ·k_f·Y_f^n_f·Y_o^n_o` via
+five invariants (128 gates, ~0.1 s):
+
+1. **Zero reactant ⇒ ω = 0.** Either Y_fuel = 0 or Y_ox = 0
+   gives zero reaction rate.
+
+2. **Closed-form algebraic identity** at T = 1500 K, rtol 1e-12.
+
+3. **Exponential T-sensitivity.** T: 1000 → 2000 K at E_a = 1e5
+   J/mol gives rate ratio exp(50/R) ≈ 409 to rtol 1e-12.
+
+4. **Pre-exponential A scaling.** Doubling A doubles ω.
+
+5. **Low-T clamp.** Implementation clamps T at 200 K for
+   numerical stability; T = 100 K gives same rate as T = 200 K.
+
+### `combustion` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Species AD (exponential BL)          | v3.17 | `test/v_and_v_species_ad.jl`  |
+| EDM reaction-rate algebra            | v3.27 | `test/v_and_v_edm.jl`         |
+| Arrhenius finite-rate kinetics       | v3.37 | `test/v_and_v_arrhenius.jl`   |
+
+### Stable-review tally
+
+Eight provisional features now meet the 3-benchmark floor:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 3 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+| `radiation`               | 3 |
+| `multiphase_vof`          | 3 |
+| `combustion`              | 3 |
+
+### Verification
+
+No manifest tier change. 128 new gates wired into default
+runtests.jl under `V&V: Arrhenius kinetics`.
+
 ## v3.36.0 — VOF Mixture Blending (third `multiphase_vof` benchmark)
 
 Third convergence-verified benchmark for `multiphase_vof`,

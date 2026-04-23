@@ -149,6 +149,9 @@ end
     @testset verbose = true "V&V: VOF mixture properties" begin
         safe_include("v_and_v_vof_mixture.jl")
     end
+    @testset verbose = true "V&V: Arrhenius kinetics" begin
+        safe_include("v_and_v_arrhenius.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
