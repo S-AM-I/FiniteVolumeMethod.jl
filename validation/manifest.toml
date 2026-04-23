@@ -1439,17 +1439,18 @@ limitations = [
 
 [[features]]
 feature = "linear_solver_infra"
-maturity = "experimental"
-validation = "smoke_tested"
+maturity = "provisional"
+validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "Configurable iterative linear solvers with AMG and ILU preconditioners via package extensions for the incompressible collocated solver."
+summary = "Configurable iterative linear solvers with AMG and ILU preconditioners via package extensions for the incompressible collocated solver. Poisson MMS verified across LU, CG, and GMRES backends (v3.42)."
 limitations = [
-  "Experimental — AMG and ILU require loading AlgebraicMultigrid.jl and IncompleteLU.jl as weak deps.",
+  "Promoted from experimental → provisional in v3.42.0. Evidence: `test/v_and_v_linear_solvers.jl` — four testsets, 6 gates: (1) LUFactorization gives L² < 5e-3 on Poisson MMS at N = 32; (2) CG matches LU within 1e-6; (3) GMRES matches LU within 1e-6; (4) O(h²) grid convergence across N ∈ {16, 32, 64}.",
+  "AMG and ILU require loading AlgebraicMultigrid.jl and IncompleteLU.jl as weak deps.",
   "Krylov solver symbols require LinearSolve.jl to be loaded by the user.",
   "Solver config not yet auto-integrated into solver wrappers — users call _dispatch_solve or pass config manually.",
 ]
