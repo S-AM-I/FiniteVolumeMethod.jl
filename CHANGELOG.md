@@ -1,5 +1,85 @@
 # Changelog
 
+## v2.3.0 — Stage 2 Real MPI Submesh Decomposition
+
+Third deliverable of the v3 industrial-grade roadmap. Replaces the
+"every rank holds the full mesh and assembles the full matrix" workaround
+(Stage 0/1 `DistributedFVMMesh`) with a true per-rank submesh plus halo
+layer. The MPI extension now does real parallel work rather than running
+the same serial solve on every rank and reducing a residual at the end.
+
+### New infrastructure (base module, no MPI loaded)
+
+- `src/parallel/rcb_partitioner.jl` — `partition_rcb(mesh, nranks)`:
+  dep-free recursive coordinate bisection on an `UnstructuredFVMMesh`.
+  Deterministic, geometrically-clustered, balanced buckets.
+  Metis support is a Stage 2 follow-up.
+- `src/parallel/local_mesh.jl` — `extract_local_mesh(mesh, cell_to_rank, my_rank)`
+  → `LocalMeshData{Dim, T}`. Returns an `UnstructuredFVMMesh` holding only
+  this rank's owned cells (1..n_owned) plus one halo layer of off-rank
+  neighbours. Provides `local_to_global`, `global_to_local`,
+  `halo_owner_rank` maps for MPI bookkeeping.
+
+Exports added: `partition_rcb`, `extract_local_mesh`, `LocalMeshData`.
+
+### MPI extension (`ext/FVMMPIExt/`)
+
+- `distributed_mesh.jl` — `DistributedFVMMesh` now stores the local
+  submesh plus halo bookkeeping. `n_ghost` renamed to `n_local - n_owned`;
+  `halo_owner_rank` added. `HaloPattern` re-cast in local indices.
+- `partitioning.jl` — `distribute_mesh` now calls `partition_rcb` +
+  `extract_local_mesh` and builds a local-indexed `HaloPattern`.
+- `distributed_solve.jl` — the SIMPLE loop is now Additive Schwarz:
+  each rank assembles + solves on its local submesh, halo-syncs state
+  with neighbour ranks between iterations, and reduces the continuity
+  residual globally.
+
+### Verification
+
+- Serial contract test `test/mpi_partition.jl` (wired into runtests.jl
+  — runs without MPI):
+  - Stage 2b partition balance + determinism: **6 gates**.
+  - Stage 2c local-mesh sizes, maps, halo correctness: **354 gates**
+    verifying every global cell is owned by exactly one rank, every halo
+    cell points at an other-rank owned cell, and global↔local maps
+    invert correctly.
+  - Stage 2c local face connectivity well-formedness: **572 gates**.
+  - Stage 2 local-assembly parity with global assembly on owned rows:
+    **48 gates**.
+- `mpiexec`-driven parity oracle `test/mpi_parity.jl` (manual launch):
+  lid-driven cavity 16×16, compares distributed SIMPLE result to serial
+  reference. Passes at L∞ ≤ 1e-6 on `mpiexec -n {2, 4}`.
+
+### Verification strategy
+
+The serial contract test provides 980 machine-checked invariants that
+require zero MPI infrastructure — it catches regressions in the
+partitioner and submesh extractor without needing mpiexec on the CI host.
+The mpiexec parity oracle is the ground-truth end-to-end check; it's
+excluded from the default test loop so developers without MPI installed
+still get a fast signal on the partitioning logic.
+
+### Known limitations deferred to Stage 2 follow-ups
+
+- Distributed `PSparseMatrix` (PartitionedArrays) for the pressure
+  Poisson: would tighten serial↔parallel parity from 1e-6 to 1e-10 and
+  admit parallel AMG preconditioning. Current Stage 2 MVP uses per-rank
+  local solves + halo sync (Additive Schwarz), which converges but
+  doesn't match the serial iteration count exactly.
+- Metis partitioner (`:metis`): better load balance on meshes with poor
+  geometric locality.
+- Parallel AMG for pressure: currently per-rank block-Jacobi via
+  `LinearSolve.jl`'s existing extension.
+- 3D thermal + channel benchmarks for the parallel lane.
+- Dedicated CI lane running `mpiexec -n {2, 4}` on the GitHub Actions
+  runner (tracked in `validation/CI_REENABLE_PLAN.md`).
+
+### Breaking changes
+
+- `DistributedFVMMesh` field layout: `n_ghost` removed, `n_local` and
+  `halo_owner_rank` added. External users of the MPI extension (none
+  known outside the repo) will need to update field access.
+
 ## v2.2.0 — Stage 1 Structural Prerequisites
 
 Second deliverable of the v3 industrial-grade roadmap

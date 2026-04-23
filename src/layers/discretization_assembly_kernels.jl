@@ -220,3 +220,5 @@ include("../dynamic_mesh/ale.jl")
 # MPI Parallelism stubs (Phase 6)
 # Concrete implementations live in ext/FVMMPIExt/.
 include("../parallel/stubs.jl")
+include("../parallel/rcb_partitioner.jl")
+include("../parallel/local_mesh.jl")

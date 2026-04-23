@@ -1,4 +1,10 @@
-# partitioning.jl — Mesh distribution across MPI ranks
+# partitioning.jl — Mesh distribution across MPI ranks (Stage 2 rewrite)
+#
+# Replaces the Stage-0/1 full-mesh-per-rank implementation with a true
+# per-rank submesh plus halo layer. Uses the dep-free RCB partitioner
+# in src/parallel/rcb_partitioner.jl to assign each global cell to a
+# rank, then calls src/parallel/local_mesh.jl's `extract_local_mesh`
+# on each process.
 
 """
     FiniteVolumeMethod.distribute_mesh(
@@ -7,21 +13,21 @@
         method::Symbol = :rcb,
     ) -> DistributedFVMMesh{Dim, T}
 
-Partition a global `UnstructuredFVMMesh` across MPI ranks.
+Partition a global `UnstructuredFVMMesh` across MPI ranks and build the
+local submesh plus halo pattern for the calling rank.
 
-Each rank receives the full mesh but only "owns" a contiguous slice of cells.
-Ghost cells are the non-owned cells that share a face with owned cells.
-A [`HaloPattern`](@ref) is built from face connectivity so that
-[`halo_exchange!`](@ref) can synchronize field values across ranks.
+Each rank:
+1. Computes the global partition via `partition_rcb` (same result on every
+   rank — cheap and deterministic compared to shipping the partition).
+2. Extracts its own `LocalMeshData` (owned + halo cells).
+3. Scans global faces to build a rank-by-rank `HaloPattern` in local
+   indices.
 
-This initial implementation replicates the full mesh on every rank for
-correctness validation.  A memory-efficient version that stores only
-local + ghost cells is planned for a future iteration.
+Supported methods:
+- `:rcb` — recursive coordinate bisection (default, deps-free).
 
-# Arguments
-- `mesh` — global `UnstructuredFVMMesh{Dim, T}`
-- `comm` — MPI communicator
-- `method` — partitioning strategy (`:rcb` only, currently)
+Metis (`:metis`) is planned as a follow-up for meshes with poor
+geometric locality.
 """
 function FiniteVolumeMethod.distribute_mesh(
         mesh::FiniteVolumeMethod.UnstructuredFVMMesh{Dim, T},
@@ -31,59 +37,68 @@ function FiniteVolumeMethod.distribute_mesh(
     rank = MPI.Comm_rank(comm)
     nranks = MPI.Comm_size(comm)
 
-    # Divide cells evenly across ranks (contiguous ranges)
-    nc = length(mesh.cell_volumes)
-    cells_per_rank = div(nc, nranks)
-    my_start = rank * cells_per_rank + 1
-    my_end = rank == nranks - 1 ? nc : (rank + 1) * cells_per_rank
-    n_owned = my_end - my_start + 1
-    n_ghost = nc - n_owned
+    cell_to_rank = if method === :rcb
+        FiniteVolumeMethod.partition_rcb(mesh, nranks)
+    else
+        error("unknown partitioning method :$method — only :rcb is currently supported")
+    end
 
-    global_to_local = Dict(i => i for i in 1:nc)
-    local_to_global = collect(1:nc)
-
-    # Build halo pattern from face connectivity
-    halo = _build_halo_pattern(mesh, my_start, my_end, rank, nranks)
+    local_data = FiniteVolumeMethod.extract_local_mesh(mesh, cell_to_rank, rank)
+    halo = _build_halo_pattern(mesh, cell_to_rank, local_data, rank)
 
     return DistributedFVMMesh{Dim, T}(
-        mesh, n_owned, n_ghost, halo, comm, rank, nranks,
-        global_to_local, local_to_global,
+        local_data.mesh,
+        local_data.n_owned,
+        local_data.n_local,
+        halo,
+        comm, rank, nranks,
+        local_data.global_to_local,
+        local_data.local_to_global,
+        local_data.halo_owner_rank,
     )
 end
 
 """
-    _build_halo_pattern(mesh, my_start, my_end, rank, nranks) -> HaloPattern
+    _build_halo_pattern(global_mesh, cell_to_rank, local_data, my_rank) -> HaloPattern
 
-Scan face connectivity to identify which cells must be sent to / received
-from each neighbor rank.  Cells are assigned to ranks by contiguous ranges.
+Construct a `HaloPattern` expressed in LOCAL indices. For each internal
+global face crossing a rank boundary into `my_rank`:
+
+- the owned cell's local index goes into `send_indices[other_rank]`,
+- the halo cell's local index goes into `recv_indices[other_rank]`.
+
+The resulting lists are deduplicated so each cell is communicated at
+most once per neighbour rank per exchange.
 """
-function _build_halo_pattern(mesh, my_start, my_end, rank, nranks)
+function _build_halo_pattern(global_mesh, cell_to_rank, local_data, my_rank::Int)
     send_indices = Dict{Int, Vector{Int}}()
     recv_indices = Dict{Int, Vector{Int}}()
-    nc = length(mesh.cell_volumes)
-    cells_per_rank = div(nc, nranks)
+    nf = size(global_mesh.face_cells, 2)
 
-    nf = size(mesh.face_cells, 2)
-    for f in 1:nf
-        P = mesh.face_cells[1, f]
-        N = mesh.face_cells[2, f]
+    @inbounds for f in 1:nf
+        P = global_mesh.face_cells[1, f]
+        N = global_mesh.face_cells[2, f]
         N == 0 && continue  # boundary face
 
-        P_owned = my_start <= P <= my_end
-        N_owned = my_start <= N <= my_end
+        P_owner = cell_to_rank[P]
+        N_owner = cell_to_rank[N]
+        P_owner == N_owner && continue  # both on same rank
 
-        if P_owned && !N_owned
-            other_rank = _cell_to_rank(N, cells_per_rank, nranks)
-            push!(get!(Vector{Int}, send_indices, other_rank), P)
-            push!(get!(Vector{Int}, recv_indices, other_rank), N)
-        elseif !P_owned && N_owned
-            other_rank = _cell_to_rank(P, cells_per_rank, nranks)
-            push!(get!(Vector{Int}, send_indices, other_rank), N)
-            push!(get!(Vector{Int}, recv_indices, other_rank), P)
+        if P_owner == my_rank
+            # I own P; neighbour N is halo — send P to N_owner, expect N back.
+            local_P = local_data.global_to_local[P]
+            local_N = local_data.global_to_local[N]
+            push!(get!(Vector{Int}, send_indices, N_owner), local_P)
+            push!(get!(Vector{Int}, recv_indices, N_owner), local_N)
+        elseif N_owner == my_rank
+            # I own N; neighbour P is halo — send N to P_owner, expect P back.
+            local_P = local_data.global_to_local[P]
+            local_N = local_data.global_to_local[N]
+            push!(get!(Vector{Int}, send_indices, P_owner), local_N)
+            push!(get!(Vector{Int}, recv_indices, P_owner), local_P)
         end
     end
 
-    # Deduplicate indices
     for (k, v) in send_indices
         send_indices[k] = unique(v)
     end
@@ -91,12 +106,6 @@ function _build_halo_pattern(mesh, my_start, my_end, rank, nranks)
         recv_indices[k] = unique(v)
     end
 
-    neighbor_ranks = sort(collect(keys(send_indices)))
+    neighbor_ranks = sort(union(keys(send_indices), keys(recv_indices)))
     return HaloPattern(send_indices, recv_indices, neighbor_ranks)
-end
-
-"""Map a 1-based cell index to a 0-based MPI rank given contiguous partitioning."""
-function _cell_to_rank(cell_idx::Int, cells_per_rank::Int, nranks::Int)
-    r = div(cell_idx - 1, cells_per_rank)
-    return min(r, nranks - 1)
 end
