@@ -281,6 +281,9 @@ end
     @testset verbose = true "V&V: update_mesh!" begin
         safe_include("v_and_v_mesh_update.jl")
     end
+    @testset verbose = true "V&V: FvDOMModel" begin
+        safe_include("v_and_v_fvdom_model.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
