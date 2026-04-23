@@ -194,6 +194,9 @@ end
     @testset verbose = true "V&V: Wall quantities" begin
         safe_include("v_and_v_wall_quantities.jl")
     end
+    @testset verbose = true "V&V: Solver config dispatch" begin
+        safe_include("v_and_v_solver_config.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

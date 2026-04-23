@@ -1,5 +1,38 @@
 # Changelog
 
+## v3.52.0 — Solver Config Dispatch (second `linear_solver_infra` benchmark)
+
+Second convergence-verified benchmark for `linear_solver_infra`,
+joining the Poisson MMS across-backends test (v3.42). Covers the
+`FVMSolverConfig` routing layer used by every collocated
+transport equation to dispatch per-field solver/preconditioner
+combinations.
+
+### test/v_and_v_solver_config.jl
+
+Six testsets (21 gates, ~0.1 s):
+
+1. **Default pressure routing.** `:p` → `:cg` + `:amg`, rtol 1e-6,
+   maxiter 1000.
+2. **Default fallback.** Non-pressure fields → `:bicgstab` + `:ilu`,
+   rtol 1e-5, maxiter 500.
+3. **Custom FieldSolverConfig** overrides.
+4. **`:direct`** resolves to `nothing` (backslash path).
+5. **Unknown solver symbol** throws ErrorException.
+6. **Non-Symbol arguments** pass through unchanged.
+
+### `linear_solver_infra` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Poisson MMS across LU/CG/GMRES backends | v3.42 | `test/v_and_v_linear_solvers.jl` |
+| FVMSolverConfig per-field dispatch      | v3.52 | `test/v_and_v_solver_config.jl`   |
+
+### Verification
+
+No manifest tier change. 21 new gates wired into default
+runtests.jl under `V&V: Solver config dispatch`.
+
 ## v3.51.0 — Wall Quantities (fourth `postprocessing` benchmark)
 
 Fourth convergence-verified benchmark for `postprocessing`,
