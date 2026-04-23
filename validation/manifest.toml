@@ -1344,19 +1344,22 @@ limitations = [
 
 [[features]]
 feature = "turbulence_rans"
-maturity = "experimental"
-validation = "smoke_tested"
-role = "research_tooling"
+maturity = "provisional"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
-summary = "RANS turbulence models (k-epsilon, k-omega, k-omega SST, Spalart-Allmaras) for incompressible collocated solver."
+summary = "RANS turbulence models (k-epsilon, k-omega, k-omega SST, Spalart-Allmaras) for incompressible collocated solver. Standard k-ε source terms verified against analytical decaying-homogeneous-turbulence ODE solution (v3.18)."
 limitations = [
-  "Experimental — validated via smoke tests only; channel flow and flat plate benchmarks pending.",
+  "Provisional — only `StandardKEpsilon` is convergence-verified, and only the source-term ODE (k-ε decay) is matched. Shear production, wall functions, and full channel-flow profiles are smoke-tested only.",
+  "`KOmega`, `KOmegaSST`, `SpalartAllmaras` models carry only smoke tests; their transport terms have not been independently verified.",
   "Wall functions are simplified (Neumann/Dirichlet); dynamic wall function update not yet implemented.",
   "SST viscosity limiter uses simplified form without strain rate recomputation.",
+  "Published benchmarks (Moser channel DNS at Reτ ∈ {180, 395, 590}, flat-plate BL, periodic hills) are a v3.19+ follow-up.",
+  "Evidence: `test/v_and_v_kepsilon_dhit.jl` — (1) k, ε, ν_t ≥ 0 and strictly monotone decay at every step; (2) endpoint match of k(1) and ε(1) within 1 % of analytical for 1000 × 0.001 integration; (3) first-order-in-Δt convergence of the k endpoint at dt ∈ {0.01, 0.005, 0.0025} with rates in [0.8, 1.3].",
 ]
 
 # ── Phase 3: Conjugate Heat Transfer & Buoyancy ────────────────────
