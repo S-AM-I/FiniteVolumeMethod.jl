@@ -3,12 +3,25 @@
 # Wraps SolveResult with symbolic field access and SciML traits.
 
 """
+    AbstractFVMSolution
+
+Stage 1f umbrella supertype for solution wrappers owned by this repo.
+Currently just `IncompressibleSolution`; parabolic and hyperbolic
+problems return standard `SciMLBase.ODESolution` which is already
+`sol[:field]`-enabled via `SymbolicIndexingInterface`. The
+`is_fvm_solution` trait below lets downstream code recognize both
+families without forcing `SciMLBase.ODESolution` under this supertype
+(we don't own that type).
+"""
+abstract type AbstractFVMSolution end
+
+"""
     IncompressibleSolution{Dim, T}
 
 SciML-compatible solution for incompressible flow problems.
 Supports symbolic field access: `sol[:U]`, `sol[:p]`, `sol[:Ux]`, etc.
 """
-struct IncompressibleSolution{Dim, T}
+struct IncompressibleSolution{Dim, T} <: AbstractFVMSolution
     result::SolveResult{Dim, T}
     prob::IncompressibleProblem
     retcode::Symbol
@@ -67,3 +80,23 @@ function Base.show(
     print(io, "IncompressibleSolution{$Dim, $T} ($status in $(sol.iterations) iterations)")
     return nothing
 end
+
+# ── Stage 1f generic-solution trait ──────────────────────────────────
+
+"""
+    is_fvm_solution(sol) -> Bool
+
+Trait-style predicate returning `true` if `sol` was produced by any of
+this repo's solvers (either a custom wrapper like `IncompressibleSolution`
+or a `SciMLBase.AbstractODESolution` coming out of `solve(::FVMProblem)`,
+`solve(::HyperbolicProblem)`, etc.). Downstream generic utilities can use
+this to decide whether to invoke FVM-specific post-processing, symbolic
+indexing, or plotting recipes.
+
+Default: `false`.
+"""
+is_fvm_solution(::Any) = false
+is_fvm_solution(::AbstractFVMSolution) = true
+is_fvm_solution(::SciMLBase.AbstractODESolution) = true
+is_fvm_solution(::SciMLBase.AbstractNonlinearSolution) = true
+is_fvm_solution(::SciMLBase.AbstractLinearSolution) = true
