@@ -1,5 +1,60 @@
 # Changelog
 
+## v3.34.0 — Mesh Sweep Flux (third `dynamic_mesh` benchmark)
+
+Third convergence-verified benchmark for `dynamic_mesh`,
+joining three-pattern GCL (v3.14) and rotational GCL (v3.29).
+Exercises the face-primitive `compute_mesh_flux!` kernel
+directly — `dynamic_mesh` now meets the 3-benchmark
+stable-review floor.
+
+### test/v_and_v_mesh_flux.jl
+
+`compute_mesh_flux!` implements
+
+    phi_mesh[f] = <d_f, S_f> / Δt
+
+where d_f is the face-center displacement. Four testsets
+(367 gates, ~0.2 s):
+
+1. **Zero displacement ⇒ phi_mesh ≡ 0** identically.
+
+2. **Uniform translation exact formula.** For d = d₀ uniform,
+   phi_mesh[f] = <d₀, S_f>/Δt at every face. 220 faces checked
+   to rtol 1 × 10⁻¹².
+
+3. **Δt scaling.** Halving Δt doubles phi_mesh at every face
+   to rtol 1 × 10⁻¹².
+
+4. **Closed-cell sum invariant.** Σ_f ε(c,f)·phi_mesh[f] = 0
+   under uniform translation (divergence theorem identity).
+   Max absolute deviation < 1 × 10⁻¹² across 144 cells.
+
+### `dynamic_mesh` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Three-pattern GCL (zero/trans/scale)  | v3.14 | `test/v_and_v_gcl.jl`           |
+| Rotational GCL (∇·d = 0 identity)     | v3.29 | `test/v_and_v_gcl_rotation.jl`  |
+| Mesh sweep-flux primitive             | v3.34 | `test/v_and_v_mesh_flux.jl`     |
+
+### Stable-review tally
+
+Five provisional features now meet the 3-benchmark floor:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 3 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+
+### Verification
+
+No manifest tier change. 367 new gates wired into default
+runtests.jl under `V&V: Mesh sweep flux`.
+
 ## v3.33.0 — Ranz-Marshall Heat Transfer (third `lagrangian_dpm` benchmark)
 
 Third convergence-verified benchmark for `lagrangian_dpm`,
