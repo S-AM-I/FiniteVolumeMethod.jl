@@ -1502,19 +1502,21 @@ limitations = [
 
 [[features]]
 feature = "combustion"
-maturity = "experimental"
-validation = "smoke_tested"
-role = "research_tooling"
+maturity = "provisional"
+validation = "convergence_verified"
+role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
-summary = "Multi-species transport with EDM and EDC turbulence-chemistry interaction and heat release coupling."
+summary = "Multi-species transport with EDM and EDC turbulence-chemistry interaction and heat release coupling. Species transport kernel verified against analytical 1D advection-diffusion solution (v3.17)."
 limitations = [
-  "Experimental — EDM and EDC implemented; finite-rate Arrhenius for collocated solver deferred.",
+  "Provisional — only the species transport kernel (`assemble_species!`: convection + diffusion) is convergence-verified against its 1D steady analytical solution. EDM/EDC/Arrhenius reaction models, heat-release coupling, and turbulent-chemistry interaction are smoke-tested only.",
   "Three-species (fuel/oxidizer/product) model; multi-step mechanisms deferred.",
   "Constant density (incompressible); variable density combustion deferred.",
+  "Published benchmarks (1D laminar premixed flame vs. Cantera, Sandia Flame D) require Cantera interop and are a v3.18+ follow-up.",
+  "Evidence: `test/v_and_v_species_ad.jl` — (1) monotone decay from Y_L to Y_R, no overshoot, Pe = 2; (2) y-direction invariance < 1e-10 under Neumann top/bottom; (3) L² error 1.8e-2 → 9.5e-3 → 5.0e-3 at N ∈ {20, 40, 80} with observed orders in [0.8, 1.5] (first-order upwind on exp(Pe·x/L)), finest-grid interior L² < 5 × 10⁻³.",
 ]
 
 # ── Phase 11: Lagrangian DPM ─────────────────────────────────────────

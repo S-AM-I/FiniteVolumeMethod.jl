@@ -1,5 +1,84 @@
 # Changelog
 
+## v3.17.0 — Species Advection-Diffusion V&V + `combustion` Promotion
+
+Eighth manifest promotion. `combustion` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of a steady 1D advection-diffusion verification of
+the `assemble_species!` transport kernel against its closed-form
+exponential-boundary-layer solution.
+
+### test/v_and_v_species_ad.jl
+
+Problem: the steady 1D species transport ODE
+
+    u ∂Y/∂x − D ∂²Y/∂x² = 0,   Y(0) = Y_L,  Y(L) = Y_R
+
+has closed-form solution (Pe = u L / D)
+
+    Y(x) = Y_L + (Y_R − Y_L) · (exp(Pe x / L) − 1) / (exp(Pe) − 1).
+
+At Pe = 2 (moderate), the profile is a smooth exponential
+transition from Y_L = 1 at the inflow to Y_R = 0 at the outflow;
+top/bottom boundaries are Neumann so the 2D problem collapses to
+strictly 1D.
+
+Three testsets (9 gates, ~0.7 s):
+
+1. **Boundary values + monotonicity.** Left column Y > 0.85,
+   right column Y < 0.15. Monotone decrease across columns.
+   No overshoot: Y ∈ [Y_R, Y_L] at every cell (upwind + Laplacian
+   preserves the maximum principle on a Cartesian grid at Pe = 2).
+
+2. **y-direction invariance.** Neumann top/bottom forces the
+   solution to depend only on x; measured column spread <
+   1 × 10⁻¹⁰.
+
+3. **First-order grid convergence.** L² error on the interior
+   band (0.1 < x < 0.9) at N ∈ {20, 40, 80}:
+   - Observed orders: ≈1.0 (textbook first-order upwind on
+     a smooth exponential with curvature).
+   - Monotone error decrease.
+   - Finest-grid error < 5 × 10⁻³ (< 0.5 % of Y swing).
+
+### Manifest promotion
+
+`combustion`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+- `role`: research_tooling → **claim_bearing_solver**
+
+### Limitations carried into provisional
+
+- Only the species transport kernel is convergence-verified.
+  EDM, EDC, Arrhenius reaction source terms, and heat-release
+  coupling to the energy equation remain smoke-tested.
+- Single-species, moderate-Pe, no-reaction test; multi-step
+  chemistry + turbulent-chemistry interaction are future work.
+- Published benchmarks (1D laminar premixed flame vs. Cantera,
+  Sandia Flame D, counterflow diffusion flame) require Cantera
+  interop and are a v3.18+ follow-up.
+
+### Running manifest-promotion tally
+
+Eight `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators`    | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`       | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`          | v3.13 | Stokes terminal velocity analytical match |
+| `dynamic_mesh`            | v3.14 | GCL three-pattern round-off-exactness |
+| `radiation`               | v3.15 | P1 slab sinh attenuation O(h²) |
+| `multiphase_vof`          | v3.16 | Disc translation mass + COM invariants |
+| `combustion`              | v3.17 | Species AD exponential BL first-order |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 9 new gates
+wired into default runtests.jl under `V&V: Species advection-diffusion`.
+
 ## v3.16.0 — VOF Translation V&V + `multiphase_vof` Promotion
 
 Seventh manifest promotion. `multiphase_vof` advances from
