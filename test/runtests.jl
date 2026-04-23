@@ -248,6 +248,9 @@ end
     @testset verbose = true "V&V: VOFState + TwoPhaseProperties" begin
         safe_include("v_and_v_vof_state.jl")
     end
+    @testset verbose = true "V&V: DPM dispatch" begin
+        safe_include("v_and_v_dpm_dispatch.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
