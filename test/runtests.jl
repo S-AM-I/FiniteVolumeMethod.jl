@@ -260,6 +260,9 @@ end
     @testset verbose = true "V&V: LES dispatch" begin
         safe_include("v_and_v_les_dispatch.jl")
     end
+    @testset verbose = true "V&V: Mesh accessors" begin
+        safe_include("v_and_v_mesh_accessors.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
