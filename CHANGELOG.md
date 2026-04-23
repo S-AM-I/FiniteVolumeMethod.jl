@@ -1,5 +1,56 @@
 # Changelog
 
+## v3.21.0 — Unsteady Heat V&V (second CHT benchmark)
+
+First *second-benchmark* release — adds a transient
+analytical verification to `conjugate_heat_transfer` (already
+provisional from v3.12.0), progressing it toward future `stable`
+promotion. No manifest-tier change; limitations block and summary
+updated to reflect two independent benchmarks.
+
+### test/v_and_v_unsteady_heat.jl
+
+Problem: the 1D unsteady heat equation on [0, L] with zero
+Dirichlet sidewalls, Neumann top/bottom, and sinusoidal initial
+condition:
+
+    ∂T/∂t = α ∂²T/∂x²,
+    T(0, t) = T(L, t) = 0,
+    T(x, 0) = sin(π x / L)
+
+has the closed-form separable solution
+
+    T(x, t) = sin(π x / L) · exp(−π² α t / L²).
+
+Three testsets (8 gates, ~2 s):
+
+1. **Endpoint agreement.** At α = 0.1, L = 1, t = 0.5 the decay
+   factor is exp(−π² · 0.1 · 0.5) ≈ 0.610. Interior-band L² error
+   at 40 × 8 × 100 time steps: < 5 × 10⁻³. y-direction spread
+   (Neumann top/bottom invariance): < 10⁻¹⁰.
+
+2. **O(h²) spatial convergence.** At dt = t_end/4000 (temporal
+   error ≪ spatial error), N ∈ {20, 40, 80} gives observed
+   orders in [1.55, 2.3] — textbook second-order FVM Laplacian.
+
+3. **O(Δt) temporal convergence.** At fixed N = 80 and
+   n_steps ∈ {50, 100, 200}, the error drops monotonically with
+   the coarse-to-fine rate r₁ > 0.6 (first-order implicit Euler,
+   saturating as spatial-error floor is approached).
+
+### `conjugate_heat_transfer` evidence inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Steady Laplace series   | v3.12 | `test/v_and_v_heat_conduction.jl` |
+| Unsteady decay          | v3.21 | `test/v_and_v_unsteady_heat.jl`   |
+| De Vahl Davis natural convection | ≥ v3.22 | (pending) |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 8 new gates
+wired into default runtests.jl under `V&V: Unsteady heat`.
+
 ## v3.20.0 — Postprocessing V&V + `postprocessing` Promotion
 
 Eleventh manifest promotion. `postprocessing` advances from
