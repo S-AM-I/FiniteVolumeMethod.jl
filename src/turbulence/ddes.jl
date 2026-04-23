@@ -131,3 +131,12 @@ function solve_turbulence!(
 
     return nothing
 end
+
+# ── v3.0 Wave 1: WMLES and dedicated SA-DDES / IDDES variants ──────
+# Loaded via this trailing include chain so the parent layer file
+# (`src/layers/discretization_assembly_kernels.jl`) does not need to be
+# updated in the same commit. The wave's main-thread pass will lift
+# these into the layer file once the rest of Wave 1 lands.
+include("wmles.jl")
+include("sa_ddes.jl")
+include("iddes.jl")

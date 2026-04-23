@@ -16,8 +16,14 @@ Thermophysical properties for the fluid region in thermal simulations.
 - `k::T` — laminar thermal conductivity [W/(m·K)]
 - `Pr_t::T` — turbulent Prandtl number (default 0.85)
 - `beta::T` — thermal expansion coefficient [1/K] (0 = no buoyancy)
-- `T_ref::T` — reference temperature for Boussinesq approximation [K]
+- `T_ref::T` — reference temperature [K] (also enthalpy datum: `h(T_ref) = 0`
+  for constant-Cp formulation)
 - `g::SVector{Dim, T}` — gravity vector [m/s²]
+- `use_enthalpy::Bool` — if `true` the solver wrappers transport enthalpy
+  `h` instead of temperature `T`. For constant `Cp` the two forms are
+  equivalent up to a constant shift; the enthalpy form is preferable for
+  high-Mach compressible and for future variable-Cp extensions (Stage v3
+  fast-path Wave 1). Defaults to `false` (T-form).
 """
 struct FluidThermalProperties{Dim, T}
     Cp::T
@@ -26,13 +32,16 @@ struct FluidThermalProperties{Dim, T}
     beta::T
     T_ref::T
     g::SVector{Dim, T}
+    use_enthalpy::Bool
 end
 
 """
-    FluidThermalProperties{Dim}(; Cp, k, Pr_t, beta, T_ref, g)
+    FluidThermalProperties{Dim}(; Cp, k, Pr_t, beta, T_ref, g, use_enthalpy)
 
 Construct fluid thermal properties with keyword arguments.
 When `beta == 0` (default), buoyancy is disabled.
+When `use_enthalpy == true`, the enthalpy form of the energy equation
+is assembled by the thermal solver wrappers.
 """
 function FluidThermalProperties{Dim}(;
         Cp::Real = 1005.0,
@@ -41,6 +50,7 @@ function FluidThermalProperties{Dim}(;
         beta::Real = 0.0,
         T_ref::Real = 300.0,
         g = nothing,
+        use_enthalpy::Bool = false,
     ) where {Dim}
     T = promote_type(typeof(Cp), typeof(k), typeof(Pr_t), typeof(beta), typeof(T_ref))
     if g === nothing
@@ -48,7 +58,9 @@ function FluidThermalProperties{Dim}(;
     else
         g_vec = SVector{Dim, T}(g)
     end
-    return FluidThermalProperties{Dim, T}(T(Cp), T(k), T(Pr_t), T(beta), T(T_ref), g_vec)
+    return FluidThermalProperties{Dim, T}(
+        T(Cp), T(k), T(Pr_t), T(beta), T(T_ref), g_vec, use_enthalpy,
+    )
 end
 
 """Check if buoyancy is active."""

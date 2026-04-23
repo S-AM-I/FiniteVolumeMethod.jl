@@ -344,6 +344,43 @@ end
     @testset verbose = true "V&V: polyhedral volumes" begin
         safe_include("v_and_v_polyhedral_volumes.jl")
     end
+    # Wave 1 (v3.102) — pressure-based + turbulence + thermal + VOF + gradient
+    @testset verbose = true "V&V: compressible pressure-based" begin
+        safe_include("v_and_v_compressible.jl")
+    end
+    @testset verbose = true "V&V: Durbin realizability + full-tensor P_k" begin
+        safe_include("v_and_v_durbin.jl")
+    end
+    @testset verbose = true "V&V: equilibrium WMLES" begin
+        safe_include("v_and_v_wmles.jl")
+    end
+    @testset verbose = true "V&V: full-tensor Germano invariants" begin
+        safe_include("v_and_v_full_germano.jl")
+    end
+    @testset verbose = true "V&V: wall-function skew projection" begin
+        safe_include("v_and_v_wall_skew.jl")
+    end
+    @testset verbose = true "V&V: per-face CHT coupling" begin
+        safe_include("v_and_v_per_face_cht.jl")
+    end
+    @testset verbose = true "V&V: enthalpy energy equation" begin
+        safe_include("v_and_v_enthalpy.jl")
+    end
+    @testset verbose = true "V&V: MULES-wired α transport" begin
+        safe_include("v_and_v_mules_integration.jl")
+    end
+    @testset verbose = true "V&V: isoAdvector interface flux" begin
+        safe_include("v_and_v_iso_advector.jl")
+    end
+    @testset verbose = true "V&V: contact angle (static + Cox-Voinov)" begin
+        safe_include("v_and_v_contact_angle.jl")
+    end
+    @testset verbose = true "V&V: over-relaxed non-orthogonal correction" begin
+        safe_include("v_and_v_over_relaxed.jl")
+    end
+    @testset verbose = true "V&V: least-squares gradient" begin
+        safe_include("v_and_v_lsq_gradient.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

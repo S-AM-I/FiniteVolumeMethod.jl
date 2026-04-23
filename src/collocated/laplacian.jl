@@ -7,8 +7,12 @@
 # Follows OpenFOAM `fvm::laplacian(gamma, phi)` semantics.
 #
 # Non-orthogonal correction modes (Stage 3c, Jasak 1996 Ch. 4):
+#   NON_ORTHO_NONE       — E = (S·d̂) d̂, T_f forced to zero (orthogonal only,
+#                          no tangential correction term even if caller sets
+#                          `non_ortho_correction = true`).
 #   NON_ORTHO_MINIMUM    — E = (S·d̂) d̂; smallest |E|, gentlest implicit term.
-#   NON_ORTHO_ORTHOGONAL — E = |S| d̂;     fixed magnitude.
+#                          T_f = S_f − E_f (the parallel-to-face component).
+#   NON_ORTHO_ORTHOGONAL — E = |S| d̂; fixed magnitude.
 #   NON_ORTHO_OVER_RELAXED — E = |S|² / (S·d̂) · d̂; largest |E|, best
 #                             convergence on skewed meshes (OpenFOAM default).
 #
@@ -22,8 +26,20 @@
 
 Selector for the implicit-vs-explicit split of the face flux in
 `assemble_laplacian!`. See file header for details.
+
+Variants:
+
+  * `NON_ORTHO_NONE` — orthogonal-only, skip tangential correction.
+  * `NON_ORTHO_MINIMUM` — minimum-correction (Jasak 1996).
+  * `NON_ORTHO_ORTHOGONAL` — classical orthogonal correction.
+  * `NON_ORTHO_OVER_RELAXED` — over-relaxed (Jasak 1996, OpenFOAM default).
 """
-@enum NonOrthoCorrectionMode NON_ORTHO_MINIMUM NON_ORTHO_ORTHOGONAL NON_ORTHO_OVER_RELAXED
+@enum NonOrthoCorrectionMode begin
+    NON_ORTHO_NONE
+    NON_ORTHO_MINIMUM
+    NON_ORTHO_ORTHOGONAL
+    NON_ORTHO_OVER_RELAXED
+end
 
 # ── Core assembly ────────────────────────────────────────────────────
 
@@ -98,8 +114,10 @@ function assemble_laplacian!(
             )
 
             # Explicit non-orthogonal correction using T_f = S_f - E_f.
-            # Only applied if caller supplies a current gradient estimate.
-            if non_ortho_correction && grad_phi !== nothing
+            # Only applied if caller supplies a current gradient estimate
+            # AND the mode is not NON_ORTHO_NONE (which zeroes T_f).
+            if non_ortho_correction && grad_phi !== nothing &&
+                    correction_mode !== NON_ORTHO_NONE
                 w = face_weight(mesh, f)
                 grad_f = w * grad_phi[P] + (one(T) - w) * grad_phi[N]
                 E_vec = E_mag * d_hat
@@ -118,7 +136,9 @@ function assemble_laplacian!(
 end
 
 @inline function _non_ortho_E_magnitude(mode::NonOrthoCorrectionMode, S_mag2, S_dot_d)
-    if mode === NON_ORTHO_MINIMUM
+    if mode === NON_ORTHO_NONE || mode === NON_ORTHO_MINIMUM
+        # Minimum-correction magnitude; NONE shares the implicit split but
+        # forces T_f = 0 at the correction site.
         return S_dot_d
     elseif mode === NON_ORTHO_ORTHOGONAL
         return sqrt(S_mag2)

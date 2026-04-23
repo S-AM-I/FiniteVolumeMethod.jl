@@ -333,7 +333,10 @@ function apply_wall_functions!(
         wall_patches::Vector{Symbol},
     ) where {Dim, T}
     # SA: nu_tilde = 0 at wall (already set by Dirichlet BC)
-    # Just update nu_t at wall-adjacent cells
+    # Just update nu_t at wall-adjacent cells — same skew-penalty
+    # projection as the k-ε / k-ω branches so SA doesn't see a
+    # spuriously-large y from the raw centre-to-centre offset on
+    # skewed cells.
     nf = size(mesh.face_cells, 2)
     wall_set = Set(wall_patches)
 
@@ -343,8 +346,7 @@ function apply_wall_functions!(
         tag in wall_set || continue
 
         c = owner(mesh, f)
-        y = norm(cell_center(mesh, c) - face_center(mesh, f))
-        U_par = norm(U.internal[c])
+        y, U_par = _wall_projection(mesh, c, f, U.internal[c])
         turb_state.nu_t[c] = compute_nut_wall(U_par, y, nu)
     end
 

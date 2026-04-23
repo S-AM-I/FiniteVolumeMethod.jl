@@ -3,11 +3,37 @@
 # Provides turbulent_viscosity! and solve_turbulence! methods for the
 # existing StandardKEpsilon type. Assembles k and ε transport equations
 # using Phase 0 operators (convection, Laplacian, source linearization).
+#
+# Correctness upgrades (v3.0 Wave 1 — production-grade):
+#   1. Durbin realizability cap:  ν_t ← min(C_μ k²/ε, C_T k / |S|)
+#      with C_T ≈ 0.6 (Durbin 1996). Bounds the Reynolds stresses by
+#      the Schwarz inequality and suppresses non-physical spikes in
+#      strong-shear regions. The cap is driven by `model.realizability_alpha`
+#      — if the user leaves it at zero, `_durbin_C_T(model)` falls back to
+#      the Durbin 1996 default 0.6 so the cap is active out-of-the-box.
+#   2. Full-tensor production: P_k = 2 ν_t S_ij S_ij, assembled through
+#      `_sym_self_magnitude_sq` from `dynamic_smagorinsky.jl`. Algebraically
+#      identical to `ν_t · |S|²` under the  `|S| = √(2 S_ij S_ij)` convention
+#      (`strain_rate.jl`) but written in the tensor form so the origin of
+#      each term is explicit — and so swapping in a non-isotropic ν_t later
+#      is a one-line change rather than an algebraic audit.
 
 # ── Interface implementation ─────────────────────────────────────────
 
 n_turbulence_fields(::StandardKEpsilon) = 2
 turbulence_field_names(::StandardKEpsilon) = (:k, :epsilon)
+
+"""
+    _durbin_C_T(model) -> T
+
+Durbin realizability coefficient for the eddy-viscosity cap
+`ν_t ≤ C_T · k / |S|`. Honours `model.realizability_alpha` when set
+(>0) and otherwise returns the Durbin 1996 default 0.6.
+"""
+@inline function _durbin_C_T(model::StandardKEpsilon{T}) where {T}
+    return model.realizability_alpha > zero(T) ?
+        model.realizability_alpha : T(0.6)
+end
 
 function turbulent_viscosity!(
         nu_t::Vector{T},
@@ -22,6 +48,35 @@ function turbulent_viscosity!(
         k_val = max(k_field.internal[c], T(1.0e-10))
         eps_val = max(eps_field.internal[c], T(1.0e-10))
         nu_t[c] = model.C_mu * k_val^2 / eps_val
+    end
+    return nothing
+end
+
+"""
+    _apply_durbin_cap!(nu_t, k_field, S_mag, C_T)
+
+Enforce `ν_t ≤ C_T · k / |S|` pointwise. Writes the capped eddy
+viscosity back into `nu_t`. Safe against `|S| → 0` (no cap applied
+when the local strain vanishes — the unbounded formula is already
+finite in that limit).
+
+`k_field` is duck-typed: any object exposing a real-typed `internal`
+vector is accepted (production code passes a `CollocatedScalarField`;
+the V&V suite passes a lightweight stand-in).
+"""
+function _apply_durbin_cap!(
+        nu_t::Vector{T}, k_field,
+        S_mag::Vector{T}, C_T::T,
+    ) where {T}
+    nc = length(nu_t)
+    k_int = k_field.internal
+    for c in 1:nc
+        k_val = max(k_int[c], T(1.0e-10))
+        s_val = S_mag[c]
+        if s_val > T(1.0e-14)
+            nu_t_cap = C_T * k_val / s_val
+            nu_t[c] = min(nu_t[c], nu_t_cap)
+        end
     end
     return nothing
 end
@@ -42,29 +97,30 @@ function solve_turbulence!(
     k_field = turb_state.fields[:k]
     eps_field = turb_state.fields[:epsilon]
 
-    # Compute production. Strain-rate magnitude is |S| = √(2 S_ij S_ij)
-    # — a full tensor contraction; production is ν_t · |S|².
+    # Compute the strain rate magnitude |S| = √(2 S_ij S_ij). This is
+    # reused for the Durbin cap and the production term below.
     S_mag = compute_strain_rate(U, mesh)
 
-    # Stage 4a: Durbin realizability cap. When `model.realizability_alpha > 0`
-    # we enforce ν_t ≤ α · k / |S| before computing production. This keeps
-    # the eddy viscosity bounded in regions of strong strain and suppresses
-    # the non-physical ν_t spikes that break convergence on flows like the
-    # Sandia-flame near-nozzle region or backward-facing step just past
-    # reattachment.
-    if model.realizability_alpha > zero(T)
-        k_field_internal = k_field.internal
-        for c in 1:nc
-            k_val = max(k_field_internal[c], T(1.0e-10))
-            s_val = max(S_mag[c], T(1.0e-10))
-            nu_t_cap = model.realizability_alpha * k_val / s_val
-            turb_state.nu_t[c] = min(turb_state.nu_t[c], nu_t_cap)
-        end
-    end
+    # Durbin realizability cap (v3.0). Enforces
+    #   ν_t ≤ C_T · k / |S|   (C_T ≈ 0.6, Durbin 1996)
+    # which is equivalent to requiring the Reynolds stress tensor from
+    # the Boussinesq closure to satisfy the Schwarz inequality
+    # (realizability). Active by default via `_durbin_C_T`; users can
+    # override via `StandardKEpsilon(; realizability_alpha = ...)`.
+    _apply_durbin_cap!(turb_state.nu_t, k_field, S_mag, _durbin_C_T(model))
 
+    # Full-tensor production P_k = 2 ν_t S_ij S_ij. Under the
+    # `|S| = √(2 S_ij S_ij)` convention this equals ν_t · |S|², but we
+    # assemble the strain components explicitly and contract through
+    # `_sym_self_magnitude_sq` so the tensor origin is obvious and the
+    # path is ready for an anisotropic ν_t generalisation.
+    grad_U = _compute_velocity_gradient_tensor(U, mesh)
     P_k = Vector{T}(undef, nc)
     for c in 1:nc
-        P_k[c] = turb_state.nu_t[c] * S_mag[c]^2
+        S_comp = _strain_components(grad_U, c, Val(Dim))
+        # |S|² = 2 S_ij S_ij (reduced-component form)
+        S_mag_sq = _sym_self_magnitude_sq(S_comp, Val(Dim))
+        P_k[c] = turb_state.nu_t[c] * S_mag_sq
     end
 
     # ── k equation ───────────────────────────────────────────────

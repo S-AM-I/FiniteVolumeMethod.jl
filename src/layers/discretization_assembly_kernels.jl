@@ -160,6 +160,12 @@ include("../incompressible/simple.jl")
 include("../incompressible/piso.jl")
 include("../incompressible/pimple.jl")
 
+# Compressible pressure-based family (Wave 1)
+# Extends SIMPLE/PIMPLE with density coupling + EOS dispatch.
+include("../pressure_based/eos_coupling.jl")
+include("../pressure_based/compressible_simple.jl")
+include("../pressure_based/compressible_pimple.jl")
+
 # Linear Solver Infrastructure (Phase 5)
 # Must come after incompressible (provides _solve_linear) and before turbulence.
 include("../linear_solvers/abstract_operator.jl")

@@ -130,11 +130,19 @@ function solve_simple_thermal(
         end
 
         # ── Energy equation ─────────────────────────────────────
-        T_eq = CollocatedEquation(mesh)
-        assemble_energy!(T_eq, thermal_state.T_field, state.phi, alpha_eff, mesh, bcs_T)
-        T_sol = _dispatch_solve(to_linear_problem(T_eq), linear_solver, solver_config, :T)
-        for c in 1:nc
-            thermal_state.T_field.internal[c] = T_sol.u[c]
+        if thermal_props.use_enthalpy
+            _advance_enthalpy_step!(
+                thermal_state, thermal_props, state.phi, alpha_eff, mesh, bcs_T;
+                dt = nothing, linear_solver = linear_solver,
+                solver_config = solver_config,
+            )
+        else
+            T_eq = CollocatedEquation(mesh)
+            assemble_energy!(T_eq, thermal_state.T_field, state.phi, alpha_eff, mesh, bcs_T)
+            T_sol = _dispatch_solve(to_linear_problem(T_eq), linear_solver, solver_config, :T)
+            for c in 1:nc
+                thermal_state.T_field.internal[c] = T_sol.u[c]
+            end
         end
 
         # ── Convergence ─────────────────────────────────────────
@@ -243,14 +251,22 @@ function solve_incompressible_thermal(
         end
 
         # Energy equation
-        T_eq = CollocatedEquation(mesh)
-        assemble_energy!(
-            T_eq, thermal_state.T_field, state.phi, alpha_eff, mesh, bcs_T;
-            dt = dt_actual
-        )
-        T_sol = _dispatch_solve(to_linear_problem(T_eq), linear_solver, solver_config, :T)
-        for c in 1:nc
-            thermal_state.T_field.internal[c] = T_sol.u[c]
+        if thermal_props.use_enthalpy
+            _advance_enthalpy_step!(
+                thermal_state, thermal_props, state.phi, alpha_eff, mesh, bcs_T;
+                dt = dt_actual, linear_solver = linear_solver,
+                solver_config = solver_config,
+            )
+        else
+            T_eq = CollocatedEquation(mesh)
+            assemble_energy!(
+                T_eq, thermal_state.T_field, state.phi, alpha_eff, mesh, bcs_T;
+                dt = dt_actual
+            )
+            T_sol = _dispatch_solve(to_linear_problem(T_eq), linear_solver, solver_config, :T)
+            for c in 1:nc
+                thermal_state.T_field.internal[c] = T_sol.u[c]
+            end
         end
 
         t += dt_actual
@@ -405,5 +421,43 @@ function _thermal_pimple_step!(
         end
     end
 
+    return nothing
+end
+
+# ── Enthalpy advance helper ──────────────────────────────────────────
+#
+# Internal bridge between the temperature-state (`ThermalState`) and the
+# enthalpy-form energy equation. The enthalpy field is a transient
+# working variable; after each solve we convert back to T so the rest
+# of the solver (buoyancy, `k_eff`, diagnostics) sees consistent data.
+
+function _advance_enthalpy_step!(
+        thermal_state::ThermalState{T},
+        thermal_props::FluidThermalProperties{Dim, T},
+        phi::FaceFluxField{T},
+        alpha_eff::Vector{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        bcs_T::Dict{Symbol, <:AbstractBoundaryCondition};
+        dt::Union{Nothing, T} = nothing,
+        linear_solver = nothing,
+        solver_config = nothing,
+    ) where {Dim, T}
+    Cp = thermal_props.Cp
+    T_ref = thermal_props.T_ref
+
+    # T → h (internal + boundary).
+    h_field = enthalpy_field_from_temperature(thermal_state.T_field, T_ref, Cp)
+    bcs_h = enthalpy_bcs_from_temperature(bcs_T, T_ref, Cp)
+
+    # Enthalpy diffusivity equals alpha_eff for constant Cp.
+    alpha_h = alpha_eff
+
+    solve_enthalpy_equation(
+        h_field, phi, alpha_h, mesh, bcs_h;
+        dt = dt, linear_solver = linear_solver, solver_config = solver_config,
+    )
+
+    # h → T.
+    temperature_from_enthalpy!(thermal_state.T_field, h_field, T_ref, Cp)
     return nothing
 end

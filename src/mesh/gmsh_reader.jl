@@ -62,7 +62,7 @@ function _read_gmsh_physical_names!(io::IO, physical_names::Dict{Int, Symbol})
         physical_names[tag] = name
     end
     # Read closing $EndPhysicalNames
-    readline(io)
+    return readline(io)
 end
 
 function _read_gmsh_nodes!(io::IO, nodes::Dict{Int, Node3D})
@@ -89,7 +89,7 @@ function _read_gmsh_nodes!(io::IO, nodes::Dict{Int, Node3D})
             nodes[node_tags[i]] = Node3D(x, y, z)
         end
     end
-    readline(io)  # $EndNodes
+    return readline(io)  # $EndNodes
 end
 
 # Gmsh element type → number of nodes
@@ -131,7 +131,7 @@ function _read_gmsh_elements!(io::IO, vol_elems, surf_elems)
             # Skip 1D (lines) and 0D (points)
         end
     end
-    readline(io)  # $EndElements
+    return readline(io)  # $EndElements
 end
 
 function _build_mesh_from_gmsh(nodes_dict, vol_elems, surf_elems, physical_names)
@@ -172,9 +172,11 @@ function _build_mesh_from_gmsh(nodes_dict, vol_elems, surf_elems, physical_names
             _approx_volume(cell_nodes, cx, cy, cz)
         end
 
-        push!(cells, Cell3D(
-            cell_nodes, Int[], (cx, cy, cz), abs(vol), ct,
-        ))
+        push!(
+            cells, Cell3D(
+                cell_nodes, Int[], (cx, cy, cz), abs(vol), ct,
+            )
+        )
     end
 
     # Build faces from surface elements (boundary faces)
@@ -221,16 +223,18 @@ function _build_mesh_from_gmsh(nodes_dict, vol_elems, surf_elems, physical_names
 
         tag = get(physical_names, elem.tag, Symbol("patch_$(elem.tag)"))
 
-        push!(faces, Face3D(
-            face_nodes,
-            Tuple(normal),
-            area,
-            (cx, cy, cz),
-            owner_idx,  # owner
-            0,          # neighbour (boundary)
-            true,       # is_boundary
-            tag,
-        ))
+        push!(
+            faces, Face3D(
+                face_nodes,
+                Tuple(normal),
+                area,
+                (cx, cy, cz),
+                owner_idx,  # owner
+                0,          # neighbour (boundary)
+                true,       # is_boundary
+                tag,
+            )
+        )
     end
 
     return UnstructuredMesh3D(nodes_vec, cells, faces)

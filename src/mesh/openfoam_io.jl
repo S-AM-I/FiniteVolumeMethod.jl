@@ -400,7 +400,7 @@ end
 
 """Read OpenFOAM binary points file -> Matrix{Float64}."""
 function _read_openfoam_points_binary(path::AbstractString)
-    open(path) do io
+    return open(path) do io
         npoints = _skip_foam_header_binary(io)
         points = Matrix{Float64}(undef, 3, npoints)
         for i in 1:npoints
@@ -414,7 +414,7 @@ end
 
 """Read OpenFOAM binary label list -> Vector{Int} (1-indexed)."""
 function _read_openfoam_labels_binary(path::AbstractString)
-    open(path) do io
+    return open(path) do io
         nlabels = _skip_foam_header_binary(io)
         labels = Vector{Int}(undef, nlabels)
         for i in 1:nlabels
@@ -426,7 +426,7 @@ end
 
 """Read OpenFOAM binary faces file -> Vector{Vector{Int}} (1-indexed)."""
 function _read_openfoam_faces_binary(path::AbstractString)
-    open(path) do io
+    return open(path) do io
         nfaces_total = _skip_foam_header_binary(io)
         faces = Vector{Vector{Int}}(undef, nfaces_total)
         for f in 1:nfaces_total
