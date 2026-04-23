@@ -1406,19 +1406,21 @@ limitations = [
 
 [[features]]
 feature = "postprocessing"
-maturity = "experimental"
-validation = "smoke_tested"
+maturity = "provisional"
+validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "Derived field operations (vorticity, Q-criterion), wall quantities (shear stress, y+, heat flux, Nusselt), force coefficients, and line sampling."
+summary = "Derived field operations (vorticity, Q-criterion), wall quantities (shear stress, y+, heat flux, Nusselt), force coefficients, and line sampling. Vorticity + Q-criterion + enstrophy verified against analytical values on canonical flows (v3.20)."
 limitations = [
-  "Experimental — 0th-order nearest-cell interpolation for sampling; higher-order deferred.",
+  "Provisional — `compute_vorticity`, `compute_q_criterion`, and `compute_enstrophy` are verified against analytical values on uniform, simple-shear, and solid-body-rotation flows. Wall-quantity routines (shear stress, y+, Nusselt), force coefficients, and line sampling remain smoke-tested.",
   "Wall quantities use linear near-wall approximation; wall functions not integrated.",
   "Force coefficients assume rho = 1 for viscous contribution.",
+  "Line sampling uses 0th-order nearest-cell interpolation; higher-order deferred.",
+  "Evidence: `test/v_and_v_postprocessing.jl` — (1) uniform flow: ω = 0, Q = 0 to atol 1e-10; (2) simple shear U = (A·y, 0): ω = −A, Q = 0 to rtol 1e-8; (3) solid-body rotation U = (−Ω·y, Ω·x): ω = 2Ω, Q = Ω² to rtol 1e-8; (4) enstrophy density |ω|² matches (2Ω)² under rotation. 448 interior-cell gates across 4 testsets.",
 ]
 
 # ── Phase 5: Linear Solver Infrastructure ──────────────────────────

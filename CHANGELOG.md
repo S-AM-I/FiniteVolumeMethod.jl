@@ -1,5 +1,72 @@
 # Changelog
 
+## v3.20.0 — Postprocessing V&V + `postprocessing` Promotion
+
+Eleventh manifest promotion. `postprocessing` advances from
+`experimental`/`smoke_tested` to `provisional`/`convergence_verified`
+on the strength of an analytical verification of the vorticity,
+Q-criterion, and enstrophy routines against three canonical flows.
+
+### test/v_and_v_postprocessing.jl
+
+Four testsets (448 gates, ~0.3 s), each testing every interior
+cell on a 16×16 mesh:
+
+1. **Uniform flow U = (2, 0).** ω = 0 to atol 1 × 10⁻¹⁰, Q = 0 to
+   atol 1 × 10⁻¹⁰. Trivial invariance.
+
+2. **Simple shear U = (A·y, 0), A = 4.** Analytical:
+   ω_z = ∂v/∂x − ∂u/∂y = −A; S_12 = Ω_12 = A/2 ⇒ Q = 0.
+   Every interior cell matches to rtol 1 × 10⁻⁸.
+
+3. **Solid-body rotation U = (−Ω·y, Ω·x), Ω = 3.** Analytical:
+   ω = 2Ω, S = 0, |Ω|² = 2Ω² ⇒ Q = Ω². Every interior cell
+   matches to rtol 1 × 10⁻⁸.
+
+4. **Enstrophy density under solid-body rotation (Ω = 2).**
+   The `compute_enstrophy` routine returns |ω|² per cell (no
+   factor of ½). Expected value: (2Ω)² = 16; measured to
+   rtol 1 × 10⁻⁸.
+
+### Manifest promotion
+
+`postprocessing`:
+- `maturity`: experimental → **provisional**
+- `validation`: smoke_tested → **convergence_verified**
+
+### Limitations carried into provisional
+
+- Only the field-operation routines (`compute_vorticity`,
+  `compute_q_criterion`, `compute_enstrophy`) are
+  convergence-verified on linear velocity fields where the FVM
+  gradient is exact.
+- Wall-quantity routines (shear stress, y+, Nusselt), force
+  coefficients, and line sampling remain smoke-tested.
+- Line sampling uses 0th-order nearest-cell interpolation.
+
+### Running manifest-promotion tally
+
+Eleven `provisional` features this session:
+
+| Feature | Promoted | Evidence |
+|---------|----------|----------|
+| `collocated_operators`    | v3.7  | Laplacian + gradient + divergence + Rhie-Chow MMS |
+| `incompressible_ns`       | v3.11 | Poiseuille grid-convergence O(h²) + Ghia Re=100 |
+| `conjugate_heat_transfer` | v3.12 | Laplace series grid-convergence O(h²) |
+| `lagrangian_dpm`          | v3.13 | Stokes terminal velocity analytical match |
+| `dynamic_mesh`            | v3.14 | GCL three-pattern round-off-exactness |
+| `radiation`               | v3.15 | P1 slab sinh attenuation O(h²) |
+| `multiphase_vof`          | v3.16 | Disc translation mass + COM invariants |
+| `combustion`              | v3.17 | Species AD exponential BL first-order |
+| `turbulence_rans`         | v3.18 | k-ε DHIT ODE match + O(Δt) |
+| `turbulence_les`          | v3.19 | Smagorinsky ν_t = (C_s·Δ)²·|S| analytical |
+| `postprocessing`          | v3.20 | Vorticity + Q + enstrophy on canonical flows |
+
+### Verification
+
+All pre-existing tests pass at identical counts. 448 new gates
+wired into default runtests.jl under `V&V: Postprocessing kinematics`.
+
 ## v3.19.0 — Smagorinsky LES V&V + `turbulence_les` Promotion
 
 Tenth manifest promotion. `turbulence_les` advances from
