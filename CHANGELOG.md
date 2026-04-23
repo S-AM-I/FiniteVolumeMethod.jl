@@ -1,5 +1,53 @@
 # Changelog
 
+## v3.36.0 — VOF Mixture Blending (third `multiphase_vof` benchmark)
+
+Third convergence-verified benchmark for `multiphase_vof`,
+joining disc translation (v3.16) and plane-wave advection (v3.24).
+Tests the property-blending primitive that converts volume
+fraction α into mixture density/viscosity consumed by momentum.
+
+### test/v_and_v_vof_mixture.jl
+
+`ρ = α·ρ₁ + (1−α)·ρ₂`, `μ = α·μ₁ + (1−α)·μ₂` via five invariants
+(1368 gates, ~0.1 s):
+
+1. **Pure phase 1.** α = 1 ⇒ (ρ, μ) = (ρ₁, μ₁) to rtol 1 × 10⁻¹⁴.
+2. **Pure phase 2.** α = 0 ⇒ (ρ, μ) = (ρ₂, μ₂) to rtol 1 × 10⁻¹⁴.
+3. **Linearity.** α(x) = x ramp produces ρ = α·ρ₁ + (1−α)·ρ₂
+   at every cell.
+4. **Density bounds.** Random α ∈ [0, 1] keeps ρ in [min, max].
+5. **Clip + blend consistency.** α values outside [0, 1] are
+   clipped by `clip_alpha!`; blending after clip gives
+   self-consistent mixture properties.
+
+### `multiphase_vof` benchmark inventory
+
+| Benchmark | Added | Evidence |
+|-----------|-------|----------|
+| Disc translation (mass + COM) | v3.16 | `test/v_and_v_vof_translation.jl` |
+| Plane-wave advection           | v3.24 | `test/v_and_v_vof_planewave.jl`    |
+| Mixture property blending      | v3.36 | `test/v_and_v_vof_mixture.jl`      |
+
+### Stable-review tally
+
+Seven provisional features now meet the 3-benchmark floor:
+
+| Feature | Benchmarks |
+|---------|------------|
+| `collocated_operators`    | 5 |
+| `incompressible_ns`       | 3 |
+| `conjugate_heat_transfer` | 3 |
+| `lagrangian_dpm`          | 3 |
+| `dynamic_mesh`            | 3 |
+| `radiation`               | 3 |
+| `multiphase_vof`          | 3 |
+
+### Verification
+
+No manifest tier change. 1368 new gates wired into default
+runtests.jl under `V&V: VOF mixture properties`.
+
 ## v3.35.0 — Radiation Source Algebra (third `radiation` benchmark)
 
 Third convergence-verified benchmark for `radiation`, joining
