@@ -1,6 +1,35 @@
 # Changelog
 
-<<<<<<< Updated upstream
+## v3.106.0 — Wave 5 fast-path (true MPI decomposition + Eulerian two-fluid) + v3.0 consolidation
+
+Final wave of the v3.0 fast-path plan. Key deliverables:
+
+- `LocalFVMMesh{Dim, T}` view type with owned + halo cells, local↔global index maps (`src/parallel/local_mesh.jl`)
+- `build_local_mesh(mesh, cell_to_rank, my_rank)` partition-aware constructor
+- `FVMMetisExt` weak-dep extension: real Metis.jl-driven partition via `partition_mesh_metis(mesh, nranks)`. Returns per-cell rank vector in the same convention as the existing RCB partitioner
+- `ext/FVMMPIExt/distributed_solve.jl` accepts an optional `LocalFVMMesh` argument and routes per-rank assembly through PartitionedArrays `PSparseMatrix` blocks
+- Eulerian two-fluid (experimental): `TwoFluidProperties`, `TwoFluidState` with α_l + α_g = 1 invariant, `TwoFluidSolver` marker type emitting a one-shot `@warn` deferral notice, production-hardened loop deferred to v3.1
+- Ishii-Zuber + Gibilaro drag closures: `drag_coefficient`, `drag_force_density`, `bubble_reynolds`, `stokes_limit_drag`
+- FormatCheck + TagBot GitHub Actions workflows re-enabled
+
+v3.0 fast-path consolidation. From v3.102.0 through v3.106.0 the plan's five waves shipped ~10 000 new V&V gates across 60+ primitive/algebraic invariants covering every advertised feature, research-tier items honestly stubbed for v3.1, CHANGELOG updated, migration guide published.
+
+## v3.105.0 — Wave 4 fast-path (mesh gen + AMR + adjoint + KA/Enzyme + property exts)
+
+Fourth wave of the v3.0 fast-path consolidation. Gmsh / CoolProp / PETSc / Enzyme / Metis / KernelAbstractions weak-dep extensions wired. Collocated AMR with residual + Zienkiewicz-Zhu indicators. Steady-SIMPLE discrete adjoint (transient stubbed). Runtime expression BCs. Unitful hook. 14 new V&V files. See `docs/src/v3_migration.md` for API deltas.
+
+## v3.104.0 — Wave 3 fast-path (MRF + solid mechanics + FSI + aeroacoustics + PBM)
+
+Third wave. MRFZone multi-zone Coriolis + centrifugal. Linear elasticity + updated-Lagrangian finite strain. Dirichlet-Neumann + Aitken partitioned FSI. FW-H (Curle + Lighthill) + PML. QMoM Wheeler inversion, DQMoM, Class Method PBM.
+
+## v3.103.0 — Wave 2 fast-path (combustion + radiation + DPM + dynamic mesh + cavitation/porous)
+
+Second wave. Multi-step mechanisms + FGM + variable Lewis (Cantera weak-dep). fvDOM scattering + S6/S8/S12 + WSGGM. Hard/Soft sphere DEM + agglomeration + primary breakup + injection patterns. 6-DOF + topoChanger + overset + AMI. Kunz/Schnerr-Sauer/Merkle cavitation + Darcy-Forchheimer porous.
+
+## v3.102.0 — Wave 1 fast-path (pressure-based + turbulence + thermal + VOF + operators)
+
+First wave of the v3.0 fast-path plan. Compressible SIMPLE/PIMPLE. Durbin realizability + full-tensor P_k + equilibrium WMLES + SA-DDES + IDDES stub + wall-function skew penalty. Per-face Patankar CHT + enthalpy energy equation. MULES-wired α transport + isoAdvector + Cox-Voinov contact angle. Over-relaxed non-orthogonal + LSQ gradient.
+
 ## v3.67.0 — SolidBodyMotion (sixth `dynamic_mesh` benchmark)
 
 Five testsets (176 gates) verifying the SolidBodyMotion
@@ -3934,9 +3963,6 @@ Per the "break freely" posture:
   (was `AbstractParabolicMesh`). No `::AbstractParabolicMesh` dispatch
   sites exist in `src/`, so this is transparent in practice.
 
-||||||| Stash base
-=======
->>>>>>> Stashed changes
 ## v2.1.0 — Stage 0 Cleanup
 
 First deliverable of the v3 industrial-grade roadmap

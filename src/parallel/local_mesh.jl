@@ -184,3 +184,107 @@ function extract_local_mesh(
         local_to_global_face,
     )
 end
+
+# ── LocalFVMMesh (rank-view wrapper over LocalMeshData) ──────────────────
+#
+# Wave 5 Agent A surface: a lighter, PartitionedArrays-friendly per-rank
+# view of an `UnstructuredFVMMesh`. Unlike `LocalMeshData` (which owns a
+# freshly-rebuilt local submesh), `LocalFVMMesh` keeps a handle to the
+# parent global mesh and only carries the index bookkeeping — useful
+# when the solver needs to pair local indices with the global partition.
+#
+# Both structures are kept: `LocalMeshData` is what the Stage-2 MPI
+# extension's halo pattern builder already consumes, and `LocalFVMMesh`
+# is the narrower surface documented in the Wave 5 plan.
+
+"""
+    LocalFVMMesh{Dim, T}
+
+Per-rank view of a global `UnstructuredFVMMesh` restricted to the cells
+owned by this rank plus a one-face-wide halo layer of off-rank
+neighbours. Built by [`build_local_mesh`](@ref) from a `cell_to_rank`
+partition (produced by `partition_rcb` or the Metis-backed
+`partition_mesh_metis`).
+
+# Fields
+- `owned_cells::Vector{Int}` — global cell indices owned by this rank.
+- `halo_cells::Vector{Int}` — global cell indices of halo neighbours
+  (cells owned by other ranks that appear on at least one face incident
+  to an owned cell).
+- `local_to_global::Vector{Int}` — length `length(owned_cells) + length(halo_cells)`;
+  entries `1..n_owned` are owned (mirrors `owned_cells`), entries
+  `n_owned+1..end` are halo (mirrors `halo_cells`).
+- `global_to_local::Dict{Int, Int}` — inverse of `local_to_global`.
+- `parent_mesh::UnstructuredFVMMesh{Dim, T}` — the global mesh; the
+  local view indexes into this parent.
+
+Invariants:
+- `owned_cells ∩ halo_cells == ∅`
+- Every halo cell is a face-neighbour of at least one owned cell
+- `union` of all ranks' `owned_cells` covers every global cell exactly once
+"""
+struct LocalFVMMesh{Dim, T}
+    owned_cells::Vector{Int}
+    halo_cells::Vector{Int}
+    local_to_global::Vector{Int}
+    global_to_local::Dict{Int, Int}
+    parent_mesh::UnstructuredFVMMesh{Dim, T}
+end
+
+"""
+    build_local_mesh(
+        mesh::UnstructuredFVMMesh, cell_to_rank::AbstractVector{<:Integer}, my_rank::Integer,
+    ) -> LocalFVMMesh
+
+Build a `LocalFVMMesh` view of `mesh` for the rank `my_rank`, using
+`cell_to_rank` (entry per global cell, 0-based rank ID) as the
+partition.
+
+Edge cases:
+- If no cells are assigned to `my_rank`, returns a `LocalFVMMesh` with
+  empty `owned_cells` / `halo_cells` and just a handle to `mesh`.
+- Halo detection uses only internal faces (`face_cells[2, f] != 0`);
+  boundary faces never generate halo cells.
+"""
+function build_local_mesh(
+        mesh::UnstructuredFVMMesh{Dim, T},
+        cell_to_rank::AbstractVector{<:Integer},
+        my_rank::Integer,
+    ) where {Dim, T}
+    nc_g = length(mesh.cell_volumes)
+    length(cell_to_rank) == nc_g ||
+        error("cell_to_rank length $(length(cell_to_rank)) ≠ ncells $nc_g")
+
+    my_rank_int = Int(my_rank)
+
+    # Owned cells (global IDs) in ascending order.
+    owned_cells = Int[c for c in 1:nc_g if cell_to_rank[c] == my_rank_int]
+
+    # Halo cells: off-rank neighbours of owned cells, via internal faces.
+    halo_set = Set{Int}()
+    nf = size(mesh.face_cells, 2)
+    @inbounds for f in 1:nf
+        P = mesh.face_cells[1, f]
+        N = mesh.face_cells[2, f]
+        N == 0 && continue  # boundary face never contributes halo cells
+        P_owned = cell_to_rank[P] == my_rank_int
+        N_owned = cell_to_rank[N] == my_rank_int
+        if P_owned && !N_owned
+            push!(halo_set, N)
+        elseif !P_owned && N_owned
+            push!(halo_set, P)
+        end
+    end
+    halo_cells = sort!(collect(halo_set))
+
+    local_to_global = vcat(owned_cells, halo_cells)
+    global_to_local = Dict{Int, Int}()
+    sizehint!(global_to_local, length(local_to_global))
+    @inbounds for (i, g) in pairs(local_to_global)
+        global_to_local[g] = i
+    end
+
+    return LocalFVMMesh{Dim, T}(
+        owned_cells, halo_cells, local_to_global, global_to_local, mesh,
+    )
+end

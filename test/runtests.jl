@@ -513,6 +513,19 @@ end
     @testset verbose = true "V&V: PETSc stub" begin
         safe_include("v_and_v_petsc_stub.jl")
     end
+    # Wave 5 (v3.106) — true MPI decomposition + Eulerian two-fluid
+    @testset verbose = true "V&V: LocalFVMMesh partition view" begin
+        safe_include("v_and_v_local_mesh.jl")
+    end
+    @testset verbose = true "V&V: Metis partition stub" begin
+        safe_include("v_and_v_metis_partition_stub.jl")
+    end
+    @testset verbose = true "V&V: two-fluid drag closures" begin
+        safe_include("v_and_v_drag_closures.jl")
+    end
+    @testset verbose = true "V&V: Eulerian two-fluid (experimental)" begin
+        safe_include("v_and_v_two_fluid.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

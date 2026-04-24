@@ -1254,7 +1254,24 @@ export
     is_unitful,
     # External property / solver stubs
     CoolPropFluid,
-    PETScLinearSolver
+    PETScLinearSolver,
+    # Wave 5 — true MPI decomposition + Eulerian two-fluid (experimental)
+    LocalFVMMesh,
+    build_local_mesh,
+    partition_mesh_metis,
+    TwoFluidProperties,
+    TwoFluidState,
+    TwoFluidSolver,
+    AbstractDragClosure,
+    IshiiZuberDrag,
+    GibilaroDrag,
+    drag_coefficient,
+    drag_force_density,
+    bubble_reynolds,
+    stokes_limit_drag,
+    density_ratio,
+    enforce_volume_fraction_sum!,
+    interphase_drag
 
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin
