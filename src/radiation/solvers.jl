@@ -27,7 +27,7 @@ Each SIMPLE iteration:
 function solve_simple_thermal_radiation(
         prob::IncompressibleProblem{Dim, T},
         thermal_props::FluidThermalProperties{Dim, T},
-        rad_model::P1Model{T};
+        rad_model::AbstractRadiationModel;
         bcs_T::Dict{Symbol, <:AbstractBoundaryCondition},
         bcs_G::Dict{Symbol, <:AbstractBoundaryCondition},
         turb_model = nothing,
@@ -36,6 +36,7 @@ function solve_simple_thermal_radiation(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        wsggm_path_length::Real = 1.0,
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
     mesh = prob.mesh
@@ -144,12 +145,13 @@ function solve_simple_thermal_radiation(
             thermal_state.T_field.internal[c] = T_sol.u[c]
         end
 
-        # -- P1 radiation --------------------------------------------------
-        rad_state.G = solve_p1_radiation(
+        # -- Radiation (grey P1 / fvDOM / WSGGM non-grey) ------------------
+        rad_state.G, source_model = _solve_radiation_step(
             rad_model, thermal_state.T_field, mesh, bcs_G;
             linear_solver = linear_solver, solver_config = solver_config,
+            wsggm_path_length = wsggm_path_length,
         )
-        S_rad = compute_radiation_source(rad_model, rad_state.G, thermal_state.T_field)
+        S_rad = compute_radiation_source(source_model, rad_state.G, thermal_state.T_field)
 
         # -- Convergence ---------------------------------------------------
         max_res = zero(T)

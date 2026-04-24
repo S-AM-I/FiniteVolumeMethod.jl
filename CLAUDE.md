@@ -175,7 +175,20 @@ The repo is in a v2→v3 overhaul; the authoritative issue list is `test/KNOWN_F
 ### Correctness / simplifications
 - WENO5 has a ghost-cell bug in the 1D solver (`nghost=3` unsupported at small grid sizes)
 - Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L∞, not O(h^2)
+<<<<<<< Updated upstream
 - ~~Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `‖b‖` denominator)~~ **Fixed v3.2.0** via OpenFOAM-style scale-invariant normalization in `src/incompressible/residuals.jl`. Residual floor on 80×80 now ~3e-3 (was ~2e-2); Ghia Re=100 ≤8% interior, ≤5% near-lid
+||||||| Stash base
+- WENO5 has a ghost cell bug in the 1D solver (`nghost=3` not supported at small grid sizes)
+- Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L-inf norm, not O(h^2)
+- Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `||b||` denominator)
+- Conjugate heat transfer uses scalar (face-averaged) interface temperature, not per-face
+- Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form
+- CyclicBC: face matching and cell coupling are wired into SIMPLE/PISO/PIMPLE solver loops; convergence on coarse meshes may still be slow
+- MPI extension uses full mesh per rank (not memory-efficient) — production MPI needs true submesh decomposition
+- All collocated solver features are `experimental` maturity — not yet validated against published benchmarks
+=======
+- Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `‖b‖` denominator)
+>>>>>>> Stashed changes
 - `k-ε` uses simple `max()` floor for `ν_t`, no Durbin realizability (`src/turbulence/k_epsilon_rans.jl:24`)
 - Dynamic Smagorinsky uses simplified scalar Germano, not full tensor form (`src/turbulence/dynamic_smagorinsky.jl`)
 - Wall functions assume aligned cells; no skew penalty (`src/turbulence/wall_functions.jl`)

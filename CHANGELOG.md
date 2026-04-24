@@ -1,5 +1,6 @@
 # Changelog
 
+<<<<<<< Updated upstream
 ## v3.67.0 — SolidBodyMotion (sixth `dynamic_mesh` benchmark)
 
 Five testsets (176 gates) verifying the SolidBodyMotion
@@ -3933,6 +3934,9 @@ Per the "break freely" posture:
   (was `AbstractParabolicMesh`). No `::AbstractParabolicMesh` dispatch
   sites exist in `src/`, so this is transparent in practice.
 
+||||||| Stash base
+=======
+>>>>>>> Stashed changes
 ## v2.1.0 — Stage 0 Cleanup
 
 First deliverable of the v3 industrial-grade roadmap

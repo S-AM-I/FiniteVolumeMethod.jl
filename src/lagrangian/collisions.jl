@@ -1,9 +1,15 @@
-# lagrangian/collisions.jl — O'Rourke stochastic particle collision model
+# lagrangian/collisions.jl — Particle collision models
 #
-# Implements probabilistic collision detection and outcome (coalescence or
-# bounce) for Lagrangian particles sharing the same mesh cell.
+# Three collision families are provided:
+#
+# 1. **O'Rourke stochastic** — cell-local probabilistic collision detection
+#    with coalescence/bounce outcome (legacy; used by the spray solver).
+# 2. **Hard-sphere DEM** — deterministic impulsive binary collision between
+#    particles in contact, parameterised by a coefficient of restitution.
+# 3. **Soft-sphere DEM** — Hertzian/linear spring-dashpot contact force with
+#    Coulomb-capped tangential friction.
 
-using LinearAlgebra: norm
+using LinearAlgebra: norm, dot
 
 """
     AbstractCollisionModel
@@ -11,6 +17,10 @@ using LinearAlgebra: norm
 Supertype for particle-particle collision models.
 """
 abstract type AbstractCollisionModel end
+
+# ═════════════════════════════════════════════════════════════════════════
+# O'Rourke stochastic collision model
+# ═════════════════════════════════════════════════════════════════════════
 
 """
     ORourkeCollision{T} <: AbstractCollisionModel
@@ -137,4 +147,161 @@ function apply_collisions!(
     end
 
     return nothing
+end
+
+# ═════════════════════════════════════════════════════════════════════════
+# Hard-sphere DEM collision model
+# ═════════════════════════════════════════════════════════════════════════
+
+"""
+    HardSphereCollision{T} <: AbstractCollisionModel
+
+Deterministic hard-sphere DEM collision. Given two particles in
+contact and a line-of-centres unit normal `n̂`, the post-collision
+velocities follow from the impulsive equation with coefficient of
+restitution `e`:
+
+```
+U₁⁺ = U₁ − (1 + e)·m₂/(m₁ + m₂) · ((U₁ − U₂)·n̂) · n̂
+U₂⁺ = U₂ + (1 + e)·m₁/(m₁ + m₂) · ((U₁ − U₂)·n̂) · n̂
+```
+
+Linear momentum is conserved exactly. `e = 1` is perfectly elastic
+(kinetic energy preserved); `e = 0` is perfectly inelastic (the
+components of velocity along `n̂` collapse to a common value).
+
+# Fields
+- `e::T` — coefficient of restitution ∈ `[0, 1]` (default `1.0`)
+"""
+struct HardSphereCollision{T} <: AbstractCollisionModel
+    e::T
+end
+
+HardSphereCollision(; e::Real = 1.0) = HardSphereCollision{Float64}(Float64(e))
+
+"""
+    apply_hard_sphere_collision!(p1, p2, model; normal = nothing) -> nothing
+
+Resolve a single binary hard-sphere collision between `p1` and `p2` in
+place. When `normal` is `nothing` (default), the line-of-centres normal
+is computed from the particle positions `(p2 - p1)`. If the particles
+are co-located, the caller must pass an explicit `normal`.
+
+Particle masses are read from `p.properties[:mass]`.
+"""
+function apply_hard_sphere_collision!(
+        p1::LagrangianParticle{Dim, T},
+        p2::LagrangianParticle{Dim, T},
+        model::HardSphereCollision{T};
+        normal::Union{Nothing, SVector{Dim, T}} = nothing,
+    ) where {Dim, T}
+    m1 = T(p1.properties[:mass])
+    m2 = T(p2.properties[:mass])
+
+    n = if normal === nothing
+        Δ = p2.position - p1.position
+        nrm = norm(Δ)
+        nrm < eps(T) && return nothing
+        Δ / nrm
+    else
+        normal
+    end
+
+    v_rel = p1.velocity - p2.velocity
+    v_rel_n = dot(v_rel, n)
+    # Only resolve if approaching (v_rel · n > 0).
+    v_rel_n <= zero(T) && return nothing
+
+    e = model.e
+    factor = (one(T) + e) * v_rel_n / (m1 + m2)
+    p1.velocity = p1.velocity - (m2 * factor) * n
+    p2.velocity = p2.velocity + (m1 * factor) * n
+    return nothing
+end
+
+# ═════════════════════════════════════════════════════════════════════════
+# Soft-sphere DEM collision model
+# ═════════════════════════════════════════════════════════════════════════
+
+"""
+    SoftSphereCollision{T} <: AbstractCollisionModel
+
+Linear spring-dashpot soft-sphere DEM contact model. For two
+particles with overlap `δ > 0` along the contact normal:
+
+```
+F_n = k·δ  −  γ·δ̇         (normal; spring + viscous damping)
+F_t = −min(|μ_f·F_n|, k_t·|u_t|) · t̂   (tangential; Coulomb-capped)
+```
+
+The force is applied equal and opposite to the two particles. Use
+this in the particle integration step as `F_contact += F_n·n̂ + F_t·t̂`.
+
+# Fields
+- `k::T`   — normal spring stiffness [N/m]
+- `gamma::T` — normal damping coefficient [kg/s]
+- `mu_f::T` — Coulomb friction coefficient (default `0.3`)
+- `k_t::T` — tangential spring stiffness [N/m] (default `k`)
+"""
+struct SoftSphereCollision{T} <: AbstractCollisionModel
+    k::T
+    gamma::T
+    mu_f::T
+    k_t::T
+end
+
+function SoftSphereCollision(;
+        k::Real = 1.0e3,
+        gamma::Real = 1.0,
+        mu_f::Real = 0.3,
+        k_t::Real = k,
+    )
+    T = Float64
+    return SoftSphereCollision{T}(T(k), T(gamma), T(mu_f), T(k_t))
+end
+
+"""
+    soft_sphere_force(p1, p2, model) -> (F_on_p1, F_on_p2)
+
+Return the contact force exerted by the soft-sphere model on each
+particle. If there is no overlap the returned forces are zero.
+
+The overlap is `δ = (r₁ + r₂) − |x₂ − x₁|`; when `δ > 0` a normal
+spring–dashpot force plus a Coulomb-capped tangential spring force is
+returned.
+"""
+function soft_sphere_force(
+        p1::LagrangianParticle{Dim, T},
+        p2::LagrangianParticle{Dim, T},
+        model::SoftSphereCollision{T},
+    ) where {Dim, T}
+    r1 = T(p1.properties[:diameter]) / 2
+    r2 = T(p2.properties[:diameter]) / 2
+    Δ = p2.position - p1.position
+    dist = norm(Δ)
+    # No overlap (or co-located) ⇒ zero force.
+    if dist < eps(T) || dist >= r1 + r2
+        return zero(SVector{Dim, T}), zero(SVector{Dim, T})
+    end
+    δ = (r1 + r2) - dist
+    n = Δ / dist
+    v_rel = p1.velocity - p2.velocity
+    v_rel_n = dot(v_rel, n)              # closing speed (positive ⇒ approach)
+
+    # Normal force on p1 points from p2 → p1 (i.e. −n):
+    F_n_mag = model.k * δ + model.gamma * v_rel_n
+    F_n_on_p1 = -F_n_mag * n
+
+    # Tangential relative velocity
+    v_t = v_rel - v_rel_n * n
+    v_t_mag = norm(v_t)
+    F_t_on_p1 = if v_t_mag < eps(T)
+        zero(SVector{Dim, T})
+    else
+        t = v_t / v_t_mag
+        F_t_mag = min(abs(model.mu_f * F_n_mag), model.k_t * v_t_mag)
+        -F_t_mag * t
+    end
+    F_on_p1 = F_n_on_p1 + F_t_on_p1
+    return F_on_p1, -F_on_p1
 end
