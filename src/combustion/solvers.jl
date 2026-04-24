@@ -217,3 +217,171 @@ function solve_simple_reacting(
     result = SolveResult{Dim, T}(converged, final_iter, residuals, state)
     return (result, thermal_state, species_state)
 end
+
+"""
+    solve_simple_reacting(prob, thermal_props, combustion_props, mechanism::MultiStepMechanism; kwargs...) -> (SolveResult, ThermalState, SpeciesState)
+
+Multi-step finite-rate Arrhenius variant of [`solve_simple_reacting`](@ref).
+
+The reaction-rate source at each SIMPLE iteration is computed from
+`mechanism::MultiStepMechanism` via [`compute_multi_step_rates`](@ref)
+(temperature-dependent, chemistry-limited). All other kwargs match the
+EDM dispatch. Pass `lewis` / `alpha_thermal` to enable variable Lewis
+species transport.
+"""
+function solve_simple_reacting(
+        prob::IncompressibleProblem{Dim, T},
+        thermal_props::FluidThermalProperties{Dim, T},
+        combustion_props::CombustionProperties{NS, T},
+        mechanism::MultiStepMechanism{NR, NS, T};
+        bcs_T::Dict{Symbol, <:AbstractBoundaryCondition},
+        bcs_species::Dict{Symbol, <:Any},
+        turb_model = nothing,
+        turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
+        Y_init::Dict{Symbol, <:Real} = Dict{Symbol, T}(),
+        T_init::Real = thermal_props.T_ref,
+        linear_solver = nothing,
+        solver_config = nothing,
+        lewis::Union{Nothing, VariableLewis{NS, T}} = nothing,
+        verbose::Bool = false,
+    ) where {Dim, T, NR, NS}
+    algo = prob.algorithm::SIMPLE{T}
+    mesh = prob.mesh
+    nc = length(mesh.cell_volumes)
+
+    state = IncompressibleState(mesh)
+    update_boundary_velocity!(state, prob.bcs, mesh)
+    update_boundary_pressure!(state, prob.bcs, mesh)
+
+    thermal_state = ThermalState(mesh; T_init = T(T_init), k_init = thermal_props.k)
+
+    species_state = SpeciesState(
+        mesh, combustion_props; (
+            name => T(get(Y_init, name, zero(T)))
+                for name in combustion_props.species_names
+        )...
+    )
+
+    turb_state = nothing
+    if turb_model !== nothing
+        turb_state = RANSTurbulenceState(turb_model, mesh)
+        turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
+    end
+
+    component_labels = _velocity_labels(Val(Dim))
+    residuals = Dict{Symbol, Vector{T}}(
+        label => T[] for label in [component_labels..., :continuity]
+    )
+
+    converged = false
+    final_iter = 0
+
+    for iter in 1:algo.max_iterations
+        final_iter = iter
+
+        nu_t_vec = turb_state === nothing ? nothing : turb_state.nu_t
+        update_k_eff!(thermal_state, thermal_props, nu_t_vec, prob.density)
+        nu_eff = turb_state === nothing ? prob.nu : compute_nu_eff(prob.nu, turb_state.nu_t)
+        alpha_eff = compute_alpha_eff(thermal_state.k_eff, prob.density, thermal_props.Cp)
+
+        body_force = compute_buoyancy_source(thermal_state.T_field, thermal_props, prob.density)
+
+        eqs = CollocatedEquation{T}[]
+        for d in 1:Dim
+            eq = CollocatedEquation(mesh)
+            assemble_momentum!(
+                eq, state, prob, d;
+                nu_eff = nu_eff, body_force = body_force,
+            )
+            push!(eqs, eq)
+        end
+
+        extract_momentum_operators!(state, eqs, mesh)
+
+        for d in 1:Dim
+            U_old_d = _extract_component(state.U, d)
+            under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
+            sol = _dispatch_solve(
+                to_linear_problem(eqs[d]), linear_solver, solver_config,
+                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
+            )
+            _set_component!(state.U, d, sol.u)
+        end
+        update_boundary_velocity!(state, prob.bcs, mesh)
+
+        p_eq = CollocatedEquation(mesh)
+        assemble_pressure!(p_eq, state, prob)
+        if _needs_pressure_reference(prob.bcs)
+            fix_pressure_reference!(p_eq, 1, zero(T))
+        end
+        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
+
+        for c in 1:nc
+            state.p.internal[c] += algo.alpha_p * (p_sol.u[c] - state.p.internal[c])
+        end
+        update_boundary_pressure!(state, prob.bcs, mesh)
+
+        correct_velocity!(state, mesh)
+        update_boundary_velocity!(state, prob.bcs, mesh)
+        correct_fluxes!(state, mesh)
+
+        if turb_model !== nothing
+            _update_turbulence!(
+                turb_state, turb_model, state, prob, mesh, turb_bcs;
+                linear_solver = linear_solver,
+            )
+        end
+
+        # Multi-step reaction rates (temperature-dependent).
+        reaction_rates = compute_multi_step_rates(
+            mechanism, species_state, thermal_state.T_field, prob.density, mesh,
+        )
+
+        # Species transport (honours `lewis` if supplied).
+        alpha_species_arg = lewis === nothing ? nothing : alpha_eff
+        solve_species!(
+            species_state, state.phi, combustion_props, reaction_rates,
+            nu_t_vec, prob.density, mesh, bcs_species;
+            dt = nothing, linear_solver = linear_solver, solver_config = solver_config,
+            lewis = lewis, alpha_thermal = alpha_species_arg,
+        )
+
+        S_h = compute_heat_release(reaction_rates, combustion_props)
+
+        T_eq = CollocatedEquation(mesh)
+        assemble_energy!(T_eq, thermal_state.T_field, state.phi, alpha_eff, mesh, bcs_T)
+
+        rho_Cp = prob.density * thermal_props.Cp
+        for c in 1:nc
+            T_eq.b[c] += S_h[c] * mesh.cell_volumes[c] / rho_Cp
+        end
+
+        T_sol = _dispatch_solve(to_linear_problem(T_eq), linear_solver, solver_config, :T)
+        for c in 1:nc
+            thermal_state.T_field.internal[c] = T_sol.u[c]
+        end
+
+        max_res = zero(T)
+        for d in 1:Dim
+            u_d = _extract_component(state.U, d)
+            r = momentum_residual(eqs[d], u_d)
+            push!(residuals[component_labels[d]], r)
+            max_res = max(max_res, r)
+        end
+        r_cont = continuity_residual(state, mesh)
+        push!(residuals[:continuity], r_cont)
+        max_res = max(max_res, r_cont)
+
+        if verbose
+            _print_simple_residuals(iter, residuals, component_labels)
+        end
+
+        if max_res < algo.tolerance
+            converged = true
+            break
+        end
+    end
+
+    result = SolveResult{Dim, T}(converged, final_iter, residuals, state)
+    return (result, thermal_state, species_state)
+end

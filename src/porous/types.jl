@@ -115,3 +115,18 @@ function porous_momentum_source(
     end
     return source
 end
+
+# ---------------------------------------------------------------------------
+# v3.0 fast-path API: `PorousZone` holds the full permeability tensor
+# `K` [m²] and Forchheimer coefficient tensor `F` [1/m], matching the
+# OpenFOAM `explicitPorositySource` convention. The momentum sink is
+#
+#   S_U = − ( μ · K⁻¹  +  0.5 · ρ · F · |U| ) · U
+#
+# where the first (Darcy) term is linear in `U` and the second
+# (Forchheimer) term is quadratic in `|U|`. Both `K` and `F` are
+# general 3×3 SMatrices so anisotropic / off-diagonal porous media are
+# supported with no extra code.
+# ---------------------------------------------------------------------------
+
+include("darcy_forchheimer.jl")

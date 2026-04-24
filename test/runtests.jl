@@ -381,6 +381,61 @@ end
     @testset verbose = true "V&V: least-squares gradient" begin
         safe_include("v_and_v_lsq_gradient.jl")
     end
+    # Wave 2 (v3.103) — combustion + radiation + Lagrangian + dynamic mesh + cavitation/porous
+    @testset verbose = true "V&V: variable Lewis number" begin
+        safe_include("v_and_v_variable_lewis.jl")
+    end
+    @testset verbose = true "V&V: multi-step mechanism" begin
+        safe_include("v_and_v_multi_step.jl")
+    end
+    @testset verbose = true "V&V: FGM tabulated chemistry" begin
+        safe_include("v_and_v_fgm.jl")
+    end
+    @testset verbose = true "V&V: fvDOM scattering" begin
+        safe_include("v_and_v_scattering.jl")
+    end
+    @testset verbose = true "V&V: SN quadratures (S6/S8/S12)" begin
+        safe_include("v_and_v_sn_quadratures.jl")
+    end
+    @testset verbose = true "V&V: WSGGM weighted-sum-of-grey-gases" begin
+        safe_include("v_and_v_wsggm.jl")
+    end
+    @testset verbose = true "V&V: hard-sphere DEM collision" begin
+        safe_include("v_and_v_hard_sphere_dem.jl")
+    end
+    @testset verbose = true "V&V: agglomeration" begin
+        safe_include("v_and_v_agglomeration.jl")
+    end
+    @testset verbose = true "V&V: primary breakup (KH-ACT + LISA)" begin
+        safe_include("v_and_v_primary_breakup.jl")
+    end
+    @testset verbose = true "V&V: injection patterns" begin
+        safe_include("v_and_v_injection_patterns.jl")
+    end
+    @testset verbose = true "V&V: 6-DOF rigid body" begin
+        safe_include("v_and_v_six_dof.jl")
+    end
+    @testset verbose = true "V&V: topoChanger" begin
+        safe_include("v_and_v_topo_changer.jl")
+    end
+    @testset verbose = true "V&V: overset/chimera interpolation" begin
+        safe_include("v_and_v_overset.jl")
+    end
+    @testset verbose = true "V&V: AMI sliding interface" begin
+        safe_include("v_and_v_ami.jl")
+    end
+    @testset verbose = true "V&V: Kunz cavitation" begin
+        safe_include("v_and_v_kunz.jl")
+    end
+    @testset verbose = true "V&V: Schnerr-Sauer cavitation" begin
+        safe_include("v_and_v_schnerr_sauer.jl")
+    end
+    @testset verbose = true "V&V: Merkle cavitation" begin
+        safe_include("v_and_v_merkle.jl")
+    end
+    @testset verbose = true "V&V: Darcy-Forchheimer porous" begin
+        safe_include("v_and_v_darcy_forchheimer.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

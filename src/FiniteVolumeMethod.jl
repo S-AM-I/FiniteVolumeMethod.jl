@@ -540,7 +540,23 @@ export
     # Arrhenius finite-rate chemistry
     CollocatedArrheniusReaction,
     compute_arrhenius_reaction_rates,
-    compute_fred_reaction_rates
+    compute_fred_reaction_rates,
+    # Multi-step mechanism (generalised Arrhenius)
+    MultiStepMechanism,
+    one_step_arrhenius_mechanism,
+    compute_multi_step_rates,
+    compute_multi_step_rates!,
+    read_chemkin_mechanism,
+    # Variable Lewis number species transport
+    VariableLewis,
+    species_diffusivity,
+    lewis_number,
+    # Flamelet-Generated Manifold (FGM) tabulated chemistry
+    FGMTable,
+    build_fgm_table_from_callback,
+    lookup_fgm,
+    lookup_fgm!,
+    compute_fgm_table_from_cantera
 
 # --- Lagrangian DPM (Phase 11) ---
 export

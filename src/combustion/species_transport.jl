@@ -50,13 +50,16 @@ end
 """
     solve_species!(
         species_state, phi, combustion_props, reaction_rates,
-        nu_t, density, mesh, bcs_species; dt, linear_solver,
+        nu_t, density, mesh, bcs_species; dt, linear_solver, lewis,
     )
 
 Solve the species transport equations for all species.
 
 For each species `i`:
-1. Compute effective diffusivity `D_eff_i = D_i + ν_t / Sc_t`
+1. Compute effective diffusivity `D_eff_i = D_i + ν_t / Sc_t` (unity Le)
+   or `D_eff_i = α_thermal / Le_i + ν_t / Sc_t` when a
+   [`VariableLewis`](@ref) object is supplied together with a thermal
+   diffusivity via the `alpha_thermal` keyword.
 2. Assemble convection + diffusion + temporal into a `CollocatedEquation`
 3. Add reaction source `ω_i / ρ × V_c` to the RHS
 4. Solve the linear system
@@ -73,6 +76,11 @@ For each species `i`:
 - `bcs_species::Dict{Symbol, Dict{Symbol, <:AbstractBoundaryCondition}}` — BCs keyed by species name
 - `dt` — time step (`nothing` for steady state)
 - `linear_solver` — linear solver algorithm (or `nothing` for default)
+- `lewis::Union{Nothing, VariableLewis{NS, T}}` — non-unity Lewis
+  numbers (requires `alpha_thermal`). When `nothing` (default) the
+  unity-Le `combustion_props.diffusivities` are used.
+- `alpha_thermal::Union{Nothing, T, Vector{T}}` — thermal diffusivity
+  for the non-unity-Le branch. Required when `lewis !== nothing`.
 """
 function solve_species!(
         species_state::SpeciesState{NS, T},
@@ -86,22 +94,41 @@ function solve_species!(
         dt::Union{Nothing, T} = nothing,
         linear_solver = nothing,
         solver_config = nothing,
+        lewis::Union{Nothing, VariableLewis{NS, T}} = nothing,
+        alpha_thermal::Union{Nothing, T, Vector{T}} = nothing,
     ) where {Dim, T, NS}
     nc = length(mesh.cell_volumes)
+    if lewis !== nothing && alpha_thermal === nothing
+        error("solve_species!: `lewis` requires `alpha_thermal` to be supplied.")
+    end
 
     for i in 1:NS
         name_i = combustion_props.species_names[i]
         Y_i = species_state.Y[i]
 
-        # Effective mass diffusivity: D_i + nu_t / Sc_t
-        D_lam = combustion_props.diffusivities[i]
+        # Laminar mass diffusivity: either unity-Le default from
+        # `combustion_props` or α_thermal / Le_i when Variable-Le is
+        # supplied.
+        D_lam = if lewis === nothing
+            combustion_props.diffusivities[i]
+        else
+            species_diffusivity(lewis, alpha_thermal, i)
+        end
+
+        # Effective mass diffusivity: D_lam + nu_t / Sc_t
         D_eff = if nu_t === nothing
             D_lam
         else
             D_vec = Vector{T}(undef, nc)
             Sc_t_val = combustion_props.Sc_t
-            for c in 1:nc
-                D_vec[c] = D_lam + nu_t[c] / Sc_t_val
+            if D_lam isa AbstractVector
+                for c in 1:nc
+                    D_vec[c] = D_lam[c] + nu_t[c] / Sc_t_val
+                end
+            else
+                for c in 1:nc
+                    D_vec[c] = D_lam + nu_t[c] / Sc_t_val
+                end
             end
             D_vec
         end

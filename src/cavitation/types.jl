@@ -144,3 +144,54 @@ function cavitation_source(
         (p < p_sat ? one(T) : zero(T))
     return m_plus, m_minus
 end
+
+# ---------------------------------------------------------------------------
+# v3.0 fast-path API: vapour-fraction (α_v) driven models with direct
+# per-cell source arrays. These models are the modern OpenFOAM-style
+# counterparts to the legacy (α_l, m_plus, m_minus) API above and are
+# what the v3.0 VOF solver wires into the α-transport equation.
+# ---------------------------------------------------------------------------
+
+"""
+    AbstractCavitationVaporModel{T}
+
+Vapour-fraction-driven cavitation mass-transfer model. Concrete types
+implement
+
+    compute_vapor_source(model, p, alpha_v, mesh, props) -> Vector{T}
+
+returning the per-cell vapour mass source [kg/(m³·s)]. Positive values
+indicate vapour production (p < p_sat); negative values indicate
+condensation (p > p_sat).
+"""
+abstract type AbstractCavitationVaporModel{T} end
+
+"""
+    CavitationProperties{T}
+
+Bundle of two-phase fluid properties required by all vapour-fraction
+cavitation models.
+
+# Fields
+- `rho_l::T` — liquid density [kg/m³].
+- `rho_v::T` — vapour density [kg/m³].
+- `p_sat::T` — saturation pressure [Pa].
+"""
+struct CavitationProperties{T}
+    rho_l::T
+    rho_v::T
+    p_sat::T
+end
+function CavitationProperties(;
+        rho_l::Real = 1000.0,
+        rho_v::Real = 0.02308,
+        p_sat::Real = 2300.0,
+    )
+    T = promote_type(typeof(float(rho_l)), typeof(float(rho_v)), typeof(float(p_sat)))
+    return CavitationProperties{T}(T(rho_l), T(rho_v), T(p_sat))
+end
+
+include("kunz.jl")
+include("schnerr_sauer.jl")
+include("merkle.jl")
+include("solvers.jl")
