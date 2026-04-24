@@ -1,37 +1,48 @@
-# mesh_generation/snappy.jl — snappyHexMesh-style stub (Wave 4, time-boxed)
+# mesh_generation/snappy.jl — snappyHexMesh-style native mesher (v3.1).
 #
-# Native Julia port of OpenFOAM's `snappyHexMesh` pipeline
-# (octree → snap → layer-add) is a multi-month project.  This file ships
-# a one-day time-boxed stub that:
+# Minimal but functional port of OpenFOAM's `snappyHexMesh` pipeline.
+# v3.1 covers the first two stages:
 #
-#   * defines the user-facing `SnappyMesher{T}` container so downstream
-#     call sites can be written today;
-#   * offers `build_snappy_mesh(mesher)` which attempts the native
-#     pipeline.  Because snapping and layer addition are not yet
-#     implemented, the function emits a deferral `@warn` and falls back
-#     to a pure octree mesh (no surface snap, no boundary layers);
-#   * recommends callers use `FVMGmshExt` via
-#     [`run_gmsh_pipeline`](@ref) when they need a production-quality
-#     body-fitted mesh.
+#   1. **Castellated**: uniform octree to `base_level`, then per-cell
+#      refinement to `surface_level` for every leaf that overlaps an
+#      STL triangle (SAT intersection).
+#   2. **Surface snap**: iteratively project every octree corner that
+#      sits close to the surface onto the nearest STL face.
+#
+# Layer addition remains deferred to v3.2 — `build_snappy_mesh` emits an
+# `@info` to that effect.
+#
+# The public surface is:
+#
+#   * `SnappyMesher{T}` — parameter bundle (constructor with defaults).
+#   * `SnappySnapshot{T}` — opaque result (snapped octree + bookkeeping).
+#   * `build_snappy_mesh(mesher)` — full pipeline driver.
+#   * `build_castellated_mesh(mesher)` — exposed for V&V.
+#   * `read_stl_ascii` / `write_stl_ascii` — via `stl_reader.jl`.
+#   * `snap_to_surface!`, `triangle_intersects_aabb`,
+#     `closest_point_on_triangle`, `nearest_point_on_stl` — via `snap.jl`.
 
 using StaticArrays: SVector
+
+include("stl_reader.jl")
+include("snap.jl")
 
 """
     SnappyMesher{T}
 
-Parameter bundle for a snappyHexMesh-style run.  All fields are
-optional with sensible defaults so the stub can be driven from a
-single-line constructor during experimentation.
+Parameter bundle for a snappyHexMesh-style run.  All fields are optional
+with sensible defaults so the mesher can be driven from a single-line
+constructor during experimentation.
 
 # Fields
-- `stl_path::String` — path to the closed triangulated surface (STL).
+- `stl_path::String` — path to a closed triangulated surface (ASCII STL).
 - `bbox_min::SVector{3, T}`, `bbox_max::SVector{3, T}` — background-mesh bounding box.
 - `base_level::Int` — uniform refinement level used to seed the octree.
-- `surface_level::Int` — target refinement level on the STL surface.
-- `n_layers::Int` — number of boundary layers to add (currently ignored).
-- `layer_thickness::T` — first-layer thickness (currently ignored).
-- `expansion_ratio::T` — layer growth ratio (currently ignored).
-- `snap_iterations::Int` — snap-to-surface iterations (currently ignored).
+- `surface_level::Int` — target refinement level at cells that intersect the STL.
+- `n_layers::Int` — number of boundary layers to add (deferred to v3.2).
+- `layer_thickness::T` — first-layer thickness (deferred to v3.2).
+- `expansion_ratio::T` — layer growth ratio (deferred to v3.2).
+- `snap_iterations::Int` — surface-snap iterations (maps to `max_iters`).
 """
 struct SnappyMesher{T}
     stl_path::String
@@ -54,7 +65,7 @@ function SnappyMesher(;
         n_layers::Int = 0,
         layer_thickness::Real = 0.0,
         expansion_ratio::Real = 1.2,
-        snap_iterations::Int = 0,
+        snap_iterations::Int = 20,
     )
     T = promote_type(
         eltype(bbox_min), eltype(bbox_max),
@@ -76,56 +87,129 @@ end
 """
     SnappySnapshot{T}
 
-Opaque return type for the [`build_snappy_mesh`](@ref) stub.  Wraps the
-raw octree that the fallback path emits together with bookkeeping
-telling the caller what is (and is not) yet implemented.
+Opaque return type of [`build_snappy_mesh`](@ref).  Wraps the snapped
+octree together with bookkeeping telling the caller which pipeline
+stages were executed.
 
 # Fields
-- `octree::Octree{3, T}` — background octree produced by uniform + surface refinement.
-- `snap_applied::Bool` — always `false` in the stub.
-- `layers_added::Int` — always `0` in the stub.
-- `n_cells::Int` — convenience cell count (== `cell_count(octree)`).
+- `octree::Octree{3, T}` — castellated + snapped octree.
+- `snap_applied::Bool` — `true` if surface snap ran and moved vertices.
+- `layers_added::Int` — always `0` (deferred to v3.2).
+- `n_cells::Int` — convenience leaf count.
+- `snap_moved::Float64` — total vertex displacement accumulated during snap.
+- `snap_iters::Int` — snap iterations executed (≤ `snap_iterations`).
 """
 struct SnappySnapshot{T}
     octree::Octree{3, T}
     snap_applied::Bool
     layers_added::Int
     n_cells::Int
+    snap_moved::Float64
+    snap_iters::Int
+end
+
+# Back-compat no-STL convenience constructor kept as-is.
+SnappySnapshot{T}(octree::Octree{3, T}, snap_applied::Bool, layers::Int, n_cells::Int) where {T} =
+    SnappySnapshot{T}(octree, snap_applied, layers, n_cells, 0.0, 0)
+
+"""
+    _refine_cell_on_surface!(node, stl_vertices, stl_faces, target_level)
+
+Recursively subdivide `node` until every leaf that still touches an STL
+triangle has `level ≥ target_level`.  Uses the Akenine-Möller SAT test
+(`triangle_intersects_aabb`) for the per-triangle intersection check.
+"""
+function _refine_cell_on_surface!(
+        node::Octree{3, T},
+        stl_vertices::AbstractVector{<:SVector{3}},
+        stl_faces::AbstractVector{<:NTuple{3, <:Integer}},
+        target_level::Int,
+    ) where {T <: AbstractFloat}
+    # Any triangle overlapping this cell?
+    hit = false
+    mn = node.bbox_min
+    mx = node.bbox_max
+    @inbounds for face in stl_faces
+        v0 = SVector{3, T}(stl_vertices[face[1]])
+        v1 = SVector{3, T}(stl_vertices[face[2]])
+        v2 = SVector{3, T}(stl_vertices[face[3]])
+        if triangle_intersects_aabb(v0, v1, v2, mn, mx)
+            hit = true
+            break
+        end
+    end
+    hit || return nothing
+    if is_leaf(node)
+        node.level >= target_level && return nothing
+        subdivide!(node)
+    end
+    for child in node.children
+        _refine_cell_on_surface!(child, stl_vertices, stl_faces, target_level)
+    end
+    return nothing
+end
+
+"""
+    build_castellated_mesh(mesher::SnappyMesher) -> Octree{3, Float64}
+
+Build the castellated (octree-refined) background mesh for `mesher`.
+Stages:
+
+  1. Uniform refinement to `base_level`.
+  2. STL-driven refinement: every cell that overlaps an STL triangle is
+     recursively split until it reaches `surface_level`.
+
+If `mesher.stl_path` is empty or the file is missing, only stage 1 runs
+and the function returns the uniform octree.  The caller is responsible
+for any additional proximity bands beyond the two stages above.
+"""
+function build_castellated_mesh(mesher::SnappyMesher{T}) where {T}
+    octree = build_octree(mesher.bbox_min, mesher.bbox_max, mesher.base_level)
+    if mesher.surface_level > mesher.base_level && !isempty(mesher.stl_path) &&
+            isfile(mesher.stl_path)
+        stl_vertices, stl_faces, _ = read_stl_ascii(mesher.stl_path)
+        _refine_cell_on_surface!(octree, stl_vertices, stl_faces, mesher.surface_level)
+    end
+    return octree
 end
 
 """
     build_snappy_mesh(mesher::SnappyMesher) -> SnappySnapshot
 
-Attempt the snappyHexMesh-style pipeline.  This is an **experimental
-stub**: snap-to-surface and layer addition are deferred, and the
-function emits a `@warn` redirecting callers to the Gmsh pipeline via
-the `FVMGmshExt` extension.
+Run the v3.1 snappyHexMesh-style pipeline:
 
-The fallback produces a uniformly refined octree at `mesher.base_level`.
-If an STL path is supplied the octree is additionally refined inside
-the axis-aligned bounding box of the surface (a bounding-box proxy;
-true STL-triangle intersection tests are TODO).
+  1. Castellated mesh (uniform octree + STL-driven refinement).
+  2. Surface snap (project octree vertices onto the STL surface).
+  3. Layer addition — **deferred to v3.2** (emits an `@info`).
+
+Returns a [`SnappySnapshot`](@ref) wrapping the snapped octree and some
+bookkeeping.  If no STL is supplied the pipeline still runs but the
+snap step is a no-op.
 """
 function build_snappy_mesh(mesher::SnappyMesher{T}) where {T}
-    @warn (
-        "snappyHexMesh native is experimental; prefer Gmsh pipeline via " *
-            "FVMGmshExt (see `run_gmsh_pipeline`). Falling back to octree-only " *
-            "background mesh without surface snap or boundary layers."
-    ) stl_path = mesher.stl_path n_layers = mesher.n_layers
+    octree = build_castellated_mesh(mesher)
 
-    # Seed a uniformly refined background octree at `base_level`.
-    octree = build_octree(mesher.bbox_min, mesher.bbox_max, mesher.base_level)
-
-    # Axis-aligned-box proxy refinement near the (unknown) surface: if
-    # the user supplied a real STL path we cannot read it without an
-    # STL loader, so we treat the interior of the bounding box as the
-    # proxy surface region and refine toward `surface_level`.
-    if mesher.surface_level > mesher.base_level
-        surf_center = (mesher.bbox_min + mesher.bbox_max) / T(2)
-        bbox_diag = mesher.bbox_max - mesher.bbox_min
-        radius = T(0.25) * sqrt(sum(bbox_diag .* bbox_diag))
-        refine_near_sphere!(octree, surf_center, radius, mesher.surface_level)
+    snap_applied = false
+    snap_moved = 0.0
+    snap_iters = 0
+    if !isempty(mesher.stl_path) && isfile(mesher.stl_path)
+        stl_vertices, stl_faces, _ = read_stl_ascii(mesher.stl_path)
+        if mesher.snap_iterations > 0
+            moved, iters = snap_to_surface!(
+                octree, stl_vertices, stl_faces;
+                max_iters = mesher.snap_iterations,
+            )
+            snap_moved = moved
+            snap_iters = iters
+            snap_applied = moved > 0
+        end
     end
 
-    return SnappySnapshot{T}(octree, false, 0, cell_count(octree))
+    if mesher.n_layers > 0
+        @info "snappyHexMesh: layer addition deferred to v3.2" n_layers = mesher.n_layers layer_thickness = mesher.layer_thickness
+    else
+        @info "snappyHexMesh: castellated + snap complete (layer addition deferred to v3.2)" n_cells = cell_count(octree) snap_moved = snap_moved snap_iters = snap_iters
+    end
+
+    return SnappySnapshot{T}(octree, snap_applied, 0, cell_count(octree), snap_moved, snap_iters)
 end

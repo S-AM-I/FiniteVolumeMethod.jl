@@ -110,16 +110,16 @@ end
     @test state.alpha_l.internal[5] == 1.0 - 0.5
 end
 
-@testset "V&V: TwoFluidSolver — one-shot experimental warning" begin
-    msg = "Eulerian two-fluid: experimental; production-hardening deferred to v3.1"
-    # Capture a single logger emission.
+@testset "V&V: TwoFluidSolver — production path (v3.1)" begin
+    # v3.0 emitted a one-shot "deferred to v3.1" @warn. v3.1 ships the
+    # production-hardened solver; `warn_experimental!` is now a no-op.
     buffer = IOBuffer()
     logger = ConsoleLogger(buffer, Logging.Warn)
     with_logger(logger) do
         FiniteVolumeMethod.warn_experimental!(TwoFluidSolver())
     end
     captured = String(take!(buffer))
-    @test occursin(msg, captured)
+    @test !occursin("deferred to v3.1", captured)
 end
 
 @testset "V&V: interphase_drag wrapper — zero slip, nominal slip" begin
