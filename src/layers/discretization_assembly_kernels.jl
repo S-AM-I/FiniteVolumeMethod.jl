@@ -236,6 +236,9 @@ include("../multiphase/boundedness.jl")
 include("../multiphase/alpha_transport.jl")
 include("../multiphase/surface_tension.jl")
 include("../multiphase/solvers.jl")
+# Eulerian two-fluid (Wave 5, experimental) + Ishii-Zuber / Gibilaro drag closures
+include("../multiphase/drag_closures.jl")
+include("../multiphase/two_fluid.jl")
 
 # Radiation (Phase 9)
 # Depends on Phase 0 operators + Phase 3 thermal.
@@ -283,3 +286,4 @@ include("../dynamic_mesh/ami.jl")
 include("../parallel/stubs.jl")
 include("../parallel/rcb_partitioner.jl")
 include("../parallel/local_mesh.jl")
+include("../parallel/metis_stub.jl")

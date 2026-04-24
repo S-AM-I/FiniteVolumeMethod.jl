@@ -1,6 +1,6 @@
 name = "FiniteVolumeMethod"
 uuid = "d4f04ab7-4f65-4d72-8a28-7087bc7f46f4"
-version = "3.105.0"
+version = "3.106.0"
 authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>", "cx-xd contributors"]
 
 [deps]
@@ -35,6 +35,7 @@ IncompleteLU = "40713840-3770-5561-ab4c-a76e7d0d7895"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+Metis = "2679e427-3c69-5b7f-982b-ece356f1e94b"
 PETSc = "ace2c81b-2b5f-4b1e-a30d-d662738edfe0"
 PartitionedArrays = "5a9dfac6-5c52-46f7-8278-5e2210713be9"
 
@@ -49,6 +50,7 @@ FVMEnzymeExt = "Enzyme"
 FVMGmshExt = "Gmsh"
 FVMHdf5Ext = "HDF5"
 FVMKAExt = "KernelAbstractions"
+FVMMetisExt = "Metis"
 FVMPETScExt = "PETSc"
 FVMRecipesExt = "RecipesBase"
 FVMVTKExt = "WriteVTK"
