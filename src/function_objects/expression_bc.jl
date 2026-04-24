@@ -7,7 +7,7 @@
 # input.
 
 """
-    ExpressionBC
+    StringExpressionBC
 
 Runtime-evaluated boundary condition / function-object. Holds a Julia
 expression string and a kwarg bag of user-supplied constants; produces
@@ -15,21 +15,21 @@ a callable `evaluate(bc, x, y, z, t)` that returns the expression
 evaluated with those arguments in scope.
 
 ```julia
-bc = ExpressionBC("2 * sin(2*pi*t) * cos(pi*x/L)"; L = 1.0)
+bc = StringExpressionBC("2 * sin(2*pi*t) * cos(pi*x/L)"; L = 1.0)
 v = evaluate(bc, 0.25, 0.0, 0.0, 0.1)
 ```
 """
-mutable struct ExpressionBC
+mutable struct StringExpressionBC
     expression::String
     constants::Dict{Symbol, Any}
     _compiled::Any       # cached Function or nothing
 end
 
-function ExpressionBC(expression::AbstractString; constants...)
-    return ExpressionBC(String(expression), Dict{Symbol, Any}(constants), nothing)
+function StringExpressionBC(expression::AbstractString; constants...)
+    return StringExpressionBC(String(expression), Dict{Symbol, Any}(constants), nothing)
 end
 
-function _compile!(bc::ExpressionBC)
+function _compile!(bc::StringExpressionBC)
     bc._compiled !== nothing && return bc._compiled
     body = Meta.parse(bc.expression)
     consts = bc.constants
@@ -47,12 +47,12 @@ function _compile!(bc::ExpressionBC)
 end
 
 """
-    evaluate(bc::ExpressionBC, x, y, z, t) -> Number
+    evaluate(bc::StringExpressionBC, x, y, z, t) -> Number
 
 Evaluate the cached expression. The first call compiles it; subsequent
 calls reuse the cached function.
 """
-function evaluate(bc::ExpressionBC, x, y, z, t)
+function evaluate(bc::StringExpressionBC, x, y, z, t)
     fn = _compile!(bc)
     return Base.invokelatest(fn, x, y, z, t)
 end

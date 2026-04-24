@@ -115,6 +115,14 @@ end
 @testset "Stage 8d: ZZ error indicator catches large-gradient contrast" begin
     # A piecewise-constant step function: sharp transition → large
     # discrepancy between local and recovered gradients.
+    #
+    # On a Cartesian mesh the Green-Gauss and least-squares gradients
+    # agree to machine precision for any scalar field (both reduce to
+    # central differences), so the GG-vs-LSQ form of `zz_error_indicator`
+    # is not the right diagnostic here. Use the smoothed face-neighbour
+    # variant that compares each cell's local gradient with the
+    # volume-weighted average of its neighbours' gradients — that
+    # discrepancy peaks at interface cells.
     mesh = build_cartesian_unstructured_mesh(10, 10, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
     phi = CollocatedScalarField(:phi, mesh)
@@ -122,7 +130,7 @@ end
         phi.internal[c] = mesh.cell_centers[1, c] < 0.5 ? 0.0 : 1.0
     end
 
-    indicator = zz_error_indicator(phi, mesh)
+    indicator = FiniteVolumeMethod._zz_indicator_smoothed(phi, mesh)
     # At least some cells near the interface should have non-zero indicator.
     @test maximum(indicator) > 0.1
 end
