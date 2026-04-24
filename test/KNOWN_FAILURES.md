@@ -41,7 +41,7 @@ green in CI.
 
 | Component | File:Line | Simplification | Fix Stage |
 |-----------|-----------|----------------|-----------|
-| ~~Non-orthogonal correction~~ | ~~`src/collocated/gradient.jl:144-149`~~ | ~~Interpolated-gradient only; no over-relaxed variant~~ | **Partially fixed in v2.4.0 (Stage 3c)**: `assemble_laplacian!` now supports `NON_ORTHO_MINIMUM` / `NON_ORTHO_ORTHOGONAL` / `NON_ORTHO_OVER_RELAXED` modes via a `correction_mode` keyword; default is over-relaxed (Jasak 1996 Ch. 4). On orthogonal meshes all three are identical; on skewed meshes the over-relaxed implicit coefficient scales by 1/cosθ. Least-squares gradient alternative is a Stage 3 follow-up. |
+| ~~Non-orthogonal correction~~ | ~~`src/collocated/gradient.jl:144-149`~~ | ~~Interpolated-gradient only; no over-relaxed variant~~ | **Fixed in v2.4.0 + v3.102.0 (Wave 1)**: `assemble_laplacian!` supports `NON_ORTHO_MINIMUM` / `NON_ORTHO_ORTHOGONAL` / `NON_ORTHO_OVER_RELAXED`; **over-relaxed (Jasak 1996 Ch. 4) is now the default in v3.102** for all collocated assembly. LSQ gradient alternative also lands in v3.102 as a peer to the Green-Gauss path. |
 | Laplacian skewness | `src/collocated/laplacian.jl` | No face-skewness correction term; accuracy drops on heavily skewed meshes | 3 follow-up |
 | ~~k-ε realizability~~ | ~~`src/turbulence/k_epsilon_rans.jl:24`~~ | ~~`ν_t = C_μ k²/ε` with simple `max()` floor; no Durbin bound~~ | **Fixed in v2.5.0 (Stage 4a)**: `StandardKEpsilon` gained optional `realizability_alpha` field; when > 0, ν_t is capped at `α · k / |S|` inside `solve_turbulence!` right before production is computed. Default 0 preserves classical formulation. |
 | ~~k-ε production~~ | ~~`src/turbulence/k_epsilon_rans.jl`~~ | ~~Scalar strain magnitude `|S|²`~~ | **Verified correct**: `compute_strain_rate` at `src/turbulence/strain_rate.jl:21` computes full-tensor `|S| = √(2 S_ij S_ij)`; production is `ν_t · \|S\|²`. Audit claim was imprecise. |
@@ -49,18 +49,18 @@ green in CI.
 | k-ω-SST blending | `src/turbulence/k_omega_sst.jl` | Simplified scalar blending; should be full F1/F2 blending with proper limiter | 4a |
 | ~~Dynamic Smagorinsky~~ | ~~`src/turbulence/dynamic_smagorinsky.jl`~~ | ~~Scalar Germano identity, not full tensor form~~ | **Fixed in v2.5.0 (Stage 4c)**: `S̃_ij` now test-filtered per-component independently rather than approximated as `S_ij · |S̃|/|S|`. `|S̃|` computed from the test-filtered tensor directly (Lilly form). |
 | ~~Wall functions~~ | ~~`src/turbulence/wall_functions.jl`~~ | ~~Assumes cells aligned with boundary normal; no skew/tangential projection~~ | **Fixed in v2.5.0 (Stage 4d)**: `_wall_projection` computes wall-normal distance `y = |d · n̂|` and tangential velocity `U_par = |U - (U·n̂)n̂|` per boundary face. Strips spurious normal-velocity contributions on skewed cells; identical to old formula on Cartesian walls with purely-tangential flow. |
-| ~~Conjugate HT interface~~ | ~~`src/thermal/conjugate.jl`~~ | ~~Scalar face-averaged interface temperature~~ | **Fixed in v2.6.0 (Stage 5a)**: per-face heat-flux correction in `_apply_perface_interface_fluxes!` was already present; fixed latent post-Stage-1b Dict/Vector bmap regression. |
-| ~~VOF boundedness~~ | ~~`src/multiphase/boundedness.jl`~~ | ~~Hard clipping `clamp(α, 0, 1)` — not MULES~~ | **Fixed in v2.6.0 (Stage 5b)**: `mules_limit_flux!` implements the Zalesak FCT limiter (clean-room from Weller 2006). Takes upwind + high-order flux and returns λ_f-blended flux guaranteeing α stays in [0, 1] after one explicit Euler step. `clip_alpha!` retained as a post-solve safety net. |
-| VOF interface reconstruction | `src/multiphase/` | No isoAdvector / sharp interface reconstruction | 5b |
-| VOF contact angles | `src/multiphase/surface_tension.jl` | Static/dynamic contact-angle models absent | 5b |
-| Combustion chemistry | `src/combustion/edm.jl` | One-step EDM only; no multi-step mechanisms, no FGM, no Cantera interface | 5c |
-| Combustion diffusion | `src/combustion/species_transport.jl` | Lewis-unity implicit; no per-species Le exposure | 5c |
+| ~~Conjugate HT interface~~ | ~~`src/thermal/conjugate.jl`~~ | ~~Scalar face-averaged interface temperature~~ | **Fixed in v3.102.0 (Wave 1)**: per-face Patankar harmonic-mean interface flux replaces the scalar face-averaged temperature; pre-existing `_apply_perface_interface_fluxes!` was promoted to the default Dirichlet-Neumann path. Latent post-Stage-1b Dict/Vector bmap regression also resolved. |
+| ~~VOF boundedness~~ | ~~`src/multiphase/boundedness.jl`~~ | ~~Hard clipping `clamp(α, 0, 1)` — not MULES~~ | **Fixed in v3.102.0 (Wave 1)**: `mules_limit_flux!` (clean-room Zalesak FCT, Weller 2006) wired into `alpha_transport!` as the default. The standalone primitive shipped in v3.91 (Evidence #7); v3.102 wires it into the actual solver path. `clip_alpha!` retained as a post-solve safety net. |
+| ~~VOF interface reconstruction~~ | ~~`src/multiphase/`~~ | ~~No isoAdvector / sharp interface reconstruction~~ | **Fixed in v3.102.0 (Wave 1)**: `src/multiphase/iso_advector.jl` ships geometric isoAdvector face-flux reconstruction; selectable per-problem alongside the algebraic VOF path. |
+| ~~VOF contact angles~~ | ~~`src/multiphase/surface_tension.jl`~~ | ~~Static/dynamic contact-angle models absent~~ | **Fixed in v3.102.0 (Wave 1)**: static contact angle and Cox-Voinov dynamic model both land; coupled into CSF curvature on wall faces. |
+| ~~Combustion chemistry~~ | ~~`src/combustion/edm.jl`~~ | ~~One-step EDM only; no multi-step mechanisms, no FGM, no Cantera interface~~ | **Fixed in v3.103.0 (Wave 2)**: multi-step mechanisms (`src/combustion/multi_step.jl`), Flamelet-Generated Manifold (`src/combustion/fgm.jl`), and Cantera weak-dep extension (`ext/FVMCanteraExt/`) all land. EDC + EDM + finite-rate Arrhenius all production. |
+| ~~Combustion diffusion~~ | ~~`src/combustion/species_transport.jl`~~ | ~~Lewis-unity implicit; no per-species Le exposure~~ | **Fixed in v3.103.0 (Wave 2)**: `src/combustion/variable_lewis.jl` exposes per-species Lewis number and folds into the diffusion term of `assemble_species!`. |
 | ~~Radiation quadrature~~ | ~~`src/radiation/fvdom.jl`~~ | ~~fvDOM angular quadrature is skeleton; LSn/Tn sets absent~~ | **Already implemented (verified in v2.6.0)**: `src/radiation/fvdom.jl:60-135` carries proper Carlson-Lathrop level-symmetric S2 (4/8 dirs) and S4 (12/24 dirs) quadratures. Audit claim was outdated. S8/S12 extensions remain Stage 5c follow-ups. |
-| Radiation scattering | `src/radiation/fvdom.jl` | Scattering term absent | 5d |
-| Radiation wall BCs | `src/radiation/fvdom.jl` | Basic Dirichlet/Neumann only; no wavelength-banded emissivity | 5d |
-| DPM collision | `src/lagrangian/collisions.jl` | Binary elastic only; no hard/soft-sphere DEM, no agglomeration/coalescence | 5e |
-| DPM breakup | `src/lagrangian/spray.jl` | Secondary breakup only (TAB/KHRT); no primary breakup (KH-ACT, LISA) | 5e, 7c |
-| DPM injection | — | No cone/hollow-cone/flat-fan injection patterns or rate-of-injection profiles | 5e |
+| ~~Radiation scattering~~ | ~~`src/radiation/fvdom.jl`~~ | ~~Scattering term absent~~ | **Fixed in v3.103.0 (Wave 2)**: in-scattering integral wired into the fvDOM ordinate sweep alongside S6/S8/S12 quadrature additions. |
+| ~~Radiation wall BCs~~ | ~~`src/radiation/fvdom.jl`~~ | ~~Basic Dirichlet/Neumann only; no wavelength-banded emissivity~~ | **Fixed in v3.103.0 (Wave 2)**: `src/radiation/wsggm.jl` ships the Weighted Sum of Grey Gases Model with banded emissivity; couples through Marshak BC via per-band absorption coefficient. |
+| ~~DPM collision~~ | ~~`src/lagrangian/collisions.jl`~~ | ~~Binary elastic only; no hard/soft-sphere DEM, no agglomeration/coalescence~~ | **Fixed in v3.103.0 (Wave 2)**: hard-sphere and soft-sphere (Hertz-Mindlin) DEM contact models both land; `src/lagrangian/agglomeration.jl` adds coalescence kernel. |
+| ~~DPM breakup~~ | ~~`src/lagrangian/spray.jl`~~ | ~~Secondary breakup only (TAB/KHRT); no primary breakup (KH-ACT, LISA)~~ | **Fixed in v3.103.0 (Wave 2)**: `src/lagrangian/primary_breakup.jl` adds KH-ACT (Reitz) and LISA (Senecal) primary breakup. v3.107 adds `couple_primary_breakup_fsi!` for FSI coupling. |
+| ~~DPM injection~~ | — | ~~No cone/hollow-cone/flat-fan injection patterns or rate-of-injection profiles~~ | **Fixed in v3.103.0 (Wave 2)**: `src/lagrangian/injection.jl` adds solid-cone, hollow-cone, flat-fan, and solid-stream injectors with rate-of-injection profiles. |
 | ~~Dynamic-mesh GCL~~ | ~~`src/dynamic_mesh/ale.jl`~~ | ~~Geometric conservation law not verified for large deformation~~ | **Fixed in v2.6.0 (Stage 5d)**: `verify_gcl(phi_mesh, V_old, V_new, mesh, dt)` computes per-cell GCL residual and returns max; a GCL-consistent mesh motion yields zeros to machine precision. Runtime diagnostic; catches inconsistent face/volume pairs before they corrupt transport. `compute_mesh_flux!` already uses the 2nd-order face-velocity form. |
 | Dynamic-mesh 6-DOF | — | No 6-DOF rigid-body solver | 5f |
 | Dynamic-mesh topology | — | No dynamic refinement/coarsening or topology changes during a run | 5f |
@@ -86,26 +86,40 @@ Each slated for the stage noted in the roadmap:
 
 | Feature | Status | Stage |
 |---------|--------|-------|
-| Compressible pressure-based solvers (rhoSimpleFoam, rhoPimpleFoam, rhoReactingFoam) | Absent | 3 |
-| Real-gas EOS (Peng-Robinson, Redlich-Kwong, tabulated) | Absent | 3b |
-| Non-Newtonian rheology (power-law, Bird-Carreau, Herschel-Bulkley, Casson) | Absent | 3c |
+| ~~Compressible pressure-based solvers (rhoSimpleFoam, rhoPimpleFoam)~~ | Landed v3.102.0 (Wave 1): `src/pressure_based/{compressible_simple,compressible_pimple}.jl`. rhoReactingFoam-equivalent multi-step + EDC coupling lands as Wave-2 follow-up. | 3 done |
+| ~~Real-gas EOS (Peng-Robinson, Redlich-Kwong, tabulated)~~ | Landed v3.102.0 + v3.105.0: `src/eos/`, `src/pressure_based/{eos_coupling,thermo_models}.jl`; CoolProp tabulated path via `ext/FVMCoolPropExt`. | 3b done |
+| ~~Non-Newtonian rheology (power-law, Bird-Carreau, Herschel-Bulkley, Casson)~~ | Landed v3.102.0 (Wave 1): `src/pressure_based/rheology.jl`. | 3c done |
 | ~~Moving Reference Frame (MRF)~~ | Landed v2.7.0 (Stage 6a): `RotationalMRFZone`, `mrf_momentum_source`, `mrf_momentum_source_2d_planar`. Verified Coriolis+centrifugal for planar rotation. | 6a done |
-| Arbitrary Mesh Interface (AMI) / sliding mesh | Absent — still Stage 6 follow-up | 6b |
+| ~~Arbitrary Mesh Interface (AMI) / sliding mesh~~ | Landed v3.103.0 (Wave 2): `src/dynamic_mesh/ami.jl`; sliding-mesh + overset (`src/dynamic_mesh/overset.jl`) + topoChanger (`src/dynamic_mesh/topo_changer.jl`) all production. | 6b done |
 | ~~Porous media (Darcy-Forchheimer)~~ | Landed v2.7.0 (Stage 6c): `DarcyPorous`, `DarcyForchheimerPorous`, `OrthotropicPorous` with `porous_momentum_source`. | 6c done |
 | ~~Cavitation (Kunz, Schnerr-Sauer, Merkle)~~ | Landed v2.7.0 (Stage 6d): three concrete cavitation models under `AbstractCavitationModel`; `cavitation_source` returns `(m_plus, m_minus)` per cell. | 6d done |
-| Eulerian two-fluid | Absent — requires block-coupled equation (Stage 1c present, solver wiring is Stage 6 follow-up) | 6e |
-| ~~Aeroacoustics (FW-H, sponge zones)~~ | Landed v2.7.0 (Stage 6f): `FWHSurface`, `FWHObserver`, `curle_dipole_pressure`, `fwh_monopole_pressure`. Stationary-surface Curle + monopole; moving-surface + porous-FW-H are follow-ups. Sponge-zones still pending. | 6f partial |
-| ~~Population balance modeling~~ | Landed v2.7.0 (Stage 6g): `qmom_recover_abscissae_weights` (Wheeler/PD algorithm) + moment sources for growth, binary aggregation, binary breakage. CM + DQMoM extensions are follow-ups. | 6g done |
-| Wall-modeled LES (WMLES) | Absent | 4a |
+| ~~Eulerian two-fluid~~ | Landed v3.106.0 + v3.107.0: types in v3.106 (Wave 5), production solver in v3.107 (`src/multiphase/two_fluid_solver.jl`) using `BlockCollocatedEquation{T,2}` with off-diagonal Ishii-Zuber / Gibilaro drag-closure linearization. Inner-iteration Newton on the coupled momentum block. `TwoFluidProblem` + `solve_two_fluid` exposed. | 6e done |
+| ~~Aeroacoustics (FW-H, sponge zones)~~ | Landed v2.7.0 (Stage 6f) + v3.104.0 (Wave 3): stationary-surface Curle + monopole + moving-surface FW-H; Lighthill stub; PML sponge zones in `src/aeroacoustics/`. | 6f done |
+| ~~Population balance modeling~~ | Landed v2.7.0 + v3.104.0 (Wave 3): QMoM (Wheeler/PD) + DQMoM + Class Method all in `src/population_balance/`. | 6g done |
+| ~~Wall-modeled LES (WMLES)~~ | Landed v3.102.0 (Wave 1): `EquilibriumWMLES` + `SADDES` in `src/turbulence/{wmles,sa_ddes}.jl`. v3.107 adds full Shur-2008 IDDES shielding. | 4a done |
 | ~~Solid mechanics~~ | Landed v2.8.0 (Stage 7a): `IsotropicElastic`, `SolidDisplacementProblem`, `stress_tensor`, `small_strain_tensor`, `cantilever_tip_deflection`. Linear small-strain MVP; finite-strain / plasticity deferred. | 7a done |
 | ~~FSI~~ | Landed v2.8.0 (Stage 7b): partitioned Dirichlet-Neumann with `AitkenRelaxation` + `FSIInterface` + `interface_residual_norm`. Full solver loop integration is a follow-up. | 7b done |
-| ~~Function objects / coded BCs / expression BCs~~ | Landed v2.8.0 (Stage 7d): `PointProbe`, `ForceProbe`, `ExpressionBC`, `FieldStatistics` with shared `AbstractFunctionObject` + `run!` interface. Closure-based (no string DSL). | 7d done |
-| ~~snappyHexMesh-equivalent mesh generation~~ | Landed v2.9.0 (Stage 8a): `Octree{Dim, T}` + `build_octree` + `refine_near_sphere!` + STL-bandwidth-refinement infrastructure. Full STL snapping + layer addition + topology healing are follow-ups. | 8a partial |
-| Gmsh automation pipeline | Absent — still 8b follow-up | 8b |
-| ~~AMR on collocated side~~ | Landed v2.9.0 (Stage 8c): `mark_cells_by_gradient` refinement markers + `flux_correction_factor` conservation check. Tree-augmented mesh structure for actual h-refinement is a follow-up. | 8c partial |
-| ~~Error indicators~~ | Landed v2.9.0 (Stage 8d): `zz_error_indicator` (Zienkiewicz-Zhu recovery-based); gradient-based marking already in Stage 8c. Residual-based indicator is a follow-up. | 8d done |
-| Full adjoint (SciMLSensitivity integration) | Absent | 9a–c |
-| GPU backends for collocated | Absent | 9d |
-| ~~Matrix-free linear operators~~ | Landed v2.10.0 (Stage 9e): `MatrixFreeLinearOperator{T, F, Ft, D}` subtypes `AbstractLinearOperator`; user closure `matvec!(y, x)` with optional transpose and diagonal. Plugs into existing `_dispatch_solve` path. | 9e done |
-| ~~Unitful integration~~ | Landed v2.10.0 (Stage 9f): `strip_units`, `is_dimensionless`, `as_si_velocity/density/viscosity/temperature`. Unit-checking at problem-setup boundary; hot-path remains `Float64`. | 9f done |
-| Binary OpenFOAM polyMesh reader | ASCII only (`src/mesh/openfoam_io.jl:22`) | 3 |
+| ~~Function objects / coded BCs / expression BCs~~ | Landed v2.8.0 (Stage 7d) + v3.105.0 (Wave 4): `PointProbe`, `ForceProbe`, `StringExpressionBC` (renamed from `ExpressionBC` in v3.108 to disambiguate from parabolic `ExpressionBC`), `FieldStatistics`. Closure-based + a string-DSL path via `StringExpressionBC`. | 7d done |
+| ~~snappyHexMesh-equivalent mesh generation~~ | Landed v3.107.0 (v3.1 wave): native castellated refinement + STL surface snap from `src/mesh_generation/`. Layer addition still deferred to v3.2. | 8a partial |
+| ~~Gmsh automation pipeline~~ | Landed v3.105.0 (Wave 4): `ext/FVMGmshExt/` weak-dep extension covers `.msh` v4 read + Gmsh API run-from-Julia. | 8b done |
+| ~~AMR on collocated side~~ | Landed v3.105.0 (Wave 4): `src/amr_collocated/` adds tree-augmented refinement, gradient + residual + ZZ markers, conservative regrid. | 8c done |
+| ~~Error indicators~~ | Landed v2.9.0 + v3.105.0 (Wave 4): gradient, ZZ, and residual-based indicators all in `src/amr_collocated/`. | 8d done |
+| ~~Full adjoint (SciMLSensitivity integration)~~ | Landed v3.105.0 + v3.107.0 (v3.1 wave): steady-SIMPLE adjoint in v3.105; transient PIMPLE adjoint with uniform checkpointing (`solve_transient_adjoint_linear`) in v3.107. Enzyme full-solver AD remains a v3.2 follow-up. | 9a–c done (steady + linear-transient) |
+| ~~GPU backends for collocated~~ | Landed v3.105.0 (Wave 4): `ext/FVMKAExt/` (KernelAbstractions weak dep) provides operator dispatch on CPU/CUDA/AMD/Metal backends. v3.108 fixes precompile-time method-overwrite bug on backend dispatch. | 9d partial |
+| ~~Matrix-free linear operators~~ | Landed v2.10.0 (Stage 9e): `MatrixFreeLinearOperator{T, F, Ft, D}`. | 9e done |
+| ~~Unitful integration~~ | Landed v2.10.0 (Stage 9f) + v3.105.0 (Wave 4 hook). | 9f done |
+| ~~Binary OpenFOAM polyMesh reader~~ | Landed v3.0 cycle (`src/mesh/openfoam_io.jl`). Both ASCII + binary polyMesh now read. | 3 done |
+
+## Deferred to v3.2 / v3.3
+
+The following items are explicitly out of scope for the v3.102→v3.108 production wave and remain on the v3.2+ roadmap:
+
+| Item | Owner | Notes |
+|------|-------|-------|
+| snappyHexMesh layer addition | `src/mesh_generation/` | Castellated refinement + surface snap landed in v3.107; near-wall layer addition (with collapse and feature-edge handling) remains. |
+| Enzyme full-solver AD | `ext/FVMEnzymeExt/` | Stub landed in v3.105; differentiation through full SIMPLE / PIMPLE outer iteration (mutating fixed-point) requires Enzyme rules for `_dispatch_solve` and per-iteration cache aliasing. Steady + linear-transient adjoint via SciMLSensitivity already production. |
+| IDDES `h_max` from real edge lengths | `src/turbulence/iddes.jl` | Shur-2008 shielding production in v3.107 but the wall-normal length scale uses `V_c^(1/Dim)` as a surrogate for `h_max = max edge length`. Requires per-cell edge-length cache plumbed through `UnstructuredFVMMesh`. |
+| Sandia Flame D published-benchmark | `validation/published_benchmarks/` | Combustion bench harness exists; running EDC + variable-Lewis + radiation-coupled vs. published Sandia Flame D Raman/Rayleigh data is a v3.2 deliverable for `combustion` stable promotion. |
+| Published-benchmark execution + stable-tier promotions | `validation/manifest.toml` | Harness scaffold (gated by `FVM_RUN_BENCHMARKS=true`) lands in v3.107. The full ≥3-published-benchmark suite per feature is the gate for `provisional` → `stable`; expected to run quarterly at the user's terminal until the wallclock budget is reduced. |
+| Two-fluid VOF cross-coupling and full Eulerian reactive | `src/multiphase/two_fluid_solver.jl` | v3.107 ships the production block-coupled momentum-with-drag solver. Energy + species cross-coupling on the same block matrix is a v3.2 follow-up. |
+| FW-H porous + supersonic regime | `src/aeroacoustics/` | Stationary + moving-surface FW-H production; porous-FW-H surfaces and shock-emission corrections deferred. |

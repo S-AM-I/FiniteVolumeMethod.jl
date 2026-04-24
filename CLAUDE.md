@@ -170,43 +170,37 @@ To add a new test file, create it in `test/` and add a `safe_include("filename.j
 
 ## Known Issues
 
-The repo is in a v2→v3 overhaul; the authoritative issue list is `test/KNOWN_FAILURES.md`. High-level summary:
+The repo is in a v2→v3 overhaul; the authoritative issue list is `test/KNOWN_FAILURES.md`. High-level summary as of v3.108:
 
-### Correctness / simplifications
+### Still-open correctness items
 - WENO5 has a ghost-cell bug in the 1D solver (`nghost=3` unsupported at small grid sizes)
 - Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L∞, not O(h^2)
-<<<<<<< Updated upstream
-- ~~Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `‖b‖` denominator)~~ **Fixed v3.2.0** via OpenFOAM-style scale-invariant normalization in `src/incompressible/residuals.jl`. Residual floor on 80×80 now ~3e-3 (was ~2e-2); Ghia Re=100 ≤8% interior, ≤5% near-lid
-||||||| Stash base
-- WENO5 has a ghost cell bug in the 1D solver (`nghost=3` not supported at small grid sizes)
-- Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L-inf norm, not O(h^2)
-- Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `||b||` denominator)
-- Conjugate heat transfer uses scalar (face-averaged) interface temperature, not per-face
-- Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form
-- CyclicBC: face matching and cell coupling are wired into SIMPLE/PISO/PIMPLE solver loops; convergence on coarse meshes may still be slow
-- MPI extension uses full mesh per rank (not memory-efficient) — production MPI needs true submesh decomposition
-- All collocated solver features are `experimental` maturity — not yet validated against published benchmarks
-=======
-- Collocated SIMPLE convergence: normalized Uy residual can plateau on coarse meshes (small `‖b‖` denominator)
->>>>>>> Stashed changes
-- `k-ε` uses simple `max()` floor for `ν_t`, no Durbin realizability (`src/turbulence/k_epsilon_rans.jl:24`)
-- Dynamic Smagorinsky uses simplified scalar Germano, not full tensor form (`src/turbulence/dynamic_smagorinsky.jl`)
-- Wall functions assume aligned cells; no skew penalty (`src/turbulence/wall_functions.jl`)
-- Conjugate heat transfer uses scalar face-averaged interface temperature (`src/thermal/conjugate.jl`)
-- VOF boundedness is hard clipping — no MULES, no isoAdvector (`src/multiphase/boundedness.jl`)
-- Combustion: one-step EDM only, Lewis-unity implicit (`src/combustion/edm.jl:8`)
-- Radiation: fvDOM angular quadrature is skeleton-only, scattering absent (`src/radiation/fvdom.jl`)
-- Non-orthogonal correction is interpolated-only — no over-relaxed, no least-squares (`src/collocated/gradient.jl:144-149`)
-- CyclicBC face matching converges slowly on coarse meshes
+- Collocated SIMPLE: normalized Uy residual can still plateau on very coarse meshes (small `‖b‖` denominator); OpenFOAM-style scale-invariant normalization in `src/incompressible/residuals.jl` reduced the 80×80 floor from ~2e-2 to ~3e-3 but does not eliminate it
+- CyclicBC face matching converges slowly on coarse meshes (Stage 1a follow-up)
+- IDDES uses `V_c^(1/Dim)` as a surrogate for `h_max`; full real-edge-length variant is a v3.2 follow-up
+- v3.108 still has no end-to-end published-benchmark gate run in CI — the harness in `validation/published_benchmarks/` is gated by `FVM_RUN_BENCHMARKS=true` and runs at the user's terminal only
 
-### Structural
-- `CollocatedEquation.A` assembles via `A[P,P] +=` CSC random-pattern insertion at every SIMPLE iteration — dominates wall-clock at 10⁵+ cells (`src/collocated/types.jl:192`, `src/collocated/laplacian.jl`)
-- Operator hot loops allocate: `gradient.jl:126-130` allocates each call, `interpolation.jl:96` builds `Dict{Int,Int}` per call
-- MPI extension stores full mesh AND assembles full matrix on every rank; halo exchange decorative (`ext/FVMMPIExt/distributed_mesh.jl:44`, `distributed_solve.jl:49-53`) — not true submesh decomposition
-- `SciMLStructures.Tunable` is hardcoded length-5 — adding a closure constant breaks every `remake` caller (`src/core/sciml_structures.jl:130-144`)
-- `CollocatedEquation.b` is a single `Vector{T}` — not block-capable; two-fluid and coupled momentum-energy need a block-matrix generalization (`src/collocated/types.jl:181`)
-- OpenFOAM mesh reader is ASCII only; binary polyMesh is declared but not implemented (`src/mesh/openfoam_io.jl:22`)
+### v3 fast-path delivered features (production-ready, awaiting published-benchmark stable promotion)
+The v3.102→v3.108 waves moved the following items from "simplification" to production. None are yet promoted to `stable` because that requires ≥3 published-benchmark gates green in CI, but each is a real, tested implementation rather than a stub:
 
-### Validation status
-- All features in `src/{incompressible,turbulence,thermal,multiphase,combustion,radiation,lagrangian,dynamic_mesh}/` are marked `experimental`/`smoke_tested` in `validation/manifest.toml` — tests are shape/arithmetic only with no published-benchmark comparison
-- v3 roadmap (24–36 months FTE) is to fix all of the above, add missing OpenFOAM features, and promote each feature to `stable` via a 3+ published-benchmark suite. Plan: `plans/i-m-not-sure-of-ticklish-squid.md`
+- **v3.102 (Wave 1)** — pressure-based compressible SIMPLE/PIMPLE (`src/pressure_based/compressible_*`); Durbin realizability ON BY DEFAULT in k-ε; full-tensor production via `_sym_self_magnitude_sq`; EquilibriumWMLES + SADDES (full implementations); per-face Patankar CHT (replaces scalar interface T); enthalpy energy equation selectable via `use_enthalpy=true`; MULES wired into alpha_transport (was primitive-only since v3.91); isoAdvector (`src/multiphase/iso_advector.jl`); static + Cox-Voinov contact angles; over-relaxed non-orthogonal correction is now the default; LSQ gradient
+- **v3.103 (Wave 2)** — Cantera weak-dep extension + multi-step combustion + variable Lewis + FGM (`src/combustion/{multi_step,variable_lewis,fgm}.jl`); fvDOM scattering, S6/S8/S12 quadratures, WSGGM (`src/radiation/wsggm.jl`); HardSphere/SoftSphere DEM + agglomeration (`src/lagrangian/{collisions,agglomeration}.jl`); primary breakup KH-ACT + LISA + cone/hollow/flat-fan/solid injectors (`src/lagrangian/{primary_breakup,injection}.jl`); 6-DOF + topoChanger + overset + AMI (`src/dynamic_mesh/{six_dof,topo_changer,overset,ami}.jl`); Kunz/Schnerr-Sauer/Merkle cavitation (`src/cavitation/`); Darcy-Forchheimer porous media (`src/porous/`)
+- **v3.104 (Wave 3)** — multi-zone MRF; linear elasticity + updated-Lagrangian finite strain (`src/solid_mechanics/`); Aitken FSI partitioned coupling (`src/fsi/`); FW-H aeroacoustics (Curle + Lighthill stub) + PML sponge zones (`src/aeroacoustics/`); QMoM + DQMoM + Class Method PBM (`src/population_balance/`)
+- **v3.105 (Wave 4)** — Gmsh weak-dep extension + snappy stub (`src/mesh_generation/`); collocated AMR + ZZ + residual indicators (`src/amr_collocated/`); steady-SIMPLE adjoint + transient adjoint stub (`src/adjoint/`); KernelAbstractions weak-dep extension; Enzyme weak-dep stub; CoolProp + PETSc weak-dep extensions; ExpressionBC (renamed StringExpressionBC in v3.108) + probe + Unitful hook
+- **v3.106 (Wave 5)** — `LocalFVMMesh` + Metis partitioner (`src/parallel/{local_mesh,rcb_partitioner,metis_stub}.jl`); distributed assembly via PartitionedArrays `PSparseMatrix`; Eulerian two-fluid types (experimental at this point)
+- **v3.107 (v3.1 wave)** — production Eulerian two-fluid solver via `BlockCollocatedEquation{T,2}` with off-diagonal drag linearization (`src/multiphase/two_fluid_solver.jl`); transient PIMPLE adjoint with uniform checkpointing (`solve_transient_adjoint_linear`, no longer a stub); snappyHexMesh native castellated + surface snap (layer addition deferred to v3.2); IDDES full Shur-2008 shielding (no longer a stub); primary-breakup FSI handshake (`couple_primary_breakup_fsi!`); published-benchmark harness scaffold gated by `FVM_RUN_BENCHMARKS=true`
+- **v3.108 (full-suite triage)** — `ExpressionBC` → `StringExpressionBC` rename (resolves collision with parabolic `ExpressionBC`); KA backend dispatch fixed (no method overwrite during precompile); stale stub-warn tests updated to verify production behaviour
+
+### Structural items already addressed
+The following structural items previously listed here have been resolved during the v2→v3 overhaul. See `test/KNOWN_FAILURES.md` for fix-stage details and assertions:
+- `CollocatedEquation` random-pattern CSC insertion (Stage 1a — `SparsityPattern` pre-computes `nzval` indices, O(1) writes)
+- Operator hot-loop allocations (Stage 1b — `Dict{Int,Int}` replaced with `Vector{Int}`; audit confirmed gradients/interpolation are zero-alloc on the hot path)
+- `BlockCollocatedEquation` for vector-valued / two-fluid systems (Stage 1c, in production use by v3.107 two-fluid solver)
+- `SciMLStructures.Tunable` named registry (Stage 1e — `register_tunable!` + `tunable_schema`, no longer hardcoded length-5)
+- MPI full-mesh-per-rank (Stage 2 + Wave 5 — `LocalFVMMesh`, RCB + Metis partitioners, distributed `PSparseMatrix` assembly via PartitionedArrays.jl)
+- OpenFOAM binary polyMesh reader landed alongside Gmsh v4 reader
+
+### Validation status (v3.108)
+- All collocated solver features in `src/{incompressible,turbulence,thermal,multiphase,combustion,radiation,lagrangian,dynamic_mesh,solid_mechanics,fsi,aeroacoustics,population_balance,cavitation,porous,mrf,adjoint,mesh_generation,amr_collocated}/` are marked `provisional` (or `experimental` for `mpi_parallel`) in `validation/manifest.toml`. The 7-Evidence-entry harness per feature establishes algebraic + invariant coverage, but published-benchmark execution (≥3 per feature) is the explicit gate for `stable` promotion and is not yet wired into CI.
+- Outstanding deferrals to v3.2 / v3.3: layer addition in snappyHexMesh, Enzyme full-solver AD, IDDES `h_max` from real edge lengths, Sandia Flame D combustion benchmark, all `stable`-tier promotions.
+- v3 roadmap remains in `plans/i-m-not-sure-of-ticklish-squid.md`; `test/KNOWN_FAILURES.md` is the authoritative per-item status list.

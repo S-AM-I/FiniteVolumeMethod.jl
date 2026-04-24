@@ -1322,7 +1322,8 @@ limitations = [
   "Benchmark #5: `test/v_and_v_temporal_mms.jl` (v3.9) — temporal-order MMS for Euler (first-order) and BDF2 (monotone improvement over Euler with documented spatial-error-floor saturation).",
   "Benchmark #6: `test/v_and_v_mesh_accessors.jl` (v3.74) — mesh accessor primitives (face_weight ∈ [0,1] and = 0.5 on uniform Cartesian, cell/face centers inside domain, face_normal_area ↔ face_areas consistency, is_internal_face partition completeness). Six testsets, 879 gates.",
   "Benchmark #7 (v3.99.0): `test/v_and_v_ddt.jl` — temporal discretization primitives (Euler, BDF2, Crank-Nicolson, and the unified dispatch). Twelve testsets, 260 gates: (1) Euler diagonal = ρ·V/Δt rtol 1e-14; (2) Euler RHS = ρ·V·φ_old/Δt rtol 1e-14; (3) Euler Δt inverse scaling (halving Δt doubles diagonal + RHS); (4) scalar vs per-cell vector density give identical results; (5) BDF2 diagonal = 3·ρV/(2Δt) rtol 1e-14; (6) BDF2 RHS = coeff·(4·φ_old - φ_old_old) rtol 1e-14; (7) BDF2 steady-state (φ_old = φ_old_old = φ) satisfies the closed form directly; (8) Crank-Nicolson ddt-part equals Euler (same diagonal + RHS); (9) unified assemble_ddt! dispatches to Euler on TIME_EULER; (10) dispatches to BDF2 with phi_old_old kwarg; (11) BDF2 without phi_old_old throws; (12) TimeScheme enum variants distinct.",
-  "Stable-promotion review remains blocked on integration-level tests (full SIMPLE with operators), not on operator-primitive coverage.",
+  "Evidence #8 (v3.102.0): over-relaxed non-orthogonal correction is now the default `correction_mode` in `assemble_laplacian!` (was opt-in since v2.4); LSQ gradient added as a peer to Green-Gauss in `src/collocated/gradient.jl`. No new V&V file — verified by re-running the existing benchmarks #1–4 with the over-relaxed default and observing identical or better convergence.",
+  "Stable-promotion review remains blocked on integration-level tests (full SIMPLE with operators) and a published-benchmark suite, not on operator-primitive coverage.",
 ]
 
 # ── Phase 1: Incompressible Navier-Stokes ────────────────────────────
@@ -1345,8 +1346,10 @@ limitations = [
   "Fifth benchmark added in v3.55.0: SciML interface V&V (test/v_and_v_incompressible_sciml.jl) — public API surface consumed by downstream SciML workflows. Seven testsets, 277 gates: (1) solve returns IncompressibleSolution <: AbstractFVMSolution; (2) sol[:U], sol[:p], sol[:phi] round-trip symbolic access to 131 state values; (3) sol[:Ux], sol[:Uy] component extraction cross-checks U; (4) keys(sol) lists (:U, :p, :phi, :Ux, :Uy) with no :Uz in 2D; (5) retcode reflects convergence (:Success or :MaxIters); (6) is_fvm_solution trait correctly identifies wrapped solutions; (7) unknown symbol errors.",
   "Sixth benchmark added in v3.64.0: SciMLBase.remake parameter-update contract (test/v_and_v_incompressible_remake.jl) — supports sensitivity + optimization workflows. Seven testsets, 17 gates: (1) remake(; nu) updates nu only; (2) remake(; density) updates density only; (3) both nu + density together; (4) original problem immutable under remake; (5) algorithm swap; (6) chained remakes compose; (7) type preserved across remake.",
   "Seventh benchmark added in v3.100.0: continuity-residual + Courant-number primitives (test/v_and_v_continuity.jl). Nine testsets, 12 gates: (1) phi ≡ 0 ⇒ continuity_residual = 0 exactly; (2) phi ≡ 0 ⇒ continuity_residual_interior = 0 exactly; (3) L¹ norm ≥ 0 on non-trivial flux + interior ≤ full residual; (4) flux-linear scaling (doubling phi doubles residual rtol 1e-14); (5) single internal-face flux identity — imbalance on owner and neighbour equals |phi_f| each ⇒ total residual = 2·|phi_f| (here 1.0 rtol 1e-14); (6) wider interior band shrinks the interior residual (monotone in boundary_band); (7) compute_max_courant(phi ≡ 0) = 0 exactly; (8) Co_max ∝ dt (halving dt halves Co_max rtol 1e-14); (9) sign-symmetric — flipping phi sign does not change max|phi|·dt/V.",
-  "Steady SIMPLE only. Transient PISO/PIMPLE paths exist but lack dedicated V&V.",
-  "Higher Reynolds numbers (Re ≥ 400) currently destabilise the solver without deferred-correction convection schemes — Stage 2a follow-up.",
+  "Evidence #8 (v3.102.0): pressure-based compressible SIMPLE/PIMPLE landed in `src/pressure_based/compressible_{simple,pimple}.jl` with EOS coupling, ideal-gas + real-gas (Peng-Robinson, Redlich-Kwong) + tabulated CoolProp dispatch, and non-Newtonian rheology (`src/pressure_based/rheology.jl`: power-law, Bird-Carreau, Herschel-Bulkley, Casson). Smoke-tested only — published benchmarks against rhoSimpleFoam analytical cases (Sod-tube, isentropic compressor) are a v3.2 follow-up before stable promotion.",
+  "Evidence #9 (v3.105.0 + v3.107.0): adjoint integration. Steady-SIMPLE adjoint via SciMLSensitivity (`src/adjoint/`) lands in v3.105; transient PIMPLE adjoint with uniform checkpointing (`solve_transient_adjoint_linear`) production in v3.107. Smoke + invariant tests; full-solver Enzyme AD remains a v3.2 deferral.",
+  "Steady SIMPLE has the strongest V&V; transient PISO/PIMPLE covered by Evidence #4; pressure-based compressible (#8) is smoke-only.",
+  "Higher Reynolds numbers (Re ≥ 400) on coarse meshes still destabilise without deferred-correction convection schemes — Stage 2a follow-up.",
   "Kovasznay flow and other steady NS analytical benchmarks beyond Poiseuille are outside the current reliable envelope (solver diverges at Re≥10 for this problem; v3.12+ follow-up).",
   "Fixed time step only; adaptive CFL control deferred.",
 ]
@@ -1377,6 +1380,7 @@ limitations = [
   "Evidence #5 (v3.54): `test/v_and_v_wall_functions.jl` — Spalding wall-function primitives. Seven testsets, 38 gates: (1) k_wall = u_τ²/√C_μ algebraic identity at six u_τ values; (2) ε_wall = u_τ³/(κ·y) algebraic identity; (3) k_wall ∝ u_τ² scaling; (4) ε_wall ∝ u_τ³/y scaling; (5) Spalding Newton iteration converges to log-law at high y⁺ within 5 %; (6) ν_t_wall ≥ 0 realizability; (7) u_τ monotonically increasing in U_par.",
   "Evidence #6 (v3.66): `test/v_and_v_rans_state.jl` — RANSTurbulenceState container + model dispatch. Seven testsets, 190 gates: (1) k-ε field names (:k, :epsilon) and count 2; (2) k-ω field names (:k, :omega) and count 2; (3) SA field (:nu_tilde) and count 1; (4) default zero-ish (1e-6) init with size matching mesh (131 cells); (5) custom init kwargs round-trip; (6) KOmega + SA dispatch via AbstractRANSModel; (7) k-ω state has :omega not :epsilon key.",
   "Evidence #7 (v3.89): `test/v_and_v_sst_blend.jl` — k-ω SST blending-function algebra (Menter 1994). Eight testsets, 165 gates: (1) KappaOmegaSST default coefficients (a1 = 0.31, β* = 0.09, σ_k1 = 0.85, σ_k2 = 1.0, σ_ω1 = 0.5, σ_ω2 = 0.856, β1 = 0.075, β2 = 0.0828, κ = 0.41); (2) `_blend` boundary + linearity at 11 F1 sample points rtol 1e-14; (3) F1 ∈ [0, 1] across 64 (k, ω, d) triples; (4) F2 ∈ [0, 1] across 64 triples; (5) F2 = tanh(max(2√k/(β*·ω·d), 500ν/(d²ω))²) closed-form match at four sample points rtol 1e-12; (6) near-wall (d = 1e-6) ⇒ F1 → 1 (> 0.99); (7) free-stream (∇k·∇ω = 1e10) ⇒ F1 → 0 (< 0.01); (8) blended constants σ_k, σ_ω, β recover inner set at F1 = 1 and outer set at F1 = 0.",
+  "Evidence #8 (v3.102.0): Durbin realizability cap (`realizability_alpha`) is now ON BY DEFAULT in `StandardKEpsilon` (was opt-in since v2.5); full-tensor production via `_sym_self_magnitude_sq` confirmed (Evidence #4 was an audit-driven affirmation). Equilibrium WMLES + SADDES lands as full implementations (`src/turbulence/{wmles,sa_ddes}.jl`); IDDES stub also lands. v3.107 (Wave 1.5) replaces the IDDES stub with the full Shur-2008 shielding implementation (`src/turbulence/iddes.jl`). All five hybrid/wall-modelled families are smoke-tested — Moser channel DNS at Reτ ∈ {180, 395, 590} remains the published-benchmark gate for stable promotion.",
 ]
 
 # ── Phase 3: Conjugate Heat Transfer & Buoyancy ────────────────────
@@ -1400,10 +1404,10 @@ limitations = [
   "Fifth benchmark in v3.56.0 (test/v_and_v_k_eff.jl): thermal-property primitives `update_k_eff!` (k_eff = k_lam + ρ·Cp·ν_t/Pr_t) and `compute_alpha_eff` (α = k/(ρ·Cp)). Six testsets, 292 gates: (1) ν_t = nothing ⇒ k_eff = k_lam; (2) ν_t = 0 ⇒ k_eff = k_lam; (3) k_eff linear in ν_t; (4) closed-form match at every cell rtol 1e-14; (5) α_eff = k/(ρ·Cp) algebraic identity; (6) Pr_t inverse scaling.",
   "Sixth benchmark in v3.65.0 (test/v_and_v_thermal_types.jl): thermal property + state types. Seven testsets, 83 gates: (1) FluidThermalProperties kwargs round-trip; (2) has_buoyancy detection (beta = 0 vs non-zero); (3) SolidThermalProperties kwargs round-trip; (4) SolidThermalProperties Q_gen default zero; (5) ThermalState zero/default initialization (T = 300 K, k = 0.026); (6) ThermalState custom T_init + k_init; (7) FluidThermalProperties integer/float type promotion to Float64.",
   "Seventh benchmark in v3.88.0 (test/v_and_v_qgen.jl): SolidThermalProperties.Q_gen volumetric heat source coupling into `solve_solid_conduction`. Four testsets: (1) Q_gen = 0 reduces to the pure Laplace solution with mixed Dirichlet BCs — bounded between wall extrema; (2) Q_gen > 0 with all walls at T = 0 raises interior cells above zero (heat accumulates and escapes only through walls); (3) Laplace-equation linearity: T_interior scales linearly with Q_gen (Q_a = 5, Q_b = 10 ⇒ T_b/T_a = 2.0 rtol 1e-10); (4) Poisson scaling T ∝ Q_gen/k: doubling k halves interior T at fixed Q_gen (rtol 1e-10).",
-  "Solid conduction path (solve_solid_conduction, steady + transient) verified; full conjugate Dirichlet-Neumann coupling (solve_conjugate_ht) lacks a dedicated analytical benchmark (v3.22+ follow-up).",
-  "Fluid-energy equation verification (De Vahl Davis natural convection, Rayleigh-Bénard) is a v3.22+ follow-up before stable promotion.",
-  "Constant fluid properties (rho, Cp) only; temperature-dependent properties deferred.",
-  "Per-face CHT correction landed in v2.6.0 (Stage 5a) but dedicated per-face accuracy gate is outstanding.",
+  "Evidence #8 (v3.102.0): per-face Patankar harmonic-mean interface flux is now the default Dirichlet-Neumann coupling in `_apply_perface_interface_fluxes!` (replaces the scalar face-averaged interface temperature). Enthalpy energy equation (`src/thermal/enthalpy_equation.jl`) selectable via `use_enthalpy=true` for compressible / variable-Cp coupling. Smoke-tested only — De Vahl Davis natural convection + Rayleigh-Bénard remain the published benchmarks for stable promotion.",
+  "Solid conduction path (solve_solid_conduction, steady + transient) verified; full conjugate Dirichlet-Neumann coupling (solve_conjugate_ht) is per-face Patankar from v3.102 but lacks a dedicated analytical benchmark gate (v3.2 follow-up).",
+  "Fluid-energy equation verification (De Vahl Davis natural convection, Rayleigh-Bénard) is a v3.2 follow-up before stable promotion.",
+  "Constant fluid properties (rho, Cp) by default; temperature-dependent properties via `src/eos/` + CoolProp weak-dep extension are wired but not yet validated.",
 ]
 
 # ── Phase 4: Polyhedral Mesh I/O ───────────────────────────────────
@@ -1423,8 +1427,9 @@ limitations = [
   "Promoted from experimental → provisional in v3.43.0. Evidence: `test/v_and_v_mesh_geometry.jl` — 976 gates across five testsets: (1) total volume = Lx·Ly across three mesh configurations rtol 1e-14; (2) uniform cell volumes V_c = Lx·Ly/(Nx·Ny) at 456 cells; (3) closed-cell face-area identity Σ_f ε(c,f)·S_f = 0 per cell at N ∈ {8, 16, 32}; (4) every face area matches either Lx/Nx or Ly/Ny; (5) 512 cell centers lie strictly inside the domain.",
   "Evidence #2 (v3.98.0): `test/v_and_v_mesh_quality.jl` — `check_mesh_quality` OpenFOAM-style mesh-quality report (non-orthogonality, skewness, aspect ratio). Seven testsets, 3986 gates: (1) Cartesian mesh ⇒ max + avg non-orthogonality < 1e-10 across N ∈ {4, 8, 16} (axis-aligned faces); (2) Cartesian mesh ⇒ max + avg skewness < 1e-12 (face centers exactly on owner-neighbour line); (3) output shape — non_orthogonality + skewness arrays of length n_internal, aspect_ratio of length n_cells; (4) aspect_ratio > 0 + finite on every cell across N ∈ {4, 8, 16, 32}; (5) summary max/avg fields match array maxima/means rtol 1e-14; (6) anisotropic 10:1 Cartesian domain has larger max aspect_ratio than isotropic 1:1; (7) refinement N ∈ {4, 8, 16, 32, 64} preserves zero non-orthogonality.",
   "Evidence #3 (v3.101.0): `test/v_and_v_polyhedral_volumes.jl` — polyhedral volume primitives (tet, hex, prism, pyramid). Thirteen testsets, 25 gates: (1) volume_tet unit tetrahedron = 1/6 rtol 1e-14; (2) degenerate coplanar tet ⇒ volume = 0; (3) tet volume α³-scales under uniform scaling at α ∈ {0.5, 2, 3}; (4) translation invariance; (5) vertex-swap (flipped signed volume) preserves magnitude; (6) volume_hex unit hex = 1 rtol 1e-14; (7) Lx·Ly·Lz closed form at three aspect ratios; (8) hex α³ scaling; (9) wrong node count errors; (10) volume_pyramid unit pyramid = 1/3 rtol 1e-14 (correct 1/3·base·height law); (11) pyramid h-linear scaling at four heights; (12) pyramid + prism wrong node count errors; (13) volume_prism unit triangular prism = 0.5·h at three heights rtol 1e-14.",
-  "ASCII OpenFOAM format only; gzip-compressed files must be decompressed first.",
-  "OpenFOAM writer, Gmsh v4 reader, and blockMesh equivalent deferred to Phase 4b.",
+  "Evidence #4 (v3.0 cycle + v3.105.0): binary OpenFOAM polyMesh reader landed alongside the ASCII path; OpenFOAM writer landed; Gmsh v4 `.msh` reader via `ext/FVMGmshExt/` weak-dep extension. Gmsh + OpenFOAM round-trip smoke-tested.",
+  "Evidence #5 (v3.107.0): native snappyHexMesh-equivalent castellated refinement + STL surface snap landed in `src/mesh_generation/`. Layer addition (with collapse and feature-edge handling) deferred to v3.2.",
+  "Gzip-compressed OpenFOAM files must still be decompressed first.",
   "Mesh quality aspect ratio uses approximate formula (max_face_area / V^(2/3)).",
 ]
 
@@ -1472,6 +1477,7 @@ limitations = [
   "Evidence #1 (v3.42.0): `test/v_and_v_linear_solvers.jl` — four testsets, 6 gates. (1) LUFactorization gives L² < 5e-3 on Poisson MMS at N = 32; (2) CG matches LU within 1e-6; (3) GMRES matches LU within 1e-6; (4) O(h²) grid convergence across N ∈ {16, 32, 64}.",
   "Evidence #2 (v3.52.0): `test/v_and_v_solver_config.jl` — six testsets, 21 gates: (1) default pressure routing to :cg + :amg with rtol 1e-6; (2) default fallback to :bicgstab + :ilu with rtol 1e-5; (3) custom FieldSolverConfig overrides; (4) :direct resolves to nothing (backslash path); (5) unknown solver symbol errors; (6) non-Symbol arguments pass through unchanged. Second convergence-verified benchmark for the solver-infrastructure layer.",
   "Evidence #3 (v3.97.0): `test/v_and_v_linear_operator.jl` — AbstractLinearOperator wrapper + Stage 1h matrix-free interface. Nine testsets, 21 gates: (1) SparseMatrixLinearOperator forwards size + eltype; (2) mul! matches A·x; (3) underlying_matrix round-trips the wrapped sparse matrix by identity; (4) as_linear_operator(::SparseMatrixCSC) wraps; (5) as_linear_operator(::AbstractLinearOperator) passthrough (===); (6) MatrixFreeError fallback for custom matrix-free subtype without overridden underlying_matrix; (7) non-square (2×3) size + mul! correct; (8) eltype propagates T parameter for Float32/Float64 wrappers; (9) mul! linearity via superposition (op·(x+z) = op·x + op·z, op·(α·x) = α·op·x) rtol 1e-14.",
+  "Evidence #4 (v3.105.0 + v3.108.0): KernelAbstractions weak-dep extension (`ext/FVMKAExt/`) provides operator dispatch on CPU/CUDA/AMD/Metal backends; v3.108 fixes a precompile-time method-overwrite bug in backend dispatch. PETSc weak-dep extension (`ext/FVMPETScExt/`) wires PETSc Krylov + AMG as a peer to the LinearSolve.jl path.",
   "AMG and ILU require loading AlgebraicMultigrid.jl and IncompleteLU.jl as weak deps.",
   "Krylov solver symbols require LinearSolve.jl to be loaded by the user.",
   "Solver config not yet auto-integrated into solver wrappers — users call _dispatch_solve or pass config manually.",
@@ -1502,6 +1508,7 @@ limitations = [
   "Evidence #5 (v3.63): `test/v_and_v_les_state.jl` — LESTurbulenceState + AbstractLESModel dispatch. Six testsets, 257 gates.",
   "Evidence #6 (v3.73): `test/v_and_v_les_dispatch.jl` — output-consistency across LES models. Five testsets, 18 gates: all three models return finite ν_t of correct length; ν_t ≥ 0 and finite across A ∈ {1e-3 … 1e6}; biaxial stretching realizability; Smagorinsky Cs=0 ⇒ ν_t ≡ 0; WALE Cw=0 ⇒ ν_t ≡ 0.",
   "Evidence #7 (v3.90): `test/v_and_v_test_filter.jl` — Dynamic Smagorinsky Germano-identity primitives. Eight testsets, 412 gates: (1) `_test_filter` preserves constants (4 constant values × 64 cells rtol 1e-14); (2) shape/type preservation + range-bound ≤ extrema; (3) `_test_filter` linearity filter(α·u + β·v) = α·filter(u) + β·filter(v) rtol 1e-12; (4) `_sym_contract` 2D A⊙A = A_xx² + A_yy² + 2·A_xy² closed form at five tensors rtol 1e-14; (5) bilinearity + commutativity + scaling; (6) 3D A⊙A = A_xx² + A_yy² + A_zz² + 2·(A_xy² + A_xz² + A_yz²) at four tensors; (7) `_sym_self_magnitude_sq` matches 2·(A⊙A) identity in 2D + 3D; (8) zero-tensor contractions.",
+  "Evidence #8 (v3.102.0 + v3.107.0): full-tensor Dynamic Smagorinsky (Germano test-filtered S̃_ij per-component, Lilly contraction) is the production path; scalar-Germano simplification removed. EquilibriumWMLES + SADDES land as production wall-modelled / hybrid LES (`src/turbulence/{wmles,sa_ddes}.jl`); IDDES with full Shur-2008 shielding lands in v3.107 (replaces the v3.102 stub). All wall-modelled / hybrid families remain smoke-tested — DHIT vs. Comte-Bellot-Corrsin and channel Reτ = 395 WMLES are the published-benchmark gates for stable promotion.",
 ]
 
 # ── Phase 7: Multiphase VOF ───────────────────────────────────────
@@ -1519,9 +1526,11 @@ required_ladder_stages = ["verification", "benchmark"]
 summary = "Volume of Fluid two-phase flow with alpha transport, interface compression, CSF surface tension, and mixture property blending. Alpha transport verified against analytical mass-conservation and center-of-mass translation invariants (v3.16)."
 limitations = [
   "Provisional — only pure-kinematic alpha transport under a prescribed divergence-free velocity field is convergence-verified. Two-phase PISO/PIMPLE with variable density, interface compression (C_α > 0), CSF surface tension, and contact-angle coupling remain smoke-tested only.",
-  "Boundedness limiter is clip+redistribute, not face-based MULES.",
-  "No contact angle model for wall-interface interaction.",
-  "Published benchmarks (Martin-Moyce dam break, Hysing rising bubble, Zalesak rotating slot) are a v3.17+ follow-up.",
+  "Boundedness now uses MULES face-flux limiter from v3.102 (was clip+redistribute through v3.91); MULES primitives Evidence #7, MULES-in-solver wiring is the v3.102 deliverable.",
+  "Static contact angle and Cox-Voinov dynamic model land in v3.102.0 (Wave 1) on the CSF surface-tension path; smoke-tested only.",
+  "isoAdvector geometric face-flux reconstruction lands in v3.102.0 (`src/multiphase/iso_advector.jl`) selectable alongside the algebraic VOF path; smoke-tested only.",
+  "Eulerian two-fluid lands as a peer experimental feature in v3.106 (types) + v3.107 (production block-coupled solver via `BlockCollocatedEquation{T,2}` with off-diagonal Ishii-Zuber/Gibilaro drag); cross-references the new `eulerian_two_fluid` feature entry rather than this VOF feature.",
+  "Published benchmarks (Martin-Moyce dam break, Hysing rising bubble, Zalesak rotating slot) are a v3.2 follow-up.",
   "Evidence #1: `test/v_and_v_vof_translation.jl` — (1) total mass drift < 1e-8 over 25 steps, < 1e-12 at mid-run; (2) α ∈ [0, 1] strict at every step after clip_alpha!; (3) center-of-mass translates with x_COM(T) − x_COM(0) matching U·T to O(h); lateral drift < 1e-10.",
   "Evidence #2 (v3.24): `test/v_and_v_vof_planewave.jl` — plane-wave α = 0.5 + 0.4·sin(2πx/L) advected at u = 1 for t = 0.25 on an Nx=200 × 10 mesh. (1) amplitude preserved to ≥ 50 % without overshoot, peak-location phase error < 5·h (upwind is non-dispersive); (2) L¹ interior error decreases monotonically at Nx ∈ {100, 200, 400} with observed rates > 0.6 (first-order upwind on smooth sine); (3) strict max-principle: α ∈ [0.1, 0.9] everywhere (TVD under upwind).",
   "Evidence #3 (v3.36): `test/v_and_v_vof_mixture.jl` — mixture property blending. ρ = α·ρ₁ + (1-α)·ρ₂, μ = α·μ₁ + (1-α)·μ₂. Five testsets, 1368 gates: (1) α = 1 pure phase 1 (rtol 1e-14); (2) α = 0 pure phase 2; (3) linearity on x-ramp α(x) = x; (4) density bounds under random α ∈ [0, 1]; (5) `clip_alpha!` composed with blending — overshoots clipped correctly and blend consistent.",
@@ -1546,8 +1555,8 @@ required_ladder_stages = ["verification"]
 summary = "P1 and fvDOM radiation models with absorption/emission, Marshak BCs, and coupled thermal+radiation solver. P1 model verified against 1D slab analytical solution (v3.15)."
 limitations = [
   "Provisional — only the P1 model with Dirichlet boundaries on a cold medium is convergence-verified. Marshak walls, non-zero emission, and fvDOM are smoke-tested only.",
-  "Constant absorption coefficient only; WSGGM deferred.",
-  "P1 and fvDOM (S2 quadrature); higher-order SN deferred.",
+  "WSGGM (Weighted Sum of Grey Gases Model) lands in v3.103.0 (`src/radiation/wsggm.jl`); banded emissivity couples through the Marshak BC. Smoke-tested only.",
+  "S6/S8/S12 quadrature extensions land in v3.103.0; fvDOM in-scattering integral wired into the ordinate sweep in the same wave (was absent through v3.92).",
   "Radiation-flow coupling is lagged one iteration (standard approach).",
   "Evidence #1: `test/v_and_v_p1_slab.jl` — (1) monotone attenuation shape match; (2) y-direction independence < 1e-10 (strict 1D invariance under Neumann top/bottom BCs); (3) O(h²) grid convergence at N ∈ {20, 40, 80} with observed orders in [1.8, 2.2] against sinh(√3a(L-x))/sinh(√3aL).",
   "Evidence #2 (v3.25): `test/v_and_v_p1_equilibrium.jl` — radiative equilibrium invariant. With uniform T_medium = T_wall (isothermal cavity), P1 admits the exact solution G ≡ 4σT⁴. (1) every interior cell matches the analytical equilibrium to rtol 1e-2 at three absorption coefficients a ∈ {0.1, 1, 10}; (2) interior spread < 1e-4 relative (no spurious gradient, Marshak BC closes the field uniformly); (3) T⁴ scaling verified by doubling T and measuring the 16× factor to rtol 5e-3.",
@@ -1573,9 +1582,10 @@ required_ladder_stages = ["verification", "benchmark"]
 summary = "Multi-species transport with EDM and EDC turbulence-chemistry interaction and heat release coupling. Species transport kernel verified against analytical 1D advection-diffusion solution (v3.17)."
 limitations = [
   "Provisional — only the species transport kernel (`assemble_species!`: convection + diffusion) is convergence-verified against its 1D steady analytical solution. EDM/EDC/Arrhenius reaction models, heat-release coupling, and turbulent-chemistry interaction are smoke-tested only.",
-  "Three-species (fuel/oxidizer/product) model; multi-step mechanisms deferred.",
-  "Constant density (incompressible); variable density combustion deferred.",
-  "Published benchmarks (1D laminar premixed flame vs. Cantera, Sandia Flame D) require Cantera interop and are a v3.18+ follow-up.",
+  "Multi-step mechanisms land in v3.103.0 (`src/combustion/multi_step.jl`); FGM (Flamelet-Generated Manifold) lands in `src/combustion/fgm.jl`; Cantera interop via the `FVMCanteraExt` weak-dep extension. All three smoke-tested only — Sandia Flame D against published Raman/Rayleigh data is the v3.2 published-benchmark gate.",
+  "Variable Lewis number (per-species) lands in v3.103.0 (`src/combustion/variable_lewis.jl`) and folds into `assemble_species!` diffusion term; Lewis-unity remains the default.",
+  "Variable density combustion is reachable via the v3.102 pressure-based compressible PIMPLE + the v3.103 multi-step / EDC chemistry path; not yet validated end-to-end.",
+  "Published benchmarks (1D laminar premixed flame vs. Cantera, Sandia Flame D) require the Cantera extension to be loaded and remain a v3.2 follow-up before stable promotion.",
   "Evidence #1: `test/v_and_v_species_ad.jl` — (1) monotone decay from Y_L to Y_R, no overshoot, Pe = 2; (2) y-direction invariance < 1e-10 under Neumann top/bottom; (3) L² error 1.8e-2 → 9.5e-3 → 5.0e-3 at N ∈ {20, 40, 80} with observed orders in [0.8, 1.5] (first-order upwind on exp(Pe·x/L)), finest-grid interior L² < 5 × 10⁻³.",
   "Evidence #2 (v3.27): `test/v_and_v_edm.jl` — Magnussen-Hjertager EDM reaction-rate closed-form algebra. Five testsets, 128 gates: (1) fuel-limited branch ω = -ρ·A·(ε/k)·Y_fuel to rtol 1e-12; (2) oxidizer-limited branch; (3) stoichiometric mass balance Σω_i ≡ 0 to atol 1e-14; (4) ε/k proportionality (doubling mixing rate doubles ω); (5) heat release S_h = -ω_fuel·ΔH > 0 exothermic consistency.",
   "Evidence #3 (v3.37): `test/v_and_v_arrhenius.jl` — finite-rate Arrhenius kinetics (k_f = A·T^b·exp(-E_a/(RT)), ω = -ρ·k_f·Y_f·Y_o). Five testsets, 128 gates: (1) zero fuel or oxidizer ⇒ ω = 0; (2) closed-form algebraic identity to rtol 1e-12; (3) exponential T-sensitivity (T: 1000 → 2000 K gives analytical ratio exp(50/R)); (4) pre-exponential A scaling; (5) low-T clamp at 200 K.",
@@ -1603,7 +1613,8 @@ limitations = [
   "Forward-Euler particle integration is first-order in Δt; RK2/RK4 variants exist but are not yet convergence-verified.",
   "No buoyancy correction is applied automatically — users must pass effective gravity g·(1 - ρ_f/ρ_p) if needed.",
   "PSI-cell coupling (volume-weighted); no particle-source smoothing.",
-  "TAB and KHRT breakup models; collision models deferred.",
+  "TAB and KHRT secondary-breakup (smoke-tested via Evidence #4); KH-ACT and LISA primary-breakup land in v3.103.0 (`src/lagrangian/primary_breakup.jl`); v3.107 adds `couple_primary_breakup_fsi!` for FSI handshake. Cone/hollow/flat-fan/solid injectors with rate-of-injection profiles land in v3.103.0 (`src/lagrangian/injection.jl`). All smoke-tested.",
+  "Hard-sphere and soft-sphere (Hertz-Mindlin) DEM contact + agglomeration coalescence land in v3.103.0 (`src/lagrangian/{collisions,agglomeration}.jl`). Smoke-tested.",
   "Evidence #1: `test/v_and_v_stokes_terminal.jl` — (1) steady-state asymptote within 1% of analytical v_t at t=5τ_p; (2) mid-transient v(τ_p) within 2% of v_t·(1 - e⁻¹); (3) Euler first-order grid convergence in Δt/τ_p ∈ {0.04, 0.02, 0.01}; (4) strictly monotone descent with no lateral drift.",
   "Evidence #2 (v3.26): `test/v_and_v_schiller_naumann.jl` — moderate-Re regime. (1) Algebraic f(Re) = 1 + 0.15·Re^0.687 verified across slip ∈ {0.01, 0.1, 0.5, 1, 5} to rtol 1e-12 against the closed-form F = (m/τ_p)·f·ΔU; (2) Re cap at 1000 verified — at Re_raw = 2000 the implementation uses f(1000); (3) Stokes-limit agreement at Re < 0.02 within 2 %; (4) exponential relaxation of slip to U_f under quiescent-to-moving flow step, terminal match within 1 %, monotone approach.",
   "Evidence #3 (v3.33): `test/v_and_v_ranz_marshall.jl` — Ranz-Marshall particle thermal closure. Nu = 2 + 0.6·Re_p^0.5·Pr^0.33. (1) Stagnant limit Nu = 2 and q = π·d·k_f·2·ΔT to rtol 1e-12; (2) isothermal T_f = T_p ⇒ q ≡ 0; (3) sign consistency and |q_hot| = |q_cold|; (4) ΔT linearity to rtol 1e-12; (5) non-trivial Re = 10 closed-form match to rtol 1e-12.",
@@ -1631,7 +1642,7 @@ limitations = [
   "Laplacian motion solver is smoke-tested only; its GCL behaviour for a full fluid-coupled ALE run is not yet convergence-verified.",
   "`_approximate_volumes!` uses a first-order divergence-of-displacement approximation; exact for linear displacement fields, O(α²) for nonlinear fields.",
   "Laplacian motion uses uniform diffusivity; distance-based weighting deferred.",
-  "No topology change (remeshing) support.",
+  "Topology-changing motion (`src/dynamic_mesh/topo_changer.jl`), 6-DOF rigid-body solver (`src/dynamic_mesh/six_dof.jl`), overset / chimera (`src/dynamic_mesh/overset.jl`), and AMI sliding mesh (`src/dynamic_mesh/ami.jl`) all land in v3.103.0 (Wave 2). Smoke-tested only — published-benchmark gates (oscillating cylinder, propeller, valve closure) are v3.2 follow-ups.",
   "Evidence #1: `test/v_and_v_gcl.jl` — (1) zero motion: phi_mesh ≡ 0 and residual < 1e-14; (2) rigid translation on 10×10: volume drift < 1e-12, GCL residual < 1e-11 per cell; (3) isotropic α=0.05 scaling: GCL residual < 1e-10·V̄/Δt and (ΔV / V₀) matches `1 + Dim·α` to within 5α²; (4) residual / (V_cell/Δt) < 1e-10 at N ∈ {8, 16, 32}.",
   "Evidence #2 (v3.29): `test/v_and_v_gcl_rotation.jl` — infinitesimal rigid rotation d = θ·(−y, x). ∇·d = 0 exactly for linear rotational displacement. (1) Cell volumes preserved to atol 1e-12 at θ = 0.05 rad; (2) GCL residual · dt / V̄ < 1e-10 on a 20×20 mesh; (3) residual invariance verified across N ∈ {8, 16, 32}; (4) 512 cell-center coordinates match the prescribed rotation to atol 1e-14.",
   "Evidence #3 (v3.34): `test/v_and_v_mesh_flux.jl` — `compute_mesh_flux!` face-primitive verification. phi_mesh[f] = <d_f, S_f>/dt. (1) Zero displacement ⇒ phi_mesh ≡ 0; (2) uniform translation exact formula at 220 faces to rtol 1e-12; (3) Δt scaling (halving Δt doubles phi_mesh) to rtol 1e-12; (4) closed-cell sum Σ_f ε(c,f)·phi_mesh[f] = 0 to atol 1e-12. 367 gates.",
@@ -1653,10 +1664,30 @@ precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "Distributed-memory parallelism via MPI.jl package extension with ghost-cell halo exchange, mesh partitioning, and parallel SIMPLE solver."
+summary = "Distributed-memory parallelism via MPI.jl package extension with mesh partitioning, true per-rank submesh storage (`LocalFVMMesh`), and parallel SIMPLE/PIMPLE solver. v3.106 (Wave 5) replaced the full-mesh-per-rank skeleton with `LocalFVMMesh` + Metis graph partitioner + distributed `PSparseMatrix` assembly via PartitionedArrays.jl."
 limitations = [
-  "Experimental — full mesh replicated on every rank; memory-efficient local-only storage deferred.",
-  "Contiguous cell partitioning only; graph-based (Metis) partitioning deferred.",
-  "Parallel SIMPLE solver only; PISO/PIMPLE distributed variants deferred.",
-  "Requires mpiexec for testing; not included in standard CI test suite.",
+  "Evidence #1 (Stage 2): `test/mpi_partition.jl` — 980 serial gates on dep-free RCB partitioner + extracted local mesh + halo pattern in local indices.",
+  "Evidence #2 (Stage 2): `test/mpi_parity.jl` — manual `mpiexec -n N` parity test against single-rank reference; not in `runtests.jl`.",
+  "Evidence #3 (v3.106.0, Wave 5): `LocalFVMMesh` + Metis graph partitioner (`src/parallel/{local_mesh,metis_stub,rcb_partitioner}.jl`) + distributed `PSparseMatrix` assembly via PartitionedArrays.jl (`ext/FVMMPIExt`). Halo exchange is functional, not decorative.",
+  "Parallel SIMPLE production; PISO/PIMPLE distributed variants smoke-tested.",
+  "Requires `mpiexec` for the full parity test; not included in the standard CI test suite. Published-benchmark gate (weak + strong scaling on Poiseuille / Ghia at 10⁶ cells) is a v3.2 follow-up before stable promotion.",
+]
+
+# ── Phase 7b: Eulerian Two-Fluid (production via Block-Coupled Solver) ──
+
+[[features]]
+feature = "eulerian_two_fluid"
+maturity = "experimental"
+validation = "smoke_tested"
+role = "claim_bearing_solver"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+required_ladder_stages = ["verification"]
+summary = "Eulerian two-fluid (interpenetrating phase) solver with block-coupled momentum-with-drag. v3.106 (Wave 5) lands the types; v3.107 (v3.1 wave) lands the production solver via `BlockCollocatedEquation{T,2}` with off-diagonal Ishii-Zuber / Gibilaro drag-closure linearization, exposed as `TwoFluidProblem` + `solve_two_fluid`."
+limitations = [
+  "Experimental — block-coupled momentum + drag landed v3.107; cross-coupling for energy + species + alpha (compressibility) on the same block matrix is a v3.2 follow-up.",
+  "Drag closures: Ishii-Zuber (default for bubbly), Gibilaro (granular). No turbulent-dispersion or virtual-mass terms yet.",
+  "Smoke-tested only — bubbly column, fluidized-bed, and stratified-flow published benchmarks are v3.2+ deferrals before stable promotion.",
 ]
