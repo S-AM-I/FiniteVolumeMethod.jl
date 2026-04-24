@@ -1241,8 +1241,9 @@ export
     KABackend,
     kernel_backend,
     per_term_ad,
-    # Runtime function objects
-    ExpressionBC,
+    # Runtime function objects (string-DSL expression BC lives alongside the
+    # closure-based `ExpressionBC` exported above — they are different types)
+    StringExpressionBC,
     evaluate,
     Probe,
     Force,
