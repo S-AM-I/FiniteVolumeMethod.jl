@@ -1212,6 +1212,50 @@ export
     parabolic_to_odefunction,
     parabolic_to_linearproblem
 
+# --- Wave 4 fast-path (v3.105) — mesh gen / AMR / adjoint / KA-GPU / unit + prop extensions ---
+export
+    # Mesh generation (Stage 8)
+    GmshPipeline,
+    run_gmsh_pipeline,
+    auto_remediate!,
+    SnappyMesher,
+    # Collocated AMR + error indicators
+    residual_error_indicator,
+    zz_error_indicator,
+    mark_for_refinement,
+    RefinementPlan,
+    CoarseningPlan,
+    apply_refinement!,
+    apply_coarsening!,
+    # Adjoint
+    AbstractAdjointAlgorithm,
+    SteadyAdjoint,
+    TransientAdjoint,
+    solve_adjoint,
+    solve_steady_adjoint,
+    solve_transient_adjoint,
+    verify_adjoint_gradient,
+    # Kernel backend trait
+    KernelBackend,
+    CPUBackend,
+    KABackend,
+    kernel_backend,
+    per_term_ad,
+    # Runtime function objects
+    ExpressionBC,
+    evaluate,
+    Probe,
+    Force,
+    SamplingPlane,
+    trigger_probe,
+    # Unitful hook
+    strip_units,
+    annotate_units,
+    is_unitful,
+    # External property / solver stubs
+    CoolPropFluid,
+    PETScLinearSolver
+
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 @setup_workload begin
     @compile_workload begin

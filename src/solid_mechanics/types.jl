@@ -12,7 +12,7 @@
 #
 # This is the MVP cantilever-beam / plate-bending / Cook's-membrane
 # benchmark infrastructure. Finite-strain + contact + plasticity are
-# deferred (Stage 7a follow-ups).
+# layered on top in `finite_strain.jl`.
 
 using StaticArrays: SVector
 using LinearAlgebra: dot
@@ -38,6 +38,70 @@ function IsotropicElastic(; E::Real = 1.0, nu::Real = 0.3)
     lambda = E_T * nu_T / ((one(T) + nu_T) * (one(T) - T(2) * nu_T))
     mu = E_T / (T(2) * (one(T) + nu_T))
     return IsotropicElastic{T}(E_T, nu_T, lambda, mu)
+end
+
+"""
+    SolidProperties{T}
+
+Full solid-material descriptor including density (for dynamic problems)
+plus the linear-elastic Lamé parameters. `lambda` and `mu` are derived
+from `E` and `nu` when the keyword constructor is used.
+
+# Fields
+- `rho::T` — mass density (kg / m³).
+- `E::T` — Young's modulus (Pa).
+- `nu::T` — Poisson's ratio.
+- `lambda::T` — first Lamé parameter.
+- `mu::T` — shear modulus.
+"""
+struct SolidProperties{T}
+    rho::T
+    E::T
+    nu::T
+    lambda::T
+    mu::T
+end
+
+"""
+    SolidProperties(; rho = 1.0, E = 1.0, nu = 0.3)
+
+Keyword constructor that derives `lambda` and `mu` from `E` and `nu`.
+"""
+function SolidProperties(; rho::Real = 1.0, E::Real = 1.0, nu::Real = 0.3)
+    T = promote_type(typeof(float(rho)), typeof(float(E)), typeof(float(nu)))
+    rho_T = T(rho); E_T = T(E); nu_T = T(nu)
+    lambda = E_T * nu_T / ((one(T) + nu_T) * (one(T) - T(2) * nu_T))
+    mu = E_T / (T(2) * (one(T) + nu_T))
+    return SolidProperties{T}(rho_T, E_T, nu_T, lambda, mu)
+end
+
+"""
+    SolidMechanicsState{Dim, T}
+
+Mutable solid-mechanics state container. Holds displacement and (for
+dynamic problems) velocity as per-cell `SVector{Dim, T}` fields.
+
+# Fields
+- `displacement::Vector{SVector{Dim, T}}` — cell-centered displacement.
+- `velocity::Vector{SVector{Dim, T}}` — cell-centered velocity (zero
+  for static problems).
+"""
+mutable struct SolidMechanicsState{Dim, T}
+    displacement::Vector{SVector{Dim, T}}
+    velocity::Vector{SVector{Dim, T}}
+end
+
+"""
+    SolidMechanicsState(mesh::UnstructuredFVMMesh{Dim, T})
+
+Construct a zero-initialised solid-mechanics state for `mesh`.
+"""
+function SolidMechanicsState(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    zeroU = zero(SVector{Dim, T})
+    displacement = fill(zeroU, nc)
+    velocity = fill(zeroU, nc)
+    return SolidMechanicsState{Dim, T}(displacement, velocity)
 end
 
 """

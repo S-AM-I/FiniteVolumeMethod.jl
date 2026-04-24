@@ -132,3 +132,51 @@ function mrf_momentum_source_2d_planar(
     centrifugal = -omega^2 * r_vec  # k̂ × (k̂ × r) = -r in 2D
     return -rho * (T(2) * coriolis + centrifugal)
 end
+
+# ---------------------------------------------------------------------------
+# Wave 3: Plain-SVector MRF zone API (single- + multi-zone)
+#
+# `MRFZone{T}` below is a self-contained 3D zone descriptor keyed on a
+# fixed rotation origin and angular-velocity vector plus a list of cell
+# indices. For planar/2D problems encode ω = (0, 0, ω_z) and
+# r = (rx, ry, 0). Lives alongside the legacy `RotationalMRFZone` so
+# older callers keep working; new physics (see `momentum_source.jl` and
+# `multi_zone.jl`) builds on this struct.
+# ---------------------------------------------------------------------------
+
+"""
+    MRFZone{T}
+
+Single Moving Reference Frame zone. Holds a 3D angular-velocity vector,
+a 3D rotation-axis origin, and the list of cell indices in the zone.
+
+# Fields
+- `omega::SVector{3, T}` — angular velocity vector (rad/s).
+- `origin::SVector{3, T}` — point on the rotation axis.
+- `cells::Vector{Int}` — global cell indices belonging to the zone.
+
+For 2D problems use `omega = SVector(0, 0, ω_z)` and
+`origin = SVector(x0, y0, 0)`.
+"""
+struct MRFZone{T}
+    omega::SVector{3, T}
+    origin::SVector{3, T}
+    cells::Vector{Int}
+end
+
+"""
+    MultiMRF{T}
+
+Container for multiple disjoint `MRFZone{T}` regions (e.g. rotor +
+stator blade row). Build via `build_multi_mrf_from_zones` to enforce the
+disjoint-cell invariant at construction time.
+"""
+struct MultiMRF{T}
+    zones::Vector{MRFZone{T}}
+end
+
+# Wave 3: momentum source + multi-zone dispatch. Kept as sibling files to
+# keep per-file concerns narrow; `types.jl` is the single `include` point
+# registered in the assembly-kernels layer.
+include("momentum_source.jl")
+include("multi_zone.jl")

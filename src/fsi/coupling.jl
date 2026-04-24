@@ -117,3 +117,12 @@ function interface_residual_norm(
     end
     return sqrt(acc)
 end
+
+# Wave 3 Agent C extensions: interface mapping + partitioned loop.
+# These add `build_matched_interface`, `interpolate_displacement_to_fluid[!]`,
+# `interpolate_traction_to_structure[!]`, `update_aitken_omega!`, and
+# `solve_partitioned_fsi`. They are strictly additive — existing
+# `AitkenRelaxation` / `FSIInterface` / `update_aitken!` behavior is
+# unchanged.
+include("interface.jl")
+include("partitioned.jl")

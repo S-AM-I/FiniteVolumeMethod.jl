@@ -436,6 +436,83 @@ end
     @testset verbose = true "V&V: Darcy-Forchheimer porous" begin
         safe_include("v_and_v_darcy_forchheimer.jl")
     end
+    # Wave 3 (v3.104) — MRF + solid mechanics + FSI + aeroacoustics + PBM
+    @testset verbose = true "V&V: MRF single-zone Coriolis+centrifugal" begin
+        safe_include("v_and_v_mrf_single_zone.jl")
+    end
+    @testset verbose = true "V&V: MRF multi-zone" begin
+        safe_include("v_and_v_mrf_multi_zone.jl")
+    end
+    @testset verbose = true "V&V: linear elasticity" begin
+        safe_include("v_and_v_linear_elasticity.jl")
+    end
+    @testset verbose = true "V&V: finite strain (updated-Lagrangian)" begin
+        safe_include("v_and_v_finite_strain.jl")
+    end
+    @testset verbose = true "V&V: Aitken relaxation" begin
+        safe_include("v_and_v_aitken.jl")
+    end
+    @testset verbose = true "V&V: partitioned FSI" begin
+        safe_include("v_and_v_partitioned_fsi.jl")
+    end
+    @testset verbose = true "V&V: FW-H aeroacoustics" begin
+        safe_include("v_and_v_fwh.jl")
+    end
+    @testset verbose = true "V&V: PML sponge zones" begin
+        safe_include("v_and_v_pml.jl")
+    end
+    @testset verbose = true "V&V: QMoM Wheeler inversion" begin
+        safe_include("v_and_v_qmom.jl")
+    end
+    @testset verbose = true "V&V: DQMoM" begin
+        safe_include("v_and_v_dqmom.jl")
+    end
+    @testset verbose = true "V&V: Class Method PBM" begin
+        safe_include("v_and_v_class_method.jl")
+    end
+    # Wave 4 (v3.105) — mesh gen + collocated AMR + adjoint + KA/Enzyme + units/properties
+    @testset verbose = true "V&V: octree primitive" begin
+        safe_include("v_and_v_octree.jl")
+    end
+    @testset verbose = true "V&V: SnappyMesher stub" begin
+        safe_include("v_and_v_snappy_stub.jl")
+    end
+    @testset verbose = true "V&V: Gmsh pipeline stub" begin
+        safe_include("v_and_v_gmsh_pipeline.jl")
+    end
+    @testset verbose = true "V&V: ZZ error indicator" begin
+        safe_include("v_and_v_zz_indicator.jl")
+    end
+    @testset verbose = true "V&V: residual error indicator" begin
+        safe_include("v_and_v_residual_indicator.jl")
+    end
+    @testset verbose = true "V&V: collocated refinement/coarsening" begin
+        safe_include("v_and_v_collocated_refine.jl")
+    end
+    @testset verbose = true "V&V: steady adjoint identity" begin
+        safe_include("v_and_v_steady_adjoint.jl")
+    end
+    @testset verbose = true "V&V: transient adjoint stub" begin
+        safe_include("v_and_v_transient_adjoint_stub.jl")
+    end
+    @testset verbose = true "V&V: KA backend CPU path" begin
+        safe_include("v_and_v_ka_backend.jl")
+    end
+    @testset verbose = true "V&V: Enzyme full-solver stub" begin
+        safe_include("v_and_v_enzyme_stub.jl")
+    end
+    @testset verbose = true "V&V: runtime expression BC" begin
+        safe_include("v_and_v_expression_bc.jl")
+    end
+    @testset verbose = true "V&V: Unitful hook" begin
+        safe_include("v_and_v_unitful.jl")
+    end
+    @testset verbose = true "V&V: CoolProp stub" begin
+        safe_include("v_and_v_coolprop_stub.jl")
+    end
+    @testset verbose = true "V&V: PETSc stub" begin
+        safe_include("v_and_v_petsc_stub.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"
