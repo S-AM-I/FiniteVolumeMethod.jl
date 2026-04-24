@@ -526,6 +526,25 @@ end
     @testset verbose = true "V&V: Eulerian two-fluid (experimental)" begin
         safe_include("v_and_v_two_fluid.jl")
     end
+    # v3.1 roadmap — production two-fluid + transient adjoint + snappy + IDDES-full + primary-breakup FSI
+    @testset verbose = true "V&V: two-fluid coupled solver (v3.1)" begin
+        safe_include("v_and_v_two_fluid_solver.jl")
+    end
+    @testset verbose = true "V&V: transient adjoint (checkpointed)" begin
+        safe_include("v_and_v_transient_adjoint.jl")
+    end
+    @testset verbose = true "V&V: IDDES full Shur-2008 shielding" begin
+        safe_include("v_and_v_iddes_full.jl")
+    end
+    @testset verbose = true "V&V: primary-breakup FSI coupling" begin
+        safe_include("v_and_v_primary_breakup_fsi.jl")
+    end
+    @testset verbose = true "V&V: STL reader" begin
+        safe_include("v_and_v_stl_reader.jl")
+    end
+    @testset verbose = true "V&V: snappyHexMesh native (castellated + snap)" begin
+        safe_include("v_and_v_snappy_native.jl")
+    end
     # Grid-convergence study runs three full SIMPLE solves — slower.
     # Gated behind FVM_RUN_VANDV like Ghia.
     if get(ENV, "FVM_RUN_VANDV", "false") == "true"

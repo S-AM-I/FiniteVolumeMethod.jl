@@ -239,6 +239,8 @@ include("../multiphase/solvers.jl")
 # Eulerian two-fluid (Wave 5, experimental) + Ishii-Zuber / Gibilaro drag closures
 include("../multiphase/drag_closures.jl")
 include("../multiphase/two_fluid.jl")
+include("../multiphase/mass_transfer.jl")
+include("../multiphase/two_fluid_solver.jl")
 
 # Radiation (Phase 9)
 # Depends on Phase 0 operators + Phase 3 thermal.
@@ -280,6 +282,8 @@ include("../dynamic_mesh/six_dof.jl")
 include("../dynamic_mesh/topo_changer.jl")
 include("../dynamic_mesh/overset.jl")
 include("../dynamic_mesh/ami.jl")
+# Primary-breakup FSI coupling needs MeshMotionState (from dynamic_mesh/types.jl)
+include("../lagrangian/primary_breakup_fsi.jl")
 
 # MPI Parallelism stubs (Phase 6)
 # Concrete implementations live in ext/FVMMPIExt/.
