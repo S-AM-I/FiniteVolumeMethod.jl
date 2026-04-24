@@ -66,9 +66,16 @@ function qmom_recover_abscissae_weights(moments::AbstractVector{T}, N::Int) wher
         a[k] = sigma[k + 1, k + 1] / sigma[k + 1, k] -
             sigma[k, k] / sigma[k, k - 1]
         b[k] = sigma[k + 1, k] / sigma[k, k - 1]
-        b[k] >= zero(T) || error(
-            "qmom: moment sequence not realizable (β_$k = $(b[k]) < 0)"
-        )
+        # Tolerate tiny floating-point negatives from roundoff on
+        # degenerate (monodisperse / nearly-monodisperse) sequences;
+        # reject only genuine violations of the realisability bound.
+        tol = sqrt(eps(T)) *
+            max(one(T), abs(sigma[k + 1, k]), abs(sigma[k, k - 1]))
+        if b[k] < -tol
+            error("qmom: moment sequence not realizable (β_$k = $(b[k]) < 0)")
+        elseif b[k] < zero(T)
+            b[k] = zero(T)
+        end
     end
 
     # Jacobi matrix: symmetric tridiagonal with diagonal = α and
@@ -168,4 +175,65 @@ function qmom_moment_source_breakage(
         s += weights[i] * Kb(Li) * (daughter_pdf(Li, k) - Li^k)
     end
     return s
+end
+
+"""
+    wheeler_inversion(moments::AbstractVector{T}) -> (weights, abscissae)
+
+Convenience alias for `qmom_recover_abscissae_weights(moments, N)` with
+`N = length(moments) ÷ 2`. Returns `(weights, abscissae)` (note the
+swapped ordering vs `qmom_recover_abscissae_weights`) to match the
+conventional `(w, L)` presentation from Marchisio & Fox (2013).
+
+A monodisperse distribution `n(L) = m_0 · δ(L - L_0)` has moments
+`m_k = m_0 · L_0^k` and Wheeler recovers `(w, L) = ([m_0, 0, …], [L_0, *, …])`
+with the zero-weight abscissae determined by the zero of the Jacobi
+matrix and filtered out by the caller if desired.
+"""
+function wheeler_inversion(moments::AbstractVector{T}) where {T}
+    N = length(moments) ÷ 2
+    N >= 1 || error("wheeler_inversion: need ≥ 2 moments, got $(length(moments))")
+    abscissae, weights = qmom_recover_abscissae_weights(moments, N)
+    return weights, abscissae
+end
+
+"""
+    moment_source_aggregation(moments::AbstractVector{T}, beta_kernel) -> Vector{T}
+
+Rate of change of the first `2N = length(moments)` moments under
+Smoluchowski binary aggregation with kernel `β_kernel(L_i, L_j)`.
+Internally recovers the quadrature via `wheeler_inversion` and then
+evaluates `qmom_moment_source_aggregation` for each moment index
+`k = 0, …, 2N-1`.
+"""
+function moment_source_aggregation(
+        moments::AbstractVector{T}, beta_kernel::Function,
+    ) where {T}
+    weights, abscissae = wheeler_inversion(moments)
+    return T[
+        qmom_moment_source_aggregation(weights, abscissae, beta_kernel, k)
+            for k in 0:(length(moments) - 1)
+    ]
+end
+
+"""
+    moment_source_breakage(moments, breakage_rate, fragment_distribution) -> Vector{T}
+
+Rate of change of the first `2N = length(moments)` moments under
+binary breakage. `breakage_rate(L)` is the selection function and
+`fragment_distribution(L_parent, k)` returns the expected value of
+`L^k` over children — i.e. it folds the child-size integral into a
+closed-form expectation so no additional quadrature is required.
+"""
+function moment_source_breakage(
+        moments::AbstractVector{T},
+        breakage_rate::Function,
+        fragment_distribution::Function,
+    ) where {T}
+    weights, abscissae = wheeler_inversion(moments)
+    return T[
+        qmom_moment_source_breakage(
+                weights, abscissae, breakage_rate, fragment_distribution, k
+            ) for k in 0:(length(moments) - 1)
+    ]
 end

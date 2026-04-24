@@ -1,6 +1,6 @@
 name = "FiniteVolumeMethod"
 uuid = "d4f04ab7-4f65-4d72-8a28-7087bc7f46f4"
-version = "3.103.0"
+version = "3.105.0"
 authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>", "cx-xd contributors"]
 
 [deps]
@@ -27,17 +27,29 @@ JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 AlgebraicMultigrid = "2169fc97-5a83-5252-b627-83903c6c433c"
+Cantera = "88aad2b8-1d4e-47e9-91a5-7c0b1f2b4bdd"
+CoolProp = "e084ae63-2819-5025-826e-f8e2a42c56e6"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+Gmsh = "705231aa-382f-11e9-3f0c-b7cb4346fdeb"
 IncompleteLU = "40713840-3770-5561-ab4c-a76e7d0d7895"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+PETSc = "ace2c81b-2b5f-4b1e-a30d-d662738edfe0"
 PartitionedArrays = "5a9dfac6-5c52-46f7-8278-5e2210713be9"
 
 [extensions]
 FVMCUDAExt = "CUDA"
+FVMCanteraExt = "Cantera"
 FVMCheckpointExt = "JLD2"
+FVMCoolPropExt = "CoolProp"
 FVMDashboardExt = "JSON3"
 FVMDashboardServerExt = ["HTTP", "JSON3"]
+FVMEnzymeExt = "Enzyme"
+FVMGmshExt = "Gmsh"
 FVMHdf5Ext = "HDF5"
+FVMKAExt = "KernelAbstractions"
+FVMPETScExt = "PETSc"
 FVMRecipesExt = "RecipesBase"
 FVMVTKExt = "WriteVTK"
 FVMAMGExt = "AlgebraicMultigrid"

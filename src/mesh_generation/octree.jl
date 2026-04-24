@@ -169,3 +169,90 @@ function refine_near_sphere!(
     end
     return nothing
 end
+
+# ── Wave 4 generic octree primitives ──────────────────────────────
+#
+# The `build_octree` above is a uniform-refinement driver.  Wave 4 ships
+# a callback-driven variant + inspection helpers used by
+# `snappyHexMesh`-style workflows and the Gmsh pipeline.
+
+"""
+    leaves(node::Octree) -> Vector{Octree}
+
+Collect every leaf under `node` (pre-order walk).  Returns a `Vector`
+of the same concrete `Octree{Dim, T}` type.
+"""
+function leaves(node::Octree{Dim, T}) where {Dim, T}
+    out = Octree{Dim, T}[]
+    _collect_leaves!(out, node)
+    return out
+end
+
+function _collect_leaves!(out::Vector{<:Octree}, node::Octree)
+    if is_leaf(node)
+        push!(out, node)
+    else
+        for child in node.children
+            _collect_leaves!(out, child)
+        end
+    end
+    return out
+end
+
+"""
+    cell_count(node::Octree) -> Int
+
+Number of leaf cells under `node`. Alias for [`count_leaves`](@ref)
+exposed under the Wave 4 naming convention.
+"""
+cell_count(node::Octree) = count_leaves(node)
+
+"""
+    octree_refine!(node::Octree) -> Octree
+
+Split a single leaf node by one level (no-op on a non-leaf).  Primitive
+used by the callback-driven [`build_octree`](@ref) overload. Named
+`octree_refine!` rather than `refine!` to avoid clashing with
+DelaunayTriangulation's `refine!`.
+"""
+octree_refine!(node::Octree) = subdivide!(node)
+
+"""
+    build_octree(domain::NTuple{2, SVector{Dim, T}}, max_depth, refinement_criterion)
+    build_octree(bbox_min, bbox_max, max_depth, refinement_criterion)
+
+Callback-driven octree refinement.  The root covers the
+axis-aligned box `(bbox_min, bbox_max)` (or the 2-tuple `domain =
+(bbox_min, bbox_max)`).  A leaf is split iff
+`refinement_criterion(node) === true` and `node.level < max_depth`.
+
+The callback receives the candidate leaf and may inspect
+`node.level`, `node.bbox_min`, `node.bbox_max`, or [`center`](@ref).
+"""
+function build_octree(
+        domain::Tuple{SVector{Dim, T}, SVector{Dim, T}},
+        max_depth::Int, refinement_criterion,
+    ) where {Dim, T}
+    return build_octree(domain[1], domain[2], max_depth, refinement_criterion)
+end
+
+function build_octree(
+        bbox_min::SVector{Dim, T}, bbox_max::SVector{Dim, T},
+        max_depth::Int, refinement_criterion,
+    ) where {Dim, T}
+    root = Octree{Dim, T}(bbox_min, bbox_max, 0)
+    _callback_refine!(root, max_depth, refinement_criterion)
+    return root
+end
+
+function _callback_refine!(node::Octree, max_depth::Int, criterion)
+    node.level >= max_depth && return nothing
+    if is_leaf(node)
+        criterion(node) === true || return nothing
+        subdivide!(node)
+    end
+    for child in node.children
+        _callback_refine!(child, max_depth, criterion)
+    end
+    return nothing
+end

@@ -93,52 +93,7 @@ function flux_correction_factor(parent_area::T, child_areas::AbstractVector{T}) 
     return parent_area / max(total, eps(T))
 end
 
-"""
-    zz_error_indicator(field::CollocatedScalarField{T}, mesh) -> Vector{T}
-
-Zienkiewicz-Zhu (1987) superconvergent-patch-recovery error indicator.
-For each cell, compute a smoothed gradient from a patch of face
-neighbours, then take `|grad_recovered - grad_local|` as an error
-proxy. Larger indicator ⇒ more refinement needed.
-
-This MVP uses a volume-weighted face-neighbour average for the
-recovered gradient; a full ZZ implementation would solve a local
-least-squares fit.
-"""
-function zz_error_indicator(
-        field::CollocatedScalarField{T},
-        mesh::UnstructuredFVMMesh{Dim, T},
-    ) where {Dim, T}
-    nc = length(mesh.cell_volumes)
-    grad_local = gradient(field, mesh)
-
-    # Recover smoothed gradient via volume-weighted face-neighbour average.
-    grad_rec = Vector{SVector{Dim, T}}(undef, nc)
-    weights = zeros(T, nc)
-    accum = fill(zero(SVector{Dim, T}), nc)
-
-    # Self-contribution
-    for c in 1:nc
-        accum[c] = grad_local[c] * mesh.cell_volumes[c]
-        weights[c] = mesh.cell_volumes[c]
-    end
-
-    # Face-neighbour contribution
-    nf = size(mesh.face_cells, 2)
-    @inbounds for f in 1:nf
-        P = mesh.face_cells[1, f]
-        N = mesh.face_cells[2, f]
-        N == 0 && continue
-        accum[P] += grad_local[N] * mesh.cell_volumes[N]
-        weights[P] += mesh.cell_volumes[N]
-        accum[N] += grad_local[P] * mesh.cell_volumes[P]
-        weights[N] += mesh.cell_volumes[P]
-    end
-
-    indicator = Vector{T}(undef, nc)
-    @inbounds for c in 1:nc
-        grad_rec[c] = accum[c] / max(weights[c], eps(T))
-        indicator[c] = norm(grad_rec[c] - grad_local[c])
-    end
-    return indicator
-end
+# Note: the canonical `zz_error_indicator` lives in error_indicators.jl
+# (GG-vs-LSQ formulation from Wave 1 W1-E). A legacy smoothed variant
+# remains available there as `_zz_indicator_smoothed` for callers that
+# want the pre-Wave-1 behaviour.
