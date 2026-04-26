@@ -1,8 +1,8 @@
 module FVMDashboardExt
 
 using FiniteVolumeMethod
-using HTTP
-using JSON3
+using HTTP: HTTP
+using JSON3: JSON3
 
 # ============================================================
 # JSON Export / Import

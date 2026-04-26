@@ -1,6 +1,6 @@
 module FVMCUDAExt
 
-using CUDA
+using CUDA: CUDA, CuArray, @cuda
 using StaticArrays: SVector
 
 using FiniteVolumeMethod

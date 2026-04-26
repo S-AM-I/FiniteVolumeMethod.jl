@@ -1,7 +1,7 @@
 module FVMILUExt
 
 using FiniteVolumeMethod
-using IncompleteLU
+using IncompleteLU: IncompleteLU
 using SparseArrays: SparseMatrixCSC
 
 """

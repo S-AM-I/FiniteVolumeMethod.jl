@@ -1,7 +1,7 @@
 module FVMPETScExt
 
 using FiniteVolumeMethod
-using PETSc
+using PETSc: PETSc
 
 # Override the stub constructor so that once PETSc.jl is loaded the
 # `PETScLinearSolver` type can be created with options.

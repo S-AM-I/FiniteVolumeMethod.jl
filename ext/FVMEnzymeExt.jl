@@ -1,7 +1,7 @@
 module FVMEnzymeExt
 
 using FiniteVolumeMethod
-using Enzyme
+using Enzyme: Enzyme
 
 function FiniteVolumeMethod.autodiff_forward_step(
         step_fn::Function, state::AbstractVector, dstate::AbstractVector,

@@ -13,7 +13,7 @@ module FVMMetisExt
 # `src/parallel/metis_stub.jl`.
 
 using FiniteVolumeMethod
-using Metis
+using Metis: Metis
 using SparseArrays: sparse, SparseMatrixCSC
 
 """

@@ -1,7 +1,7 @@
 module FVMVTKExt
 
 using FiniteVolumeMethod
-using WriteVTK
+using WriteVTK: WriteVTK
 
 """
     write_structured_vtk_3d(path, mesh::StructuredMesh3D, data::AbstractArray{<:Real,3}; label="value")

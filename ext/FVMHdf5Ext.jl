@@ -1,7 +1,7 @@
 module FVMHdf5Ext
 
 using FiniteVolumeMethod
-using HDF5
+using HDF5: HDF5
 
 function _hdf5_metadata(mesh, metadata)
     normalized = FiniteVolumeMethod.stringify_keys(Dict{Any, Any}(metadata))
