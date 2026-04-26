@@ -1,9 +1,8 @@
 module FVMMPIExt
 
 using FiniteVolumeMethod
-using MPI
-using PartitionedArrays
-using PartitionedArrays: distribute_with_mpi, LocalIndices
+using MPI: MPI
+using PartitionedArrays: PartitionedArrays, distribute_with_mpi, LocalIndices
 using SparseArrays: SparseMatrixCSC, sparse, nnz, nzrange
 using LinearAlgebra: norm
 using StaticArrays: SVector

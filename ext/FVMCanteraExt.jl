@@ -1,7 +1,7 @@
 module FVMCanteraExt
 
 using FiniteVolumeMethod
-using Cantera
+using Cantera: Cantera
 
 # ── read_chemkin_mechanism ─────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 module FVMCoolPropExt
 
 using FiniteVolumeMethod
-using CoolProp
+using CoolProp: CoolProp
 
 function FiniteVolumeMethod.coolprop_density(f::FiniteVolumeMethod.CoolPropFluid, p, T)
     return CoolProp.PropsSI("D", "P", p, "T", T, f.name)

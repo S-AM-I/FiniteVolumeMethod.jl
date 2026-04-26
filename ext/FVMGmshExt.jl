@@ -1,7 +1,7 @@
 module FVMGmshExt
 
 using FiniteVolumeMethod
-using Gmsh
+using Gmsh: Gmsh
 
 # Override the package's `run_gmsh_pipeline` stub once Gmsh.jl is loaded.
 function FiniteVolumeMethod.run_gmsh_pipeline(

@@ -1,7 +1,7 @@
 module FVMAMGExt
 
 using FiniteVolumeMethod
-using AlgebraicMultigrid
+using AlgebraicMultigrid: AlgebraicMultigrid
 using SparseArrays: SparseMatrixCSC
 
 """

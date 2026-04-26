@@ -1,7 +1,7 @@
 module FVMCheckpointExt
 
 using FiniteVolumeMethod
-using JLD2
+using JLD2: JLD2
 
 function _checkpoint_metadata(metadata)
     normalized = FiniteVolumeMethod.stringify_keys(Dict{Any, Any}(metadata))
