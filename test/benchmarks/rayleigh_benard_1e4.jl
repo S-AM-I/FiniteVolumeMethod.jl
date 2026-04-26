@@ -144,7 +144,7 @@ end
     # Liveness: iteration count + finite T field.
     @benchmark_assert r.result.iterations > 0
     @benchmark_assert all(isfinite, r.thermal_state.T_field.internal)
-    @benchmark_assert all(isfinite, r.result.state.U.internal)
+    @benchmark_assert all(u -> all(isfinite, u), r.result.state.U.internal)
 
     # Temperature bounds: with Dirichlet [0, 1] walls and diffusive
     # interior, T must lie in [0, 1] (max-principle) up to discretization
