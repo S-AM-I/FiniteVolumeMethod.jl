@@ -1,7 +1,7 @@
 module FVMDashboardExt
 
 using FiniteVolumeMethod
-using JSON3
+using JSON3: JSON3
 
 using StaticArrays: SVector
 using SciMLBase: DiscreteCallback
