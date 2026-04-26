@@ -1,7 +1,7 @@
 module FVMRecipesExt
 
 using FiniteVolumeMethod
-using RecipesBase
+using RecipesBase: RecipesBase, @recipe
 
 """
     plot(sol, prob::HyperbolicProblem; vars=nothing, tidx=length(sol.t))
