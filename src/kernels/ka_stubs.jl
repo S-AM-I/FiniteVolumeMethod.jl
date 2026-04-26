@@ -12,7 +12,7 @@ to launch a `@kernel` on the provided backend.
 """
 function interpolate_face_ka!(
         out::AbstractVector{T}, field_P::AbstractVector{T}, field_N::AbstractVector{T},
-        weights::AbstractVector{T}; backend::KernelBackend = CPUBackend(),
+        weights::AbstractVector{T}; backend::AbstractBackend = CPUBackend(),
     ) where {T}
     nf = length(out)
     @inbounds for f in 1:nf
@@ -30,7 +30,7 @@ in V&V without dragging in the full gradient/laplacian stencils.
 """
 function elementwise_sum_ka!(
         out::AbstractVector{T}, a::AbstractVector{T}, b::AbstractVector{T};
-        backend::KernelBackend = CPUBackend(),
+        backend::AbstractBackend = CPUBackend(),
     ) where {T}
     @inbounds for i in eachindex(out)
         out[i] = a[i] + b[i]

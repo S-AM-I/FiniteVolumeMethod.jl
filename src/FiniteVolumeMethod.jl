@@ -1235,9 +1235,8 @@ export
     solve_steady_adjoint,
     solve_transient_adjoint,
     verify_adjoint_gradient,
-    # Kernel backend trait
+    # Kernel backend trait (CPUBackend is exported earlier alongside AbstractBackend)
     KernelBackend,
-    CPUBackend,
     KABackend,
     kernel_backend,
     per_term_ad,

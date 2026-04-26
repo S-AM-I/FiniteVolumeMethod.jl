@@ -3,20 +3,16 @@
 """
     KernelBackend
 
-Supertype for computational backends dispatched by the KA-capable
-kernels. [`CPUBackend`](@ref) is today's default CPU path; [`KABackend`](@ref)
-wraps a `KernelAbstractions` backend handle and is activated when the
-`FVMKAExt` extension is loaded.
-"""
-abstract type KernelBackend end
+Supertype for KA-capable backend wrappers. `CPUBackend` (defined in
+`core/backends.jl`) is the default CPU path and is *not* a subtype of
+this — `core/backends.jl` was loaded first and owns the `CPUBackend`
+type. `KABackend` wraps a `KernelAbstractions.Backend` and is
+activated when the `FVMKAExt` extension is loaded.
 
+`KernelBackend <: AbstractBackend` so KA-flavored backends still
+satisfy the older solver-side `::AbstractBackend` keyword.
 """
-    CPUBackend()
-
-Serial CPU backend. The default and only backend for v3.0 without
-KernelAbstractions.jl loaded.
-"""
-struct CPUBackend <: KernelBackend end
+abstract type KernelBackend <: AbstractBackend end
 
 """
     KABackend{B}
