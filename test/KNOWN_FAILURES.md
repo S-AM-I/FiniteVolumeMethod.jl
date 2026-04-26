@@ -28,6 +28,20 @@ is `validation/manifest.toml`; this document is a human-readable companion.
 - Scripts marked `run_in_ci = false` in `validation/manifest.toml` are excluded from CI due to memory or runtime constraints. They are exercised in the Nightly and Release workflows.
 - All numerical acceptance criteria use fixed `@test` assertions. Image regression tests use `JULIA_REFERENCETESTS_UPDATE=true` and are not part of the scientific contract.
 
+## Published-Benchmark Suite Status (2026-04-26 dry-run)
+
+Run via `./scripts/run_benchmarks.sh` with `FVM_RUN_BENCHMARKS=true`. As of v3.111 the 5-case harness lands as follows on M3 / Julia 1.12.4:
+
+| Benchmark | Status | Notes |
+|-----------|--------|-------|
+| `sod_shock_tube` | ✓ pass | HLLC + MUSCL on N=400 hits L¹ density error < 0.05 vs. analytical Riemann. |
+| `moser_re180` | ✓ pass | Channel flow Re_τ=180. |
+| `martin_moyce_dam_break` | ✓ pass | VOF + MULES dam-break front position vs. Martin-Moyce. |
+| `ghia_re400` | ✗ fail (1/28) | SIMPLE on N=64 lid-driven cavity Re=400 misses Ghia centerline profiles. Solver runs to completion but `peak_u` and downstream point-wise tolerances all fail. v3.2 work: needs deferred-correction convection or a finer mesh + tighter outer-loop tolerance. |
+| `rayleigh_benard_1e4` | ✗ fail (5/9) | Buoyancy-SIMPLE on N=40 misses De Vahl Davis Nu=2.243 ± 10% and ±25% velocity-magnitude tolerances. v3.2 work: tighten thermal-momentum coupling residual or increase outer iteration cap. |
+
+Promotion of `incompressible`, `thermal`, `multiphase`, `hyperbolic`, or `turbulence` from `provisional` to `stable` in `validation/manifest.toml` requires the corresponding benchmarks to pass.
+
 ## Simplifications in the Collocated / OpenFOAM-Style Solver Stack
 
 Every item below is a known simplification or incorrect implementation; each
