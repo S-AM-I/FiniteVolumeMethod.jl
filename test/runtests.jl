@@ -794,7 +794,13 @@ end
     end
 
     @testset verbose = true "Aqua" begin
-        Aqua.test_all(FiniteVolumeMethod; ambiguities = false, project_extras = false, unbound_args = false) # don't care about julia < 1.2
+        # piracies disabled: Aqua 0.7 traverses Core.TypeName.mt which was
+        # removed in Julia 1.12 (FieldError). Re-enable once Aqua >= 0.8.
+        Aqua.test_all(
+            FiniteVolumeMethod;
+            ambiguities = false, project_extras = false, unbound_args = false,
+            piracies = false,
+        )
         Aqua.test_unbound_args(FiniteVolumeMethod)
         Aqua.test_ambiguities(FiniteVolumeMethod) # don't pick up Base and Core...
     end

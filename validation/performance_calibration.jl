@@ -1,7 +1,15 @@
 module RepoPerformanceCalibration
 
-using Statistics
 using TOML
+
+# Inline median to avoid pulling in the Statistics stdlib dep —
+# matches the same policy applied across the rest of the package.
+function _median(values)
+    sorted = sort(collect(values))
+    n = length(sorted)
+    n == 0 && throw(ArgumentError("_median of empty collection"))
+    return iseven(n) ? (sorted[n ÷ 2] + sorted[n ÷ 2 + 1]) / 2 : sorted[(n + 1) ÷ 2]
+end
 
 include(joinpath(@__DIR__, "performance_baselines.jl"))
 using .RepoPerformanceBaselines
@@ -159,7 +167,7 @@ end
 
 function _metric_summary(values, warn_limit::Float64, fail_limit::Float64)
     rounded_minimum = round(minimum(values); digits = 3)
-    rounded_median = round(median(values); digits = 3)
+    rounded_median = round(_median(values); digits = 3)
     rounded_maximum = round(maximum(values); digits = 3)
     warn_headroom = round(warn_limit / rounded_maximum; digits = 3)
     fail_headroom = round(fail_limit / rounded_maximum; digits = 3)

@@ -1,7 +1,7 @@
 module FVMKAExt
 
 using FiniteVolumeMethod
-using KernelAbstractions
+using KernelAbstractions: KernelAbstractions
 
 # Extension override: KABackend wraps a KernelAbstractions backend
 # handle. When `KernelAbstractions.jl` is loaded, users can construct

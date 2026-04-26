@@ -762,6 +762,7 @@ export FVMGeometry,
     ospre,
     apply_limiter,
     select_limiter,
+    ParabolicLimiters,
     # Gradient reconstruction
     AbstractGradientMethod,
     GreenGaussGradient,
