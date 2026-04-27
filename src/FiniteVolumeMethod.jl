@@ -57,6 +57,7 @@ export
     STATEVAR,
     Variable,
     CellField,
+    make_cell_field,
     SimulationState,
     validate_state,
     update_field,

@@ -271,6 +271,35 @@ struct CellField{V, T} <: AbstractField
 end
 
 """
+    make_cell_field(mesh; name, role=STATEVAR, unit=:unitless, description="", init=0.0)
+
+Construct a metadata-tagged `CellField` of the right size for `mesh`.
+
+Builds `Variable(name, role, unit, description)` and pairs it with a `Vector`
+of length `length(mesh.cells)` filled with `init`. This is the canonical
+factory; using `CellField(::Symbol, vector)` directly is supported but loses
+the metadata wrapper.
+
+# Example
+```julia
+mesh = generate_mesh_1d(50, 1.0e-3)
+T = make_cell_field(mesh; name = :temperature, unit = :K,
+                    description = "Temperature", init = 560.0)
+```
+"""
+function make_cell_field(
+        mesh::AbstractParabolicMesh;
+        name::Symbol,
+        role = STATEVAR,
+        unit::Symbol = :unitless,
+        description::AbstractString = "",
+        init::Real = 0.0,
+    )
+    var = Variable(name, role, unit, description)
+    return CellField(var, fill(float(init), length(mesh.cells)))
+end
+
+"""
     SimulationState(t; fields)
 
 State wrapper holding the current time and field data.

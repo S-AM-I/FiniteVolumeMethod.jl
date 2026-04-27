@@ -94,3 +94,47 @@ sol = solve(prob, KrylovJL_GMRES()) # true GMRES with Krylov
 function parabolic_to_linearproblem(A, b)
     return LinearProblem(A, b)
 end
+
+"""
+    SciMLBase.ODEProblem(model, mesh::AbstractParabolicMesh, bcs...;
+                         tspan, u0, source = nothing, transient = false)
+
+Convenience constructor for the structured-parabolic stack: assembles the
+`(A, b)` system from `(model, mesh, bcs...)`, takes the mass matrix from
+`assemble_mass_matrix(mesh)`, wraps them with `parabolic_to_odefunction`, and
+returns an `SciMLBase.ODEProblem` ready for `solve`.
+
+Equivalent (long-form) to:
+```julia
+A, b = assemble_system(model, mesh, bcs...; source = source, transient = transient)
+M = assemble_mass_matrix(mesh)
+f = parabolic_to_odefunction(A, M, b)
+prob = ODEProblem(f, u0, tspan)
+```
+
+Works for any `(model, mesh)` pair `assemble_system` already dispatches on
+(1D/2D/3D structured parabolic, cylindrical, spherical). The variadic `bcs...`
+matches the existing assembly call shape (1D: `bc_left, bc_right`; 2D/3D:
+single tuple of face BCs).
+
+# Example
+```julia
+mesh = generate_mesh_1d(50, 1.0)
+prob = ODEProblem(Diffusion1D(2.0e-7), mesh,
+                  ParabolicDirichlet(600.0), ParabolicNeumann(0.0);
+                  tspan = (0.0, 10.0), u0 = fill(560.0, length(mesh.cells)))
+sol = solve(prob, ImplicitEuler(); adaptive = false, dt = 0.01)
+```
+"""
+function SciMLBase.ODEProblem(
+        model, mesh::AbstractParabolicMesh, bcs...;
+        tspan::Tuple,
+        u0::AbstractVector,
+        source = nothing,
+        transient::Bool = false,
+    )
+    A, b = assemble_system(model, mesh, bcs...; source = source, transient = transient)
+    M = assemble_mass_matrix(mesh)
+    f = parabolic_to_odefunction(A, M, b)
+    return ODEProblem(f, u0, tspan)
+end
