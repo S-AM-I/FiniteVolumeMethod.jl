@@ -28,19 +28,21 @@ is `validation/manifest.toml`; this document is a human-readable companion.
 - Scripts marked `run_in_ci = false` in `validation/manifest.toml` are excluded from CI due to memory or runtime constraints. They are exercised in the Nightly and Release workflows.
 - All numerical acceptance criteria use fixed `@test` assertions. Image regression tests use `JULIA_REFERENCETESTS_UPDATE=true` and are not part of the scientific contract.
 
-## Published-Benchmark Suite Status (2026-04-26 dry-run)
+## Published-Benchmark Suite Status (2026-04-27, v3.120)
 
-Run via `./scripts/run_benchmarks.sh` with `FVM_RUN_BENCHMARKS=true`. As of v3.111 the 5-case harness lands as follows on M3 / Julia 1.12.4:
+Run via `./scripts/run_benchmarks.sh` with `FVM_RUN_BENCHMARKS=true`. The 5-case harness lands as follows on M3 / Julia 1.12.4:
 
 | Benchmark | Status | Notes |
 |-----------|--------|-------|
 | `sod_shock_tube` | ✓ pass | HLLC + MUSCL on N=400 hits L¹ density error < 0.05 vs. analytical Riemann. |
 | `moser_re180` | ✓ pass | Channel flow Re_τ=180. |
 | `martin_moyce_dam_break` | ✓ pass | VOF + MULES dam-break front position vs. Martin-Moyce. |
-| `ghia_re400` | ✗ fail (1/28) | SIMPLE on N=64 lid-driven cavity Re=400 misses Ghia centerline profiles. Solver runs to completion but `peak_u` and downstream point-wise tolerances all fail. v3.2 work: needs deferred-correction convection or a finer mesh + tighter outer-loop tolerance. |
-| `rayleigh_benard_1e4` | ✗ fail (5/9) | Buoyancy-SIMPLE on N=40 misses De Vahl Davis Nu=2.243 ± 10% and ±25% velocity-magnitude tolerances. v3.2 work: tighten thermal-momentum coupling residual or increase outer iteration cap. |
+| `ghia_re400` | ✗ fail (1/28) | **Root cause identified (v3.120)**: SIMPLE on N=64 with default 8000 iters diverges to NaN; the only stable config (αU=0.5/αP=0.2/4000 iters) under-resolves at min(u)=−0.262 vs Ghia −0.327. On N=128 (Ghia 1982's actual grid) all 5 geometric assertions pass; pointwise sweep was cancelled mid-run. See `plans/open-work.md` §A.1 for the two paths forward. |
+| `rayleigh_benard_1e4` | ✗ fail (4/9) | Buoyancy-SIMPLE on N=40 misses De Vahl Davis Nu=2.243 ±10% and ±25% velocity tolerances. Diagnosis pending — likely the same convection-divergence pattern as Ghia. See `plans/open-work.md` §A.2. |
 
 Promotion of `incompressible`, `thermal`, `multiphase`, `hyperbolic`, or `turbulence` from `provisional` to `stable` in `validation/manifest.toml` requires the corresponding benchmarks to pass.
+
+**Pkg.test() baseline (v3.120):** 1,428,433 passed / 0 failed / 0 errored. The full failure-sweep wave is documented in `plans/open-work.md` §E.
 
 ## Simplifications in the Collocated / OpenFOAM-Style Solver Stack
 
