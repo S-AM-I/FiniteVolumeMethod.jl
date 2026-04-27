@@ -30,6 +30,8 @@ include("layers/extensions_tooling_output.jl")
 
 # --- Parabolic Core Types ---
 export
+    # Problem Type Hierarchy
+    AbstractProblemPDE,
     # Geometry and Mesh
     AbstractParabolicMesh,
     AbstractNode,
