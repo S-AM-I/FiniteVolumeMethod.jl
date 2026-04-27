@@ -48,7 +48,7 @@ end
 @testset "Threaded vs Serial: 2D CFL" begin
     prob = make_2d_euler_problem()
     U = FiniteVolumeMethod.initialize_2d(prob)
-    FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, 0.0)
+    FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, 2, 0.0)
 
     dt_serial = FiniteVolumeMethod.compute_dt_2d(prob, U, 0.0)
     dt_threaded = FiniteVolumeMethod._compute_dt_2d_threaded(prob, U, 0.0)
@@ -60,7 +60,7 @@ end
 @testset "Threaded vs Serial: 2D RHS" begin
     prob = make_2d_euler_problem()
     U = FiniteVolumeMethod.initialize_2d(prob)
-    FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, 0.0)
+    FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, 2, 0.0)
 
     nx, ny = prob.mesh.nx, prob.mesh.ny
     N = nvariables(prob.law)

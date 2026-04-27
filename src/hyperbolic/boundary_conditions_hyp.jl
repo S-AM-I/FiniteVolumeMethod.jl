@@ -15,7 +15,7 @@ Fill the ghost cells `U_ghost` based on the boundary condition, the conservation
 and the interior cell values.
 
 For 1D problems, `U` is padded as:
-  `U[1:2]` = left ghost, `U[3:ncells+2]` = interior, `U[ncells+3:ncells+4]` = right ghost.
+  `U[1:ng]` = left ghost, `U[ng+1:ncells+ng]` = interior, `U[ncells+ng+1:ncells+2*ng]` = right ghost.
 
 Each BC fills its side's ghost cells.
 """
@@ -33,15 +33,19 @@ the nearest interior cells (extrapolation of order 0).
 """
 struct TransmissiveBC <: AbstractHyperbolicBC end
 
-function apply_bc_left!(U::AbstractVector, ::TransmissiveBC, law, ncells::Int, t)
-    U[2] = U[3]      # first ghost = first interior
-    U[1] = U[3]      # second ghost = first interior
+function apply_bc_left!(U::AbstractVector, ::TransmissiveBC, law, ncells::Int, ng::Int, t)
+    first_interior = ng + 1
+    for g in 1:ng
+        U[ng + 1 - g] = U[first_interior]
+    end
     return nothing
 end
 
-function apply_bc_right!(U::AbstractVector, ::TransmissiveBC, law, ncells::Int, t)
-    U[ncells + 3] = U[ncells + 2]  # first ghost = last interior
-    U[ncells + 4] = U[ncells + 2]  # second ghost = last interior
+function apply_bc_right!(U::AbstractVector, ::TransmissiveBC, law, ncells::Int, ng::Int, t)
+    last_interior = ncells + ng
+    for g in 1:ng
+        U[last_interior + g] = U[last_interior]
+    end
     return nothing
 end
 
@@ -58,29 +62,26 @@ velocities are copied.
 """
 struct ReflectiveBC <: AbstractHyperbolicBC end
 
-function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law::EulerEquations{1}, ncells::Int, t)
+function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law::EulerEquations{1}, ncells::Int, ng::Int, t)
     # Reflect: negate velocity
-    u1 = U[3]  # first interior cell
-    u2 = U[4]  # second interior cell
-    w1 = conserved_to_primitive(law, u1)
-    w2 = conserved_to_primitive(law, u2)
-    # Mirror: ρ same, v negated, P same
-    w1_ghost = SVector(w1[1], -w1[2], w1[3])
-    w2_ghost = SVector(w2[1], -w2[2], w2[3])
-    U[2] = primitive_to_conserved(law, w1_ghost)
-    U[1] = primitive_to_conserved(law, w2_ghost)
+    for g in 1:ng
+        u_int = U[ng + g]  # interior cell g (1st, 2nd, etc. from boundary)
+        w = conserved_to_primitive(law, u_int)
+        # Mirror: rho same, v negated, P same
+        w_ghost = SVector(w[1], -w[2], w[3])
+        U[ng + 1 - g] = primitive_to_conserved(law, w_ghost)
+    end
     return nothing
 end
 
-function apply_bc_right!(U::AbstractVector, ::ReflectiveBC, law::EulerEquations{1}, ncells::Int, t)
-    u1 = U[ncells + 2]  # last interior cell
-    u2 = U[ncells + 1]  # second-to-last interior cell
-    w1 = conserved_to_primitive(law, u1)
-    w2 = conserved_to_primitive(law, u2)
-    w1_ghost = SVector(w1[1], -w1[2], w1[3])
-    w2_ghost = SVector(w2[1], -w2[2], w2[3])
-    U[ncells + 3] = primitive_to_conserved(law, w1_ghost)
-    U[ncells + 4] = primitive_to_conserved(law, w2_ghost)
+function apply_bc_right!(U::AbstractVector, ::ReflectiveBC, law::EulerEquations{1}, ncells::Int, ng::Int, t)
+    last_interior = ncells + ng
+    for g in 1:ng
+        u_int = U[last_interior + 1 - g]  # interior cell g from boundary
+        w = conserved_to_primitive(law, u_int)
+        w_ghost = SVector(w[1], -w[2], w[3])
+        U[last_interior + g] = primitive_to_conserved(law, w_ghost)
+    end
     return nothing
 end
 
@@ -94,23 +95,26 @@ end
 Prescribes all primitive variables at the boundary.
 
 # Fields
-- `state::SVector{N, FT}`: Prescribed primitive state `[ρ, v, P]` (1D) or `[ρ, vx, vy, P]` (2D).
+- `state::SVector{N, FT}`: Prescribed primitive state `[rho, v, P]` (1D) or `[rho, vx, vy, P]` (2D).
 """
 struct InflowBC{N, FT} <: AbstractHyperbolicBC
     state::SVector{N, FT}
 end
 
-function apply_bc_left!(U::AbstractVector, bc::InflowBC, law, ncells::Int, t)
+function apply_bc_left!(U::AbstractVector, bc::InflowBC, law, ncells::Int, ng::Int, t)
     u_bc = primitive_to_conserved(law, bc.state)
-    U[2] = u_bc
-    U[1] = u_bc
+    for g in 1:ng
+        U[ng + 1 - g] = u_bc
+    end
     return nothing
 end
 
-function apply_bc_right!(U::AbstractVector, bc::InflowBC, law, ncells::Int, t)
+function apply_bc_right!(U::AbstractVector, bc::InflowBC, law, ncells::Int, ng::Int, t)
     u_bc = primitive_to_conserved(law, bc.state)
-    U[ncells + 3] = u_bc
-    U[ncells + 4] = u_bc
+    last_interior = ncells + ng
+    for g in 1:ng
+        U[last_interior + g] = u_bc
+    end
     return nothing
 end
 
@@ -126,18 +130,22 @@ interior cells and vice versa.
 """
 struct PeriodicHyperbolicBC <: AbstractHyperbolicBC end
 
-function apply_periodic_bcs!(U::AbstractVector, law, ncells::Int, t)
+function apply_periodic_bcs!(U::AbstractVector, law, ncells::Int, ng::Int, t)
+    first_interior = ng + 1
+    last_interior = ncells + ng
     # Left ghosts from right interior
-    U[2] = U[ncells + 2]  # ghost 1 = last interior
-    U[1] = U[ncells + 1]  # ghost 2 = second-to-last interior
+    for g in 1:ng
+        U[ng + 1 - g] = U[last_interior + 1 - g]
+    end
     # Right ghosts from left interior
-    U[ncells + 3] = U[3]  # ghost 1 = first interior
-    U[ncells + 4] = U[4]  # ghost 2 = second interior
+    for g in 1:ng
+        U[last_interior + g] = U[first_interior + g - 1]
+    end
     return nothing
 end
 
 # ============================================================
-# Dirichlet (fixed state) BC — for Sod-like problems
+# Dirichlet (fixed state) BC -- for Sod-like problems
 # ============================================================
 
 """
@@ -153,17 +161,20 @@ struct DirichletHyperbolicBC{N, FT} <: AbstractHyperbolicBC
     state::SVector{N, FT}
 end
 
-function apply_bc_left!(U::AbstractVector, bc::DirichletHyperbolicBC, law, ncells::Int, t)
+function apply_bc_left!(U::AbstractVector, bc::DirichletHyperbolicBC, law, ncells::Int, ng::Int, t)
     u_bc = primitive_to_conserved(law, bc.state)
     # Set ghost cells to reflect the boundary state
-    U[2] = u_bc
-    U[1] = u_bc
+    for g in 1:ng
+        U[ng + 1 - g] = u_bc
+    end
     return nothing
 end
 
-function apply_bc_right!(U::AbstractVector, bc::DirichletHyperbolicBC, law, ncells::Int, t)
+function apply_bc_right!(U::AbstractVector, bc::DirichletHyperbolicBC, law, ncells::Int, ng::Int, t)
     u_bc = primitive_to_conserved(law, bc.state)
-    U[ncells + 3] = u_bc
-    U[ncells + 4] = u_bc
+    last_interior = ncells + ng
+    for g in 1:ng
+        U[last_interior + g] = u_bc
+    end
     return nothing
 end

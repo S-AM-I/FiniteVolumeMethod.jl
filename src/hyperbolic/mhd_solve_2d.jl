@@ -124,15 +124,16 @@ function _mhd_compute_fluxes_2d!(
     solver = prob.riemann_solver
     recon = prob.reconstruction
     N = nvariables(law)
-    FT = eltype(U[3, 3])
+    ng = _nghost_for_reconstruction(recon)
+    FT = eltype(U[ng + 1, ng + 1])
 
     # Apply BCs to fill ghost cells
-    apply_boundary_conditions_2d!(U, prob, t)
+    apply_boundary_conditions_2d!(U, prob, ng, t)
 
     # Zero dU for interior cells
     zero_state = zero(SVector{N, FT})
     for iy in 1:ny, ix in 1:nx
-        dU[ix + 2, iy + 2] = zero_state
+        dU[ix + ng, iy + ng] = zero_state
     end
 
     # ---- X-direction sweeps (including ghost rows) ----
@@ -167,7 +168,7 @@ function _mhd_compute_fluxes_2d!(
         # Fy_all col_idx for interior column ix: col_idx = ix + 1
         G_top = Fy_all[ix + 1, iy + 1]
         G_bottom = Fy_all[ix + 1, iy]
-        dU[ix + 2, iy + 2] = -(F_right - F_left) / dx - (G_top - G_bottom) / dy
+        dU[ix + ng, iy + ng] = -(F_right - F_left) / dx - (G_top - G_bottom) / dy
     end
 
     return nothing
@@ -236,6 +237,7 @@ function solve_hyperbolic(
     dx, dy = mesh.dx, mesh.dy
     law = prob.law
     N = nvariables(law)  # 8
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     # Initialize cell-centered solution (padded array)
     U = initialize_2d(prob)
@@ -279,7 +281,7 @@ function solve_hyperbolic(
 
             # Update all conserved variables via flux differencing
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U[ii, jj] = U[ii, jj] + dt * dU[ii, jj]
             end
 
@@ -324,7 +326,7 @@ function solve_hyperbolic(
             # ---- Stage 1: U1 = U + dt * L(U) ----
             _mhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U, prob, t)
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U1[ii, jj] = U[ii, jj] + dt * dU[ii, jj]
             end
             _compute_emf_from_extended!(ct.emf_z, Fx_all, Fy_all, nx, ny)
@@ -334,10 +336,10 @@ function solve_hyperbolic(
             face_to_cell_B!(U1, ct1, nx, ny)
 
             # ---- Stage 2: U2 = 3/4*U + 1/4*(U1 + dt*L(U1)) ----
-            apply_boundary_conditions_2d!(U1, prob, t + dt)
+            apply_boundary_conditions_2d!(U1, prob, ng, t + dt)
             _mhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U1, prob, t + dt)
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U2[ii, jj] = 0.75 * U[ii, jj] + 0.25 * (U1[ii, jj] + dt * dU[ii, jj])
             end
             _compute_emf_from_extended!(ct1.emf_z, Fx_all, Fy_all, nx, ny)
@@ -346,10 +348,10 @@ function solve_hyperbolic(
             face_to_cell_B!(U2, ct2, nx, ny)
 
             # ---- Stage 3: U = 1/3*U + 2/3*(U2 + dt*L(U2)) ----
-            apply_boundary_conditions_2d!(U2, prob, t + 0.5 * dt)
+            apply_boundary_conditions_2d!(U2, prob, ng, t + 0.5 * dt)
             _mhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U2, prob, t + 0.5 * dt)
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U[ii, jj] = (1.0 / 3.0) * U[ii, jj] + (2.0 / 3.0) * (U2[ii, jj] + dt * dU[ii, jj])
             end
             _compute_emf_from_extended!(ct2.emf_z, Fx_all, Fy_all, nx, ny)
@@ -370,7 +372,7 @@ function solve_hyperbolic(
     # Extract interior solution as nx × ny matrix
     U_interior = Matrix{SVector{N, FT}}(undef, nx, ny)
     for iy in 1:ny, ix in 1:nx
-        U_interior[ix, iy] = U[ix + 2, iy + 2]
+        U_interior[ix, iy] = U[ix + ng, iy + ng]
     end
 
     # Cell center coordinates

@@ -26,8 +26,8 @@ abstract type AbstractSemidiscreteCache end
 
 Pre-allocated workspace for a 1D hyperbolic problem.
 
-`padded_U` and `padded_dU` have length `nc + 2*ng` where `ng = 2`
-(matching the standard ghost cell padding used by `initialize_1d`).
+`padded_U` and `padded_dU` have length `nc + 2*ng` where `ng` is
+determined by the reconstruction scheme (e.g. 2 for MUSCL, 3 for WENO5).
 """
 struct HyperbolicCache1D{N, FT, Prob} <: AbstractSemidiscreteCache
     prob::Prob
@@ -234,27 +234,14 @@ function _determine_ft_3d(prob::HyperbolicProblem3D)
 end
 
 """
-    _check_reconstruction_ghost_count(prob)
+    _nghost_for_reconstruction(reconstruction) -> Int
 
-Guard against reconstruction schemes whose stencil width exceeds the
-two ghost cells the BC layer currently fills. WENO5 (`nghost = 3`) is
-the documented offender; it currently reads uninitialised ghost cells
-on small grids and is tracked in `test/KNOWN_FAILURES.md`. Erroring
-early here is preferable to silently producing wrong answers.
+Return the number of ghost cells required by the given reconstruction scheme.
+Falls back to 2 (the MUSCL/WENO3 default) when `nghost` is not defined.
 """
-function _check_reconstruction_ghost_count(prob)
-    rec = prob.reconstruction
-    hasmethod(nghost, Tuple{typeof(rec)}) || return nothing
-    ng_required = nghost(rec)
-    if ng_required > 2
-        error(
-            "Reconstruction $(nameof(typeof(rec))) requires nghost = $(ng_required) " *
-                "but the BC layer currently fills only 2 ghost cells per side. " *
-                "This is a known limitation tracked in test/KNOWN_FAILURES.md " *
-                "(WENO5 ghost-cell bug). Use CellCenteredMUSCL or WENO3 instead.",
-        )
-    end
-    return nothing
+function _nghost_for_reconstruction(rec)
+    hasmethod(nghost, Tuple{typeof(rec)}) || return 2
+    return nghost(rec)
 end
 
 """
@@ -265,10 +252,9 @@ Dispatches on problem type to create the appropriate cache.
 """
 function build_cache(prob::HyperbolicProblem, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_cache(::HyperbolicProblem)", backend)
-    _check_reconstruction_ghost_count(prob)
     nc = ncells(prob.mesh)
     N = nvariables(prob.law)
-    ng = 2
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     FT = _determine_ft(prob)
 
     padded_U = Vector{SVector{N, FT}}(undef, nc + 2 * ng)
@@ -284,10 +270,9 @@ end
 
 function build_cache(prob::HyperbolicProblem2D, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_cache(::HyperbolicProblem2D)", backend)
-    _check_reconstruction_ghost_count(prob)
     nx, ny = prob.mesh.nx, prob.mesh.ny
     N = nvariables(prob.law)
-    ng = 2
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     FT = _determine_ft_2d(prob)
 
     padded_U = Matrix{SVector{N, FT}}(undef, nx + 2 * ng, ny + 2 * ng)
@@ -303,10 +288,9 @@ end
 
 function build_cache(prob::HyperbolicProblem3D, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_cache(::HyperbolicProblem3D)", backend)
-    _check_reconstruction_ghost_count(prob)
     nx, ny, nz = prob.mesh.nx, prob.mesh.ny, prob.mesh.nz
     N = nvariables(prob.law)
-    ng = 2
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     FT = _determine_ft_3d(prob)
 
     padded_U = Array{SVector{N, FT}, 3}(undef, nx + 2 * ng, ny + 2 * ng, nz + 2 * ng)

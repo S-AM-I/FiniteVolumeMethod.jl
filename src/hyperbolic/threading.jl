@@ -4,10 +4,10 @@
 #
 # Multi-threaded implementations for large 2D problems.
 # Thread safety:
-#   - X-sweep: each row is independent → thread over rows
-#   - Y-sweep: each column is independent → thread over columns
+#   - X-sweep: each row is independent -> thread over rows
+#   - Y-sweep: each column is independent -> thread over columns
 #   - CFL: per-row max with final reduction
-#   - Implicit solve: each cell is independent → thread over cells
+#   - Implicit solve: each cell is independent -> thread over cells
 
 """
     _hyperbolic_rhs_2d_threaded!(dU, U, prob, t)
@@ -23,25 +23,26 @@ function _hyperbolic_rhs_2d_threaded!(dU::AbstractMatrix, U::AbstractMatrix, pro
     dx, dy = mesh.dx, mesh.dy
     solver = prob.riemann_solver
     recon = prob.reconstruction
+    ng = _nghost_for_reconstruction(recon)
 
-    # Apply BCs (serial — fast, touches only boundary cells)
-    apply_boundary_conditions_2d!(U, prob, t)
+    # Apply BCs (serial -- fast, touches only boundary cells)
+    apply_boundary_conditions_2d!(U, prob, ng, t)
 
     N = nvariables(law)
-    FT = eltype(U[3, 3])
+    FT = eltype(U[ng + 1, ng + 1])
     zero_state = zero(SVector{N, FT})
 
     # Zero dU for interior cells
     for iy in 1:ny, ix in 1:nx
-        @inbounds dU[ix + 2, iy + 2] = zero_state
+        @inbounds dU[ix + ng, iy + ng] = zero_state
     end
 
     # X-direction sweeps: thread over rows (each row is independent)
     Threads.@threads for iy in 1:ny
-        jj = iy + 2
+        jj = iy + ng
         @inbounds for ix in 0:nx
-            iL = ix + 2
-            iR = ix + 3
+            iL = ix + ng
+            iR = ix + ng + 1
             wL_face, wR_face = _reconstruct_face_2d(recon, law, U, iL, iR, jj, 1, nx)
             F = solve_riemann(solver, law, wL_face, wR_face, 1)
             if ix >= 1
@@ -55,10 +56,10 @@ function _hyperbolic_rhs_2d_threaded!(dU::AbstractMatrix, U::AbstractMatrix, pro
 
     # Y-direction sweeps: thread over columns (each column is independent)
     Threads.@threads for ix in 1:nx
-        ii = ix + 2
+        ii = ix + ng
         @inbounds for iy in 0:ny
-            jL = iy + 2
-            jR = iy + 3
+            jL = iy + ng
+            jR = iy + ng + 1
             wL_face, wR_face = _reconstruct_face_2d_y(recon, law, U, ii, jL, jR, ny)
             F = solve_riemann(solver, law, wL_face, wR_face, 2)
             if iy >= 1
@@ -86,16 +87,17 @@ function _compute_dt_2d_threaded(prob::HyperbolicProblem2D, U::AbstractMatrix, t
     nx, ny = mesh.nx, mesh.ny
     cfl = prob.cfl
     dx, dy = mesh.dx, mesh.dy
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     row_max = zeros(eltype(dx), ny)
 
     Threads.@threads for iy in 1:ny
         local_max = zero(dx)
         @inbounds for ix in 1:nx
-            w = conserved_to_primitive(law, U[ix + 2, iy + 2])
-            λx = max_wave_speed(law, w, 1)
-            λy = max_wave_speed(law, w, 2)
-            speed = λx / dx + λy / dy
+            w = conserved_to_primitive(law, U[ix + ng, iy + ng])
+            lambda_x = max_wave_speed(law, w, 1)
+            lambda_y = max_wave_speed(law, w, 2)
+            speed = lambda_x / dx + lambda_y / dy
             local_max = max(local_max, speed)
         end
         row_max[iy] = local_max
@@ -111,17 +113,17 @@ function _compute_dt_2d_threaded(prob::HyperbolicProblem2D, U::AbstractMatrix, t
 end
 
 """
-    _implicit_solve_2d_threaded!(U_stage, law, stiff_source, adt, nx, ny, N, tol, maxiter)
+    _implicit_solve_2d_threaded!(U_stage, law, stiff_source, adt, nx, ny, ng, N, tol, maxiter)
 
 Multi-threaded cell-by-cell implicit solve. Each cell is completely
 independent, making this embarrassingly parallel.
 """
-function _implicit_solve_2d_threaded!(U_stage, law, stiff_source, adt, nx, ny, N, tol, maxiter)
+function _implicit_solve_2d_threaded!(U_stage, law, stiff_source, adt, nx, ny, ng, N, tol, maxiter)
     ncells_total = nx * ny
     Threads.@threads for idx in 1:ncells_total
         ix = mod1(idx, nx)
         iy = div(idx - 1, nx) + 1
-        ii, jj = ix + 2, iy + 2
+        ii, jj = ix + ng, iy + ng
 
         @inbounds begin
             U_rhs = U_stage[ii, jj]

@@ -215,10 +215,10 @@ end
 # ReflectiveBC forwarding for 1D ResistiveMHD
 # ============================================================
 
-function apply_bc_left!(U::AbstractVector, bc::ReflectiveBC, law::ResistiveMHDEquations{1}, ncells::Int, t)
-    return apply_bc_left!(U, bc, _ideal_mhd(law), ncells, t)
+function apply_bc_left!(U::AbstractVector, bc::ReflectiveBC, law::ResistiveMHDEquations{1}, ncells::Int, ng::Int, t)
+    return apply_bc_left!(U, bc, _ideal_mhd(law), ncells, ng, t)
 end
 
-function apply_bc_right!(U::AbstractVector, bc::ReflectiveBC, law::ResistiveMHDEquations{1}, ncells::Int, t)
-    return apply_bc_right!(U, bc, _ideal_mhd(law), ncells, t)
+function apply_bc_right!(U::AbstractVector, bc::ReflectiveBC, law::ResistiveMHDEquations{1}, ncells::Int, ng::Int, t)
+    return apply_bc_right!(U, bc, _ideal_mhd(law), ncells, ng, t)
 end
