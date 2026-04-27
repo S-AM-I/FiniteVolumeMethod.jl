@@ -104,10 +104,59 @@ using FiniteVolumeMethod
     end
 
     # ------------------------------------------------------------------
+    # Test 6b: make_cell_field factory — sized + metadata-tagged in one call
+    # ------------------------------------------------------------------
+    @testset "make_cell_field factory" begin
+        mesh = generate_mesh_1d(8, 1.0)
+        T = make_cell_field(mesh; name = :temperature, unit = :K,
+                            description = "Temperature", init = 560.0)
+        @test T isa CellField
+        @test length(T.values) == length(mesh.cells)
+        @test all(v -> v ≈ 560.0, T.values)
+        @test T.variable.name == :temperature
+        @test T.variable.role === STATEVAR
+        @test T.variable.unit === :K
+
+        # Defaults: zero init, :unitless, empty description
+        c = make_cell_field(mesh; name = :H3BO3)
+        @test all(v -> v == 0.0, c.values)
+        @test c.variable.unit === :unitless
+        @test c.variable.description == ""
+    end
+
+    # ------------------------------------------------------------------
     # Test 7: AbstractFVMMesh is exported (abstract mesh type)
     # ------------------------------------------------------------------
     @testset "AbstractFVMMesh exported" begin
         @test isdefined(FiniteVolumeMethod, :AbstractFVMMesh)
+    end
+
+    # ------------------------------------------------------------------
+    # Test 8: SciMLBase.ODEProblem convenience method for structured parabolic
+    # ------------------------------------------------------------------
+    @testset "ODEProblem(model, mesh, bcs; tspan, u0)" begin
+        using OrdinaryDiffEq
+        using SciMLBase
+        mesh = generate_mesh_1d(50, 1.0e-3)
+        u0 = fill(560.0, length(mesh.cells))
+        prob = SciMLBase.ODEProblem(
+            Diffusion1D(2.0e-7), mesh,
+            ParabolicDirichlet(600.0), ParabolicNeumann(0.0);
+            tspan = (0.0, 10.0), u0 = u0,
+        )
+        @test prob isa SciMLBase.ODEProblem
+        @test prob.tspan == (0.0, 10.0)
+        @test length(prob.u0) == length(mesh.cells)
+
+        # NOTE: autodiff=false because parabolic_to_odefunction's preallocated
+        # `_tmp = similar(b)` buffer is Float64-typed and breaks ForwardDiff's
+        # Dual-number propagation. Tracked as a separate FVM issue (DiffCache
+        # refactor); not blocking for the convenience method's correctness.
+        sol = solve(prob, ImplicitEuler(autodiff = false); adaptive = false, dt = 0.01)
+        # After 10 s with α=2e-7 and L=1e-3 (τ ≈ 5 s), the rod should have nearly
+        # equilibrated to the 600 K wall.
+        T_final = sol.u[end]
+        @test all(595.0 .< T_final .< 600.5)
     end
 
 end
