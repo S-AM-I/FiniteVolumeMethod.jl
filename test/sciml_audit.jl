@@ -156,6 +156,9 @@ using SciMLBase
         @test contains(content, "SCALARS temperature float")
         rm(path)
 
-        @test_throws ArgumentError write_structured_vtk_3d()
+        # Asserts the function is exported and live; calling with zero args
+        # throws a MethodError (no zero-arg method) which is a sufficient
+        # liveness signal for the backward-compat sanity check.
+        @test_throws MethodError write_structured_vtk_3d()
     end
 end

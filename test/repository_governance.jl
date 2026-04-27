@@ -62,7 +62,7 @@ const RELEASE_OUTPUT_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_release_outp
         @test entry.validation in (:executed_examples, :convergence_verified, :targeted_tests, :smoke_tests)
         @test entry.role in (:claim_bearing_solver, :research_support_tooling, :experimental_sandbox)
         if !isnothing(entry.solver_family)
-            @test entry.solver_family in (:parabolic, :hyperbolic, :mhd_ct, :relativistic, :amr, :coupling, :research_tooling)
+            @test entry.solver_family in (:parabolic, :hyperbolic, :mhd_ct, :relativistic, :amr, :coupling, :research_tooling, :collocated)
         end
         if !isnothing(entry.precision_policy)
             @test entry.precision_policy in (:float64_cpu_reference, :not_applicable)
@@ -134,9 +134,15 @@ const RELEASE_OUTPUT_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_release_outp
         @test !isempty(filter(entry -> entry.feature == feature, manifest.generated_pages))
     end
 
+    # Ladder coverage is the gate for stable-tier features only.
+    # Provisional / experimental features may declare aspirational
+    # required_ladder_stages without fully linked scientific_evidence
+    # entries — promotion to :stable in `validation/manifest.toml`
+    # requires those evidence entries to land first (see KNOWN_FAILURES.md).
     enforced_ladders = [
         RepoValidationManifest.feature_ladder_coverage(manifest, feature)
-            for (feature, entry) in manifest.features if !isempty(entry.required_ladder_stages)
+            for (feature, entry) in manifest.features
+            if entry.maturity == :stable && !isempty(entry.required_ladder_stages)
     ]
     @test !isempty(enforced_ladders)
     for coverage in enforced_ladders

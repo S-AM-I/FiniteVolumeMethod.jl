@@ -1657,8 +1657,8 @@ limitations = [
 [[features]]
 feature = "mpi_parallel"
 maturity = "experimental"
-validation = "smoke_tested"
-role = "research_tooling"
+validation = "smoke_tests"
+role = "research_support_tooling"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
@@ -1678,7 +1678,7 @@ limitations = [
 [[features]]
 feature = "eulerian_two_fluid"
 maturity = "experimental"
-validation = "smoke_tested"
+validation = "smoke_tests"
 role = "claim_bearing_solver"
 solver_family = "collocated"
 precision_policy = "float64_cpu_reference"
