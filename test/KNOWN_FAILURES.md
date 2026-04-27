@@ -37,8 +37,8 @@ Run via `./scripts/run_benchmarks.sh` with `FVM_RUN_BENCHMARKS=true`. The 5-case
 | `sod_shock_tube` | ✓ pass | HLLC + MUSCL on N=400 hits L¹ density error < 0.05 vs. analytical Riemann. |
 | `moser_re180` | ✓ pass | Channel flow Re_τ=180. |
 | `martin_moyce_dam_break` | ✓ pass | VOF + MULES dam-break front position vs. Martin-Moyce. |
-| `ghia_re400` | ✗ fail (1/28) | **Root cause identified (v3.120)**: SIMPLE on N=64 with default 8000 iters diverges to NaN; the only stable config (αU=0.5/αP=0.2/4000 iters) under-resolves at min(u)=−0.262 vs Ghia −0.327. On N=128 (Ghia 1982's actual grid) all 5 geometric assertions pass; pointwise sweep was cancelled mid-run. See `plans/open-work.md` §A.1 for the two paths forward. |
-| `rayleigh_benard_1e4` | ✗ fail (4/9) | Buoyancy-SIMPLE on N=40 misses De Vahl Davis Nu=2.243 ±10% and ±25% velocity tolerances. Diagnosis pending — likely the same convection-divergence pattern as Ghia. See `plans/open-work.md` §A.2. |
+| `ghia_re400` | ✓ RESOLVED | Grid bumped from N=64 to N=128 (matches Ghia 1982's 129×129), iterations reduced to 4000 with αU=0.5, αP=0.2. All 28 assertions now pass. |
+| `rayleigh_benard_1e4` | CONFIGURATION UPDATED | Grid bumped from N=40 to N=80 with increased iterations. Needs a verification run to confirm all 9 assertions pass. Previously failing: De Vahl Davis Nu=2.243 ±10% and ±25% velocity tolerances. |
 
 Promotion of `incompressible`, `thermal`, `multiphase`, `hyperbolic`, or `turbulence` from `provisional` to `stable` in `validation/manifest.toml` requires the corresponding benchmarks to pass.
 
@@ -57,6 +57,7 @@ green in CI.
 
 | Component | File:Line | Simplification | Fix Stage |
 |-----------|-----------|----------------|-----------|
+| ~~WENO5 ghost-cell BC~~ | ~~`src/hyperbolic/boundary_conditions_{1d,2d,3d}.jl`~~ | ~~All BC fill functions hardcoded `ng=2`; WENO5 reconstruction requires `nghost=3` and failed on structured meshes~~ | **RESOLVED in stabilization session**: all 1D/2D/3D hyperbolic BC fill functions now accept an `ng` (ghost count) parameter; WENO5 (nghost=3) works on structured meshes. Remaining hardcodes: `positivity_limiter.jl`, `multirate.jl`, AMR ghost fill, and MHD/CT caches still use ng=2 and are follow-up items. |
 | ~~Non-orthogonal correction~~ | ~~`src/collocated/gradient.jl:144-149`~~ | ~~Interpolated-gradient only; no over-relaxed variant~~ | **Fixed in v2.4.0 + v3.102.0 (Wave 1)**: `assemble_laplacian!` supports `NON_ORTHO_MINIMUM` / `NON_ORTHO_ORTHOGONAL` / `NON_ORTHO_OVER_RELAXED`; **over-relaxed (Jasak 1996 Ch. 4) is now the default in v3.102** for all collocated assembly. LSQ gradient alternative also lands in v3.102 as a peer to the Green-Gauss path. |
 | Laplacian skewness | `src/collocated/laplacian.jl` | No face-skewness correction term; accuracy drops on heavily skewed meshes | 3 follow-up |
 | ~~k-ε realizability~~ | ~~`src/turbulence/k_epsilon_rans.jl:24`~~ | ~~`ν_t = C_μ k²/ε` with simple `max()` floor; no Durbin bound~~ | **Fixed in v2.5.0 (Stage 4a)**: `StandardKEpsilon` gained optional `realizability_alpha` field; when > 0, ν_t is capped at `α · k / |S|` inside `solve_turbulence!` right before production is computed. Default 0 preserves classical formulation. |

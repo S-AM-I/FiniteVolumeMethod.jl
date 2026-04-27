@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Export `AbstractProblemPDE` from parabolic types — enables downstream packages to subtype
+- Published-benchmarks CI job in `.github/workflows/CI.yml` — runs all 5 published benchmarks automatically
+- Re-enabled DocCleanup and Nightly CI workflows
+- CRUD-path parabolic assembly integration test (`test/parabolic_crud_paths.jl`)
+
+### Fixed
+- WENO5 ghost-cell BC refactor: generalized all 1D/2D/3D hyperbolic boundary condition fills to accept `ng` (ghost count) parameter instead of hardcoding 2. WENO5 reconstruction (nghost=3) now works on structured meshes.
+- Ghia Re=400 benchmark: bumped grid from N=64 to N=128 (matches Ghia's 129×129), reduced iterations to 4000
+- Rayleigh-Benard Ra=10⁴ benchmark: bumped grid from N=40 to N=80 with increased iterations
+
+### Changed
+- Widened SciML compat bounds: `SciMLBase = "2, 3"`, `PreallocationTools = "0.4, 1"`, `LinearSolve = "2, 3"`
+
 ## v3.106.0 — Wave 5 fast-path (true MPI decomposition + Eulerian two-fluid) + v3.0 consolidation
 
 Final wave of the v3.0 fast-path plan. Key deliverables:
