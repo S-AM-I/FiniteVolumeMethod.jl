@@ -608,7 +608,7 @@ end
 
     # Compute initial totals from the padded array
     U0 = FiniteVolumeMethod.initialize_3d(prob)
-    FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 0.0)
+    FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 2, 0.0)
 
     mass0 = sum(U0[ix + 2, iy + 2, iz + 2][1] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
     mom_x0 = sum(U0[ix + 2, iy + 2, iz + 2][2] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
@@ -657,7 +657,7 @@ end
     )
 
     U0 = FiniteVolumeMethod.initialize_3d(prob)
-    FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 0.0)
+    FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 2, 0.0)
 
     mass0 = sum(U0[ix + 2, iy + 2, iz + 2][1] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
     energy0 = sum(U0[ix + 2, iy + 2, iz + 2][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
@@ -737,7 +737,7 @@ end
     @testset "Total energy conservation" begin
         # Reflective BCs should conserve total energy
         U0 = FiniteVolumeMethod.initialize_3d(prob)
-        FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 0.0)
+        FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 2, 0.0)
 
         energy0 = sum(U0[ix + 2, iy + 2, iz + 2][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
         energy_f = sum(U[ix, iy, iz][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
@@ -1293,7 +1293,7 @@ end
     )
 
     U0 = FiniteVolumeMethod.initialize_3d(prob)
-    FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 0.0)
+    FiniteVolumeMethod.apply_boundary_conditions_3d!(U0, prob, 2, 0.0)
 
     totals0 = [
         sum(U0[ix + 2, iy + 2, iz + 2][v] for ix in 1:N, iy in 1:N, iz in 1:N) * vol

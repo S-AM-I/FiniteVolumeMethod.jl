@@ -26,6 +26,7 @@ function initialize_3d(prob::HyperbolicProblem3D)
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     N = nvariables(law)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     # Determine element type from first cell
     x0, y0, z0 = cell_center(mesh, 1)
@@ -34,11 +35,11 @@ function initialize_3d(prob::HyperbolicProblem3D)
     FT = eltype(u0)
 
     # Allocate padded array
-    U = Array{SVector{N, FT}, 3}(undef, nx + 4, ny + 4, nz + 4)
+    U = Array{SVector{N, FT}, 3}(undef, nx + 2 * ng, ny + 2 * ng, nz + 2 * ng)
 
     # Fill with zeros first (ghost cells)
     zero_state = zero(SVector{N, FT})
-    for k in 1:(nz + 4), j in 1:(ny + 4), i in 1:(nx + 4)
+    for k in 1:(nz + 2 * ng), j in 1:(ny + 2 * ng), i in 1:(nx + 2 * ng)
         U[i, j, k] = zero_state
     end
 
@@ -46,7 +47,7 @@ function initialize_3d(prob::HyperbolicProblem3D)
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
         x, y, z = cell_center(mesh, cell_idx_3d(mesh, ix, iy, iz))
         w = prob.initial_condition(x, y, z)
-        U[ix + 2, iy + 2, iz + 2] = primitive_to_conserved(law, w)
+        U[ix + ng, iy + ng, iz + ng] = primitive_to_conserved(law, w)
     end
 
     return U
@@ -64,10 +65,11 @@ function compute_dt_3d(prob::HyperbolicProblem3D, U::AbstractArray{T, 3}, t) whe
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     cfl = prob.cfl
     dx, dy, dz = mesh.dx, mesh.dy, mesh.dz
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     max_speed = zero(dx)
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
-        w = conserved_to_primitive(law, U[ix + 2, iy + 2, iz + 2])
+        w = conserved_to_primitive(law, U[ix + ng, iy + ng, iz + ng])
         lx = max_wave_speed(law, w, 1)
         ly = max_wave_speed(law, w, 2)
         lz = max_wave_speed(law, w, 3)
@@ -196,26 +198,27 @@ function hyperbolic_rhs_3d!(
     dx, dy, dz = mesh.dx, mesh.dy, mesh.dz
     solver = prob.riemann_solver
     recon = prob.reconstruction
+    ng = _nghost_for_reconstruction(recon)
 
     # Apply BCs to fill ghost cells
-    apply_boundary_conditions_3d!(U, prob, t)
+    apply_boundary_conditions_3d!(U, prob, ng, t)
 
     N = nvariables(law)
-    FT = eltype(U[3, 3, 3])
+    FT = eltype(U[ng + 1, ng + 1, ng + 1])
 
     # Zero out dU for interior cells
     zero_state = zero(SVector{N, FT})
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
-        dU[ix + 2, iy + 2, iz + 2] = zero_state
+        dU[ix + ng, iy + ng, iz + ng] = zero_state
     end
 
     # X-direction sweeps: for each (j, k) row, compute x-fluxes
     for iz in 1:nz, iy in 1:ny
-        jj = iy + 2
-        kk = iz + 2
+        jj = iy + ng
+        kk = iz + ng
         for ix in 0:nx
-            iL = ix + 2
-            iR = ix + 3
+            iL = ix + ng
+            iR = ix + ng + 1
 
             wL_face, wR_face = _reconstruct_face_3d_x(recon, law, U, iL, iR, jj, kk)
             F = solve_riemann(solver, law, wL_face, wR_face, 1)
@@ -231,11 +234,11 @@ function hyperbolic_rhs_3d!(
 
     # Y-direction sweeps: for each (i, k) column, compute y-fluxes
     for iz in 1:nz, ix in 1:nx
-        ii = ix + 2
-        kk = iz + 2
+        ii = ix + ng
+        kk = iz + ng
         for iy in 0:ny
-            jL = iy + 2
-            jR = iy + 3
+            jL = iy + ng
+            jR = iy + ng + 1
 
             wL_face, wR_face = _reconstruct_face_3d_y(recon, law, U, ii, jL, jR, kk)
             F = solve_riemann(solver, law, wL_face, wR_face, 2)
@@ -251,11 +254,11 @@ function hyperbolic_rhs_3d!(
 
     # Z-direction sweeps: for each (i, j) pencil, compute z-fluxes
     for iy in 1:ny, ix in 1:nx
-        ii = ix + 2
-        jj = iy + 2
+        ii = ix + ng
+        jj = iy + ng
         for iz in 0:nz
-            kL = iz + 2
-            kR = iz + 3
+            kL = iz + ng
+            kR = iz + ng + 1
 
             wL_face, wR_face = _reconstruct_face_3d_z(recon, law, U, ii, jj, kL, kR)
             F = solve_riemann(solver, law, wL_face, wR_face, 3)
@@ -298,9 +301,10 @@ function solve_hyperbolic(
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     N = nvariables(prob.law)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     U = initialize_3d(prob)
-    FT = eltype(U[3, 3, 3])
+    FT = eltype(U[ng + 1, ng + 1, ng + 1])
 
     dU = similar(U)
     zero_state = zero(SVector{N, FT})
@@ -319,7 +323,7 @@ function solve_hyperbolic(
             end
             hyperbolic_rhs_3d!(dU, U, prob, t)
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                U[ix + 2, iy + 2, iz + 2] = U[ix + 2, iy + 2, iz + 2] + dt * dU[ix + 2, iy + 2, iz + 2]
+                U[ix + ng, iy + ng, iz + ng] = U[ix + ng, iy + ng, iz + ng] + dt * dU[ix + ng, iy + ng, iz + ng]
             end
             t += dt
             step += 1
@@ -344,23 +348,23 @@ function solve_hyperbolic(
             # Stage 1: U1 = U + dt * L(U)
             hyperbolic_rhs_3d!(dU, U, prob, t)
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                ii, jj, kk = ix + 2, iy + 2, iz + 2
+                ii, jj, kk = ix + ng, iy + ng, iz + ng
                 U1[ii, jj, kk] = U[ii, jj, kk] + dt * dU[ii, jj, kk]
             end
 
             # Stage 2: U2 = 3/4 U + 1/4 (U1 + dt * L(U1))
-            apply_boundary_conditions_3d!(U1, prob, t + dt)
+            apply_boundary_conditions_3d!(U1, prob, ng, t + dt)
             hyperbolic_rhs_3d!(dU, U1, prob, t + dt)
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                ii, jj, kk = ix + 2, iy + 2, iz + 2
+                ii, jj, kk = ix + ng, iy + ng, iz + ng
                 U2[ii, jj, kk] = 0.75 * U[ii, jj, kk] + 0.25 * (U1[ii, jj, kk] + dt * dU[ii, jj, kk])
             end
 
             # Stage 3: U = 1/3 U + 2/3 (U2 + dt * L(U2))
-            apply_boundary_conditions_3d!(U2, prob, t + 0.5 * dt)
+            apply_boundary_conditions_3d!(U2, prob, ng, t + 0.5 * dt)
             hyperbolic_rhs_3d!(dU, U2, prob, t + 0.5 * dt)
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                ii, jj, kk = ix + 2, iy + 2, iz + 2
+                ii, jj, kk = ix + ng, iy + ng, iz + ng
                 U[ii, jj, kk] = (1.0 / 3.0) * U[ii, jj, kk] + (2.0 / 3.0) * (U2[ii, jj, kk] + dt * dU[ii, jj, kk])
             end
 
@@ -377,7 +381,7 @@ function solve_hyperbolic(
     # Extract interior solution as nx x ny x nz array
     U_interior = Array{SVector{N, FT}, 3}(undef, nx, ny, nz)
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
-        U_interior[ix, iy, iz] = U[ix + 2, iy + 2, iz + 2]
+        U_interior[ix, iy, iz] = U[ix + ng, iy + ng, iz + ng]
     end
 
     # Cell center coordinates

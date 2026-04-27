@@ -8,14 +8,15 @@ using StaticArrays: SVector
     initialize_1d(prob::HyperbolicProblem) -> Vector{SVector{N,FT}}
 
 Create the padded solution array from the initial condition.
-Returns a vector of length `ncells + 4` (2 ghost cells on each side).
-Interior cells are at indices `3:ncells+2`.
+Returns a vector of length `ncells + 2*ng` where `ng` is determined by
+the reconstruction scheme. Interior cells are at indices `ng+1:ncells+ng`.
 """
 function initialize_1d(prob::HyperbolicProblem)
     law = prob.law
     mesh = prob.mesh
     nc = ncells(mesh)
     N = nvariables(law)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     # Determine element type
     x0 = cell_center(mesh, 1)
@@ -24,13 +25,13 @@ function initialize_1d(prob::HyperbolicProblem)
     FT = eltype(u0)
 
     # Allocate padded array
-    U = Vector{SVector{N, FT}}(undef, nc + 4)
+    U = Vector{SVector{N, FT}}(undef, nc + 2 * ng)
 
     # Fill interior cells
     for i in 1:nc
         x = cell_center(mesh, i)
         w = prob.initial_condition(x)
-        U[i + 2] = primitive_to_conserved(law, w)
+        U[i + ng] = primitive_to_conserved(law, w)
     end
 
     return U
@@ -47,10 +48,11 @@ function compute_dt(prob::HyperbolicProblem, U::AbstractVector, t)
     mesh = prob.mesh
     nc = ncells(mesh)
     cfl = prob.cfl
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     λ_max = zero(mesh.dx)
     for i in 1:nc
-        w = conserved_to_primitive(law, U[i + 2])
+        w = conserved_to_primitive(law, U[i + ng])
         λ = max_wave_speed(law, w, 1)
         λ_max = max(λ_max, λ)
     end
@@ -66,19 +68,20 @@ function compute_dt(prob::HyperbolicProblem, U::AbstractVector, t)
 end
 
 """
-    apply_boundary_conditions!(U, prob, t)
+    apply_boundary_conditions!(U, prob, ng, t)
 
 Apply left and right boundary conditions to the padded solution array.
+`ng` is the number of ghost cells on each side.
 """
-function apply_boundary_conditions!(U::AbstractVector, prob::HyperbolicProblem, t)
+function apply_boundary_conditions!(U::AbstractVector, prob::HyperbolicProblem, ng::Int, t)
     nc = ncells(prob.mesh)
     law = prob.law
 
     if prob.bc_left isa PeriodicHyperbolicBC && prob.bc_right isa PeriodicHyperbolicBC
-        apply_periodic_bcs!(U, law, nc, t)
+        apply_periodic_bcs!(U, law, nc, ng, t)
     else
-        apply_bc_left!(U, prob.bc_left, law, nc, t)
-        apply_bc_right!(U, prob.bc_right, law, nc, t)
+        apply_bc_left!(U, prob.bc_left, law, nc, ng, t)
+        apply_bc_right!(U, prob.bc_right, law, nc, ng, t)
     end
     return nothing
 end
@@ -89,8 +92,8 @@ end
 Compute the right-hand side of the semi-discrete conservation law:
   `dU[i]/dt = -1/Δx * (F_{i+1/2} - F_{i-1/2})`
 
-This is the 1D version. `U` and `dU` are padded arrays (length `ncells + 4`).
-Only interior cells `3:ncells+2` are updated.
+This is the 1D version. `U` and `dU` are padded arrays (length `ncells + 2*ng`).
+Only interior cells `ng+1:ncells+ng` are updated.
 """
 function hyperbolic_rhs!(dU::AbstractVector, U::AbstractVector, prob::HyperbolicProblem, t)
     law = prob.law
@@ -100,25 +103,22 @@ function hyperbolic_rhs!(dU::AbstractVector, U::AbstractVector, prob::Hyperbolic
     recon = prob.reconstruction
     dx = cell_volume(mesh, 1)
 
+    ng = _nghost_for_reconstruction(recon)
+
     # Apply BCs to fill ghost cells
-    apply_boundary_conditions!(U, prob, t)
+    apply_boundary_conditions!(U, prob, ng, t)
 
     # Compute fluxes at all faces (nc + 1 faces for nc cells)
     # Face i is between cell i and cell i+1 (in original 1-based cell numbering)
-    # In padded array: face i is between U[i+2] and U[i+3]
+    # In padded array: face i is between U[i+ng] and U[i+ng+1]
     # We need faces 0 through nc, i.e., nc+1 faces total:
     #   Face 0: left boundary face (between ghost and cell 1)
-    #   Face i (1 ≤ i ≤ nc-1): internal face
+    #   Face i (1 <= i <= nc-1): internal face
     #   Face nc: right boundary face (between cell nc and ghost)
-
-    # Compute flux at face i (0-based face index, between cell i and cell i+1)
-    # In padded array terms: between U[i+2] and U[i+3]
-    # For reconstruction we need U[i+1], U[i+2], U[i+3], U[i+4]
 
     # Update each interior cell
     for i in 1:nc
         # Left face flux (face i-1 in 0-based: between cell i-1 and cell i)
-        # padded indices: U[i+1], U[i+2] are the two cells adjacent to this face
         wL_left, wR_left = _reconstruct_face(recon, law, U, i - 1, nc)
         F_left = solve_riemann(solver, law, wL_left, wR_left, 1)
 
@@ -126,7 +126,7 @@ function hyperbolic_rhs!(dU::AbstractVector, U::AbstractVector, prob::Hyperbolic
         wL_right, wR_right = _reconstruct_face(recon, law, U, i, nc)
         F_right = solve_riemann(solver, law, wL_right, wR_right, 1)
 
-        dU[i + 2] = -(F_right - F_left) / dx
+        dU[i + ng] = -(F_right - F_left) / dx
     end
 
     return nothing
@@ -202,9 +202,10 @@ function solve_hyperbolic(
     mesh = prob.mesh
     nc = ncells(mesh)
     N = nvariables(prob.law)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     U = initialize_1d(prob)
-    FT = eltype(U[3])
+    FT = eltype(U[ng + 1])
 
     dU = similar(U)
     for i in eachindex(dU)
@@ -221,7 +222,7 @@ function solve_hyperbolic(
                 break
             end
             hyperbolic_rhs!(dU, U, prob, t)
-            for i in 3:(nc + 2)
+            for i in (ng + 1):(nc + ng)
                 U[i] = U[i] + dt * dU[i]
             end
             t += dt
@@ -246,21 +247,21 @@ function solve_hyperbolic(
 
             # Stage 1: U1 = U + dt * L(U)
             hyperbolic_rhs!(dU, U, prob, t)
-            for i in 3:(nc + 2)
+            for i in (ng + 1):(nc + ng)
                 U1[i] = U[i] + dt * dU[i]
             end
 
             # Stage 2: U2 = 3/4 U + 1/4 (U1 + dt * L(U1))
-            apply_boundary_conditions!(U1, prob, t + dt)
+            apply_boundary_conditions!(U1, prob, ng, t + dt)
             hyperbolic_rhs!(dU, U1, prob, t + dt)
-            for i in 3:(nc + 2)
+            for i in (ng + 1):(nc + ng)
                 U2[i] = 0.75 * U[i] + 0.25 * (U1[i] + dt * dU[i])
             end
 
             # Stage 3: U = 1/3 U + 2/3 (U2 + dt * L(U2))
-            apply_boundary_conditions!(U2, prob, t + 0.5 * dt)
+            apply_boundary_conditions!(U2, prob, ng, t + 0.5 * dt)
             hyperbolic_rhs!(dU, U2, prob, t + 0.5 * dt)
-            for i in 3:(nc + 2)
+            for i in (ng + 1):(nc + ng)
                 U[i] = (1.0 / 3.0) * U[i] + (2.0 / 3.0) * (U2[i] + dt * dU[i])
             end
 
@@ -276,7 +277,7 @@ function solve_hyperbolic(
 
     # Extract interior solution
     x = [cell_center(mesh, i) for i in 1:nc]
-    U_interior = U[3:(nc + 2)]
+    U_interior = U[(ng + 1):(nc + ng)]
 
     return x, U_interior, t
 end

@@ -218,22 +218,21 @@ end
 # ============================================================
 # Negate normal velocity, keep everything else (including B).
 
-function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law::IdealMHDEquations{1}, ncells::Int, t)
-    w1 = conserved_to_primitive(law, U[3])
-    w2 = conserved_to_primitive(law, U[4])
-    w1_ghost = SVector(w1[1], -w1[2], w1[3], w1[4], w1[5], w1[6], w1[7], w1[8])
-    w2_ghost = SVector(w2[1], -w2[2], w2[3], w2[4], w2[5], w2[6], w2[7], w2[8])
-    U[2] = primitive_to_conserved(law, w1_ghost)
-    U[1] = primitive_to_conserved(law, w2_ghost)
+function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law::IdealMHDEquations{1}, ncells::Int, ng::Int, t)
+    for g in 1:ng
+        w = conserved_to_primitive(law, U[ng + g])
+        w_ghost = SVector(w[1], -w[2], w[3], w[4], w[5], w[6], w[7], w[8])
+        U[ng + 1 - g] = primitive_to_conserved(law, w_ghost)
+    end
     return nothing
 end
 
-function apply_bc_right!(U::AbstractVector, ::ReflectiveBC, law::IdealMHDEquations{1}, ncells::Int, t)
-    w1 = conserved_to_primitive(law, U[ncells + 2])
-    w2 = conserved_to_primitive(law, U[ncells + 1])
-    w1_ghost = SVector(w1[1], -w1[2], w1[3], w1[4], w1[5], w1[6], w1[7], w1[8])
-    w2_ghost = SVector(w2[1], -w2[2], w2[3], w2[4], w2[5], w2[6], w2[7], w2[8])
-    U[ncells + 3] = primitive_to_conserved(law, w1_ghost)
-    U[ncells + 4] = primitive_to_conserved(law, w2_ghost)
+function apply_bc_right!(U::AbstractVector, ::ReflectiveBC, law::IdealMHDEquations{1}, ncells::Int, ng::Int, t)
+    last_interior = ncells + ng
+    for g in 1:ng
+        w = conserved_to_primitive(law, U[last_interior + 1 - g])
+        w_ghost = SVector(w[1], -w[2], w[3], w[4], w[5], w[6], w[7], w[8])
+        U[last_interior + g] = primitive_to_conserved(law, w_ghost)
+    end
     return nothing
 end

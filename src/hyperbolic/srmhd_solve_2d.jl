@@ -82,8 +82,9 @@ function solve_hyperbolic(
     law = prob.law
     N = nvariables(law)
 
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     U = initialize_2d(prob)
-    FT = eltype(U[3, 3])
+    FT = eltype(U[ng + 1, ng + 1])
 
     ct = CTData2D(nx, ny, FT)
     if vector_potential !== nothing
@@ -114,7 +115,7 @@ function solve_hyperbolic(
             end
             _mhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U, prob, t)
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U[ii, jj] = U[ii, jj] + dt * dU[ii, jj]
             end
             _compute_emf_from_extended!(ct.emf_z, Fx_all, Fy_all, nx, ny)
@@ -150,7 +151,7 @@ function solve_hyperbolic(
             # Stage 1
             _mhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U, prob, t)
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U1[ii, jj] = U[ii, jj] + dt * dU[ii, jj]
             end
             _compute_emf_from_extended!(ct.emf_z, Fx_all, Fy_all, nx, ny)
@@ -160,10 +161,10 @@ function solve_hyperbolic(
             face_to_cell_B!(U1, ct1, nx, ny)
 
             # Stage 2
-            apply_boundary_conditions_2d!(U1, prob, t + dt)
+            apply_boundary_conditions_2d!(U1, prob, ng, t + dt)
             _mhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U1, prob, t + dt)
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U2[ii, jj] = 0.75 * U[ii, jj] + 0.25 * (U1[ii, jj] + dt * dU[ii, jj])
             end
             _compute_emf_from_extended!(ct1.emf_z, Fx_all, Fy_all, nx, ny)
@@ -172,10 +173,10 @@ function solve_hyperbolic(
             face_to_cell_B!(U2, ct2, nx, ny)
 
             # Stage 3
-            apply_boundary_conditions_2d!(U2, prob, t + 0.5 * dt)
+            apply_boundary_conditions_2d!(U2, prob, ng, t + 0.5 * dt)
             _mhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U2, prob, t + 0.5 * dt)
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U[ii, jj] = (1.0 / 3.0) * U[ii, jj] + (2.0 / 3.0) * (U2[ii, jj] + dt * dU[ii, jj])
             end
             _compute_emf_from_extended!(ct2.emf_z, Fx_all, Fy_all, nx, ny)
@@ -195,7 +196,7 @@ function solve_hyperbolic(
 
     U_interior = Matrix{SVector{N, FT}}(undef, nx, ny)
     for iy in 1:ny, ix in 1:nx
-        U_interior[ix, iy] = U[ix + 2, iy + 2]
+        U_interior[ix, iy] = U[ix + ng, iy + ng]
     end
     coords = [(cell_center(mesh, cell_idx(mesh, ix, iy))) for ix in 1:nx, iy in 1:ny]
 

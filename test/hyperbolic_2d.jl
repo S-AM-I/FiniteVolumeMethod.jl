@@ -256,7 +256,7 @@ end
 
         # Compute initial totals
         U0 = FiniteVolumeMethod.initialize_2d(prob)
-        FiniteVolumeMethod.apply_boundary_conditions_2d!(U0, prob, 0.0)
+        FiniteVolumeMethod.apply_boundary_conditions_2d!(U0, prob, 2, 0.0)
         mass0 = sum(U0[ix + 2, iy + 2][1] for ix in 1:50, iy in 1:50) * dx * dy
         mom_x0 = sum(U0[ix + 2, iy + 2][2] for ix in 1:50, iy in 1:50) * dx * dy
         mom_y0 = sum(U0[ix + 2, iy + 2][3] for ix in 1:50, iy in 1:50) * dx * dy
@@ -368,7 +368,7 @@ end
         )
 
         U = FiniteVolumeMethod.initialize_2d(prob)
-        FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, 0.0)
+        FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, 2, 0.0)
         dt = compute_dt_2d(prob, U, 0.0)
 
         # dt > 0

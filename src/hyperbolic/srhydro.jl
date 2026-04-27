@@ -516,22 +516,21 @@ end
 # ReflectiveBC for 1D SRHydro
 # ============================================================
 
-function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law::SRHydroEquations{1}, ncells::Int, t)
-    w1 = conserved_to_primitive(law, U[3])
-    w2 = conserved_to_primitive(law, U[4])
-    w1_ghost = SVector(w1[1], -w1[2], w1[3])
-    w2_ghost = SVector(w2[1], -w2[2], w2[3])
-    U[2] = primitive_to_conserved(law, w1_ghost)
-    U[1] = primitive_to_conserved(law, w2_ghost)
+function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law::SRHydroEquations{1}, ncells::Int, ng::Int, t)
+    for g in 1:ng
+        w = conserved_to_primitive(law, U[ng + g])
+        w_ghost = SVector(w[1], -w[2], w[3])
+        U[ng + 1 - g] = primitive_to_conserved(law, w_ghost)
+    end
     return nothing
 end
 
-function apply_bc_right!(U::AbstractVector, ::ReflectiveBC, law::SRHydroEquations{1}, ncells::Int, t)
-    w1 = conserved_to_primitive(law, U[ncells + 2])
-    w2 = conserved_to_primitive(law, U[ncells + 1])
-    w1_ghost = SVector(w1[1], -w1[2], w1[3])
-    w2_ghost = SVector(w2[1], -w2[2], w2[3])
-    U[ncells + 3] = primitive_to_conserved(law, w1_ghost)
-    U[ncells + 4] = primitive_to_conserved(law, w2_ghost)
+function apply_bc_right!(U::AbstractVector, ::ReflectiveBC, law::SRHydroEquations{1}, ncells::Int, ng::Int, t)
+    last_interior = ncells + ng
+    for g in 1:ng
+        w = conserved_to_primitive(law, U[last_interior + 1 - g])
+        w_ghost = SVector(w[1], -w[2], w[3])
+        U[last_interior + g] = primitive_to_conserved(law, w_ghost)
+    end
     return nothing
 end

@@ -275,7 +275,7 @@ end
 
     # Compute initial conserved quantities
     U0 = FiniteVolumeMethod.initialize_1d(prob)
-    FiniteVolumeMethod.apply_boundary_conditions!(U0, prob, 0.0)
+    FiniteVolumeMethod.apply_boundary_conditions!(U0, prob, 2, 0.0)
 
     mass0 = sum(U0[i][1] for i in 3:(N_cells + 2)) * dx
     momentum0 = sum(U0[i][2] for i in 3:(N_cells + 2)) * dx

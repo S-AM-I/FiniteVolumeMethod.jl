@@ -56,8 +56,9 @@ function solve_hyperbolic_imex(
     law = prob.law
     N = nvariables(law)
 
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     U = initialize_1d(prob)
-    FT = eltype(U[3])
+    FT = eltype(U[ng + 1])
 
     tab = imex_tableau(scheme)
     s = tab.s
@@ -98,7 +99,7 @@ function solve_hyperbolic_imex(
             # Build the argument for stage k:
             #   U_stage = U^n + dt * sum_{j<k} a_ex[k,j] * K_ex[j]
             #                 + dt * sum_{j<k} a_im[k,j] * K_im[j]
-            for i in 3:(nc + 2)
+            for i in (ng + 1):(nc + ng)
                 U_stage[i] = U[i]
                 for j in 1:(k - 1)
                     U_stage[i] = U_stage[i] + dt * tab.A_ex[k][j] * K_ex[j][i]
@@ -111,7 +112,7 @@ function solve_hyperbolic_imex(
             if a_kk == 0.0
                 # Explicit stage: no implicit solve needed
                 # K_im[k] = S(U_stage)
-                _eval_stiff_source_1d!(K_im[k], U_stage, law, stiff_source, nc)
+                _eval_stiff_source_1d!(K_im[k], U_stage, law, stiff_source, nc, ng)
 
                 # K_ex[k] = F(U_stage) (hyperbolic RHS)
                 hyperbolic_rhs!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
@@ -127,18 +128,18 @@ function solve_hyperbolic_imex(
                 # Newton iteration: given U_guess, solve
                 #   (I - a_kk*dt*J) * (U_new - U_guess) = U_stage + a_kk*dt*S(U_guess) - U_guess
                 _implicit_solve_1d!(
-                    U_stage, law, stiff_source, a_kk * dt, nc, N,
+                    U_stage, law, stiff_source, a_kk * dt, nc, ng, N,
                     newton_tol, newton_maxiter
                 )
 
                 # After the solve, U_stage contains the updated stage value.
                 # K_im[k] = S(U_stage)
-                _eval_stiff_source_1d!(K_im[k], U_stage, law, stiff_source, nc)
+                _eval_stiff_source_1d!(K_im[k], U_stage, law, stiff_source, nc, ng)
             end
         end
 
         # Final update: U^{n+1} = U^n + dt * sum_k (b_ex[k]*K_ex[k] + b_im[k]*K_im[k])
-        for i in 3:(nc + 2)
+        for i in (ng + 1):(nc + ng)
             U_new = U[i]
             for k in 1:s
                 U_new = U_new + dt * tab.b_ex[k] * K_ex[k][i]
@@ -156,7 +157,7 @@ function solve_hyperbolic_imex(
 
     # Extract interior solution
     x = [cell_center(mesh, i) for i in 1:nc]
-    U_interior = U[3:(nc + 2)]
+    U_interior = U[(ng + 1):(nc + ng)]
 
     return x, U_interior, t
 end
@@ -165,11 +166,11 @@ end
 # Helper: evaluate stiff source at all interior cells (1D)
 # ============================================================
 
-function _eval_stiff_source_1d!(S_out, U, law, stiff_source, nc)
+function _eval_stiff_source_1d!(S_out, U, law, stiff_source, nc, ng)
     for i in 1:nc
-        u = U[i + 2]
+        u = U[i + ng]
         w = conserved_to_primitive(law, u)
-        S_out[i + 2] = evaluate_stiff_source(stiff_source, law, w, u)
+        S_out[i + ng] = evaluate_stiff_source(stiff_source, law, w, u)
     end
     return nothing
 end
@@ -186,9 +187,9 @@ Solve `U* = U_stage + adt * S(U*)` cell-by-cell using Newton iteration.
 On entry, `U_stage[i+2]` contains the known RHS for cell i.
 On exit, `U_stage[i+2]` contains the solution U*.
 """
-function _implicit_solve_1d!(U_stage, law, stiff_source, adt, nc, N, tol, maxiter)
+function _implicit_solve_1d!(U_stage, law, stiff_source, adt, nc, ng, N, tol, maxiter)
     for i in 1:nc
-        idx = i + 2
+        idx = i + ng
         U_rhs = U_stage[idx]  # known right-hand side
         U_guess = U_rhs       # initial guess
 
@@ -258,8 +259,9 @@ function solve_hyperbolic_imex(
     law = prob.law
     N = nvariables(law)
 
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     U = initialize_2d(prob)
-    FT = eltype(U[3, 3])
+    FT = eltype(U[ng + 1, ng + 1])
 
     tab = imex_tableau(scheme)
     s = tab.s
@@ -303,7 +305,7 @@ function solve_hyperbolic_imex(
         for k in 1:s
             # Build stage argument
             for iy in 1:ny, ix in 1:nx
-                ii, jj = ix + 2, iy + 2
+                ii, jj = ix + ng, iy + ng
                 U_stage[ii, jj] = U[ii, jj]
                 for j in 1:(k - 1)
                     U_stage[ii, jj] = U_stage[ii, jj] + dt * tab.A_ex[k][j] * K_ex[j][ii, jj]
@@ -314,23 +316,23 @@ function solve_hyperbolic_imex(
             a_kk = tab.A_im[k][k]
 
             if a_kk == 0.0
-                _eval_stiff_source_2d!(K_im[k], U_stage, law, stiff_source, nx, ny)
+                _eval_stiff_source_2d!(K_im[k], U_stage, law, stiff_source, nx, ny, ng)
                 _rhs!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
             else
                 _rhs!(K_ex[k], U_stage, prob, t + tab.c_ex[k] * dt)
 
                 _implicit_solve!(
-                    U_stage, law, stiff_source, a_kk * dt, nx, ny, N,
+                    U_stage, law, stiff_source, a_kk * dt, nx, ny, ng, N,
                     newton_tol, newton_maxiter
                 )
 
-                _eval_stiff_source_2d!(K_im[k], U_stage, law, stiff_source, nx, ny)
+                _eval_stiff_source_2d!(K_im[k], U_stage, law, stiff_source, nx, ny, ng)
             end
         end
 
         # Final update
         for iy in 1:ny, ix in 1:nx
-            ii, jj = ix + 2, iy + 2
+            ii, jj = ix + ng, iy + ng
             U_new = U[ii, jj]
             for k in 1:s
                 U_new = U_new + dt * tab.b_ex[k] * K_ex[k][ii, jj]
@@ -349,7 +351,7 @@ function solve_hyperbolic_imex(
     # Extract interior solution
     U_interior = Matrix{SVector{N, FT}}(undef, nx, ny)
     for iy in 1:ny, ix in 1:nx
-        U_interior[ix, iy] = U[ix + 2, iy + 2]
+        U_interior[ix, iy] = U[ix + ng, iy + ng]
     end
 
     coords = [(cell_center(mesh, cell_idx(mesh, ix, iy))) for ix in 1:nx, iy in 1:ny]
@@ -361,9 +363,9 @@ end
 # Helper: evaluate stiff source at all interior cells (2D)
 # ============================================================
 
-function _eval_stiff_source_2d!(S_out, U, law, stiff_source, nx, ny)
+function _eval_stiff_source_2d!(S_out, U, law, stiff_source, nx, ny, ng)
     for iy in 1:ny, ix in 1:nx
-        ii, jj = ix + 2, iy + 2
+        ii, jj = ix + ng, iy + ng
         u = U[ii, jj]
         w = conserved_to_primitive(law, u)
         S_out[ii, jj] = evaluate_stiff_source(stiff_source, law, w, u)
@@ -375,9 +377,9 @@ end
 # Helper: implicit solve at all interior cells (2D)
 # ============================================================
 
-function _implicit_solve_2d!(U_stage, law, stiff_source, adt, nx, ny, N, tol, maxiter)
+function _implicit_solve_2d!(U_stage, law, stiff_source, adt, nx, ny, ng, N, tol, maxiter)
     for iy in 1:ny, ix in 1:nx
-        ii, jj = ix + 2, iy + 2
+        ii, jj = ix + ng, iy + ng
         U_rhs = U_stage[ii, jj]
         U_guess = U_rhs
 

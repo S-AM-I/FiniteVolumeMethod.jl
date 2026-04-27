@@ -82,15 +82,16 @@ function _mhd_compute_fluxes_3d!(
     solver = prob.riemann_solver
     recon = prob.reconstruction
     N = nvariables(law)
-    FT = eltype(U[3, 3, 3])
+    ng = _nghost_for_reconstruction(recon)
+    FT = eltype(U[ng + 1, ng + 1, ng + 1])
 
     # Apply BCs to fill ghost cells
-    apply_boundary_conditions_3d!(U, prob, t)
+    apply_boundary_conditions_3d!(U, prob, ng, t)
 
     # Zero dU for interior cells
     zero_state = zero(SVector{N, FT})
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
-        dU[ix + 2, iy + 2, iz + 2] = zero_state
+        dU[ix + ng, iy + ng, iz + ng] = zero_state
     end
 
     # ---- X-direction sweeps (including ghost slabs in j and k) ----
@@ -145,7 +146,7 @@ function _mhd_compute_fluxes_3d!(
         F_zBa = Fz_all[ci, cj, iz + 1]
         F_zFr = Fz_all[ci, cj, iz]
 
-        dU[ix + 2, iy + 2, iz + 2] = -(F_xR - F_xL) / dx - (F_yT - F_yB) / dy - (F_zBa - F_zFr) / dz
+        dU[ix + ng, iy + ng, iz + ng] = -(F_xR - F_xL) / dx - (F_yT - F_yB) / dy - (F_zBa - F_zFr) / dz
     end
 
     return nothing
@@ -188,8 +189,9 @@ function solve_hyperbolic(
     N = nvariables(law)  # 8
 
     # Initialize cell-centered solution (padded array)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     U = initialize_3d(prob)
-    FT = eltype(U[3, 3, 3])
+    FT = eltype(U[ng + 1, ng + 1, ng + 1])
 
     # Initialize CT data (face-centered B)
     ct = CTData3D(nx, ny, nz, FT)
@@ -230,7 +232,7 @@ function solve_hyperbolic(
 
             # Update all conserved variables via flux differencing
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                ii, jj, kk = ix + 2, iy + 2, iz + 2
+                ii, jj, kk = ix + ng, iy + ng, iz + ng
                 U[ii, jj, kk] = U[ii, jj, kk] + dt * dU[ii, jj, kk]
             end
 
@@ -275,7 +277,7 @@ function solve_hyperbolic(
             # ---- Stage 1: U1 = U + dt * L(U) ----
             _mhd_compute_fluxes_3d!(Fx_all, Fy_all, Fz_all, dU, U, prob, t)
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                ii, jj, kk = ix + 2, iy + 2, iz + 2
+                ii, jj, kk = ix + ng, iy + ng, iz + ng
                 U1[ii, jj, kk] = U[ii, jj, kk] + dt * dU[ii, jj, kk]
             end
             _compute_emf_3d_from_extended!(ct, Fx_all, Fy_all, Fz_all, nx, ny, nz)
@@ -285,10 +287,10 @@ function solve_hyperbolic(
             face_to_cell_B_3d!(U1, ct1, nx, ny, nz)
 
             # ---- Stage 2: U2 = 3/4*U + 1/4*(U1 + dt*L(U1)) ----
-            apply_boundary_conditions_3d!(U1, prob, t + dt)
+            apply_boundary_conditions_3d!(U1, prob, ng, t + dt)
             _mhd_compute_fluxes_3d!(Fx_all, Fy_all, Fz_all, dU, U1, prob, t + dt)
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                ii, jj, kk = ix + 2, iy + 2, iz + 2
+                ii, jj, kk = ix + ng, iy + ng, iz + ng
                 U2[ii, jj, kk] = 0.75 * U[ii, jj, kk] + 0.25 * (U1[ii, jj, kk] + dt * dU[ii, jj, kk])
             end
             _compute_emf_3d_from_extended!(ct1, Fx_all, Fy_all, Fz_all, nx, ny, nz)
@@ -297,10 +299,10 @@ function solve_hyperbolic(
             face_to_cell_B_3d!(U2, ct2, nx, ny, nz)
 
             # ---- Stage 3: U = 1/3*U + 2/3*(U2 + dt*L(U2)) ----
-            apply_boundary_conditions_3d!(U2, prob, t + 0.5 * dt)
+            apply_boundary_conditions_3d!(U2, prob, ng, t + 0.5 * dt)
             _mhd_compute_fluxes_3d!(Fx_all, Fy_all, Fz_all, dU, U2, prob, t + 0.5 * dt)
             for iz in 1:nz, iy in 1:ny, ix in 1:nx
-                ii, jj, kk = ix + 2, iy + 2, iz + 2
+                ii, jj, kk = ix + ng, iy + ng, iz + ng
                 U[ii, jj, kk] = (1.0 / 3.0) * U[ii, jj, kk] + (2.0 / 3.0) * (U2[ii, jj, kk] + dt * dU[ii, jj, kk])
             end
             _compute_emf_3d_from_extended!(ct2, Fx_all, Fy_all, Fz_all, nx, ny, nz)
@@ -321,7 +323,7 @@ function solve_hyperbolic(
     # Extract interior solution
     U_interior = Array{SVector{N, FT}, 3}(undef, nx, ny, nz)
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
-        U_interior[ix, iy, iz] = U[ix + 2, iy + 2, iz + 2]
+        U_interior[ix, iy, iz] = U[ix + ng, iy + ng, iz + ng]
     end
 
     # Cell center coordinates

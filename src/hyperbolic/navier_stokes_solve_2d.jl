@@ -14,6 +14,7 @@ Compute the time step accounting for both hyperbolic and viscous stability:
 - Viscous: `dt_visc = 0.5 · ρ_min / (μ · (1/dx² + 1/dy²))`
 """
 function compute_dt_2d(prob::HyperbolicProblem2D{<:NavierStokesEquations{2}}, U::AbstractMatrix, t)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
     law = prob.law
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
@@ -24,7 +25,7 @@ function compute_dt_2d(prob::HyperbolicProblem2D{<:NavierStokesEquations{2}}, U:
     max_speed = zero(dx)
     ρ_min = typeof(dx)(Inf)
     for iy in 1:ny, ix in 1:nx
-        w = conserved_to_primitive(law, U[ix + 2, iy + 2])
+        w = conserved_to_primitive(law, U[ix + ng, iy + ng])
         λx = max_wave_speed(law, w, 1)
         λy = max_wave_speed(law, w, 2)
         speed = λx / dx + λy / dy
@@ -69,27 +70,28 @@ function hyperbolic_rhs_2d!(
     dx, dy = mesh.dx, mesh.dy
     solver = prob.riemann_solver
     recon = prob.reconstruction
+    ng = _nghost_for_reconstruction(recon)
 
     # Apply BCs to fill ghost cells
-    apply_boundary_conditions_2d!(U, prob, t)
+    apply_boundary_conditions_2d!(U, prob, ng, t)
 
     N = nvariables(law)
-    FT = eltype(U[3, 3])
+    FT = eltype(U[ng + 1, ng + 1])
 
     # Zero out dU for interior cells
     zero_state = zero(SVector{N, FT})
     for iy in 1:ny, ix in 1:nx
-        dU[ix + 2, iy + 2] = zero_state
+        dU[ix + ng, iy + ng] = zero_state
     end
 
     # ---- Inviscid fluxes (same as Euler) ----
 
     # X-direction sweeps
     for iy in 1:ny
-        jj = iy + 2
+        jj = iy + ng
         for ix in 0:nx
-            iL = ix + 2
-            iR = ix + 3
+            iL = ix + ng
+            iR = ix + ng + 1
             wL_face, wR_face = _reconstruct_face_2d(recon, law, U, iL, iR, jj, 1, nx)
             F = solve_riemann(solver, law, wL_face, wR_face, 1)
             if ix >= 1
@@ -103,10 +105,10 @@ function hyperbolic_rhs_2d!(
 
     # Y-direction sweeps
     for ix in 1:nx
-        ii = ix + 2
+        ii = ix + ng
         for iy in 0:ny
-            jL = iy + 2
-            jR = iy + 3
+            jL = iy + ng
+            jR = iy + ng + 1
             wL_face, wR_face = _reconstruct_face_2d_y(recon, law, U, ii, jL, jR, ny)
             F = solve_riemann(solver, law, wL_face, wR_face, 2)
             if iy >= 1
@@ -121,18 +123,18 @@ function hyperbolic_rhs_2d!(
     # ---- Viscous fluxes ----
 
     # Pre-compute primitive state array for cross-derivative access
-    W = Matrix{SVector{N, FT}}(undef, nx + 4, ny + 4)
-    for j in 1:(ny + 4), i in 1:(nx + 4)
+    W = Matrix{SVector{N, FT}}(undef, nx + 2 * ng, ny + 2 * ng)
+    for j in 1:(ny + 2 * ng), i in 1:(nx + 2 * ng)
         W[i, j] = conserved_to_primitive(law, U[i, j])
     end
 
     # X-direction viscous fluxes: face between (ix, iy) and (ix+1, iy)
-    # Padded: face between U[ix+2, iy+2] and U[ix+3, iy+2]
+    # Padded: face between U[ix+ng, iy+ng] and U[ix+ng+1, iy+ng]
     for iy in 1:ny
-        jj = iy + 2
+        jj = iy + ng
         for ix in 0:nx
-            iL = ix + 2
-            iR = ix + 3
+            iL = ix + ng
+            iR = ix + ng + 1
 
             wL = W[iL, jj]
             wR = W[iR, jj]
@@ -160,12 +162,12 @@ function hyperbolic_rhs_2d!(
     end
 
     # Y-direction viscous fluxes: face between (ix, iy) and (ix, iy+1)
-    # Padded: face between U[ix+2, iy+2] and U[ix+2, iy+3]
+    # Padded: face between U[ix+ng, iy+ng] and U[ix+ng, iy+ng+1]
     for ix in 1:nx
-        ii = ix + 2
+        ii = ix + ng
         for iy in 0:ny
-            jL = iy + 2
-            jR = iy + 3
+            jL = iy + ng
+            jR = iy + ng + 1
 
             wB = W[ii, jL]
             wT = W[ii, jR]
