@@ -41,7 +41,8 @@ const DVD_NU_AVG_RA4 = 2.243
 const DVD_U_MAX_RA4 = 16.178
 const DVD_V_MAX_RA4 = 19.617
 
-function solve_rayleigh_benard_1e4(; N::Int = 40)
+# N=80 for first-order upwind resolution; De Vahl Davis used N=41 with high-order.
+function solve_rayleigh_benard_1e4(; N::Int = 80)
     L = 1.0
     mesh = build_cartesian_unstructured_mesh(N, N, L, L)
 
@@ -71,7 +72,7 @@ function solve_rayleigh_benard_1e4(; N::Int = 40)
     # solve_simple_thermal handles pressure reference internally via
     # `_needs_pressure_reference`.
 
-    algo = SIMPLE(0.5, 0.2, 6000, 1.0e-5)
+    algo = SIMPLE(0.5, 0.2, 10000, 1.0e-5)
     prob = IncompressibleProblem(mesh, bcs, algo; nu = nu, density = rho)
 
     thermal_props = FluidThermalProperties{2}(;
@@ -139,7 +140,7 @@ function extract_midline_velocities(sol_state, mesh, N::Int)
 end
 
 @benchmark_testset "rayleigh_benard_1e4" sources = :thermal begin
-    r = solve_rayleigh_benard_1e4(; N = 40)
+    r = solve_rayleigh_benard_1e4(; N = 80)
 
     # Liveness: iteration count + finite T field.
     @benchmark_assert r.result.iterations > 0
