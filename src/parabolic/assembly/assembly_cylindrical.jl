@@ -549,11 +549,7 @@ function handle_cylindrical_boundary_condition!(A, b, model::CylindricalDiffusio
     denominator = bc.a * dx + bc.b * gamma
     flux_coeff = gamma * bc.a * area / denominator
     A[i, i] += flux_coeff
-    return if side == :left
-        b[i] += gamma * bc.c * area / denominator
-    else
-        b[i] -= gamma * bc.c * area / denominator
-    end
+    return b[i] += gamma * bc.c * area / denominator
 end
 
 function handle_cylindrical_boundary_condition_2d!(A, b, model::CylindricalDiffusion2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
@@ -578,11 +574,7 @@ function handle_cylindrical_boundary_condition_2d!(A, b, model::CylindricalDiffu
     denominator = bc.a * dist + bc.b * gamma
     flux_coeff = gamma * bc.a * area / denominator
     A[k, k] += flux_coeff
-    return if side == :left || side == :bottom
-        b[k] += gamma * bc.c * area / denominator
-    else
-        b[k] -= gamma * bc.c * area / denominator
-    end
+    return b[k] += gamma * bc.c * area / denominator
 end
 
 # --- Cylindrical Advection Boundary Condition Handlers ---
