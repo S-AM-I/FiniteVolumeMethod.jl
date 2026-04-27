@@ -49,7 +49,8 @@ const GHIA_RE400_V = [
     -0.38598, -0.44993, -0.23827, -0.22847, -0.19254, -0.12146, 0.0,
 ]
 
-function solve_ghia_re400(; N::Int = 64)
+function solve_ghia_re400(; N::Int = 128)
+    # N=128 matches Ghia's original 129×129 grid; N=64 diverges with first-order upwind SIMPLE.
     mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
         :left => NoSlipWallBC(),
@@ -59,7 +60,7 @@ function solve_ghia_re400(; N::Int = 64)
     )
     # Tighter under-relaxation than Re=100 (0.7/0.3) — SIMPLE can diverge
     # at Re=400 with slack relaxation on this grid.
-    algo = SIMPLE(0.5, 0.2, 8000, 1.0e-5)
+    algo = SIMPLE(0.5, 0.2, 4000, 1.0e-5)
     prob = IncompressibleProblem(mesh, bcs, algo; nu = 1.0 / 400.0, density = 1.0)
     return (solve(prob, algo), mesh, N)
 end
@@ -84,7 +85,7 @@ function _nearest_index(xs::Vector{<:Real}, x_target::Real)
 end
 
 @benchmark_testset "ghia_re400" sources = :incompressible begin
-    sol, mesh, N = solve_ghia_re400(; N = 64)
+    sol, mesh, N = solve_ghia_re400(; N = 128)
 
     # Solver liveness: if it crashed outright, everything below would
     # error, so a meaningful iteration count is a pre-gate.
