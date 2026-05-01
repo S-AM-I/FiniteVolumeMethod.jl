@@ -127,6 +127,18 @@ struct VariableCylindricalDiffusion2D <: AbstractDiffusion
     VariableCylindricalDiffusion2D(gamma, scheme::Symbol) = new(gamma, scheme)
 end
 
+"""Variable-velocity advection equation model in 2D cylindrical (r-z)
+coordinates. `vr(r, z)` and `vz(r, z)` are functions evaluated at the cell
+centre, or matrices of shape `(n_cells_r, n_cells_z)`."""
+struct VariableCylindricalAdvection2D <: AbstractAdvection
+    vr::Union{Function, Matrix{Float64}}
+    vz::Union{Function, Matrix{Float64}}
+    scheme::Symbol
+
+    VariableCylindricalAdvection2D(vr, vz) = new(vr, vz, :upwind)
+    VariableCylindricalAdvection2D(vr, vz, scheme::Symbol) = new(vr, vz, scheme)
+end
+
 # --- Spherical Diffusion Models ---
 
 """Constant-coefficient diffusion equation model in 1D spherical (radial) coordinates."""
@@ -264,6 +276,16 @@ end
 struct CylindricalAdvectionDiffusion1D <: AbstractAdvectionDiffusion
     advection::CylindricalAdvection1D
     diffusion::CylindricalDiffusion1D
+end
+
+"""Combined variable-coefficient advection-diffusion equation model in 2D
+cylindrical (r-z) coordinates. Pairs `VariableCylindricalAdvection2D`
+(spatially varying velocity) with `VariableCylindricalDiffusion2D` (or
+`CylindricalDiffusion2D` for constant γ) — useful for tracer transport in
+a Darcy-derived velocity field."""
+struct VariableCylindricalAdvectionDiffusion2D <: AbstractAdvectionDiffusion
+    advection::VariableCylindricalAdvection2D
+    diffusion::Union{CylindricalDiffusion2D, VariableCylindricalDiffusion2D}
 end
 
 """Combined advection-diffusion equation model in 2D cylindrical (r-z) coordinates."""

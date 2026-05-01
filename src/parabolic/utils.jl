@@ -125,6 +125,23 @@ end
     return 2 * a * b / (a + b)
 end
 
+# --- Cylindrical variable-velocity lookups ---
+
+function get_velocity(advection::CylindricalAdvection2D, mesh::Mesh2D, i, j, direction)
+    return direction == :r ? advection.vr : advection.vz
+end
+
+function get_velocity(advection::VariableCylindricalAdvection2D, mesh::Mesh2D, i, j, direction)
+    cell = mesh.cells[(i - 1) * mesh.ny + j]
+    if direction == :r
+        return advection.vr isa Function ? advection.vr(cell.center[1], cell.center[2]) :
+                                            advection.vr[i, j]
+    else
+        return advection.vz isa Function ? advection.vz(cell.center[1], cell.center[2]) :
+                                            advection.vz[i, j]
+    end
+end
+
 """
     get_velocity(advection, mesh, i, side)
 

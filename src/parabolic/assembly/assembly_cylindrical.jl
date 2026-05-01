@@ -35,6 +35,39 @@ end
     end
 end
 
+# Face velocities for variable cylindrical advection: arithmetic mean of the
+# two adjacent cell-centre velocities (or the boundary-cell value at faces
+# that coincide with a domain boundary). Constant-velocity models pass
+# through their scalar.
+@inline _vr_at_face_2d(model::CylindricalAdvection2D, mesh::Mesh2D, i, j, side) = model.vr
+@inline _vz_at_face_2d(model::CylindricalAdvection2D, mesh::Mesh2D, i, j, side) = model.vz
+
+@inline function _vr_at_face_2d(model::VariableCylindricalAdvection2D, mesh::Mesh2D, i, j, side)
+    vP = get_velocity(model, mesh, i, j, :r)
+    if side == :left
+        i == 1 && return vP
+        return 0.5 * (get_velocity(model, mesh, i - 1, j, :r) + vP)
+    elseif side == :right
+        i == mesh.nx && return vP
+        return 0.5 * (vP + get_velocity(model, mesh, i + 1, j, :r))
+    else
+        return vP
+    end
+end
+
+@inline function _vz_at_face_2d(model::VariableCylindricalAdvection2D, mesh::Mesh2D, i, j, side)
+    vP = get_velocity(model, mesh, i, j, :z)
+    if side == :bottom
+        j == 1 && return vP
+        return 0.5 * (get_velocity(model, mesh, i, j - 1, :z) + vP)
+    elseif side == :top
+        j == mesh.ny && return vP
+        return 0.5 * (vP + get_velocity(model, mesh, i, j + 1, :z))
+    else
+        return vP
+    end
+end
+
 @inline _gamma_at_face_2d(model::CylindricalDiffusion2D, mesh::Mesh2D, i, j, side) = model.gamma
 @inline function _gamma_at_face_2d(model::VariableCylindricalDiffusion2D, mesh::Mesh2D, i, j, side)
     nx = mesh.nx; ny = mesh.ny
@@ -913,13 +946,40 @@ function handle_cylindrical_advection_diffusion_bc!(A, b, model::CylindricalAdve
     end
 end
 
-function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::CylindricalAdvectionDiffusion2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
+const _CylAdvDiff2D = Union{CylindricalAdvectionDiffusion2D,
+                            VariableCylindricalAdvectionDiffusion2D}
+
+@inline function _adv_diff_vel_at_face(model::CylindricalAdvectionDiffusion2D,
+                                        mesh::Mesh2D, k::Int, side::Symbol)
+    return (side == :left || side == :right) ? model.advection.vr : model.advection.vz
+end
+
+@inline function _adv_diff_vel_at_face(model::VariableCylindricalAdvectionDiffusion2D,
+                                        mesh::Mesh2D, k::Int, side::Symbol)
+    j = mod(k - 1, mesh.ny) + 1
+    i = div(k - 1, mesh.ny) + 1
     if side == :left || side == :right
-        v = model.advection.vr
+        return _vr_at_face_2d(model.advection, mesh, i, j, side)
     else
-        v = model.advection.vz
+        return _vz_at_face_2d(model.advection, mesh, i, j, side)
     end
-    gamma = model.diffusion.gamma
+end
+
+@inline function _adv_diff_gamma_at_face(model::CylindricalAdvectionDiffusion2D,
+                                          mesh::Mesh2D, k::Int, side::Symbol)
+    return model.diffusion.gamma
+end
+
+@inline function _adv_diff_gamma_at_face(model::VariableCylindricalAdvectionDiffusion2D,
+                                          mesh::Mesh2D, k::Int, side::Symbol)
+    j = mod(k - 1, mesh.ny) + 1
+    i = div(k - 1, mesh.ny) + 1
+    return _gamma_at_face_2d(model.diffusion, mesh, i, j, side)
+end
+
+function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
+    v = _adv_diff_vel_at_face(model, mesh, k, side)
+    gamma = _adv_diff_gamma_at_face(model, mesh, k, side)
     dist = dr_or_dz / 2.0
 
     diff_flux_coeff = gamma * area / dist
@@ -939,6 +999,121 @@ function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::CylindricalA
             b[k] += abs(v) * bc.value * area
         end
     end
+end
+
+"""
+    assemble_system(model::VariableCylindricalAdvectionDiffusion2D, mesh::Mesh2D, bcs; source=nothing, transient=false)
+
+2D axisymmetric (r-z) advection-diffusion with spatially varying velocity
+and diffusion coefficient. Diffusion face γ uses the harmonic mean of the
+two adjacent cell γ values; advection uses the upwind scheme with face
+velocity = arithmetic mean of the two adjacent cell-centred velocities.
+"""
+function assemble_system(model::VariableCylindricalAdvectionDiffusion2D, mesh::Mesh2D, bcs; source = nothing, transient = false)
+    nx = mesh.nx
+    ny = mesh.ny
+    A = SparseArrays.spzeros(nx * ny, nx * ny)
+    b = zeros(nx * ny)
+
+    bc_left, bc_right, bc_bottom, bc_top = bcs
+
+    for i in 1:nx
+        for j in 1:ny
+            k = (i - 1) * ny + j
+
+            r_in  = _node2d(mesh, i,     j    ).x
+            r_out = _node2d(mesh, i + 1, j    ).x
+            z_lo  = _node2d(mesh, i,     j    ).y
+            z_hi  = _node2d(mesh, i,     j + 1).y
+            dr = r_out - r_in
+            dz = z_hi - z_lo
+
+            area_r_in  = 2 * pi * r_in  * dz
+            area_r_out = 2 * pi * r_out * dz
+            area_z     = pi * (r_out^2 - r_in^2)
+            volume     = area_z * dz
+
+            # --- Radial (r) ---
+            if i == 1
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dr, transient)
+            else
+                k_w = k - ny
+                dr_face = mesh.cells[k].center[1] - mesh.cells[k_w].center[1]
+                γ_face = _gamma_at_face_2d(model.diffusion, mesh, i, j, :left)
+                vr_face = _vr_at_face_2d(model.advection, mesh, i, j, :left)
+                diff_flux = γ_face * area_r_in / dr_face
+                A[k, k] += diff_flux
+                A[k, k_w] -= diff_flux
+                if vr_face >= 0
+                    A[k, k_w] -= vr_face * area_r_in
+                else
+                    A[k, k] += abs(vr_face) * area_r_in
+                end
+            end
+
+            if i == nx
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dr, transient)
+            else
+                k_e = k + ny
+                dr_face = mesh.cells[k_e].center[1] - mesh.cells[k].center[1]
+                γ_face = _gamma_at_face_2d(model.diffusion, mesh, i, j, :right)
+                vr_face = _vr_at_face_2d(model.advection, mesh, i, j, :right)
+                diff_flux = γ_face * area_r_out / dr_face
+                A[k, k] += diff_flux
+                A[k, k_e] -= diff_flux
+                if vr_face >= 0
+                    A[k, k] += vr_face * area_r_out
+                else
+                    A[k, k_e] -= abs(vr_face) * area_r_out
+                end
+            end
+
+            # --- Axial (z) ---
+            if j == 1
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dz, transient)
+            else
+                k_s = k - 1
+                dz_face = mesh.cells[k].center[2] - mesh.cells[k_s].center[2]
+                γ_face = _gamma_at_face_2d(model.diffusion, mesh, i, j, :bottom)
+                vz_face = _vz_at_face_2d(model.advection, mesh, i, j, :bottom)
+                diff_flux = γ_face * area_z / dz_face
+                A[k, k] += diff_flux
+                A[k, k_s] -= diff_flux
+                if vz_face >= 0
+                    A[k, k_s] -= vz_face * area_z
+                else
+                    A[k, k] += abs(vz_face) * area_z
+                end
+            end
+
+            if j == ny
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dz, transient)
+            else
+                k_n = k + 1
+                dz_face = mesh.cells[k_n].center[2] - mesh.cells[k].center[2]
+                γ_face = _gamma_at_face_2d(model.diffusion, mesh, i, j, :top)
+                vz_face = _vz_at_face_2d(model.advection, mesh, i, j, :top)
+                diff_flux = γ_face * area_z / dz_face
+                A[k, k] += diff_flux
+                A[k, k_n] -= diff_flux
+                if vz_face >= 0
+                    A[k, k] += vz_face * area_z
+                else
+                    A[k, k_n] -= abs(vz_face) * area_z
+                end
+            end
+
+            if source !== nothing
+                b[k] += evaluate_source(source, mesh, i, j) * volume
+            end
+        end
+    end
+
+    return A, b
+end
+
+function assemble_mass_matrix(mesh::Mesh2D, model::VariableCylindricalAdvectionDiffusion2D)
+    return assemble_mass_matrix(mesh, CylindricalDiffusion2D(0.0))
 end
 
 # --- Mass Matrix Overloads for Advection Models ---
