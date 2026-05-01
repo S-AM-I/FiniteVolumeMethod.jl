@@ -28,6 +28,9 @@ end
     @testset verbose = true "Cylindrical Robin sign" begin
         safe_include("cylindrical_robin.jl")
     end
+    @testset verbose = true "Cylindrical 2D annular MMS" begin
+        safe_include("cylindrical_2d_mms.jl")
+    end
     @testset verbose = true "Parabolic Mesh" begin
         safe_include("parabolic_mesh.jl")
     end
