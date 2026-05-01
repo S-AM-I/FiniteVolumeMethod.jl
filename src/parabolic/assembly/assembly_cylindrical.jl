@@ -1,6 +1,13 @@
 # Assembly routines for cylindrical coordinates
 # Migrated from Simu.jl SimuFVM/assembly/assembly_cylindrical.jl
 
+# 2D node access. `generate_mesh_2d` builds nodes via
+# `[Node2D(x, y) for i in 0:nx, j in 0:ny]` then `vec(...)`, which is column-
+# major: nodes[i, j] -> mesh.nodes[i + (j-1)*(nx+1)]. Reading geometry from
+# nodes (rather than computing from index + Lx/nx) supports r_inner > 0 and
+# non-uniform meshes.
+@inline _node2d(mesh::Mesh2D, i::Int, j::Int) = mesh.nodes[i + (j - 1) * (mesh.nx + 1)]
+
 """
     assemble_system(model::CylindricalDiffusion1D, mesh::Mesh1D, bc_left, bc_right; source=nothing, transient=false)
 
@@ -208,71 +215,63 @@ function assemble_system(model::CylindricalDiffusion2D, mesh::Mesh2D, bcs; sourc
     bc_left, bc_right, bc_bottom, bc_top = bcs
 
     for i in 1:nx
-        # Radial positions
-        dx = mesh.Lx / nx
-        dy = mesh.Ly / ny
-        r_in = (i - 1) * dx
-        r_out = i * dx
-
-        # Areas
-        area_r_in = 2 * pi * r_in * dy
-        area_r_out = 2 * pi * r_out * dy
-        # Volume: pi * (r_out^2 - r_in^2) * dy
-        volume = pi * (r_out^2 - r_in^2) * dy
-
-        # Area for z-faces: pi * (r_out^2 - r_in^2)
-        area_z = pi * (r_out^2 - r_in^2)
-
         for j in 1:ny
             k = (i - 1) * ny + j
 
+            r_in  = _node2d(mesh, i,     j    ).x
+            r_out = _node2d(mesh, i + 1, j    ).x
+            z_lo  = _node2d(mesh, i,     j    ).y
+            z_hi  = _node2d(mesh, i,     j + 1).y
+            dr = r_out - r_in
+            dz = z_hi - z_lo
+
+            area_r_in  = 2 * pi * r_in  * dz
+            area_r_out = 2 * pi * r_out * dz
+            area_z     = pi * (r_out^2 - r_in^2)
+            volume     = area_z * dz
+
             # --- Radial fluxes (x-direction) ---
-            # West face (r_in)
             if i == 1
-                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dx, transient)
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dr, transient)
             else
                 k_w = k - ny
-                dr = dx # uniform mesh assumption for now
-                flux_coeff = gamma * area_r_in / dr
+                dr_face = mesh.cells[k].center[1] - mesh.cells[k_w].center[1]
+                flux_coeff = gamma * area_r_in / dr_face
                 A[k, k] += flux_coeff
                 A[k, k_w] -= flux_coeff
             end
 
-            # East face (r_out)
             if i == nx
-                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dx, transient)
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dr, transient)
             else
                 k_e = k + ny
-                dr = dx
-                flux_coeff = gamma * area_r_out / dr
+                dr_face = mesh.cells[k_e].center[1] - mesh.cells[k].center[1]
+                flux_coeff = gamma * area_r_out / dr_face
                 A[k, k] += flux_coeff
                 A[k, k_e] -= flux_coeff
             end
 
-            # --- Axial fluxes (z-direction, y in Mesh2D) ---
-            # South face (z_bottom)
+            # --- Axial fluxes (y-direction = z) ---
             if j == 1
-                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dy, transient)
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dz, transient)
             else
                 k_s = k - 1
-                dz = dy
-                flux_coeff = gamma * area_z / dz
+                dz_face = mesh.cells[k].center[2] - mesh.cells[k_s].center[2]
+                flux_coeff = gamma * area_z / dz_face
                 A[k, k] += flux_coeff
                 A[k, k_s] -= flux_coeff
             end
 
-            # North face (z_top)
             if j == ny
-                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dy, transient)
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dz, transient)
             else
                 k_n = k + 1
-                dz = dy
-                flux_coeff = gamma * area_z / dz
+                dz_face = mesh.cells[k_n].center[2] - mesh.cells[k].center[2]
+                flux_coeff = gamma * area_z / dz_face
                 A[k, k] += flux_coeff
                 A[k, k_n] -= flux_coeff
             end
 
-            # Source term
             if source !== nothing
                 b[k] += evaluate_source(source, mesh, i, j) * volume
             end
@@ -297,25 +296,25 @@ function assemble_system(model::CylindricalAdvection2D, mesh::Mesh2D, bcs; sourc
     vz = model.vz
     bc_left, bc_right, bc_bottom, bc_top = bcs
 
-    dx = mesh.Lx / nx
-    dy = mesh.Ly / ny
-
     for i in 1:nx
-        r_in = (i - 1) * dx
-        r_out = i * dx
-
-        area_r_in = 2 * pi * r_in * dy
-        area_r_out = 2 * pi * r_out * dy
-        area_z = pi * (r_out^2 - r_in^2)
-        volume = area_z * dy
-
         for j in 1:ny
             k = (i - 1) * ny + j
 
+            r_in  = _node2d(mesh, i,     j    ).x
+            r_out = _node2d(mesh, i + 1, j    ).x
+            z_lo  = _node2d(mesh, i,     j    ).y
+            z_hi  = _node2d(mesh, i,     j + 1).y
+            dr = r_out - r_in
+            dz = z_hi - z_lo
+
+            area_r_in  = 2 * pi * r_in  * dz
+            area_r_out = 2 * pi * r_out * dz
+            area_z     = pi * (r_out^2 - r_in^2)
+            volume     = area_z * dz
+
             # --- Radial Advection (x-direction) ---
-            # West face (r_in)
             if i == 1
-                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dx, transient)
+                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dr, transient)
             else
                 k_w = k - ny
                 if vr >= 0
@@ -325,9 +324,8 @@ function assemble_system(model::CylindricalAdvection2D, mesh::Mesh2D, bcs; sourc
                 end
             end
 
-            # East face (r_out)
             if i == nx
-                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dx, transient)
+                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dr, transient)
             else
                 k_e = k + ny
                 if vr >= 0
@@ -338,9 +336,8 @@ function assemble_system(model::CylindricalAdvection2D, mesh::Mesh2D, bcs; sourc
             end
 
             # --- Axial Advection (y-direction) ---
-            # South face (z_bottom)
             if j == 1
-                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dy, transient)
+                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dz, transient)
             else
                 k_s = k - 1
                 if vz >= 0
@@ -350,9 +347,8 @@ function assemble_system(model::CylindricalAdvection2D, mesh::Mesh2D, bcs; sourc
                 end
             end
 
-            # North face (z_top)
             if j == ny
-                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dy, transient)
+                handle_cylindrical_advection_bc_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dz, transient)
             else
                 k_n = k + 1
                 if vz >= 0
@@ -388,29 +384,29 @@ function assemble_system(model::CylindricalAdvectionDiffusion2D, mesh::Mesh2D, b
 
     bc_left, bc_right, bc_bottom, bc_top = bcs
 
-    dx = mesh.Lx / nx
-    dy = mesh.Ly / ny
-
     for i in 1:nx
-        r_in = (i - 1) * dx
-        r_out = i * dx
-
-        area_r_in = 2 * pi * r_in * dy
-        area_r_out = 2 * pi * r_out * dy
-        area_z = pi * (r_out^2 - r_in^2)
-        volume = area_z * dy
-
         for j in 1:ny
             k = (i - 1) * ny + j
 
+            r_in  = _node2d(mesh, i,     j    ).x
+            r_out = _node2d(mesh, i + 1, j    ).x
+            z_lo  = _node2d(mesh, i,     j    ).y
+            z_hi  = _node2d(mesh, i,     j + 1).y
+            dr = r_out - r_in
+            dz = z_hi - z_lo
+
+            area_r_in  = 2 * pi * r_in  * dz
+            area_r_out = 2 * pi * r_out * dz
+            area_z     = pi * (r_out^2 - r_in^2)
+            volume     = area_z * dz
+
             # --- Radial (x-direction) ---
-            # West face
             if i == 1
-                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dx, transient)
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dr, transient)
             else
                 k_w = k - ny
-                dr = dx
-                diff_flux = gamma * area_r_in / dr
+                dr_face = mesh.cells[k].center[1] - mesh.cells[k_w].center[1]
+                diff_flux = gamma * area_r_in / dr_face
                 A[k, k] += diff_flux
                 A[k, k_w] -= diff_flux
 
@@ -421,13 +417,12 @@ function assemble_system(model::CylindricalAdvectionDiffusion2D, mesh::Mesh2D, b
                 end
             end
 
-            # East face
             if i == nx
-                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dx, transient)
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dr, transient)
             else
                 k_e = k + ny
-                dr = dx
-                diff_flux = gamma * area_r_out / dr
+                dr_face = mesh.cells[k_e].center[1] - mesh.cells[k].center[1]
+                diff_flux = gamma * area_r_out / dr_face
                 A[k, k] += diff_flux
                 A[k, k_e] -= diff_flux
 
@@ -439,13 +434,12 @@ function assemble_system(model::CylindricalAdvectionDiffusion2D, mesh::Mesh2D, b
             end
 
             # --- Axial (y-direction) ---
-            # South face
             if j == 1
-                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dy, transient)
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dz, transient)
             else
                 k_s = k - 1
-                dz = dy
-                diff_flux = gamma * area_z / dz
+                dz_face = mesh.cells[k].center[2] - mesh.cells[k_s].center[2]
+                diff_flux = gamma * area_z / dz_face
                 A[k, k] += diff_flux
                 A[k, k_s] -= diff_flux
 
@@ -456,13 +450,12 @@ function assemble_system(model::CylindricalAdvectionDiffusion2D, mesh::Mesh2D, b
                 end
             end
 
-            # North face
             if j == ny
-                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dy, transient)
+                handle_cylindrical_advection_diffusion_bc_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dz, transient)
             else
                 k_n = k + 1
-                dz = dy
-                diff_flux = gamma * area_z / dz
+                dz_face = mesh.cells[k_n].center[2] - mesh.cells[k].center[2]
+                diff_flux = gamma * area_z / dz_face
                 A[k, k] += diff_flux
                 A[k, k_n] -= diff_flux
 
@@ -508,15 +501,15 @@ function assemble_mass_matrix(mesh::Mesh2D, model::CylindricalDiffusion2D)
     nx = mesh.nx
     ny = mesh.ny
     M = SparseArrays.spzeros(nx * ny, nx * ny)
-    dx = mesh.Lx / nx
-    dy = mesh.Ly / ny
     for i in 1:nx
-        r_in = (i - 1) * dx
-        r_out = i * dx
-        volume = pi * (r_out^2 - r_in^2) * dy
         for j in 1:ny
             k = (i - 1) * ny + j
-            M[k, k] = volume
+            r_in  = _node2d(mesh, i,     j    ).x
+            r_out = _node2d(mesh, i + 1, j    ).x
+            z_lo  = _node2d(mesh, i,     j    ).y
+            z_hi  = _node2d(mesh, i,     j + 1).y
+            dz = z_hi - z_lo
+            M[k, k] = pi * (r_out^2 - r_in^2) * dz
         end
     end
     return M
