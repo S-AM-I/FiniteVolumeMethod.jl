@@ -34,6 +34,9 @@ end
     @testset verbose = true "Variable Cylindrical Diffusion MMS" begin
         safe_include("variable_cylindrical_mms.jl")
     end
+    @testset verbose = true "Variable Cylindrical Advection-Diffusion" begin
+        safe_include("variable_cylindrical_advection_diffusion.jl")
+    end
     @testset verbose = true "Parabolic Mesh" begin
         safe_include("parabolic_mesh.jl")
     end

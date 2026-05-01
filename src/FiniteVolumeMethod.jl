@@ -168,6 +168,7 @@ export
     SphericalAdvectionDiffusion1D,
     CylindricalAdvection1D,
     CylindricalAdvection2D,
+    VariableCylindricalAdvection2D,
     Advection1D,
     Advection2D,
     Advection3D,
@@ -182,6 +183,7 @@ export
     VariableAdvectionDiffusion3D,
     CylindricalAdvectionDiffusion1D,
     CylindricalAdvectionDiffusion2D,
+    VariableCylindricalAdvectionDiffusion2D,
     # Source Terms
     AbstractSourceTerm,
     ConstantSource,
