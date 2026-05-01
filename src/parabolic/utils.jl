@@ -93,6 +93,38 @@ function get_diffusion_coefficient(diffusion::VariableDiffusion2D, mesh::Curvili
     end
 end
 
+# --- Cylindrical variable-coefficient lookups ---
+
+function get_diffusion_coefficient(diffusion::CylindricalDiffusion1D, mesh::Mesh1D, i)
+    return diffusion.gamma
+end
+
+function get_diffusion_coefficient(diffusion::VariableCylindricalDiffusion1D, mesh::Mesh1D, i)
+    if diffusion.gamma isa Function
+        return diffusion.gamma(mesh.cells[i].center)
+    else
+        return diffusion.gamma[i]
+    end
+end
+
+function get_diffusion_coefficient(diffusion::CylindricalDiffusion2D, mesh::Mesh2D, i, j)
+    return diffusion.gamma
+end
+
+function get_diffusion_coefficient(diffusion::VariableCylindricalDiffusion2D, mesh::Mesh2D, i, j)
+    if diffusion.gamma isa Function
+        cell = mesh.cells[(i - 1) * mesh.ny + j]
+        return diffusion.gamma(cell.center[1], cell.center[2])
+    else
+        return diffusion.gamma[i, j]
+    end
+end
+
+@inline function _harmonic_mean(a::Real, b::Real)
+    (iszero(a) || iszero(b)) && return zero(a)
+    return 2 * a * b / (a + b)
+end
+
 """
     get_velocity(advection, mesh, i, side)
 

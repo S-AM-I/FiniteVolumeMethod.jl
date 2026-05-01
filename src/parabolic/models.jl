@@ -102,6 +102,31 @@ struct CylindricalDiffusion2D <: AbstractDiffusion
     CylindricalDiffusion2D(gamma::Float64, scheme::Symbol) = new(gamma, scheme)
 end
 
+"""Variable-coefficient diffusion equation model in 1D cylindrical (radial)
+coordinates. `gamma` is either a function `gamma(r)` evaluated at the cell
+centre or a per-cell `Vector{Float64}`. Face coefficients use the harmonic
+mean of the two adjacent cell values, matching the Cartesian
+`VariableDiffusion1D` discretisation."""
+struct VariableCylindricalDiffusion1D <: AbstractDiffusion
+    gamma::Union{Function, Vector{Float64}}
+    scheme::Symbol
+
+    VariableCylindricalDiffusion1D(gamma) = new(gamma, :first_order)
+    VariableCylindricalDiffusion1D(gamma, scheme::Symbol) = new(gamma, scheme)
+end
+
+"""Variable-coefficient diffusion equation model in 2D cylindrical (r-z)
+coordinates. `gamma` is either a function `gamma(r, z)` evaluated at the
+cell centre or a `Matrix{Float64}` of size `(n_cells_r, n_cells_z)`. Face
+coefficients use the harmonic mean of the two adjacent cell values."""
+struct VariableCylindricalDiffusion2D <: AbstractDiffusion
+    gamma::Union{Function, Matrix{Float64}}
+    scheme::Symbol
+
+    VariableCylindricalDiffusion2D(gamma) = new(gamma, :first_order)
+    VariableCylindricalDiffusion2D(gamma, scheme::Symbol) = new(gamma, scheme)
+end
+
 # --- Spherical Diffusion Models ---
 
 """Constant-coefficient diffusion equation model in 1D spherical (radial) coordinates."""
