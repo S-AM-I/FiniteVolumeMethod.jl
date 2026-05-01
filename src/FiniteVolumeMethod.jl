@@ -161,6 +161,8 @@ export
     AnisotropicDiffusion3D,
     CylindricalDiffusion1D,
     CylindricalDiffusion2D,
+    VariableCylindricalDiffusion1D,
+    VariableCylindricalDiffusion2D,
     SphericalDiffusion1D,
     SphericalAdvection1D,
     SphericalAdvectionDiffusion1D,
