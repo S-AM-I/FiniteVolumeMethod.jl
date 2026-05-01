@@ -1001,6 +1001,37 @@ function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2
     end
 end
 
+function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2D, mesh, k, bc::ParabolicNeumann, side, area, dr_or_dz, transient)
+    # Diffusion: prescribed flux contribution to RHS. Sign convention matches
+    # the pure-diffusion handler (inward flux at left/bottom; outward at
+    # right/top).
+    if side == :left || side == :bottom
+        b[k] -= bc.value * area
+    else
+        b[k] += bc.value * area
+    end
+
+    # Advection: outflow contribution if velocity points out of the domain.
+    v = _adv_diff_vel_at_face(model, mesh, k, side)
+    return if side == :left
+        if v < 0
+            A[k, k] += abs(v) * area
+        end
+    elseif side == :right
+        if v >= 0
+            A[k, k] += v * area
+        end
+    elseif side == :bottom
+        if v < 0
+            A[k, k] += abs(v) * area
+        end
+    else  # :top
+        if v >= 0
+            A[k, k] += v * area
+        end
+    end
+end
+
 """
     assemble_system(model::VariableCylindricalAdvectionDiffusion2D, mesh::Mesh2D, bcs; source=nothing, transient=false)
 
