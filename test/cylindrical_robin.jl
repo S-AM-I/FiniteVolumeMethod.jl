@@ -81,6 +81,61 @@ using LinearAlgebra
         @test max_err < 5.0
     end
 
+    @testset "2D axisymmetric annular shell (r_inner > 0)" begin
+        # Cylindrical-shell heat equation, axially uniform: same physics as
+        # the 1D radial test above, but driven through the 2D assembly to
+        # exercise r_inner > 0 (the previous (i-1)*dx indexing baked in
+        # r_inner = 0).
+        # Steady k * (1/r) d/dr (r dT/dr) = 0 between r_inner..r_outer with
+        # Neumann inner (q_inner) and Robin outer (h, T_coolant), insulated
+        # top/bottom. T should match T(r) at every z.
+        r_inner = 4.75e-3
+        r_outer = 4.8e-3
+        H = 1.0e-2
+        nx = 80
+        ny = 6
+        γ = 0.5
+        q_inner = 1.0e6
+        h_outer = 4.0e4
+        T_coolant = 600.0
+
+        T_analytic(r) = T_coolant + q_inner * r_inner *
+            (log(r_outer / r) / γ + 1 / (h_outer * r_outer))
+
+        x_nodes = collect(range(r_inner, r_outer; length = nx + 1))
+        y_nodes = collect(range(0.0, H; length = ny + 1))
+        mesh = generate_mesh_2d_nonuniform(nx, ny, r_outer - r_inner, H, x_nodes, y_nodes)
+
+        bcs = (
+            ParabolicNeumann(-q_inner),                   # left (r=r_inner): inward flux
+            ParabolicRobin(h_outer, 1.0, h_outer * T_coolant),  # right (r=r_outer)
+            ParabolicNeumann(0.0),                        # bottom: insulated
+            ParabolicNeumann(0.0),                        # top: insulated
+        )
+
+        A, b = assemble_system(CylindricalDiffusion2D(γ), mesh, bcs)
+        T = A \ Vector(b)
+
+        max_err = 0.0
+        for i in 1:nx, j in 1:ny
+            r_c = mesh.cells[(i - 1) * ny + j].center[1]
+            k = (i - 1) * ny + j
+            err = abs(T[k] - T_analytic(r_c))
+            max_err = max(max_err, err)
+        end
+
+        @test max_err < 1.0e-3
+
+        # Axial uniformity: T should not depend on z.
+        max_axial_var = 0.0
+        for i in 1:nx
+            col_T = [T[(i - 1) * ny + j] for j in 1:ny]
+            max_axial_var = max(max_axial_var, maximum(col_T) - minimum(col_T))
+        end
+
+        @test max_axial_var < 1.0e-9
+    end
+
     @testset "2D axisymmetric slab with top-Robin (uniform source)" begin
         # Insulated radial sides, insulated bottom, Robin at top.
         # Reduces to 1D axial conduction:
