@@ -31,6 +31,9 @@ end
     @testset verbose = true "Cylindrical 2D annular MMS" begin
         safe_include("cylindrical_2d_mms.jl")
     end
+    @testset verbose = true "Variable Cylindrical Diffusion MMS" begin
+        safe_include("variable_cylindrical_mms.jl")
+    end
     @testset verbose = true "Parabolic Mesh" begin
         safe_include("parabolic_mesh.jl")
     end
