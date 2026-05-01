@@ -8,6 +8,52 @@
 # non-uniform meshes.
 @inline _node2d(mesh::Mesh2D, i::Int, j::Int) = mesh.nodes[i + (j - 1) * (mesh.nx + 1)]
 
+# Cell-local γ lookup so the BC handlers can serve both the constant-γ and
+# variable-γ models without branching.
+@inline _gamma_at_cell(model::CylindricalDiffusion1D, mesh::Mesh1D, i::Int) = model.gamma
+@inline _gamma_at_cell(model::VariableCylindricalDiffusion1D, mesh::Mesh1D, i::Int) =
+    get_diffusion_coefficient(model, mesh, i)
+@inline _gamma_at_cell(model::CylindricalDiffusion2D, mesh::Mesh2D, k::Int) = model.gamma
+@inline function _gamma_at_cell(model::VariableCylindricalDiffusion2D, mesh::Mesh2D, k::Int)
+    j = mod(k - 1, mesh.ny) + 1
+    i = div(k - 1, mesh.ny) + 1
+    return get_diffusion_coefficient(model, mesh, i, j)
+end
+
+# Face γ via harmonic mean of adjacent cell γ values (matches the Cartesian
+# `VariableDiffusion*` pattern in utils.jl).
+@inline _gamma_at_face_1d(model::CylindricalDiffusion1D, mesh::Mesh1D, i, side) = model.gamma
+@inline function _gamma_at_face_1d(model::VariableCylindricalDiffusion1D, mesh::Mesh1D, i, side)
+    if side == :left
+        i == 1 && return get_diffusion_coefficient(model, mesh, i)
+        return _harmonic_mean(get_diffusion_coefficient(model, mesh, i - 1),
+                              get_diffusion_coefficient(model, mesh, i))
+    else
+        i == length(mesh.cells) && return get_diffusion_coefficient(model, mesh, i)
+        return _harmonic_mean(get_diffusion_coefficient(model, mesh, i),
+                              get_diffusion_coefficient(model, mesh, i + 1))
+    end
+end
+
+@inline _gamma_at_face_2d(model::CylindricalDiffusion2D, mesh::Mesh2D, i, j, side) = model.gamma
+@inline function _gamma_at_face_2d(model::VariableCylindricalDiffusion2D, mesh::Mesh2D, i, j, side)
+    nx = mesh.nx; ny = mesh.ny
+    γP = get_diffusion_coefficient(model, mesh, i, j)
+    if side == :left
+        i == 1 && return γP
+        return _harmonic_mean(get_diffusion_coefficient(model, mesh, i - 1, j), γP)
+    elseif side == :right
+        i == nx && return γP
+        return _harmonic_mean(γP, get_diffusion_coefficient(model, mesh, i + 1, j))
+    elseif side == :bottom
+        j == 1 && return γP
+        return _harmonic_mean(get_diffusion_coefficient(model, mesh, i, j - 1), γP)
+    else # :top
+        j == ny && return γP
+        return _harmonic_mean(γP, get_diffusion_coefficient(model, mesh, i, j + 1))
+    end
+end
+
 """
     assemble_system(model::CylindricalDiffusion1D, mesh::Mesh1D, bc_left, bc_right; source=nothing, transient=false)
 
@@ -63,6 +109,56 @@ function assemble_system(model::CylindricalDiffusion1D, mesh::Mesh1D, bc_left::A
         end
 
         # Source term
+        if source !== nothing
+            b[i] += evaluate_source(source, mesh, i) * volume
+        end
+    end
+
+    return A, b
+end
+
+"""
+    assemble_system(model::VariableCylindricalDiffusion1D, mesh::Mesh1D, bc_left, bc_right; source=nothing, transient=false)
+
+1D cylindrical diffusion with spatially varying `gamma(r)`. Face γ uses the
+harmonic mean of the two adjacent cell γ values; BCs are dispatched through
+the same handlers as the constant-coefficient case via the
+`_CylDiffusion1D` Union.
+"""
+function assemble_system(model::VariableCylindricalDiffusion1D, mesh::Mesh1D, bc_left::AbstractBoundaryCondition, bc_right::AbstractBoundaryCondition; source = nothing, transient = false)
+    nx = length(mesh.cells)
+    A = SparseArrays.spzeros(nx, nx)
+    b = zeros(nx)
+
+    for i in 1:nx
+        r_in = mesh.nodes[i].x
+        r_out = mesh.nodes[i + 1].x
+        volume = pi * (r_out^2 - r_in^2)
+
+        if i == 1
+            area_in = 2 * pi * r_in
+            handle_cylindrical_boundary_condition!(A, b, model, mesh, i, bc_left, :left, area_in, transient)
+        else
+            area_face = 2 * pi * r_in
+            dr_face = mesh.cells[i].center - mesh.cells[i - 1].center
+            γ = _gamma_at_face_1d(model, mesh, i, :left)
+            flux_coeff = γ * area_face / dr_face
+            A[i, i] += flux_coeff
+            A[i, i - 1] -= flux_coeff
+        end
+
+        if i == nx
+            area_out = 2 * pi * r_out
+            handle_cylindrical_boundary_condition!(A, b, model, mesh, i, bc_right, :right, area_out, transient)
+        else
+            area_face = 2 * pi * r_out
+            dr_face = mesh.cells[i + 1].center - mesh.cells[i].center
+            γ = _gamma_at_face_1d(model, mesh, i, :right)
+            flux_coeff = γ * area_face / dr_face
+            A[i, i] += flux_coeff
+            A[i, i + 1] -= flux_coeff
+        end
+
         if source !== nothing
             b[i] += evaluate_source(source, mesh, i) * volume
         end
@@ -268,6 +364,91 @@ function assemble_system(model::CylindricalDiffusion2D, mesh::Mesh2D, bcs; sourc
                 k_n = k + 1
                 dz_face = mesh.cells[k_n].center[2] - mesh.cells[k].center[2]
                 flux_coeff = gamma * area_z / dz_face
+                A[k, k] += flux_coeff
+                A[k, k_n] -= flux_coeff
+            end
+
+            if source !== nothing
+                b[k] += evaluate_source(source, mesh, i, j) * volume
+            end
+        end
+    end
+
+    return A, b
+end
+
+"""
+    assemble_system(model::VariableCylindricalDiffusion2D, mesh::Mesh2D, bcs; source=nothing, transient=false)
+
+2D axisymmetric diffusion with spatially varying `gamma(r, z)`. Face γ uses
+the harmonic mean of the two adjacent cell γ values; BCs are dispatched
+through the same handlers as the constant-coefficient case via the
+`_CylDiffusion2D` Union.
+"""
+function assemble_system(model::VariableCylindricalDiffusion2D, mesh::Mesh2D, bcs; source = nothing, transient = false)
+    nx = mesh.nx
+    ny = mesh.ny
+    A = SparseArrays.spzeros(nx * ny, nx * ny)
+    b = zeros(nx * ny)
+
+    bc_left, bc_right, bc_bottom, bc_top = bcs
+
+    for i in 1:nx
+        for j in 1:ny
+            k = (i - 1) * ny + j
+
+            r_in  = _node2d(mesh, i,     j    ).x
+            r_out = _node2d(mesh, i + 1, j    ).x
+            z_lo  = _node2d(mesh, i,     j    ).y
+            z_hi  = _node2d(mesh, i,     j + 1).y
+            dr = r_out - r_in
+            dz = z_hi - z_lo
+
+            area_r_in  = 2 * pi * r_in  * dz
+            area_r_out = 2 * pi * r_out * dz
+            area_z     = pi * (r_out^2 - r_in^2)
+            volume     = area_z * dz
+
+            if i == 1
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dr, transient)
+            else
+                k_w = k - ny
+                dr_face = mesh.cells[k].center[1] - mesh.cells[k_w].center[1]
+                γ = _gamma_at_face_2d(model, mesh, i, j, :left)
+                flux_coeff = γ * area_r_in / dr_face
+                A[k, k] += flux_coeff
+                A[k, k_w] -= flux_coeff
+            end
+
+            if i == nx
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_right, :right, area_r_out, dr, transient)
+            else
+                k_e = k + ny
+                dr_face = mesh.cells[k_e].center[1] - mesh.cells[k].center[1]
+                γ = _gamma_at_face_2d(model, mesh, i, j, :right)
+                flux_coeff = γ * area_r_out / dr_face
+                A[k, k] += flux_coeff
+                A[k, k_e] -= flux_coeff
+            end
+
+            if j == 1
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_bottom, :bottom, area_z, dz, transient)
+            else
+                k_s = k - 1
+                dz_face = mesh.cells[k].center[2] - mesh.cells[k_s].center[2]
+                γ = _gamma_at_face_2d(model, mesh, i, j, :bottom)
+                flux_coeff = γ * area_z / dz_face
+                A[k, k] += flux_coeff
+                A[k, k_s] -= flux_coeff
+            end
+
+            if j == ny
+                handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_top, :top, area_z, dz, transient)
+            else
+                k_n = k + 1
+                dz_face = mesh.cells[k_n].center[2] - mesh.cells[k].center[2]
+                γ = _gamma_at_face_2d(model, mesh, i, j, :top)
+                flux_coeff = γ * area_z / dz_face
                 A[k, k] += flux_coeff
                 A[k, k_n] -= flux_coeff
             end
@@ -517,14 +698,17 @@ end
 
 # --- Boundary Condition Handlers for Cylindrical Coordinates ---
 
-function handle_cylindrical_boundary_condition!(A, b, model::CylindricalDiffusion1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
+const _CylDiffusion1D = Union{CylindricalDiffusion1D, VariableCylindricalDiffusion1D}
+
+function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
     dx = mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x)
-    flux_coeff = model.gamma * area / abs(dx)
+    γ = _gamma_at_cell(model, mesh, i)
+    flux_coeff = γ * area / abs(dx)
     A[i, i] += flux_coeff
     return b[i] += flux_coeff * bc.value
 end
 
-function handle_cylindrical_boundary_condition!(A, b, model::CylindricalDiffusion1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
+function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
     # Neumann BC: flux = -gamma * dphi/dn.
     # Total flux = flux * area.
     # In b vector, we add the inward flux.
@@ -535,25 +719,27 @@ function handle_cylindrical_boundary_condition!(A, b, model::CylindricalDiffusio
     end
 end
 
-function handle_cylindrical_boundary_condition!(A, b, model::CylindricalDiffusion1D, mesh, i, bc::ParabolicRobin, side, area, transient)
+function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::ParabolicRobin, side, area, transient)
     dx = abs(mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x))
-    gamma = model.gamma
+    γ = _gamma_at_cell(model, mesh, i)
 
-    denominator = bc.a * dx + bc.b * gamma
-    flux_coeff = gamma * bc.a * area / denominator
+    denominator = bc.a * dx + bc.b * γ
+    flux_coeff = γ * bc.a * area / denominator
     A[i, i] += flux_coeff
-    return b[i] += gamma * bc.c * area / denominator
+    return b[i] += γ * bc.c * area / denominator
 end
 
-function handle_cylindrical_boundary_condition_2d!(A, b, model::CylindricalDiffusion2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
-    # Distance from cell center to boundary is roughly half cell size
+const _CylDiffusion2D = Union{CylindricalDiffusion2D, VariableCylindricalDiffusion2D}
+
+function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
     dist = dr_or_dz / 2.0
-    flux_coeff = model.gamma * area / dist
+    γ = _gamma_at_cell(model, mesh, k)
+    flux_coeff = γ * area / dist
     A[k, k] += flux_coeff
     return b[k] += flux_coeff * bc.value
 end
 
-function handle_cylindrical_boundary_condition_2d!(A, b, model::CylindricalDiffusion2D, mesh, k, bc::ParabolicNeumann, side, area, dr_or_dz, transient)
+function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::ParabolicNeumann, side, area, dr_or_dz, transient)
     return if side == :left || side == :bottom
         b[k] -= bc.value * area
     else
@@ -561,13 +747,13 @@ function handle_cylindrical_boundary_condition_2d!(A, b, model::CylindricalDiffu
     end
 end
 
-function handle_cylindrical_boundary_condition_2d!(A, b, model::CylindricalDiffusion2D, mesh, k, bc::ParabolicRobin, side, area, dr_or_dz, transient)
+function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::ParabolicRobin, side, area, dr_or_dz, transient)
     dist = dr_or_dz / 2.0
-    gamma = model.gamma
-    denominator = bc.a * dist + bc.b * gamma
-    flux_coeff = gamma * bc.a * area / denominator
+    γ = _gamma_at_cell(model, mesh, k)
+    denominator = bc.a * dist + bc.b * γ
+    flux_coeff = γ * bc.a * area / denominator
     A[k, k] += flux_coeff
-    return b[k] += gamma * bc.c * area / denominator
+    return b[k] += γ * bc.c * area / denominator
 end
 
 # --- Cylindrical Advection Boundary Condition Handlers ---
