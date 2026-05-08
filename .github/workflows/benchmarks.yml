@@ -1,0 +1,36 @@
+name: benchmarks
+
+# Manual-trigger only initially. Once the baseline is stable across a few
+# release cycles, flip on push: branches: [main] / pull_request: to gate
+# every PR on allocation regressions.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'benchmarks/**'
+      - 'Project.toml'
+      - '.github/workflows/benchmarks.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  alloc-budget:
+    name: Allocation-budget regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Resolve benchmarks env
+        run: |
+          julia --project=benchmarks -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - name: Run benchmarks (compare against baseline)
+        run: julia --project=benchmarks benchmarks/runbenchmarks.jl --compare
