@@ -1,0 +1,27 @@
+name: jet
+
+# Manual-trigger JET type-stability audit. Mirrors the
+# CRUDApplication.jl / NuclearWaterChemistry.jl jet workflows.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jet:
+    name: JET type-stability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Install JET into the project env
+        run: julia --project -e 'using Pkg; Pkg.add("JET")'
+      - name: Run JET audit
+        run: julia --project -e 'include("test/test_jet.jl")'
