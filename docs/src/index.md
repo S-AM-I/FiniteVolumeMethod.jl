@@ -4,6 +4,13 @@ CurrentModule = FiniteVolumeMethod
 
 # Introduction
 
+!!! info "Sister packages in this stack"
+    FVM is the transport-solver core; the chemistry layer lives in
+    [`NuclearWaterChemistry.jl`](https://cx-xd.github.io/NuclearWaterChemistry.jl/dev/)
+    and the PWR-CRUD application in
+    [`CRUDApplication.jl`](https://s-am-i.github.io/CRUD.jl/dev/).
+    The three docs sites share the same nav shape and `[compat]` policy.
+
 This is the documentation for FiniteVolumeMethod.jl. [Click here to go back to the GitHub repository](https://github.com/cx-xd/FiniteVolumeMethod.jl).
 
 FiniteVolumeMethod.jl is a Julia package for solving partial differential equations (PDEs) using the finite volume method. The package provides two complementary solvers for different classes of PDEs, together with research-support tooling such as validation reporting, dashboard export, and optional archival I/O.
