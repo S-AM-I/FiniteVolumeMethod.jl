@@ -1,0 +1,56 @@
+Bootstrap: docker
+From: julia:1.11-bookworm
+
+%labels
+    Author "Daniel VandenHeuvel, cx-xd contributors"
+    Project "FiniteVolumeMethod.jl"
+    Version "3.111.0"
+    License "MIT"
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends \
+        libcairo2 \
+        libfontconfig1 \
+        libfreetype6 \
+        libglib2.0-0 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libpixman-1-0 \
+        libpng16-16 \
+        libx11-6 \
+        libxext6 \
+        libxrender1 \
+        xvfb \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+    mkdir -p /julia-depot /workspace
+
+    julia -e 'using Pkg; Pkg.Registry.add("General")'
+
+    cd /workspace
+    julia --project -e '
+        using Pkg
+        Pkg.resolve()
+        Pkg.instantiate()
+        Pkg.precompile()'
+
+%environment
+    export JULIA_DEPOT_PATH=/julia-depot
+    export JULIA_NUM_THREADS=auto
+    export JULIA_PKG_SERVER=""
+
+%runscript
+    exec julia --project /workspace "$@"
+
+%help
+    FiniteVolumeMethod.jl singularity / apptainer image.
+
+    Build:   apptainer build fvm.sif docker/Apptainer.def
+    Run:     apptainer exec --bind .:/workspace fvm.sif \
+                julia --project -e 'using Pkg; Pkg.test()'
+
+    Portable equivalent of docker-compose.yml + Dockerfile.base for
+    HPC clusters where Docker isn't available. Bind-mount the repo at
+    /workspace and invoke the test suite or scientific-evidence
+    runners as above.
