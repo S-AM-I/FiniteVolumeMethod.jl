@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en,en-GB",
+  "useGitignore": true,
+  "ignorePaths": [
+    "docs/build/**",
+    "docs/Manifest.toml",
+    "Manifest.toml",
+    "results/**",
+    "node_modules/**",
+    "data/**",
+    "scripts/**/Manifest.toml",
+    "*.lock",
+    "*.svg"
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "scientific-vocab",
+      "path": "./.cspell-dict.txt",
+      "addWords": true
+    }
+  ],
+  "dictionaries": ["scientific-vocab"]
+}
