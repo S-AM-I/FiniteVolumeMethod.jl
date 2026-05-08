@@ -88,6 +88,7 @@ end
 
 using FiniteVolumeMethod
 using Documenter
+using DocumenterVitepress
 using Literate
 using Dates
 
@@ -251,27 +252,10 @@ makedocs(;
     authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>, cx-xd contributors",
     sitename = "FiniteVolumeMethod.jl",
     (_git_works ? () : (remotes = nothing,))...,
-    format = Documenter.HTML(;
-        canonical = "https://cx-xd.github.io/FiniteVolumeMethod.jl",
-        edit_link = "main",
-        # Pretty URLs work well on hosted docs and LiveServer, but they produce
-        # directory links that open in Finder when users browse the local build
-        # directly via file:// on macOS.
-        prettyurls = DOCS_PRETTYURLS,
-        collapselevel = 2,
-        assets = String[],
-        mathengine = MathJax3(
-            Dict(
-                :loader => Dict("load" => ["[tex]/physics"]),
-                :tex => Dict(
-                    "inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
-                    "tags" => "ams",
-                    "packages" => ["base", "ams", "autoload", "physics"]
-                )
-            )
-        ),
-        size_threshold = 2 * 1024 * 1024,      # 2 MiB — tutorial pages embed large inline plots
-        size_threshold_warn = 500 * 1024
+    format = DocumenterVitepress.MarkdownVitepress(;
+        repo = "github.com/cx-xd/FiniteVolumeMethod.jl",
+        devbranch = "main",
+        devurl = "dev",
     ),
     draft = IS_LIVESERVER,
     pages = _PAGES,
@@ -281,9 +265,11 @@ makedocs(;
 # Only run deploydocs for local/non-Actions deployment (e.g. TagBot).
 # GitHub Pages deployment is handled by actions/deploy-pages in CI.
 if !IS_CI
-    deploydocs(;
+    DocumenterVitepress.deploydocs(;
         repo = "github.com/cx-xd/FiniteVolumeMethod.jl",
+        target = joinpath(@__DIR__, "build"),
         devbranch = "main",
+        branch = "gh-pages",
         push_preview = true
     )
 end
