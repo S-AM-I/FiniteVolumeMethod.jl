@@ -98,7 +98,10 @@ _PAGES = [
     "Verification & Validation" => [
         "V&V Status" => "research_governance.md",
         "Capability Matrix" => "capability_matrix.md",
+        "Algorithm Provenance" => "provenance.md",
         "v2 Migration" => "v2_migration.md",
+        "v3 Migration" => "v3_migration.md",
+        "v3 Tutorials Overview" => "literate_v3/README.md",
     ],
     "Tutorials" => [
         "Parabolic and Elliptic PDEs" => [
