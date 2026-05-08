@@ -1,0 +1,6 @@
+# benchmarks/baseline.toml — pinned allocation counts in bytes.
+# Regenerate: julia --project=benchmarks benchmarks/runbenchmarks.jl --baseline
+# Tolerance: 5%.
+
+[allocations]
+"parabolic/load_smoke" = 3488
