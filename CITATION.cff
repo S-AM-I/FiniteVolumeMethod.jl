@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "FiniteVolumeMethod.jl"
+abstract: "Julia package for cell-centered finite volume methods on unstructured triangle meshes (parabolic/elliptic) and structured meshes (hyperbolic, collocated incompressible, MHD/GRMHD, AMR, multiphase VOF, Lagrangian DPM, FSI, dynamic mesh, radiation, combustion). Research-grade v3 development branch."
+license: MIT
+repository-code: "https://github.com/cx-xd/FiniteVolumeMethod.jl"
+keywords:
+  - finite volume method
+  - computational fluid dynamics
+  - unstructured mesh
+  - SciML
+  - Julia
+authors:
+  - family-names: Mashouk
+    given-names: Sami
