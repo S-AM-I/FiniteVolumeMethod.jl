@@ -7,6 +7,15 @@
 - Published-benchmarks CI job in `.github/workflows/CI.yml` — runs all 5 published benchmarks automatically
 - Re-enabled DocCleanup and Nightly CI workflows
 - CRUD-path parabolic assembly integration test (`test/parabolic_crud_paths.jl`)
+- `CITATION.cff` for cross-repo metadata parity with `CRUDApplication.jl` and `NuclearWaterChemistry.jl`
+- `scripts/install_hooks.sh` — local Runic pre-commit hook installer (CLAUDE.md documented the policy; the helper was missing)
+- `docs/src/contributing/compat.md` — cross-repo Julia / [compat] policy page
+- DocumenterVitepress backend for the docs site (replaces the Documenter HTML output)
+- Allocation-budget regression scaffold under `benchmarks/` (`runbenchmarks.jl` + pinned `baseline.toml` + `.github/workflows/benchmarks.yml`); placeholder smoke target awaiting concrete parabolic / hyperbolic kernel
+- JET informational lane at `test/test_jet.jl` + `.github/workflows/jet.yml` (manual-trigger; emits optimisation-warning count)
+- `.github/workflows/docs-quality.yml` runs `lychee` + `cspell` on docs/PR changes
+- Quarto Layer-2 scaffold under `theory/` (`_quarto.yml` + `README.md`); first migration target is the parabolic MMS convergence page
+- Three previously-orphan documentation pages (`provenance.md`, `v3_migration.md`, `literate_v3/README.md`) wired into the makedocs nav so the orphan-check passes
 
 ### Fixed
 - WENO5 ghost-cell BC refactor: generalized all 1D/2D/3D hyperbolic boundary condition fills to accept `ng` (ghost count) parameter instead of hardcoding 2. WENO5 reconstruction (nghost=3) now works on structured meshes.
