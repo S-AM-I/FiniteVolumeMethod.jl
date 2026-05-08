@@ -8,6 +8,9 @@ dev/Manifest.toml
 test/Manifest.toml
 docs/build/
 docs/site/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+node_modules/
 docs/Manifest.toml
 validation/reports/
 validation/reproduction_bundles/
