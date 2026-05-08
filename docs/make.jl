@@ -196,6 +196,9 @@ _PAGES = [
         "Parabolic Solver" => "interface.md",
         "Hyperbolic Solver" => "hyperbolic/interface.md",
     ],
+    "Contributing" => [
+        "Julia & dependency compat policy" => "contributing/compat.md",
+    ],
 ]
 
 # Make sure we haven't forgotten any files
