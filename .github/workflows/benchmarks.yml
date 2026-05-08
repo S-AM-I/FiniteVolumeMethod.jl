@@ -1,16 +1,13 @@
 name: benchmarks
 
-# Manual-trigger only initially. Once the baseline is stable across a few
-# release cycles, flip on push: branches: [main] / pull_request: to gate
-# every PR on allocation regressions.
+# Gating lane — fires on every push to main and on every PR.
+# Promoted from the manual-trigger / paths-filtered scaffold once the
+# baseline stabilized.
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
   pull_request:
-    paths:
-      - 'src/**'
-      - 'benchmarks/**'
-      - 'Project.toml'
-      - '.github/workflows/benchmarks.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
