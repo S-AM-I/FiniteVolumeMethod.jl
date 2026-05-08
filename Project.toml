@@ -1,7 +1,7 @@
 name = "FiniteVolumeMethod"
 uuid = "d4f04ab7-4f65-4d72-8a28-7087bc7f46f4"
-authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>", "cx-xd contributors"]
 version = "3.111.0"
+authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>", "cx-xd contributors"]
 
 [deps]
 ChunkSplitters = "ae650224-84b6-46f8-82ea-d812ca08434e"
@@ -9,6 +9,7 @@ CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PreallocationTools = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
@@ -69,6 +70,7 @@ DelimitedFiles = "1"
 HDF5 = "0.17, 0.18"
 HTTP = "1"
 IncompleteLU = "0.2"
+JET = "0.11.3"
 JLD2 = "0.4, 0.5"
 JSON3 = "1"
 LinearSolve = "2, 3"
