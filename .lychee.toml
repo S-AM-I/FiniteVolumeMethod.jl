@@ -1,0 +1,24 @@
+# lychee link-checker config — shared across the three sister repos.
+# https://lychee.cli.rs/usage/config/
+
+# Skip sluggish or rate-limited hosts that cause flaky CI runs.
+exclude = [
+  # GitHub PR/issue links — frequently rate-limited, low signal.
+  '^https://github\.com/.+/(pull|issues)/\d+$',
+  # Zenodo DOIs — these resolve through one redirect and rate-limit.
+  '^https://zenodo\.org/',
+  '^https://doi\.org/10\.5281/',
+]
+
+# Treat localhost / 127.0.0.1 as fine (used in dev-server links).
+exclude_loopback = true
+
+# Be patient on slow hosts.
+timeout = 30
+
+# Don't follow redirects more than 5 deep.
+max_redirects = 5
+
+# Cache successful checks across runs (the action also has a cache option).
+cache = true
+max_cache_age = "1d"

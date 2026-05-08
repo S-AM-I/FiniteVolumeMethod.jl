@@ -1,0 +1,50 @@
+name: docs-quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'theory/**'
+      - 'README.md'
+      - 'CITATION.cff'
+      - 'CLAUDE.md'
+      - '.github/workflows/docs-quality.yml'
+      - '.cspell.json'
+      - '.lychee.toml'
+  workflow_dispatch:
+
+jobs:
+  link-check:
+    name: lychee link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --config .lychee.toml
+            --no-progress
+            --exclude-mail
+            --exclude-path docs/build
+            --exclude-path docs/src/assets
+            'docs/**/*.md' 'theory/**/*.qmd' '*.md'
+          fail: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  spell-check:
+    name: cspell typo check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: streetsidesoftware/cspell-action@v6
+        with:
+          config: .cspell.json
+          files: |
+            docs/**/*.md
+            theory/**/*.qmd
+            *.md
+          incremental_files_only: false
+          strict: true
