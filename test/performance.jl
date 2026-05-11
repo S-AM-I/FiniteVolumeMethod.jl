@@ -158,10 +158,10 @@ end
     adt = 0.001
 
     FiniteVolumeMethod._implicit_solve_2d!(
-        U_serial, law, source, adt, nx, ny, N, 1.0e-10, 5
+        U_serial, law, source, adt, nx, ny, 2, N, 1.0e-10, 5
     )
     FiniteVolumeMethod._implicit_solve_2d_threaded!(
-        U_threaded, law, source, adt, nx, ny, N, 1.0e-10, 5
+        U_threaded, law, source, adt, nx, ny, 2, N, 1.0e-10, 5
     )
 
     for iy in 1:ny, ix in 1:nx

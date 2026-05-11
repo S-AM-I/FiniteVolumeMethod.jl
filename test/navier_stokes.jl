@@ -610,7 +610,7 @@ end
             U[i] = primitive_to_conserved(ns, SVector(1.0, 0.5, 1.0))
         end
 
-        FiniteVolumeMethod.apply_bc_left!(U, NoSlipBC(), ns, nc, 0.0)
+        FiniteVolumeMethod.apply_bc_left!(U, NoSlipBC(), ns, nc, 2, 0.0)
         w_ghost = conserved_to_primitive(ns, U[2])
         w_interior = conserved_to_primitive(ns, U[3])
         # Velocity should be negated
@@ -631,7 +631,7 @@ end
         end
 
         # Test left wall
-        FiniteVolumeMethod.apply_bc_2d_left!(U, NoSlipBC(), ns, nx, ny, 0.0)
+        FiniteVolumeMethod.apply_bc_2d_left!(U, NoSlipBC(), ns, nx, ny, 2, 0.0)
         w_ghost = conserved_to_primitive(ns, U[2, 4])
         w_int = conserved_to_primitive(ns, U[3, 4])
         @test w_ghost[2] ≈ -w_int[2]  # vx negated
@@ -643,7 +643,7 @@ end
         for j in 1:(ny + 4), i in 1:(nx + 4)
             U[i, j] = primitive_to_conserved(ns, SVector(1.0, 0.5, 0.3, 1.0))
         end
-        FiniteVolumeMethod.apply_bc_2d_bottom!(U, NoSlipBC(), ns, nx, ny, 0.0)
+        FiniteVolumeMethod.apply_bc_2d_bottom!(U, NoSlipBC(), ns, nx, ny, 2, 0.0)
         w_ghost_b = conserved_to_primitive(ns, U[4, 2])
         w_int_b = conserved_to_primitive(ns, U[4, 3])
         @test w_ghost_b[2] ≈ -w_int_b[2]  # vx negated
@@ -671,8 +671,8 @@ end
     end
 
     # Apply left wall BCs
-    FiniteVolumeMethod.apply_bc_2d_left!(U_noslip, NoSlipBC(), ns, nx, ny, 0.0)
-    FiniteVolumeMethod.apply_bc_2d_left!(U_reflect, ReflectiveBC(), euler, nx, ny, 0.0)
+    FiniteVolumeMethod.apply_bc_2d_left!(U_noslip, NoSlipBC(), ns, nx, ny, 2, 0.0)
+    FiniteVolumeMethod.apply_bc_2d_left!(U_reflect, ReflectiveBC(), euler, nx, ny, 2, 0.0)
 
     # NoSlip negates BOTH vx and vy; Reflective only negates vx (normal)
     w_noslip = conserved_to_primitive(ns, U_noslip[2, 4])

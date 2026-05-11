@@ -89,6 +89,7 @@ function _solve_coupled_1d(coupled::CoupledProblem, callback::Union{Nothing, Fun
     mesh = prob.mesh
     nc = ncells(mesh)
     N = nvariables(prob.law)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     # Initialize state from the HyperbolicProblem's initial condition
     U = initialize_1d(prob)
@@ -104,7 +105,7 @@ function _solve_coupled_1d(coupled::CoupledProblem, callback::Union{Nothing, Fun
         U1[i] = zero_state
         U2[i] = zero_state
     end
-    workspace = (; dU_vec = dU, U1_vec = U1, U2_vec = U2, nc = nc)
+    workspace = (; dU_vec = dU, U1_vec = U1, U2_vec = U2, nc = nc, ng = ng)
 
     t = coupled.initial_time
     step = 0
@@ -152,6 +153,7 @@ function _solve_coupled_2d(coupled::CoupledProblem, callback::Union{Nothing, Fun
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     N = nvariables(prob.law)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     # Initialize state
     U = initialize_2d(prob)
@@ -167,7 +169,7 @@ function _solve_coupled_2d(coupled::CoupledProblem, callback::Union{Nothing, Fun
         U1[i, j] = zero_state
         U2[i, j] = zero_state
     end
-    workspace = (; dU_mat = dU, U1_mat = U1, U2_mat = U2, nx = nx, ny = ny)
+    workspace = (; dU_mat = dU, U1_mat = U1, U2_mat = U2, nx = nx, ny = ny, ng = ng)
 
     t = coupled.initial_time
     step = 0

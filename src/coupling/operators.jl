@@ -168,8 +168,9 @@ end
 
 function advance!(U::AbstractVector{<:SVector}, op::SourceOperator, dt, t, workspace)
     nc = workspace.nc
+    ng = workspace.ng
     N = nvariables(op.law)
-    _implicit_solve_1d!(U, op.law, op.source, dt, nc, N, op.newton_tol, op.newton_maxiter)
+    _implicit_solve_1d!(U, op.law, op.source, dt, nc, ng, N, op.newton_tol, op.newton_maxiter)
     return nothing
 end
 
@@ -177,8 +178,9 @@ end
 
 function advance!(U::AbstractMatrix{<:SVector}, op::SourceOperator, dt, t, workspace)
     nx, ny = workspace.nx, workspace.ny
+    ng = workspace.ng
     N = nvariables(op.law)
-    _implicit_solve_2d!(U, op.law, op.source, dt, nx, ny, N, op.newton_tol, op.newton_maxiter)
+    _implicit_solve_2d!(U, op.law, op.source, dt, nx, ny, ng, N, op.newton_tol, op.newton_maxiter)
     return nothing
 end
 

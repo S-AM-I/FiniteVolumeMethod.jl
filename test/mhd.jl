@@ -547,8 +547,8 @@ end
         U[3] = SVector(2.0, 1.0, 0.1, 0.0, 3.0, 0.75, 0.5, 0.0)
         U[nc + 2] = SVector(0.5, -0.5, -0.1, 0.0, 1.0, 0.75, -0.5, 0.0)
 
-        FiniteVolumeMethod.apply_bc_left!(U, TransmissiveBC(), law, nc, 0.0)
-        FiniteVolumeMethod.apply_bc_right!(U, TransmissiveBC(), law, nc, 0.0)
+        FiniteVolumeMethod.apply_bc_left!(U, TransmissiveBC(), law, nc, 2, 0.0)
+        FiniteVolumeMethod.apply_bc_right!(U, TransmissiveBC(), law, nc, 2, 0.0)
 
         @test U[2] == U[3]
         @test U[1] == U[3]
@@ -568,7 +568,7 @@ end
         U[3] = primitive_to_conserved(law, w_interior)
         U[4] = primitive_to_conserved(law, w_interior)
 
-        FiniteVolumeMethod.apply_bc_left!(U, ReflectiveBC(), law, nc, 0.0)
+        FiniteVolumeMethod.apply_bc_left!(U, ReflectiveBC(), law, nc, 2, 0.0)
 
         w_ghost = conserved_to_primitive(law, U[2])
         @test w_ghost[1] ≈ w_interior[1]    # ρ preserved
@@ -591,7 +591,7 @@ end
         bc = DirichletHyperbolicBC(w_bc)
         u_bc = primitive_to_conserved(law, w_bc)
 
-        FiniteVolumeMethod.apply_bc_left!(U, bc, law, nc, 0.0)
+        FiniteVolumeMethod.apply_bc_left!(U, bc, law, nc, 2, 0.0)
         @test U[1] == u_bc
         @test U[2] == u_bc
     end
@@ -608,7 +608,7 @@ end
         bc = InflowBC(w_inflow)
         u_bc = primitive_to_conserved(law, w_inflow)
 
-        FiniteVolumeMethod.apply_bc_left!(U, bc, law, nc, 0.0)
+        FiniteVolumeMethod.apply_bc_left!(U, bc, law, nc, 2, 0.0)
         @test U[1] == u_bc
         @test U[2] == u_bc
     end
