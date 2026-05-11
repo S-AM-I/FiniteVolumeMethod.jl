@@ -14,7 +14,7 @@
 # 2D ReflectiveBC for SRMHD
 # ============================================================
 
-function apply_bc_2d_left!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, t)
+function apply_bc_2d_left!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
     for j in 1:(ny + 4)
         w1 = conserved_to_primitive(law, U[3, j])
         w2 = conserved_to_primitive(law, U[4, j])
@@ -24,7 +24,7 @@ function apply_bc_2d_left!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquation
     return nothing
 end
 
-function apply_bc_2d_right!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, t)
+function apply_bc_2d_right!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
     for j in 1:(ny + 4)
         w1 = conserved_to_primitive(law, U[nx + 2, j])
         w2 = conserved_to_primitive(law, U[nx + 1, j])
@@ -34,7 +34,7 @@ function apply_bc_2d_right!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquatio
     return nothing
 end
 
-function apply_bc_2d_bottom!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, t)
+function apply_bc_2d_bottom!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
     for i in 1:(nx + 4)
         w1 = conserved_to_primitive(law, U[i, 3])
         w2 = conserved_to_primitive(law, U[i, 4])
@@ -44,7 +44,7 @@ function apply_bc_2d_bottom!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquati
     return nothing
 end
 
-function apply_bc_2d_top!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, t)
+function apply_bc_2d_top!(U::AbstractMatrix, ::ReflectiveBC, law::SRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
     for i in 1:(nx + 4)
         w1 = conserved_to_primitive(law, U[i, ny + 2])
         w2 = conserved_to_primitive(law, U[i, ny + 1])

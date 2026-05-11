@@ -439,8 +439,8 @@ end
         for i in 3:52
             U[i] = primitive_to_conserved(law, w)
         end
-        FiniteVolumeMethod.apply_bc_left!(U, TransmissiveBC(), law, 50, 0.0)
-        FiniteVolumeMethod.apply_bc_right!(U, TransmissiveBC(), law, 50, 0.0)
+        FiniteVolumeMethod.apply_bc_left!(U, TransmissiveBC(), law, 50, 2, 0.0)
+        FiniteVolumeMethod.apply_bc_right!(U, TransmissiveBC(), law, 50, 2, 0.0)
         @test U[1] == U[3]
         @test U[2] == U[3]
         @test U[53] == U[52]
@@ -453,7 +453,7 @@ end
         for i in 3:52
             U[i] = primitive_to_conserved(law, w)
         end
-        FiniteVolumeMethod.apply_bc_left!(U, ReflectiveBC(), law, 50, 0.0)
+        FiniteVolumeMethod.apply_bc_left!(U, ReflectiveBC(), law, 50, 2, 0.0)
         w_ghost = conserved_to_primitive(law, U[2])
         @test w_ghost[1] ≈ 1.0     # ρ preserved
         @test w_ghost[2] ≈ -0.5    # v negated
