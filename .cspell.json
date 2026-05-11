@@ -5,6 +5,7 @@
   "useGitignore": true,
   "ignorePaths": [
     "docs/build/**",
+    "docs/superpowers/**",
     "docs/Manifest.toml",
     "Manifest.toml",
     "results/**",
