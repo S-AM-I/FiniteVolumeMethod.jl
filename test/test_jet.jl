@@ -15,8 +15,8 @@ const _FVM_TARGETS = (FiniteVolumeMethod,)
 # down as fixes land; treat any increase above (baseline + headroom)
 # as a regression to investigate.
 const _JET_BASELINES = Dict(
-    "IdealGasEOS"            => 0,
-    "pressure(IdealGasEOS)"  => 0,
+    "IdealGasEOS" => 0,
+    "pressure(IdealGasEOS)" => 0,
 )
 const _JET_HEADROOM = 5
 

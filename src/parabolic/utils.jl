@@ -135,10 +135,10 @@ function get_velocity(advection::VariableCylindricalAdvection2D, mesh::Mesh2D, i
     cell = mesh.cells[(i - 1) * mesh.ny + j]
     if direction == :r
         return advection.vr isa Function ? advection.vr(cell.center[1], cell.center[2]) :
-                                            advection.vr[i, j]
+            advection.vr[i, j]
     else
         return advection.vz isa Function ? advection.vz(cell.center[1], cell.center[2]) :
-                                            advection.vz[i, j]
+            advection.vz[i, j]
     end
 end
 

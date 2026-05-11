@@ -99,13 +99,17 @@ end
         ParabolicNeumann(0.0),
     )
 
-    A_const, b_const = assemble_system(CylindricalDiffusion2D(γ₀), mesh, bcs;
-        source = FunctionSource(Q_const))
-    A_var, b_var = assemble_system(VariableCylindricalDiffusion2D((r, z) -> γ₀), mesh, bcs;
-        source = FunctionSource(Q_const))
+    A_const, b_const = assemble_system(
+        CylindricalDiffusion2D(γ₀), mesh, bcs;
+        source = FunctionSource(Q_const)
+    )
+    A_var, b_var = assemble_system(
+        VariableCylindricalDiffusion2D((r, z) -> γ₀), mesh, bcs;
+        source = FunctionSource(Q_const)
+    )
 
-    @test maximum(abs.(A_const - A_var)) < 1e-12
-    @test maximum(abs.(b_const - b_var)) < 1e-9
+    @test maximum(abs.(A_const - A_var)) < 1.0e-12
+    @test maximum(abs.(b_const - b_var)) < 1.0e-9
 end
 
 @testset "VariableCylindricalDiffusion1D — recovers constant-γ result" begin
@@ -120,6 +124,6 @@ end
     A_const, b_const = assemble_system(CylindricalDiffusion1D(γ₀), mesh, bc_inner, bc_outer)
     A_var, b_var = assemble_system(VariableCylindricalDiffusion1D(r -> γ₀), mesh, bc_inner, bc_outer)
 
-    @test maximum(abs.(A_const - A_var)) < 1e-12
-    @test maximum(abs.(b_const - b_var)) < 1e-9
+    @test maximum(abs.(A_const - A_var)) < 1.0e-12
+    @test maximum(abs.(b_const - b_var)) < 1.0e-9
 end

@@ -26,12 +26,16 @@ end
 @inline function _gamma_at_face_1d(model::VariableCylindricalDiffusion1D, mesh::Mesh1D, i, side)
     if side == :left
         i == 1 && return get_diffusion_coefficient(model, mesh, i)
-        return _harmonic_mean(get_diffusion_coefficient(model, mesh, i - 1),
-                              get_diffusion_coefficient(model, mesh, i))
+        return _harmonic_mean(
+            get_diffusion_coefficient(model, mesh, i - 1),
+            get_diffusion_coefficient(model, mesh, i)
+        )
     else
         i == length(mesh.cells) && return get_diffusion_coefficient(model, mesh, i)
-        return _harmonic_mean(get_diffusion_coefficient(model, mesh, i),
-                              get_diffusion_coefficient(model, mesh, i + 1))
+        return _harmonic_mean(
+            get_diffusion_coefficient(model, mesh, i),
+            get_diffusion_coefficient(model, mesh, i + 1)
+        )
     end
 end
 
@@ -347,17 +351,17 @@ function assemble_system(model::CylindricalDiffusion2D, mesh::Mesh2D, bcs; sourc
         for j in 1:ny
             k = (i - 1) * ny + j
 
-            r_in  = _node2d(mesh, i,     j    ).x
-            r_out = _node2d(mesh, i + 1, j    ).x
-            z_lo  = _node2d(mesh, i,     j    ).y
-            z_hi  = _node2d(mesh, i,     j + 1).y
+            r_in = _node2d(mesh, i, j).x
+            r_out = _node2d(mesh, i + 1, j).x
+            z_lo = _node2d(mesh, i, j).y
+            z_hi = _node2d(mesh, i, j + 1).y
             dr = r_out - r_in
             dz = z_hi - z_lo
 
-            area_r_in  = 2 * pi * r_in  * dz
+            area_r_in = 2 * pi * r_in * dz
             area_r_out = 2 * pi * r_out * dz
-            area_z     = pi * (r_out^2 - r_in^2)
-            volume     = area_z * dz
+            area_z = pi * (r_out^2 - r_in^2)
+            volume = area_z * dz
 
             # --- Radial fluxes (x-direction) ---
             if i == 1
@@ -430,17 +434,17 @@ function assemble_system(model::VariableCylindricalDiffusion2D, mesh::Mesh2D, bc
         for j in 1:ny
             k = (i - 1) * ny + j
 
-            r_in  = _node2d(mesh, i,     j    ).x
-            r_out = _node2d(mesh, i + 1, j    ).x
-            z_lo  = _node2d(mesh, i,     j    ).y
-            z_hi  = _node2d(mesh, i,     j + 1).y
+            r_in = _node2d(mesh, i, j).x
+            r_out = _node2d(mesh, i + 1, j).x
+            z_lo = _node2d(mesh, i, j).y
+            z_hi = _node2d(mesh, i, j + 1).y
             dr = r_out - r_in
             dz = z_hi - z_lo
 
-            area_r_in  = 2 * pi * r_in  * dz
+            area_r_in = 2 * pi * r_in * dz
             area_r_out = 2 * pi * r_out * dz
-            area_z     = pi * (r_out^2 - r_in^2)
-            volume     = area_z * dz
+            area_z = pi * (r_out^2 - r_in^2)
+            volume = area_z * dz
 
             if i == 1
                 handle_cylindrical_boundary_condition_2d!(A, b, model, mesh, k, bc_left, :left, area_r_in, dr, transient)
@@ -514,17 +518,17 @@ function assemble_system(model::CylindricalAdvection2D, mesh::Mesh2D, bcs; sourc
         for j in 1:ny
             k = (i - 1) * ny + j
 
-            r_in  = _node2d(mesh, i,     j    ).x
-            r_out = _node2d(mesh, i + 1, j    ).x
-            z_lo  = _node2d(mesh, i,     j    ).y
-            z_hi  = _node2d(mesh, i,     j + 1).y
+            r_in = _node2d(mesh, i, j).x
+            r_out = _node2d(mesh, i + 1, j).x
+            z_lo = _node2d(mesh, i, j).y
+            z_hi = _node2d(mesh, i, j + 1).y
             dr = r_out - r_in
             dz = z_hi - z_lo
 
-            area_r_in  = 2 * pi * r_in  * dz
+            area_r_in = 2 * pi * r_in * dz
             area_r_out = 2 * pi * r_out * dz
-            area_z     = pi * (r_out^2 - r_in^2)
-            volume     = area_z * dz
+            area_z = pi * (r_out^2 - r_in^2)
+            volume = area_z * dz
 
             # --- Radial Advection (x-direction) ---
             if i == 1
@@ -602,17 +606,17 @@ function assemble_system(model::CylindricalAdvectionDiffusion2D, mesh::Mesh2D, b
         for j in 1:ny
             k = (i - 1) * ny + j
 
-            r_in  = _node2d(mesh, i,     j    ).x
-            r_out = _node2d(mesh, i + 1, j    ).x
-            z_lo  = _node2d(mesh, i,     j    ).y
-            z_hi  = _node2d(mesh, i,     j + 1).y
+            r_in = _node2d(mesh, i, j).x
+            r_out = _node2d(mesh, i + 1, j).x
+            z_lo = _node2d(mesh, i, j).y
+            z_hi = _node2d(mesh, i, j + 1).y
             dr = r_out - r_in
             dz = z_hi - z_lo
 
-            area_r_in  = 2 * pi * r_in  * dz
+            area_r_in = 2 * pi * r_in * dz
             area_r_out = 2 * pi * r_out * dz
-            area_z     = pi * (r_out^2 - r_in^2)
-            volume     = area_z * dz
+            area_z = pi * (r_out^2 - r_in^2)
+            volume = area_z * dz
 
             # --- Radial (x-direction) ---
             if i == 1
@@ -718,10 +722,10 @@ function assemble_mass_matrix(mesh::Mesh2D, model::CylindricalDiffusion2D)
     for i in 1:nx
         for j in 1:ny
             k = (i - 1) * ny + j
-            r_in  = _node2d(mesh, i,     j    ).x
-            r_out = _node2d(mesh, i + 1, j    ).x
-            z_lo  = _node2d(mesh, i,     j    ).y
-            z_hi  = _node2d(mesh, i,     j + 1).y
+            r_in = _node2d(mesh, i, j).x
+            r_out = _node2d(mesh, i + 1, j).x
+            z_lo = _node2d(mesh, i, j).y
+            z_hi = _node2d(mesh, i, j + 1).y
             dz = z_hi - z_lo
             M[k, k] = pi * (r_out^2 - r_in^2) * dz
         end
@@ -946,16 +950,22 @@ function handle_cylindrical_advection_diffusion_bc!(A, b, model::CylindricalAdve
     end
 end
 
-const _CylAdvDiff2D = Union{CylindricalAdvectionDiffusion2D,
-                            VariableCylindricalAdvectionDiffusion2D}
+const _CylAdvDiff2D = Union{
+    CylindricalAdvectionDiffusion2D,
+    VariableCylindricalAdvectionDiffusion2D,
+}
 
-@inline function _adv_diff_vel_at_face(model::CylindricalAdvectionDiffusion2D,
-                                        mesh::Mesh2D, k::Int, side::Symbol)
+@inline function _adv_diff_vel_at_face(
+        model::CylindricalAdvectionDiffusion2D,
+        mesh::Mesh2D, k::Int, side::Symbol
+    )
     return (side == :left || side == :right) ? model.advection.vr : model.advection.vz
 end
 
-@inline function _adv_diff_vel_at_face(model::VariableCylindricalAdvectionDiffusion2D,
-                                        mesh::Mesh2D, k::Int, side::Symbol)
+@inline function _adv_diff_vel_at_face(
+        model::VariableCylindricalAdvectionDiffusion2D,
+        mesh::Mesh2D, k::Int, side::Symbol
+    )
     j = mod(k - 1, mesh.ny) + 1
     i = div(k - 1, mesh.ny) + 1
     if side == :left || side == :right
@@ -965,13 +975,17 @@ end
     end
 end
 
-@inline function _adv_diff_gamma_at_face(model::CylindricalAdvectionDiffusion2D,
-                                          mesh::Mesh2D, k::Int, side::Symbol)
+@inline function _adv_diff_gamma_at_face(
+        model::CylindricalAdvectionDiffusion2D,
+        mesh::Mesh2D, k::Int, side::Symbol
+    )
     return model.diffusion.gamma
 end
 
-@inline function _adv_diff_gamma_at_face(model::VariableCylindricalAdvectionDiffusion2D,
-                                          mesh::Mesh2D, k::Int, side::Symbol)
+@inline function _adv_diff_gamma_at_face(
+        model::VariableCylindricalAdvectionDiffusion2D,
+        mesh::Mesh2D, k::Int, side::Symbol
+    )
     j = mod(k - 1, mesh.ny) + 1
     i = div(k - 1, mesh.ny) + 1
     return _gamma_at_face_2d(model.diffusion, mesh, i, j, side)
@@ -1052,17 +1066,17 @@ function assemble_system(model::VariableCylindricalAdvectionDiffusion2D, mesh::M
         for j in 1:ny
             k = (i - 1) * ny + j
 
-            r_in  = _node2d(mesh, i,     j    ).x
-            r_out = _node2d(mesh, i + 1, j    ).x
-            z_lo  = _node2d(mesh, i,     j    ).y
-            z_hi  = _node2d(mesh, i,     j + 1).y
+            r_in = _node2d(mesh, i, j).x
+            r_out = _node2d(mesh, i + 1, j).x
+            z_lo = _node2d(mesh, i, j).y
+            z_hi = _node2d(mesh, i, j + 1).y
             dr = r_out - r_in
             dz = z_hi - z_lo
 
-            area_r_in  = 2 * pi * r_in  * dz
+            area_r_in = 2 * pi * r_in * dz
             area_r_out = 2 * pi * r_out * dz
-            area_z     = pi * (r_out^2 - r_in^2)
-            volume     = area_z * dz
+            area_z = pi * (r_out^2 - r_in^2)
+            volume = area_z * dz
 
             # --- Radial (r) ---
             if i == 1

@@ -24,10 +24,11 @@ jobs:
       - name: Run lychee
         uses: lycheeverse/lychee-action@v2
         with:
+          # Note: lychee 0.24+ removed `--exclude-mail` (mailto links are
+          # now skipped by default; opt in with `--include-mail`).
           args: >-
             --config .lychee.toml
             --no-progress
-            --exclude-mail
             --exclude-path docs/build
             --exclude-path docs/src/assets
             'docs/**/*.md' 'theory/**/*.qmd' '*.md'

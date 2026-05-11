@@ -8,6 +8,21 @@ exclude = [
   # Zenodo DOIs — these resolve through one redirect and rate-limit.
   '^https://zenodo\.org/',
   '^https://doi\.org/10\.5281/',
+  # Documenter cross-references — `(@ref)` resolves at build time, so lychee
+  # sees a literal `@ref` filesystem path before Documenter has a chance to
+  # rewrite it. Excluded from the raw-markdown sweep.
+  '@ref',
+  # Sister-repo docs sites that have not been published yet. Drop these
+  # exclusions once the corresponding gh-pages branches go live.
+  '^https://cx-xd\.github\.io/(FiniteVolumeMethod|NuclearWaterChemistry)\.jl',
+  '^https://s-am-i\.github\.io/CRUD\.jl',
+  # Publisher endpoints that reject scraper user-agents with 403, even
+  # though the canonical DOI/URL is correct.
+  '^https://doi\.org/10\.1063/',
+  '^https://(epubs\.siam\.org|pubs\.aip\.org)/',
+  # Broken historical citation. Original target wiki page no longer exists;
+  # left in the docs as an attribution comment.
+  '^https?://onelab\.info/wiki/',
 ]
 
 # Treat localhost / 127.0.0.1 as fine (used in dev-server links).
