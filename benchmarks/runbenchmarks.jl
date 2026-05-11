@@ -74,8 +74,10 @@ elseif mode in ("--compare", "compare")
         b = pinned[k]; ratio = b == 0 ? Inf : cur / b
         marker = ratio > 1.0 + TOLERANCE ? "FAIL" : "ok  "
         @printf("  %-40s %12d  (baseline %12d, ratio %.3f) %s\n", k, cur, b, ratio, marker)
-        ratio > 1.0 + TOLERANCE && push!(failures,
-            @sprintf("%s grew %.1f%% over baseline", k, 100 * (ratio - 1)))
+        ratio > 1.0 + TOLERANCE && push!(
+            failures,
+            @sprintf("%s grew %.1f%% over baseline", k, 100 * (ratio - 1))
+        )
     end
     if isempty(failures)
         println("All allocations within ", round(Int, 100 * TOLERANCE), "% of baseline.")

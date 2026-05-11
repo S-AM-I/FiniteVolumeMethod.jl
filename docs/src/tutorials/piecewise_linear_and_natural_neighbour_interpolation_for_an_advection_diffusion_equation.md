@@ -207,7 +207,7 @@ fig
 ````
 
 ## Natural neighbour interpolation
-Since the solution is defined over a triangulation, the most natural form of inteprolation to use,
+Since the solution is defined over a triangulation, the most natural form of interpolation to use,
 other than piecewise linear interpolation, is natural neighbour interpolation. We can use
 [NaturalNeighbours.jl](https://github.com/DanielVandH/NaturalNeighbours.jl) for this;
 NaturalNeighbours.jl also provides the same piecewise linear interpolant above via its

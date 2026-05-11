@@ -40,8 +40,8 @@ using LinearAlgebra
         )
         A2, b2 = assemble_system(m_var, mesh, bcs; source = FunctionSource(Q))
 
-        @test maximum(abs.(A1 - A2)) < 1e-12
-        @test maximum(abs.(b1 - b2)) < 1e-12
+        @test maximum(abs.(A1 - A2)) < 1.0e-12
+        @test maximum(abs.(b1 - b2)) < 1.0e-12
     end
 
     @testset "MMS — variable γ(r, z) and axial advection vz(r)" begin
@@ -53,26 +53,26 @@ using LinearAlgebra
         β = π / L
 
         γ₀, a₁, a₂ = 1.0e-3, 1.0e3, 50.0
-        w₀, b₁     = 2.0e-3, 5.0e2
+        w₀, b₁ = 2.0e-3, 5.0e2
 
-        γ_fn(r, z)  = γ₀ * (1 + a₁ * (r - r_inner) + a₂ * z)
+        γ_fn(r, z) = γ₀ * (1 + a₁ * (r - r_inner) + a₂ * z)
         vr_fn(r, z) = 0.0
         vz_fn(r, z) = w₀ * (1 + b₁ * (r - r_inner))
-        γr(r, z)    = γ₀ * a₁
-        γz(r, z)    = γ₀ * a₂
+        γr(r, z) = γ₀ * a₁
+        γz(r, z) = γ₀ * a₂
 
         T_exact(r, z) = sin(α * (r - r_inner)) * sin(β * z)
-        T_r(r, z)     = α * cos(α * (r - r_inner)) * sin(β * z)
-        T_z(r, z)     = β * sin(α * (r - r_inner)) * cos(β * z)
+        T_r(r, z) = α * cos(α * (r - r_inner)) * sin(β * z)
+        T_z(r, z) = β * sin(α * (r - r_inner)) * cos(β * z)
 
         function lap_cyl(r, z)
             return -(α^2 + β^2) * T_exact(r, z) + (α / r) * cos(α * (r - r_inner)) * sin(β * z)
         end
 
         Q_exact(r, z) = vz_fn(r, z) * T_z(r, z) -
-                        γ_fn(r, z) * lap_cyl(r, z) -
-                        γr(r, z) * T_r(r, z) -
-                        γz(r, z) * T_z(r, z)
+            γ_fn(r, z) * lap_cyl(r, z) -
+            γr(r, z) * T_r(r, z) -
+            γz(r, z) * T_z(r, z)
 
         function solve_on(nx, ny)
             x_nodes = collect(range(r_inner, r_outer; length = nx + 1))
@@ -97,7 +97,7 @@ using LinearAlgebra
         end
 
         sizes = [(20, 8), (40, 16), (80, 32), (160, 64)]
-        errs  = Float64[solve_on(nx, ny) for (nx, ny) in sizes]
+        errs = Float64[solve_on(nx, ny) for (nx, ny) in sizes]
         rates = [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 
         # Upwind advection is first-order in space; combined with second-order

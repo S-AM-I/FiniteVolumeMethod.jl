@@ -27,7 +27,7 @@ using LinearAlgebra
     T_exact(r, z) = sin(α * (r - r_inner)) * sin(β * z)
     Q_exact(r, z) = γ * (
         (α^2 + β^2) * T_exact(r, z) -
-        (α / r) * cos(α * (r - r_inner)) * sin(β * z)
+            (α / r) * cos(α * (r - r_inner)) * sin(β * z)
     )
 
     function solve_on(nx, ny)

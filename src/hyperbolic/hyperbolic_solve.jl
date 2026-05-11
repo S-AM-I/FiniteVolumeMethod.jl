@@ -166,8 +166,15 @@ end
 end
 
 @inline function reconstruct_interface_1d(::NoReconstruction, law, U::AbstractVector, face_idx::Int, ncells::Int)
-    iL = face_idx + 2
-    iR = face_idx + 3
+    # NoReconstruction declares `nghost = 1`, so the padded array is
+    # `nc + 2` long. For face_idx in 0..nc:
+    #   left  cell index = face_idx + ng     = face_idx + 1
+    #   right cell index = face_idx + ng + 1 = face_idx + 2
+    # The MUSCL/WENO overloads above use `+ 2 / + 3` because they run
+    # with `nghost = 2`. Using those offsets here overruns U at the
+    # right boundary (right_ghost is U[nc+2], not U[nc+3]).
+    iL = face_idx + 1
+    iR = face_idx + 2
     wL = conserved_to_primitive(law, U[iL])
     wR = conserved_to_primitive(law, U[iR])
     return wL, wR

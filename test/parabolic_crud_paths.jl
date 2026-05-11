@@ -108,8 +108,10 @@ using FiniteVolumeMethod
     # ------------------------------------------------------------------
     @testset "make_cell_field factory" begin
         mesh = generate_mesh_1d(8, 1.0)
-        T = make_cell_field(mesh; name = :temperature, unit = :K,
-                            description = "Temperature", init = 560.0)
+        T = make_cell_field(
+            mesh; name = :temperature, unit = :K,
+            description = "Temperature", init = 560.0
+        )
         @test T isa CellField
         @test length(T.values) == length(mesh.cells)
         @test all(v -> v ≈ 560.0, T.values)
