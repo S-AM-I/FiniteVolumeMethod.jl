@@ -275,11 +275,12 @@ end
 
     # Compute initial conserved quantities
     U0 = FiniteVolumeMethod.initialize_1d(prob)
-    FiniteVolumeMethod.apply_boundary_conditions!(U0, prob, 2, 0.0)
+    ng = FiniteVolumeMethod._nghost_for_reconstruction(prob.reconstruction)
+    FiniteVolumeMethod.apply_boundary_conditions!(U0, prob, ng, 0.0)
 
-    mass0 = sum(U0[i][1] for i in 3:(N_cells + 2)) * dx
-    momentum0 = sum(U0[i][2] for i in 3:(N_cells + 2)) * dx
-    energy0 = sum(U0[i][3] for i in 3:(N_cells + 2)) * dx
+    mass0 = sum(U0[i][1] for i in (ng + 1):(N_cells + ng)) * dx
+    momentum0 = sum(U0[i][2] for i in (ng + 1):(N_cells + ng)) * dx
+    energy0 = sum(U0[i][3] for i in (ng + 1):(N_cells + ng)) * dx
 
     # Solve with IMEX + NullSource (purely explicit, conservative)
     x, U_final, t_final = solve_hyperbolic_imex(
