@@ -215,8 +215,9 @@ end
     # Measure initial mass
     U0 = FiniteVolumeMethod.initialize_1d(prob)
     nc = ncells(mesh)
+    ng = FiniteVolumeMethod._nghost_for_reconstruction(prob.reconstruction)
     dx = mesh.dx
-    mass_initial = sum(U0[i + 2][1] * dx for i in 1:nc)
+    mass_initial = sum(U0[i + ng][1] * dx for i in 1:nc)
 
     # Solve with coupling
     _, U_final, _ = solve_coupled(prob, cooling; splitting = StrangSplitting())
