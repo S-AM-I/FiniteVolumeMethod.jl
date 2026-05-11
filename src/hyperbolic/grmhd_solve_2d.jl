@@ -227,14 +227,14 @@ end
 # ============================================================
 
 """
-    _grmhd_add_source_terms!(dU, U, law, md, mesh, nx, ny)
+    _grmhd_add_source_terms!(dU, U, law, md, mesh, nx, ny, ng)
 
 Add geometric source terms to dU at all interior cells.
 """
 function _grmhd_add_source_terms!(
         dU::AbstractMatrix, U::AbstractMatrix,
         law::GRMHDEquations{2}, md::MetricData2D,
-        mesh::StructuredMesh2D, nx::Int, ny::Int
+        mesh::StructuredMesh2D, nx::Int, ny::Int, ng::Int
     )
     for iy in 1:ny, ix in 1:nx
         ii, jj = ix + ng, iy + ng
@@ -327,7 +327,7 @@ function solve_hyperbolic(
             _grmhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U, prob, t, md, face_data)
 
             # Add geometric source terms
-            _grmhd_add_source_terms!(dU, U, law, md, mesh, nx, ny)
+            _grmhd_add_source_terms!(dU, U, law, md, mesh, nx, ny, ng)
 
             # Update all conserved variables
             for iy in 1:ny, ix in 1:nx
@@ -372,7 +372,7 @@ function solve_hyperbolic(
 
             # ---- Stage 1: U1 = U + dt * L(U) ----
             _grmhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U, prob, t, md, face_data)
-            _grmhd_add_source_terms!(dU, U, law, md, mesh, nx, ny)
+            _grmhd_add_source_terms!(dU, U, law, md, mesh, nx, ny, ng)
             for iy in 1:ny, ix in 1:nx
                 ii, jj = ix + ng, iy + ng
                 U1[ii, jj] = U[ii, jj] + dt * dU[ii, jj]
@@ -386,7 +386,7 @@ function solve_hyperbolic(
             # ---- Stage 2: U2 = 3/4*U + 1/4*(U1 + dt*L(U1)) ----
             apply_boundary_conditions_2d!(U1, prob, ng, t + dt)
             _grmhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U1, prob, t + dt, md, face_data)
-            _grmhd_add_source_terms!(dU, U1, law, md, mesh, nx, ny)
+            _grmhd_add_source_terms!(dU, U1, law, md, mesh, nx, ny, ng)
             for iy in 1:ny, ix in 1:nx
                 ii, jj = ix + ng, iy + ng
                 U2[ii, jj] = 0.75 * U[ii, jj] + 0.25 * (U1[ii, jj] + dt * dU[ii, jj])
@@ -399,7 +399,7 @@ function solve_hyperbolic(
             # ---- Stage 3: U = 1/3*U + 2/3*(U2 + dt*L(U2)) ----
             apply_boundary_conditions_2d!(U2, prob, ng, t + 0.5 * dt)
             _grmhd_compute_fluxes_2d!(Fx_all, Fy_all, dU, U2, prob, t + 0.5 * dt, md, face_data)
-            _grmhd_add_source_terms!(dU, U2, law, md, mesh, nx, ny)
+            _grmhd_add_source_terms!(dU, U2, law, md, mesh, nx, ny, ng)
             for iy in 1:ny, ix in 1:nx
                 ii, jj = ix + ng, iy + ng
                 U[ii, jj] = (1.0 / 3.0) * U[ii, jj] + (2.0 / 3.0) * (U2[ii, jj] + dt * dU[ii, jj])

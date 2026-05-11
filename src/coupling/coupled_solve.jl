@@ -138,7 +138,7 @@ function _solve_coupled_1d(coupled::CoupledProblem, callback::Union{Nothing, Fun
 
     # Extract interior solution
     x = [cell_center(mesh, i) for i in 1:nc]
-    U_interior = U[3:(nc + 2)]
+    U_interior = U[(ng + 1):(nc + ng)]
 
     return x, U_interior, t
 end
@@ -200,7 +200,7 @@ function _solve_coupled_2d(coupled::CoupledProblem, callback::Union{Nothing, Fun
     # Extract interior solution
     U_interior = Matrix{SVector{N, FT}}(undef, nx, ny)
     for iy in 1:ny, ix in 1:nx
-        U_interior[ix, iy] = U[ix + 2, iy + 2]
+        U_interior[ix, iy] = U[ix + ng, iy + ng]
     end
     coords = [(cell_center(mesh, cell_idx(mesh, ix, iy))) for ix in 1:nx, iy in 1:ny]
 

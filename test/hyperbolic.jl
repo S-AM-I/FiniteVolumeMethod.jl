@@ -466,7 +466,7 @@ end
             w = SVector(1.0 + 0.1 * (i - 2), 0.0, 1.0)
             U[i] = primitive_to_conserved(law, w)
         end
-        FiniteVolumeMethod.apply_periodic_bcs!(U, law, 50, 0.0)
+        FiniteVolumeMethod.apply_periodic_bcs!(U, law, 50, 2, 0.0)
         @test U[2] == U[52]  # left ghost 1 = last interior
         @test U[1] == U[51]  # left ghost 2 = second-to-last interior
         @test U[53] == U[3]  # right ghost 1 = first interior

@@ -34,25 +34,26 @@ function advance!(
     )
     prob = op.problem
     nc = ncells(prob.mesh)
+    ng = workspace.ng
     dU = workspace.dU_vec
     U1 = workspace.U1_vec
     U2 = workspace.U2_vec
 
     # SSP-RK3 stage 1: U1 = U + dt * L(U)
     hyperbolic_rhs!(dU, U, prob, t)
-    for i in 3:(nc + 2)
+    for i in (ng + 1):(nc + ng)
         U1[i] = U[i] + dt * dU[i]
     end
 
     # SSP-RK3 stage 2: U2 = 3/4 U + 1/4 (U1 + dt * L(U1))
     hyperbolic_rhs!(dU, U1, prob, t + dt)
-    for i in 3:(nc + 2)
+    for i in (ng + 1):(nc + ng)
         U2[i] = 0.75 * U[i] + 0.25 * (U1[i] + dt * dU[i])
     end
 
     # SSP-RK3 stage 3: U = 1/3 U + 2/3 (U2 + dt * L(U2))
     hyperbolic_rhs!(dU, U2, prob, t + 0.5 * dt)
-    for i in 3:(nc + 2)
+    for i in (ng + 1):(nc + ng)
         U[i] = (1.0 / 3.0) * U[i] + (2.0 / 3.0) * (U2[i] + dt * dU[i])
     end
 
@@ -67,6 +68,7 @@ function advance!(
     )
     prob = op.problem
     nx, ny = prob.mesh.nx, prob.mesh.ny
+    ng = workspace.ng
     dU = workspace.dU_mat
     U1 = workspace.U1_mat
     U2 = workspace.U2_mat
@@ -74,21 +76,21 @@ function advance!(
     # SSP-RK3 stage 1
     hyperbolic_rhs_2d!(dU, U, prob, t)
     for iy in 1:ny, ix in 1:nx
-        ii, jj = ix + 2, iy + 2
+        ii, jj = ix + ng, iy + ng
         U1[ii, jj] = U[ii, jj] + dt * dU[ii, jj]
     end
 
     # SSP-RK3 stage 2
     hyperbolic_rhs_2d!(dU, U1, prob, t + dt)
     for iy in 1:ny, ix in 1:nx
-        ii, jj = ix + 2, iy + 2
+        ii, jj = ix + ng, iy + ng
         U2[ii, jj] = 0.75 * U[ii, jj] + 0.25 * (U1[ii, jj] + dt * dU[ii, jj])
     end
 
     # SSP-RK3 stage 3
     hyperbolic_rhs_2d!(dU, U2, prob, t + 0.5 * dt)
     for iy in 1:ny, ix in 1:nx
-        ii, jj = ix + 2, iy + 2
+        ii, jj = ix + ng, iy + ng
         U[ii, jj] = (1.0 / 3.0) * U[ii, jj] + (2.0 / 3.0) * (U2[ii, jj] + dt * dU[ii, jj])
     end
 
@@ -101,10 +103,11 @@ function compute_operator_dt(op::HyperbolicOperator{<:HyperbolicProblem}, U::Abs
     law = prob.law
     mesh = prob.mesh
     nc = ncells(mesh)
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     λ_max = zero(mesh.dx)
     for i in 1:nc
-        w = conserved_to_primitive(law, U[i + 2])
+        w = conserved_to_primitive(law, U[i + ng])
         λ = max_wave_speed(law, w, 1)
         λ_max = max(λ_max, λ)
     end
@@ -118,10 +121,11 @@ function compute_operator_dt(op::HyperbolicOperator{<:HyperbolicProblem2D}, U::A
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy
+    ng = _nghost_for_reconstruction(prob.reconstruction)
 
     max_speed = zero(dx)
     for iy in 1:ny, ix in 1:nx
-        w = conserved_to_primitive(law, U[ix + 2, iy + 2])
+        w = conserved_to_primitive(law, U[ix + ng, iy + ng])
         λx = max_wave_speed(law, w, 1)
         λy = max_wave_speed(law, w, 2)
         speed = λx / dx + λy / dy
