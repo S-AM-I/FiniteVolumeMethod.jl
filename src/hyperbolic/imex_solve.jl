@@ -46,7 +46,7 @@ function solve_hyperbolic_imex(
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
-    _legacy_api_depwarn(
+    _v2_api_depwarn(
         :solve_hyperbolic_imex,
         "`sciml_problem(prob, stiff_source)` with a SciML IMEX algorithm",
     )
@@ -249,7 +249,7 @@ function solve_hyperbolic_imex(
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
-    _legacy_api_depwarn(
+    _v2_api_depwarn(
         :solve_hyperbolic_imex,
         "`sciml_problem(prob, stiff_source)` with a SciML IMEX algorithm",
     )

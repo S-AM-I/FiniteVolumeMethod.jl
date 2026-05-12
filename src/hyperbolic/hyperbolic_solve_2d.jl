@@ -363,7 +363,7 @@ function solve_hyperbolic(
         backend::AbstractBackend = CPUBackend(),
         return_device_state::Bool = false,
     )
-    _legacy_api_depwarn(:solve_hyperbolic, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
+    _v2_api_depwarn(:solve_hyperbolic, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     return _solve_hyperbolic(
         prob, backend;
         method,
