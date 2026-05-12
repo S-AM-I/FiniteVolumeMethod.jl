@@ -71,7 +71,7 @@ function solve_hyperbolic(
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
-    _legacy_api_depwarn(
+    _v2_api_depwarn(
         :solve_hyperbolic,
         "`sciml_problem(prob; vector_potential = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )

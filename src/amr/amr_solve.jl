@@ -385,7 +385,7 @@ function solve_amr(
         method::Symbol = :subcycling,
         callback::Union{Nothing, Function} = nothing,
     )
-    _legacy_api_depwarn(:solve_amr, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
+    _v2_api_depwarn(:solve_amr, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     grid = prob.grid
     t = prob.initial_time
     step = 0
