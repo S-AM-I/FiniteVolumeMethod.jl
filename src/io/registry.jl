@@ -39,7 +39,8 @@ function save_model_package(mesh, physics_config::Dict, ic::Vector, path::String
         writedlm(io, ic)
     end
 
-    return println("Model package saved to $path")
+    @info "Model package saved" path
+    return nothing
 end
 
 """
