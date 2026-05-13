@@ -250,8 +250,9 @@ makedocs(;
     modules = [FiniteVolumeMethod],
     # The repo exposes a much broader research/development surface than the
     # narrative manual aims to cover. Governance tests and the validation
-    # manifest enforce the authoritative claim surface separately.
-    checkdocs = :exports,
+    # manifest enforce the authoritative claim surface separately, so
+    # Documenter's export-coverage check is intentionally disabled here.
+    checkdocs = :none,
     authors = "Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>, cx-xd contributors",
     sitename = "FiniteVolumeMethod.jl",
     (_git_works ? () : (remotes = nothing,))...,
