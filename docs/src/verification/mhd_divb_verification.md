@@ -2,11 +2,6 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/mhd_divb_verification.jl"
 ```
 
-````@example mhd_divb_verification
-using DisplayAs #hide
-tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
-nothing #hide
-````
 
 # MHD div(B) Preservation
 This example verifies that the constrained transport (CT) algorithm
@@ -29,7 +24,7 @@ where $r = \sqrt{(x-0.5)^2 + (y-0.5)^2}$.
 - **Solver**: HLLD + MUSCL(Minmod)
 - **Final time**: $t_f = 1.0$
 
-````@example mhd_divb_verification
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -44,9 +39,13 @@ vx_bg, vy_bg = 1.0, 0.5
 rho_bg, P_bg = 1.0, 1.0
 ````
 
+````
+(1.0, 1.0)
+````
+
 Initial condition (cell-centred values):
 
-````@example mhd_divb_verification
+````julia
 function loop_ic(x, y)
     r = sqrt((x - 0.5)^2 + (y - 0.5)^2)
     if r < R0
@@ -60,18 +59,26 @@ function loop_ic(x, y)
 end
 ````
 
+````
+loop_ic (generic function with 1 method)
+````
+
 Vector potential for divergence-free initialisation:
 
-````@example mhd_divb_verification
+````julia
 function Az_loop(x, y)
     r = sqrt((x - 0.5)^2 + (y - 0.5)^2)
     return r < R0 ? A0 * (R0 - r) : 0.0
 end
 ````
 
+````
+Az_loop (generic function with 1 method)
+````
+
 ## Grid Resolution Study
 
-````@example mhd_divb_verification
+````julia
 grid_sizes = [16, 32, 64]
 divB_max_values = Float64[]
 
@@ -97,7 +104,7 @@ end
 
 ## Visualisation — Solution and div(B) Field at Finest Resolution
 
-````@example mhd_divb_verification
+````julia
 N_fine = grid_sizes[end]
 coords_fine, W_fine, t_fine, ct_fine, mesh_fine = solve_divb_state(N_fine)
 
@@ -135,9 +142,21 @@ if isdefined(@__MODULE__, :evidence_artifact_path)
 end
 ````
 
+````
+┌ Warning: No strict ticks found
+└ @ PlotUtils ~/.julia/packages/PlotUtils/HX80C/src/ticks.jl:194
+┌ Warning: No strict ticks found
+└ @ PlotUtils ~/.julia/packages/PlotUtils/HX80C/src/ticks.jl:194
+┌ Warning: No strict ticks found
+└ @ PlotUtils ~/.julia/packages/PlotUtils/HX80C/src/ticks.jl:194
+┌ Warning: No strict ticks found
+└ @ PlotUtils ~/.julia/packages/PlotUtils/HX80C/src/ticks.jl:194
+
+````
+
 ## Visualisation — max|div(B)| vs Grid Size
 
-````@example mhd_divb_verification
+````julia
 fig2 = Figure(fontsize = 24, size = (600, 450))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = "max |∇·B|",
@@ -156,8 +175,7 @@ end
 ## Test Assertions
 All max|div(B)| values should be at machine precision, independent of N.
 
-````@example mhd_divb_verification
-@assert all(d -> d < 1.0e-12, divB_max_values) #hide
+````julia
 
 if isdefined(@__MODULE__, :record_evidence_result)
     record_evidence_result(

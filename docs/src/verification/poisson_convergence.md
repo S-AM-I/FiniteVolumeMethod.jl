@@ -2,11 +2,6 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/poisson_convergence.jl"
 ```
 
-````@example poisson_convergence
-using DisplayAs #hide
-tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
-nothing #hide
-````
 
 # Poisson Equation Convergence
 This example verifies the steady-state solver by solving the Poisson equation
@@ -26,7 +21,7 @@ and source term $S(x,y) = 2\pi^2\sin(\pi x)\sin(\pi y)$.
 - **Diffusion coefficient**: $D = 1$
 - **Solver**: `DynamicSS(Rosenbrock23())`
 
-````@example poisson_convergence
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation
 using OrdinaryDiffEq, SteadyStateDiffEq
 using CairoMakie
@@ -40,9 +35,13 @@ D_poisson(x, y, t, u, p) = 1.0
 bc_poisson(x, y, t, u, p) = zero(u)
 ````
 
+````
+bc_poisson (generic function with 1 method)
+````
+
 ## Grid Refinement Study
 
-````@example poisson_convergence
+````julia
 mesh_sizes = [10, 20, 40, 80]
 errors_Linf = Float64[]
 errors_L2 = Float64[]
@@ -87,7 +86,7 @@ end
 
 ## Convergence Rates
 
-````@example poisson_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -96,10 +95,17 @@ rates_Linf = convergence_rates(errors_Linf)
 rates_L2 = convergence_rates(errors_L2)
 ````
 
+````
+3-element Vector{Float64}:
+ 2.0848446765244053
+ 2.038994039888609
+ 2.0187062121025794
+````
+
 ## Visualisation — Solution Comparison
 Three panels at the finest mesh: numerical, exact, and error.
 
-````@example poisson_convergence
+````julia
 tri_fine = last_tri
 sol_fine = last_sol
 
@@ -123,7 +129,7 @@ end
 
 ## Visualisation — Convergence Plot
 
-````@example poisson_convergence
+````julia
 h_vals = 1.0 ./ mesh_sizes
 fig2 = Figure(fontsize = 24, size = (600, 500))
 ax = Axis(
@@ -157,9 +163,7 @@ end
 
 ## Test Assertions
 
-````@example poisson_convergence
-@assert all(r -> r > 1.7, rates_Linf) #hide
-@assert all(r -> r > 1.7, rates_L2) #hide
+````julia
 
 if isdefined(@__MODULE__, :record_evidence_result)
     record_evidence_result(
