@@ -1,18 +1,7 @@
 name: docs-quality
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    paths:
-      - 'docs/**'
-      - 'theory/**'
-      - 'README.md'
-      - 'CITATION.cff'
-      - 'CLAUDE.md'
-      - '.github/workflows/docs-quality.yml'
-      - '.cspell.json'
-      - '.lychee.toml'
+  # Auto-trigger cut 2026-05. Fire manually for link/spell sweeps.
   workflow_dispatch:
 
 jobs:

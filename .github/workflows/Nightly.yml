@@ -1,8 +1,6 @@
 name: Nightly V&V
 on:
-  schedule:
-    # Run at 03:00 UTC every day
-    - cron: '0 3 * * *'
+  # Nightly schedule cut 2026-05. Fire manually for full V&V sweeps.
   workflow_dispatch:
 concurrency:
   group: nightly-vv

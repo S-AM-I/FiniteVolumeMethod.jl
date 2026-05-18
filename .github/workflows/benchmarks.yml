@@ -4,9 +4,8 @@ name: benchmarks
 # Promoted from the manual-trigger / paths-filtered scaffold once the
 # baseline stabilized.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Auto-trigger cut 2026-05. Fire manually from the Actions tab
+  # when an allocation regression check is needed.
   workflow_dispatch:
 
 concurrency:
