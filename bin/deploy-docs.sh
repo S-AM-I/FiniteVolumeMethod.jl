@@ -14,7 +14,7 @@ CI=true julia --project=docs docs/make.jl
 cd docs/build
 echo "==> post-processing: default to light, scrollable nav"
 find . -name '*.html' -print0 | xargs -0 sed -i '' \
-  -e 's|<script id="check-dark-mode">|<script>if(!localStorage.getItem("vitepress-theme-appearance"))localStorage.setItem("vitepress-theme-appearance","light");</script><script id="check-dark-mode">|' \
+  -e 's|<script id="check-dark-mode">|<script>localStorage.setItem("vitepress-theme-appearance","light");</script><script id="check-dark-mode">|' \
   -e 's|</head>|<style>.VPNavBar .content-body,.VPNavBar nav,.VPNavBarMenu{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;-webkit-overflow-scrolling:touch}.VPNavBar .content-body::-webkit-scrollbar,.VPNavBarMenu::-webkit-scrollbar{height:4px}</style></head>|'
 
 echo "==> deploying to project '$PROJECT'"
