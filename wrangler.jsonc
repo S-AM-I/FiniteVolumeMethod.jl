@@ -1,0 +1,9 @@
+// Cloudflare Workers config for fvm.cx-xd.org — DocumenterVitepress site.
+// docs/make.jl writes the static site to docs/build/ (run via bin/deploy-docs.sh).
+{
+  "name": "fvm",
+  "compatibility_date": "2026-05-18",
+  "assets": {
+    "directory": "./docs/build"
+  }
+}
