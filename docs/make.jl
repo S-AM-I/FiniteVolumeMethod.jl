@@ -267,6 +267,40 @@ makedocs(;
     warnonly = IS_LIVESERVER
 )
 
+# Flatten DocumenterVitepress's single-base `build/1/` into `build/`.
+# DocumenterVitepress v0.2+ writes build output to `build/<i>/` where `<i>`
+# is the 1-indexed position in the bases array (see DocumenterVitepress
+# README §"Sub-URLs and multi-base deployments"). For single-base local
+# and production builds the only base is `""` and the output always lives
+# at `build/1/`. Move the contents up one level so `build/` behaves like
+# a normal Documenter output and the deploydocs below + the Cloudflare
+# deploy in bin/deploy-docs.sh + the GH workflow can all point at
+# `docs/build` directly. Guard skips when more than one base is present.
+let build_root = joinpath(@__DIR__, "build")
+    single_base = joinpath(build_root, "1")
+    if isdir(single_base)
+        numeric_subdirs = filter(readdir(build_root)) do d
+            isdir(joinpath(build_root, d)) && !isempty(d) && all(isdigit, d)
+        end
+        if numeric_subdirs == ["1"]
+            for entry in readdir(single_base)
+                mv(
+                    joinpath(single_base, entry),
+                    joinpath(build_root, entry); force = true
+                )
+            end
+            rm(single_base)
+            # Drop DocumenterVitepress book-keeping so build/ contains
+            # only the deployable site.
+            for artifact in (".documenter", "bases.txt")
+                path = joinpath(build_root, artifact)
+                ispath(path) && rm(path; recursive = true, force = true)
+            end
+            @info "Flattened DocumenterVitepress build/1/ → build/"
+        end
+    end
+end
+
 # Only run deploydocs for local/non-Actions deployment (e.g. TagBot).
 # GitHub Pages deployment is handled by actions/deploy-pages in CI.
 if !IS_CI
