@@ -4,12 +4,13 @@ CurrentModule = FiniteVolumeMethod
 
 # Introduction
 
-!!! info "Sister packages in this stack"
-    FVM is the transport-solver core; the chemistry layer lives in
-    [`NuclearWaterChemistry.jl`](https://cx-xd.github.io/NuclearWaterChemistry.jl/dev/)
-    and the PWR-CRUD application in
-    [`CRUDApplication.jl`](https://s-am-i.github.io/CRUD.jl/dev/).
-    The three docs sites share the same nav shape and `[compat]` policy.
+!!! info "Sister package in this stack"
+    FVM is the transport-solver core; the chemistry layer and the PWR-CRUD
+    application now live together in
+    [`Reactor.jl`](https://github.com/cx-xd/Reactor.jl) — chemistry is its
+    `Reactor.Chemistry` submodule (formerly the separate
+    `NuclearWaterChemistry.jl`), and the application is the `crud` app
+    (formerly `CRUDApplication.jl`). Both repos share the same `[compat]` policy.
 
 This is the documentation for FiniteVolumeMethod.jl. [Click here to go back to the GitHub repository](https://github.com/cx-xd/FiniteVolumeMethod.jl).
 

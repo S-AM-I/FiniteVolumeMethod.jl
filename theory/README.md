@@ -1,8 +1,7 @@
 # `theory/` — executable theory pages
 
 Layer-2 documentation: theory pages whose Julia code blocks run on every
-render. Pipeline mirrors CRUDApplication.jl and NuclearWaterChemistry.jl
-for cross-repo consistency.
+render. Pipeline mirrors Reactor.jl for cross-repo consistency.
 
 ## Install Quarto + QuartoNotebookRunner
 

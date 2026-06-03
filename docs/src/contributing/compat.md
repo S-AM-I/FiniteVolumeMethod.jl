@@ -1,10 +1,10 @@
 # Julia version & dependency compatibility policy
 
-This page documents the policy that the three sister packages
-(CRUDApplication, FiniteVolumeMethod, NuclearWaterChemistry) follow for
-Julia version support and `[compat]` ranges. The intent is to match SciML
-ecosystem conventions so that users importing the SciML stack alongside
-this code don't run into resolver conflicts.
+This page documents the policy that the two sister packages
+(FiniteVolumeMethod and Reactor) follow for Julia version support and
+`[compat]` ranges. The intent is to match SciML ecosystem conventions so
+that users importing the SciML stack alongside this code don't run into
+resolver conflicts.
 
 ## Julia version support
 
@@ -32,11 +32,10 @@ this code don't run into resolver conflicts.
   `Krylov = "0.9, 0.10"`, `LinearSolve = "2, 3"`, `Catalyst = "14, 15"`.
 - Stdlib `[compat]` entries pin to the Julia floor (`"1.10"`). They
   document intent; resolution doesn't require them.
-- For the unregistered cx-xd / S-AM-I dependencies (FiniteVolumeMethod,
-  NuclearWaterChemistry, CRUDApplication itself), do **not** add `[compat]`
-  entries — they conflict with `Pkg.develop` workflows. The cross-repo
-  pinning lives in `docs/Project.toml` instead, where `Pkg.develop` is
-  explicit.
+- For the unregistered cx-xd dependencies (FiniteVolumeMethod and Reactor
+  itself), do **not** add `[compat]` entries — they conflict with
+  `Pkg.develop` workflows. The cross-repo pinning lives in
+  `docs/Project.toml` instead, where `Pkg.develop` is explicit.
 
 ## Adding a new dependency
 
@@ -65,5 +64,5 @@ Revisit this policy if:
 - The SciML stack adopts a stricter SemVer contract (e.g., dropping
   caret-by-default).
 - The cross-repo pin-via-`Pkg.develop` workflow is replaced by a
-  registered package release. At that point, `[compat]` for FVM/NWC
+  registered package release. At that point, `[compat]` for FVM/Reactor
   becomes meaningful.
