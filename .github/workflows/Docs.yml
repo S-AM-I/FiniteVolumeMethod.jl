@@ -1,7 +1,7 @@
 name: Documentation
 on:
-  # Auto-triggered docs deploys were cut 2026-05; deploy locally via
-  # `bin/deploy-docs.sh`. Manual fire from the Actions tab if needed.
+  # Docs build verification only. The Cloudflare Pages host was retired
+  # 2026-06, so docs are built (to catch breakage) but no longer deployed.
   workflow_dispatch:
 concurrency:
   group: docs-${{ github.ref }}
@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   docs:
-    name: Build & Deploy
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Increase swapfile
@@ -38,10 +38,3 @@ jobs:
         env:
           FVM_DOCS_EXECUTION: subset
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Deploy to Cloudflare Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy docs/build --project-name=fvm --branch=main
