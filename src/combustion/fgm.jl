@@ -7,10 +7,10 @@
 # solver interpolates the table instead of integrating detailed
 # kinetics — a ~10³× speed-up for turbulent-flame calculations.
 #
-# Real FGM tables are built via Cantera flamelet solutions; that step
-# lives in `ext/FVMCanteraExt.jl`. This file owns the table type, the
-# interpolation kernel, and a callback-driven builder so the V&V suite
-# can exercise the runtime path without Cantera installed.
+# This file owns the table type, the interpolation kernel, and a
+# callback-driven builder. Tables are filled by the caller (e.g. from
+# externally computed flamelet solutions); no detailed-chemistry
+# integration ships with the package.
 
 """
     FGMTable{NS, T}
@@ -48,8 +48,8 @@ Build an `FGMTable` by sampling the caller-supplied function
 `f(C, Z) -> NTuple{NS, Real}` on an `NC × NZ` uniform grid covering
 `[0, 1]²`.
 
-Convenient for tests and for mock Cantera substitutes; the full
-Cantera-driven builder lives in `FVMCanteraExt`.
+This is the only table builder shipped with the package; fill it from
+externally computed flamelet solutions.
 """
 function build_fgm_table_from_callback(
         f, NC::Int, NZ::Int; Ttype::Type = Float64,
@@ -137,22 +137,4 @@ function lookup_fgm!(
         Y_out[s] = sample[s]
     end
     return Y_out
-end
-
-# ── Cantera stub ──────────────────────────────────────────────────
-
-"""
-    compute_fgm_table_from_cantera(mechanism, NC, NZ, fuel, oxidizer; kwargs...) -> FGMTable
-
-Solve a 1D counterflow flamelet using Cantera to fill an FGM table.
-Requires the weak dependency `Cantera.jl`; otherwise this stub errors.
-The real implementation lives in `ext/FVMCanteraExt.jl`.
-"""
-function compute_fgm_table_from_cantera(
-        mechanism, NC::Int, NZ::Int,
-        fuel::AbstractString, oxidizer::AbstractString; kwargs...,
-    )
-    return error(
-        "compute_fgm_table_from_cantera requires Cantera.jl — add `using Cantera` to enable the FVMCanteraExt extension.",
-    )
 end

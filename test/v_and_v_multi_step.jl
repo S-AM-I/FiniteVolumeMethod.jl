@@ -127,7 +127,3 @@ end
         end
     end
 end
-
-@testset "V&V: multi-step — Cantera stub errors without extension" begin
-    @test_throws ErrorException read_chemkin_mechanism("nonexistent.inp")
-end

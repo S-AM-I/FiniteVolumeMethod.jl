@@ -203,7 +203,6 @@ brusselator
 Brusselator
 btime
 Bulkley
-Cantera
 Carreau
 Casson
 cavitating

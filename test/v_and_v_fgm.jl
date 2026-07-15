@@ -92,11 +92,6 @@ end
     end
 end
 
-@testset "V&V: FGM — Cantera stub errors without extension" begin
-    @test_throws ErrorException compute_fgm_table_from_cantera(
-        nothing, 5, 5, "CH4", "O2:1,N2:3.76",
-    )
-end
 
 @testset "V&V: FGM — bad arguments are rejected" begin
     # NC or NZ < 2 are rejected.

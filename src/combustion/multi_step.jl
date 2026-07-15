@@ -203,19 +203,3 @@ one-step Arrhenius closure for consistent low-temperature behaviour.
 @inline function _cell_T(T_vals::AbstractVector{T}, c::Int) where {T}
     return max(T_vals[c], T(200))
 end
-
-# ── Cantera stub ──────────────────────────────────────────────────
-
-"""
-    read_chemkin_mechanism(path) -> MultiStepMechanism
-
-Parse a CHEMKIN-format mechanism file and build a
-[`MultiStepMechanism`](@ref). Requires the weak dependency
-`Cantera.jl` to be loaded; otherwise this stub errors. The real
-implementation lives in `ext/FVMCanteraExt.jl`.
-"""
-function read_chemkin_mechanism(path::AbstractString)
-    return error(
-        "read_chemkin_mechanism requires Cantera.jl — add `using Cantera` to enable the FVMCanteraExt extension.",
-    )
-end

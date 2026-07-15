@@ -1,6 +1,6 @@
 name = "FiniteVolumeMethod"
 uuid = "d4f04ab7-4f65-4d72-8a28-7087bc7f46f4"
-version = "3.112.0"
+version = "3.113.0"
 authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>", "cx-xd contributors"]
 
 [deps]
@@ -21,7 +21,6 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [weakdeps]
 AlgebraicMultigrid = "2169fc97-5a83-5252-b627-83903c6c433c"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-Cantera = "88aad2b8-1d4e-47e9-91a5-7c0b1f2b4bdd"
 CoolProp = "e084ae63-2819-5025-826e-f8e611a84251"
 Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 Gmsh = "705231aa-382f-11e9-3f0c-b7cb4346fdeb"
@@ -42,7 +41,6 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 [extensions]
 FVMAMGExt = "AlgebraicMultigrid"
 FVMCUDAExt = "CUDA"
-FVMCanteraExt = "Cantera"
 FVMCheckpointExt = "JLD2"
 FVMCoolPropExt = "CoolProp"
 FVMDashboardExt = "JSON3"

@@ -553,7 +553,6 @@ export
     one_step_arrhenius_mechanism,
     compute_multi_step_rates,
     compute_multi_step_rates!,
-    read_chemkin_mechanism,
     # Variable Lewis number species transport
     VariableLewis,
     species_diffusivity,
@@ -562,8 +561,7 @@ export
     FGMTable,
     build_fgm_table_from_callback,
     lookup_fgm,
-    lookup_fgm!,
-    compute_fgm_table_from_cantera
+    lookup_fgm!
 
 # --- Lagrangian DPM (Phase 11) ---
 export
