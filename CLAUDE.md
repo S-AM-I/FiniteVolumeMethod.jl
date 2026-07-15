@@ -179,29 +179,38 @@ Hyperbolic/core: HLLD uses signed `Bn` in star states and has a real `dir=3` bra
 
 Collocated: transient ddt assembles against a `state.U_old` time-level snapshot (PISO/PIMPLE are now consistent transient schemes); `SymmetryBC`/`SlipWallBC` project out the wall-normal velocity (no boundary mass leak); non-orthogonal explicit correction sign fixed and wired through momentum/pressure assembly; Rhie-Chow uses the same harmonic face `D_f` as the pressure operator; `H`/`A_P` extracted after the relaxed momentum solve with `∇p` removed from `H` (fixed a double pressure application that made reordered PISO blow up); kinematic-form consistency — solutions are density-invariant at fixed ν, buoyancy is per unit mass; the Durbin cap survives to the momentum-visible `ν_t`; `WallFunctionBC` is no-slip + Spalding wall `ν_t` (nonzero drag); time/space-varying velocity BCs are evaluated each step into the matrix (`ParabolicDirichletFunc`); MULES honors inflow alpha BCs; the pressure-reference fix is a symmetric elimination (matrix stays SPD for CG/AMG); the continuity residual is flux-normalized; turbulent SIMPLE/PISO/PIMPLE loops regained cyclic-BC handling; equations/sparsity are allocated once per solve with pattern-indexed writes in hot loops.
 
+### Fixed in v3.114 (backlog wave)
+- WENO5 1D ghost handling: the documented `nghost=3` bug no longer reproduces after the v3.112 ghost parameterization (96-config sweep in `test/weno.jl`); the last 2-ghost hardcode (positivity limiter) now takes `ng`
+- AMR 2D inter-block ghost exchange is real: same-level copy, coarse→fine prolongation, conservative fine→coarse averaging, and conservative seam-flux replacement at single-level jumps (same-level multi-block matches a single-block reference bitwise). 3D multi-block still throws
+- GRMHD has a validated curved-spacetime path: densitized Valencia formulation with metric-aware con2prim, metric-aware source terms (two physics bugs fixed), Minkowski results bitwise unchanged, static Kerr-Schild atmosphere held with resolution-converging drift
+- Pressure-based compressible SIMPLE/PIMPLE solve a real compressible pressure equation (see per-module status above)
+- Cavitation/porous/MRF wired into the solver loops (see per-module status above)
+- `fwh_farassat1a`: real retarded-time FW-H validated against analytic monopole/dipole (see per-module status above)
+- Collocated SIMPLE Uy residual plateau RESOLVED by the v3.112 Rhie-Chow harmonic-`D_f` fix: 80×80 lid cavity now reaches Uy ≈ 5e-10 (was floored at ~3e-3); the binding residual is now the flux-normalized continuity (~2e-5) from lid-corner singularity cells
+- VOF pressure correction: factor-ρ overcorrection fixed (`D` weighting was inconsistent between Laplacian and correction); VOF body force is now kinematic (`g + F_σ/ρ`)
+
 ### Still-open correctness items
-- WENO5 has a ghost-cell bug in the 1D solver (`nghost=3` unsupported at small grid sizes)
-- Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L∞, not O(h^2)
-- Collocated SIMPLE: normalized Uy residual can still plateau on very coarse meshes; the v3.112 Rhie-Chow/`D_f` consistency fix plausibly improves this but the 80×80 floor has not been re-measured
+- Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L∞, not O(h^2) (property of the scheme's boundary treatment; research item, not a bug)
 - CyclicBC face matching converges slowly on coarse meshes (Stage 1a follow-up)
 - IDDES uses `V_c^(1/Dim)` as a surrogate for `h_max`; full real-edge-length variant is a v3.2 follow-up
-- AMR blocks do not exchange ghost data — waves cannot cross block boundaries. Multi-block AMR problems now throw (single-block warns); flux-correction routines exist but are not called by any stepper
-- GRMHD is valid for flat spacetime only (metric-aware con2prim is not wired in; densitization inconsistent for curved metrics); non-Minkowski metrics warn loudly
-- VOF keeps a dynamic-force momentum convention (`ρg + F_σ` with `ρ_ref = 1`); its variable-density momentum form is a structural limitation
+- AMR: 3D multi-block still unsupported (throws); ΔL≥2 seam fluxes uncorrected (warned); AMR domain BCs are zero-gradient only
+- GRMHD curved path: HLL only, zero-gradient domain BCs, magnetized-curved cases validated for stability/div(B) only (scope stated by a one-time `@info`)
+- Compressible pressure-based solvers are subsonic-only (no `div(phid,p)`); momentum ddt neglects ∂ρ/∂t
+- PBM is 0-D and FSI has no solver adapters (deliberately deferred — do not wire without dedicated V&V)
 - The published-benchmark harness lives in `test/benchmarks/` (NOT `validation/published_benchmarks/`, which does not exist). The CI `published-benchmarks` job in `.github/workflows/CI.yml` runs all 5 cases with `FVM_RUN_BENCHMARKS=true` and FAILS unless all 5 executed their physics assertions — `mark_deferred_compute` records `@test_broken`, so a deferral can never masquerade as a pass
 
 ### v3 fast-path modules: honest per-module status
 The v3.102→v3.108 waves landed a large amount of code under `src/`. The per-module reality (audited v3.111) is more modest than the wave logs claimed. None of these are `stable`; most are thin kernels or scaffolds:
 
-- **aeroacoustics** (`src/aeroacoustics/`) — instantaneous static surface sums (thickness + loading with optional Doppler factor); no retarded-time evaluation, NOT Farassat Formulation 1A. Lighthill quadrupole is a stub. "PML" is a plain damping sponge zone (no coordinate stretching / split fields)
+- **aeroacoustics** (`src/aeroacoustics/`) — `fwh_farassat1a` (v3.114) is a real retarded-time Farassat 1A implementation for static surfaces (time-series API; thickness ∂Uₙ/∂τ + loading far-field ∂Δp/∂τ/(cr) and near-field 1/r² terms; validated against analytic monopole/dipole to ≲0.1% amplitude). The legacy static-sum functions remain as documented near-field snapshot approximations. Lighthill quadrupole is still a stub; "PML" is a plain damping sponge zone
 - **FSI** (`src/fsi/`) — generic Aitken-Δ² fixed-point accelerator over user-supplied callbacks; no adapters to the package's PISO or elasticity solvers exist; only exercised against a mock 1-DOF spring-damper. Interface transfer supports matching meshes only (1:1 copy)
 - **adjoint** (`src/adjoint/`) — dense linear adjoint identities only (transposed solve for given A, b; checkpointed linear-transient variant). Not wired into SIMPLE/PIMPLE; no SciMLSensitivity integration (it is not a dependency)
 - **solid_mechanics** (`src/solid_mechanics/`) — decoupled per-component Poisson solve by default (not full coupled elasticity); `traction_bcs` are unused by the solvers and now throw if supplied
 - **mesh_generation** (`src/mesh_generation/`) — octree castellated refinement + STL snap prototype; there is NO octree → `UnstructuredFVMMesh` extraction, so it cannot produce a solver-usable mesh; no layer addition
 - **MPI** (`src/parallel/`, `ext/FVMMPIExt/`) — per-rank local solves with halo exchange between outer iterations (additive-Schwarz-style); no distributed matrix is ever constructed (the `PSparseMatrix` claims were wrong — a PartitionedArrays row partition is carried as metadata only)
-- **pressure-based compressible SIMPLE** (`src/pressure_based/`) — incompressible-form continuity with EOS density post-update per outer iteration, not a true compressible pressure equation
+- **pressure-based compressible SIMPLE/PIMPLE** (`src/pressure_based/`) — real subsonic compressible pressure equation as of v3.114 (ρ_f mass fluxes, implicit ψ = ∂ρ/∂p diagonal, (1/ρ)∇p momentum): closed-box mass conserved to machine precision, low-Mach limit matches the incompressible solver, finite acoustic propagation verified. Subsonic only (no `div(phid,p)` shock treatment); momentum ddt neglects ∂ρ/∂t
 - **population_balance** (`src/population_balance/`) — 0-D moment/class kernel library (QMoM/DQMoM/Class Method); not coupled to transport
-- **cavitation / porous / MRF** (`src/cavitation/`, `src/porous/`, `src/mrf/`) — source-term libraries; not wired into the solver loops
+- **cavitation / porous / MRF** (`src/cavitation/`, `src/porous/`, `src/mrf/`) — wired into the solver loops as of v3.114: `solve_vof(...; cavitation_model)` (Patankar-implicit α source + implicit pressure dilatation), `porous_zones = [...]` (implicit Darcy-Forchheimer diagonal, verified vs analytic Δp), `mrf_zones = [...]` (absolute-velocity formulation with makeRelative/makeAbsolute zone-face flux conversion, verified vs solid-body rotation). Porous/MRF kwargs throw on the combustion/radiation solve paths (not yet threaded there); MRF interfaces must be surfaces of revolution
 
 ### Structural items already addressed
 The following structural items previously listed here have been resolved during the v2→v3 overhaul. See `test/KNOWN_FAILURES.md` for fix-stage details and assertions:

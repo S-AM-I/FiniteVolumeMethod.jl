@@ -11,12 +11,19 @@
 #
 # This module ships with
 #
+#   - `fwh_farassat1a` — retarded-time Farassat Formulation 1A for a
+#     STATIC (non-moving) impermeable or permeable surface, stationary
+#     observer, quiescent medium. Takes per-face time series of surface
+#     pressure and normal velocity, evaluates the source-time
+#     derivatives numerically, and sums per-face contributions at the
+#     per-face emission time t = τ + r/c. This is the quantitative
+#     entry point — validated against analytic monopole/dipole
+#     solutions in test/v_and_v_fwh.jl;
 #   - a simplified, instantaneous (single-snapshot) FW-H-style surface
 #     integration for a stationary observer: static thickness + loading
-#     surface sums with an optional Doppler factor. It does NOT evaluate
-#     retarded times or the time derivatives of the integrands, so it is
-#     not Farassat Formulation 1A — treat outputs as qualitative
-#     compact-source estimates only;
+#     surface sums. It does NOT evaluate retarded times or the time
+#     derivatives of the integrands, so it is not Farassat Formulation
+#     1A — treat outputs as qualitative compact-source estimates only;
 #   - `CurleSurface` — hard-wall variant (U_n ≡ 0 → only the loading
 #     dipole survives);
 #   - `LighthillVolume` — stub volume integral of the Lighthill tensor
@@ -120,10 +127,12 @@ Thickness (monopole) contribution at the observer
     p'_T(x) = (ρ_0 / 4π) · ∫_S  U_n(y) / (r · (1 − M_r))  dS(y)
 
 for a stationary observer. `U_n[i]` is the instantaneous normal fluid
-velocity through face `i` (positive = outward). `M_r` — the observer-
-facing Mach number — is zero for a stationary surface in quiescent
-fluid; callers wanting the subsonic-advected correction pass a finite
-`M_r_vec` to the full FW-H routine below.
+velocity through face `i` (positive = outward).
+
+Static snapshot approximation: no retarded time and no source-time
+derivative `∂U_n/∂τ` (the integrand is dimensionally `ρ_0 U_n / r`,
+not the Formulation-1A `ρ_0 U̇_n / r`). Use [`fwh_farassat1a`](@ref)
+for quantitative predictions.
 """
 function fwh_thickness_term(
         observer::FWHObserver{Dim, T},
@@ -152,11 +161,15 @@ Loading (dipole) contribution at the observer
     p'_L(x) = (1/4π) · ∫_S  [ (p − p∞) · (r̂ · n̂) · (1 − M_r)² /
                               ( r² · (1 − M_r) ) ] dS(y)
 
-Reduces to the compact-dipole far-field form used by Curle when
+Reduces to the compact-dipole near-field form used by Curle when
 `M_r = 0` (stationary body): weight = (r̂ · n̂) / r².
 
-`M_r` defaults to zero (stationary surface). Pass a scalar or
-per-face vector to include Doppler-scaled subsonic advection.
+Static snapshot approximation: no retarded time, and only the
+near-field `1/r²` part of the loading term is kept — the far-field
+`ṗ cosθ / (c r)` term requires a pressure time series and lives in
+[`fwh_farassat1a`](@ref). For a static surface the Doppler factor is
+identically 1; the `M_r` keyword exists only for moving-surface
+extensions and should be left at zero here.
 """
 function fwh_loading_term(
         observer::FWHObserver{Dim, T},
@@ -197,6 +210,10 @@ in the frequency-free (time-domain, single-sample) static-observer
 form. Returns the instantaneous acoustic pressure `p'(x, t)` at the
 observer induced by the supplied snapshot of surface data.
 
+Static snapshot approximation — no retarded time, no source-time
+derivatives. For quantitative acoustics use [`fwh_farassat1a`](@ref)
+with per-face time series.
+
 Quadrupole is intentionally omitted (see `LighthillVolume`).
 """
 function compute_fwh_pressure(
@@ -230,6 +247,211 @@ function compute_fwh_pressure(
 end
 
 # -------------------------------------------------------------------------
+# Farassat Formulation 1A — retarded-time FW-H for static surfaces
+# -------------------------------------------------------------------------
+
+# Validates that `times` is a uniformly spaced, strictly increasing grid
+# and returns the step Δt.
+function _fwh_uniform_dt(times::AbstractVector{T}) where {T}
+    nt = length(times)
+    nt >= 3 || error("fwh_farassat1a: need at least 3 time samples, got $nt")
+    dt = (times[end] - times[1]) / (nt - 1)
+    dt > zero(T) || error("fwh_farassat1a: times must be strictly increasing")
+    @inbounds for k in 1:(nt - 1)
+        step = times[k + 1] - times[k]
+        abs(step - dt) <= T(1.0e-6) * dt || error(
+            "fwh_farassat1a: times must be uniformly spaced " *
+                "(Δt deviates at index $k: $step vs $dt)",
+        )
+    end
+    return dt
+end
+
+# Source-time derivative of per-face histories `f` (nfaces × ntimes):
+# second-order central differences in the interior, second-order
+# one-sided stencils at the two endpoints.
+function _fwh_source_time_derivative(f::AbstractMatrix{T}, dt::T) where {T}
+    nf, nt = size(f)
+    ddt = Matrix{T}(undef, nf, nt)
+    inv2dt = one(T) / (2 * dt)
+    @inbounds for i in 1:nf
+        ddt[i, 1] = (-T(3) * f[i, 1] + T(4) * f[i, 2] - f[i, 3]) * inv2dt
+        ddt[i, nt] = (T(3) * f[i, nt] - T(4) * f[i, nt - 1] + f[i, nt - 2]) * inv2dt
+    end
+    @inbounds for k in 2:(nt - 1), i in 1:nf
+        ddt[i, k] = (f[i, k + 1] - f[i, k - 1]) * inv2dt
+    end
+    return ddt
+end
+
+# Shared 1A kernel. `dUn_dt === nothing` selects the loading-only
+# (Curle hard-wall) variant. All inputs are already validated.
+function _fwh_farassat1a_core(
+        surface::FWHSurface{Dim, T},
+        observer::FWHObserver{Dim, T},
+        times::AbstractVector{T},
+        dt::T,
+        delta_p::AbstractMatrix{T},
+        dp_dt::AbstractMatrix{T},
+        dUn_dt::Union{Nothing, AbstractMatrix{T}},
+    ) where {Dim, T}
+    nf = length(surface.face_indices)
+    nt = length(times)
+    c = observer.c_inf
+    four_pi = T(4) * T(pi)
+
+    radii = Vector{T}(undef, nf)
+    cos_theta = Vector{T}(undef, nf)
+    @inbounds for i in 1:nf
+        r_vec = observer.position - surface.face_centers[i]
+        r = norm(r_vec)
+        r > T(1.0e-12) ||
+            error("fwh_farassat1a: observer coincides with FW-H face $i")
+        radii[i] = r
+        cos_theta[i] = dot(r_vec, surface.face_normals[i]) / r
+    end
+    r_min, r_max = extrema(radii)
+
+    # Observer (advanced-time) grid: every sample must be reachable from
+    # source data on [times[1], times[end]] for ALL faces, i.e.
+    # t ∈ [times[1] + r_max/c, times[end] + r_min/c].
+    t_start = times[1] + r_max / c
+    t_stop = times[end] + r_min / c
+    n_obs = floor(Int, (t_stop - t_start) / dt + T(1.0e-9)) + 1
+    n_obs >= 2 || error(
+        "fwh_farassat1a: source recording too short — after retarded-time " *
+            "trimming the observer window holds < 2 samples; extend the " *
+            "time series by ≥ $((r_max - r_min) / c) s",
+    )
+    t_obs = range(t_start; step = dt, length = n_obs)
+
+    p_thickness = zeros(T, n_obs)
+    p_loading = zeros(T, n_obs)
+    s_max = T(nt - 1)
+
+    @inbounds for i in 1:nf
+        A = surface.face_areas[i]
+        r = radii[i]
+        ct = cos_theta[i]
+        w_thick = observer.rho_inf * A / (four_pi * r)
+        w_load_far = ct * A / (four_pi * c * r)
+        w_load_near = ct * A / (four_pi * r * r)
+        # Fractional source-sample index of the first observer sample's
+        # emission time τ = t_obs[1] − r/c for this face.
+        s0 = (t_start - r / c - times[1]) / dt
+        for k in 1:n_obs
+            s = clamp(s0 + (k - 1), zero(T), s_max)
+            j = min(unsafe_trunc(Int, s), nt - 2)  # 0-based lower bracket
+            xi = s - j
+            jj = j + 1
+            dp = (one(T) - xi) * delta_p[i, jj] + xi * delta_p[i, jj + 1]
+            dpd = (one(T) - xi) * dp_dt[i, jj] + xi * dp_dt[i, jj + 1]
+            p_loading[k] += w_load_far * dpd + w_load_near * dp
+            if dUn_dt !== nothing
+                dud = (one(T) - xi) * dUn_dt[i, jj] + xi * dUn_dt[i, jj + 1]
+                p_thickness[k] += w_thick * dud
+            end
+        end
+    end
+    return (
+        t = t_obs,
+        p = p_thickness .+ p_loading,
+        p_thickness = p_thickness,
+        p_loading = p_loading,
+    )
+end
+
+"""
+    fwh_farassat1a(surface, observer, times, p_surface, U_n; p_inf = 0)
+        -> (; t, p, p_thickness, p_loading)
+
+Retarded-time Ffowcs-Williams & Hawkings prediction in Farassat's
+Formulation 1A, specialised to a STATIC (non-moving) impermeable or
+permeable data surface, a stationary observer, and a quiescent medium
+— so the Doppler factor `1 − M_r` is identically 1 and no `M_r`
+parameter exists (moving-surface extensions would reintroduce it).
+
+    4π p'_T(x, t) = ∫_S [ ρ_∞ ∂U_n/∂τ / r ]_ret dS          (thickness)
+    4π p'_L(x, t) = ∫_S [ ∂Δp/∂τ · cosθ / (c_∞ r) ]_ret dS   (loading, far)
+                  + ∫_S [ Δp · cosθ / r² ]_ret dS            (loading, near)
+
+with `Δp = p − p_∞`, `cosθ = r̂ · n̂`, and every integrand evaluated at
+the per-face emission time `τ = t − r/c_∞`. For the permeable
+formulation `U_n` is the fluid normal velocity through the surface
+(`ρ u_n / ρ_∞ ≈ u_n` to linear order); for an impermeable wall pass
+`U_n ≡ 0` or use the [`CurleSurface`](@ref) method.
+
+Arguments:
+- `times` — uniformly spaced source-time grid (length `nt ≥ 3`).
+  `Δt` must resolve the highest significant source frequency: the
+  central-difference derivative and the linear source-time
+  interpolation each carry an `O((ωΔt)²)` amplitude error, so use
+  ≥ ~50 samples per period for < 0.5 % error.
+- `p_surface`, `U_n` — per-face histories, size `(nfaces, nt)`;
+  `p_surface[i, k]` is the pressure on face `i` at `times[k]`.
+- `p_inf` — ambient pressure subtracted from `p_surface`.
+
+Returns a named tuple: `t` is the observer (advanced) time grid
+`[times[1] + r_max/c, times[end] + r_min/c]` at the same `Δt`
+(trimmed so every face has source data at its emission time), `p` the
+acoustic pressure series at the observer, and `p_thickness` /
+`p_loading` its two components. Quadrupole is omitted; enclose the
+nonlinear source region with a permeable surface to capture it.
+"""
+function fwh_farassat1a(
+        surface::FWHSurface{Dim, T},
+        observer::FWHObserver{Dim, T},
+        times::AbstractVector{T},
+        p_surface::AbstractMatrix{T},
+        U_n::AbstractMatrix{T};
+        p_inf::T = zero(T),
+    ) where {Dim, T}
+    nf = length(surface.face_indices)
+    dt = _fwh_uniform_dt(times)
+    size(p_surface) == (nf, length(times)) || error(
+        "fwh_farassat1a: p_surface size $(size(p_surface)) ≠ (nfaces, ntimes) = " *
+            "($nf, $(length(times)))",
+    )
+    size(U_n) == size(p_surface) ||
+        error("fwh_farassat1a: U_n size $(size(U_n)) ≠ p_surface size $(size(p_surface))")
+
+    delta_p = p_surface .- p_inf
+    dp_dt = _fwh_source_time_derivative(delta_p, dt)
+    dUn_dt = _fwh_source_time_derivative(U_n, dt)
+    return _fwh_farassat1a_core(surface, observer, times, dt, delta_p, dp_dt, dUn_dt)
+end
+
+"""
+    fwh_farassat1a(curle::CurleSurface, observer, times, p_surface; p_inf = 0)
+        -> (; t, p, p_thickness, p_loading)
+
+Curle (hard-wall) variant of [`fwh_farassat1a`](@ref): `U_n ≡ 0`, so
+only the loading term — far-field `∂Δp/∂τ · cosθ / (c r)` plus
+near-field `Δp · cosθ / r²`, both at retarded time — survives.
+`p_thickness` is returned as all-zero for interface uniformity. This
+is the quantitative, time-series replacement for
+[`curle_dipole_pressure`](@ref).
+"""
+function fwh_farassat1a(
+        curle::CurleSurface{Dim, T},
+        observer::FWHObserver{Dim, T},
+        times::AbstractVector{T},
+        p_surface::AbstractMatrix{T};
+        p_inf::T = zero(T),
+    ) where {Dim, T}
+    surface = curle.surface
+    nf = length(surface.face_indices)
+    dt = _fwh_uniform_dt(times)
+    size(p_surface) == (nf, length(times)) || error(
+        "fwh_farassat1a: p_surface size $(size(p_surface)) ≠ (nfaces, ntimes) = " *
+            "($nf, $(length(times)))",
+    )
+    delta_p = p_surface .- p_inf
+    dp_dt = _fwh_source_time_derivative(delta_p, dt)
+    return _fwh_farassat1a_core(surface, observer, times, dt, delta_p, dp_dt, nothing)
+end
+
+# -------------------------------------------------------------------------
 # Retained legacy entry points (kept for existing callers)
 # -------------------------------------------------------------------------
 
@@ -240,6 +462,12 @@ Curle's (1955) compact-dipole pressure. Equivalent to
 `fwh_loading_term / c_inf` and retained for legacy callers; the factor
 `1 / c_inf` preserves the original v1 behaviour which is dimensionally
 a compact-source far-field amplitude.
+
+Deprecated for quantitative use: this static snapshot keeps only a
+`Δp / r` weight with no retarded time and no `∂Δp/∂τ`. Prefer
+`fwh_farassat1a(CurleSurface(surface), observer, times, p_surface)`
+which evaluates the full retarded-time loading term from the pressure
+time series.
 """
 function curle_dipole_pressure(
         observer::FWHObserver{Dim, T},
