@@ -84,7 +84,8 @@ Convert SRMHD conserved `[D, Sx, Sy, Sz, τ, Bx, By, Bz]` to
 primitive `[ρ, vx, vy, vz, P, Bx, By, Bz]` via iterative con2prim.
 """
 @inline function conserved_to_primitive(law::SRMHDEquations, u::SVector{8})
-    w, _ = srmhd_con2prim(law.eos, u, law.con2prim_tol, law.con2prim_maxiter)
+    w, result = srmhd_con2prim(law.eos, u, law.con2prim_tol, law.con2prim_maxiter)
+    result.converged || _con2prim_convergence_error("SRMHDEquations", result, u)
     return w
 end
 

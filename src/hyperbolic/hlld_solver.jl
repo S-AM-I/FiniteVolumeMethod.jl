@@ -38,11 +38,16 @@ function solve_riemann(::HLLDSolver, law::IdealMHDEquations, wL::SVector{8}, wR:
         vnR, vt1R, vt2R = vxR, vyR, vzR
         BnL, Bt1L, Bt2L = BxL, ByL, BzL
         BnR, Bt1R, Bt2R = BxR, ByR, BzR
-    else  # dir == 2
+    elseif dir == 2
         vnL, vt1L, vt2L = vyL, vxL, vzL
         vnR, vt1R, vt2R = vyR, vxR, vzR
         BnL, Bt1L, Bt2L = ByL, BxL, BzL
         BnR, Bt1R, Bt2R = ByR, BxR, BzR
+    else  # dir == 3
+        vnL, vt1L, vt2L = vzL, vxL, vyL
+        vnR, vt1R, vt2R = vzR, vxR, vyR
+        BnL, Bt1L, Bt2L = BzL, BxL, ByL
+        BnR, Bt1R, Bt2R = BzR, BxR, ByR
     end
 
     # Normal B (continuous across interface in ideal MHD)
@@ -92,10 +97,10 @@ function solve_riemann(::HLLDSolver, law::IdealMHDEquations, wL::SVector{8}, wR:
 
     # Star tangential velocities and B-fields
     vt1L_star, vt2L_star, Bt1L_star, Bt2L_star = _hlld_tangential_star(
-        ρL, vnL, vt1L, vt2L, Bt1L, Bt2L, Bn_sq, SL, SM
+        ρL, vnL, vt1L, vt2L, Bt1L, Bt2L, Bn, SL, SM
     )
     vt1R_star, vt2R_star, Bt1R_star, Bt2R_star = _hlld_tangential_star(
-        ρR, vnR, vt1R, vt2R, Bt1R, Bt2R, Bn_sq, SR, SM
+        ρR, vnR, vt1R, vt2R, Bt1R, Bt2R, Bn, SR, SM
     )
 
     # Star energies
@@ -163,17 +168,21 @@ end
 Compute the tangential velocity and B-field components in the star region
 for side K (left or right), given the outer wave speed SK and contact speed SM.
 
-From Miyoshi & Kusano (2005), eqs (44)-(47).
+From Miyoshi & Kusano (2005), eqs (44)-(47). `Bn` is the *signed* normal
+magnetic field — eqs (44)-(45) multiply the velocity jump by Bn itself,
+not |Bn|, so the sign must be preserved (mirroring a Riemann problem so
+that Bn flips sign must mirror the tangential star states).
 """
 @inline function _hlld_tangential_star(
-        ρ, vn, vt1, vt2, Bt1, Bt2, Bn_sq, SK, SM
+        ρ, vn, vt1, vt2, Bt1, Bt2, Bn, SK, SM
     )
+    Bn_sq = Bn^2
     denom = ρ * (SK - vn) * (SK - SM) - Bn_sq
 
     # Scale for tolerance check
     scale = max(abs(ρ * (SK - vn) * (SK - SM)), Bn_sq, eps(typeof(vn)))
     if abs(denom) > 1.0e-8 * scale
-        factor_v = sqrt(Bn_sq) * (SM - vn) / denom
+        factor_v = Bn * (SM - vn) / denom
         factor_B = (ρ * (SK - vn)^2 - Bn_sq) / denom
 
         vt1_star = vt1 - Bt1 * factor_v
@@ -203,8 +212,10 @@ based on direction.
 @inline function _build_mhd_conserved(ρ, vn, vt1, vt2, E, Bn, Bt1, Bt2, dir)
     if dir == 1
         return SVector(ρ, ρ * vn, ρ * vt1, ρ * vt2, E, Bn, Bt1, Bt2)
-    else  # dir == 2
+    elseif dir == 2
         return SVector(ρ, ρ * vt1, ρ * vn, ρ * vt2, E, Bt1, Bn, Bt2)
+    else  # dir == 3 (vt1 = vx, vt2 = vy, vn = vz)
+        return SVector(ρ, ρ * vt1, ρ * vt2, ρ * vn, E, Bt1, Bt2, Bn)
     end
 end
 

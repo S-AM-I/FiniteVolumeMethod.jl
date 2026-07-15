@@ -368,7 +368,8 @@ end
         )
 
         U = FiniteVolumeMethod.initialize_2d(prob)
-        FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, 2, 0.0)
+        ng = FiniteVolumeMethod._nghost_for_reconstruction(prob.reconstruction)
+        FiniteVolumeMethod.apply_boundary_conditions_2d!(U, prob, ng, 0.0)
         dt = compute_dt_2d(prob, U, 0.0)
 
         # dt > 0

@@ -82,7 +82,9 @@ function _mhd_compute_fluxes_3d!(
     solver = prob.riemann_solver
     recon = prob.reconstruction
     N = nvariables(law)
-    ng = _nghost_for_reconstruction(recon)
+    # Ghost layers from the padded array itself (legacy path pads with the
+    # reconstruction's nghost, the SciML cache always pads 2).
+    ng = (size(U, 1) - nx) ÷ 2
     FT = eltype(U[ng + 1, ng + 1, ng + 1])
 
     # Apply BCs to fill ghost cells
@@ -95,14 +97,14 @@ function _mhd_compute_fluxes_3d!(
     end
 
     # ---- X-direction sweeps (including ghost slabs in j and k) ----
-    # col_j = 1:ny+2 maps to padded jj = 2:ny+3
-    # col_k = 1:nz+2 maps to padded kk = 2:nz+3
+    # col_j = 1:ny+2 maps to padded jj = ng:ny+ng+1
+    # col_k = 1:nz+2 maps to padded kk = ng:nz+ng+1
     for col_k in 1:(nz + 2), col_j in 1:(ny + 2)
-        jj = col_j + 1
-        kk = col_k + 1
+        jj = col_j + ng - 1
+        kk = col_k + ng - 1
         for face_i in 1:(nx + 1)
-            iL = face_i + 1
-            iR = face_i + 2
+            iL = face_i + ng - 1
+            iR = iL + 1
             wL_face, wR_face = _reconstruct_face_3d_x(recon, law, U, iL, iR, jj, kk)
             Fx_all[face_i, col_j, col_k] = solve_riemann(solver, law, wL_face, wR_face, 1)
         end
@@ -110,11 +112,11 @@ function _mhd_compute_fluxes_3d!(
 
     # ---- Y-direction sweeps (including ghost slabs in i and k) ----
     for col_k in 1:(nz + 2), col_i in 1:(nx + 2)
-        ii = col_i + 1
-        kk = col_k + 1
+        ii = col_i + ng - 1
+        kk = col_k + ng - 1
         for face_j in 1:(ny + 1)
-            jL = face_j + 1
-            jR = face_j + 2
+            jL = face_j + ng - 1
+            jR = jL + 1
             wL_face, wR_face = _reconstruct_face_3d_y(recon, law, U, ii, jL, jR, kk)
             Fy_all[col_i, face_j, col_k] = solve_riemann(solver, law, wL_face, wR_face, 2)
         end
@@ -122,11 +124,11 @@ function _mhd_compute_fluxes_3d!(
 
     # ---- Z-direction sweeps (including ghost slabs in i and j) ----
     for col_j in 1:(ny + 2), col_i in 1:(nx + 2)
-        ii = col_i + 1
-        jj = col_j + 1
+        ii = col_i + ng - 1
+        jj = col_j + ng - 1
         for face_k in 1:(nz + 1)
-            kL = face_k + 1
-            kR = face_k + 2
+            kL = face_k + ng - 1
+            kR = kL + 1
             wL_face, wR_face = _reconstruct_face_3d_z(recon, law, U, ii, jj, kL, kR)
             Fz_all[col_i, col_j, face_k] = solve_riemann(solver, law, wL_face, wR_face, 3)
         end
@@ -182,15 +184,17 @@ function solve_hyperbolic(
         "`sciml_problem(prob; vector_potential_x = ..., vector_potential_y = ..., vector_potential_z = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem3D{<:IdealMHDEquations{3}})", backend)
+    _validate_ct_reconstruction(prob.reconstruction)
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     dx, dy, dz = mesh.dx, mesh.dy, mesh.dz
     law = prob.law
     N = nvariables(law)  # 8
 
-    # Initialize cell-centered solution (padded array)
-    ng = _nghost_for_reconstruction(prob.reconstruction)
-    U = initialize_3d(prob)
+    # Initialize cell-centered solution (padded array). The CT machinery
+    # (face_to_cell_B_3d!, EMF loops) assumes a fixed 2-ghost layout.
+    ng = 2
+    U = initialize_3d(prob; nghost = ng)
     FT = eltype(U[ng + 1, ng + 1, ng + 1])
 
     # Initialize CT data (face-centered B)

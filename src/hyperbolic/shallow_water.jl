@@ -40,6 +40,9 @@ ShallowWaterEquations{Dim}(; g = 9.81) where {Dim} = ShallowWaterEquations{Dim}(
 nvariables(::ShallowWaterEquations{1}) = 2
 nvariables(::ShallowWaterEquations{2}) = 3
 
+# Primitive layout [h, u] / [h, u, v] — velocity for dir is at dir+1.
+normal_velocity_index(::ShallowWaterEquations, dir::Int) = dir + 1
+
 # ============================================================
 # 1D Shallow Water
 # ============================================================

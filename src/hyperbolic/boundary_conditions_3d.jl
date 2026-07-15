@@ -74,6 +74,75 @@ function apply_bc_3d_back!(U::AbstractArray{T, 3}, ::TransmissiveBC, law, nx::In
 end
 
 # ============================================================
+# ReflectiveBC (3D generic fallbacks)
+# ============================================================
+#
+# Negate the normal-velocity component via the law's
+# `normal_velocity_index` interface. Law-specific methods (Euler{3},
+# IdealMHD{3}) take precedence by dispatch; laws without the interface
+# throw an informative ArgumentError.
+
+function apply_bc_3d_left!(U::AbstractArray{T, 3}, ::ReflectiveBC, law, nx::Int, ny::Int, nz::Int, ng::Int, t) where {T}
+    for k in 1:(nz + 2 * ng), j in 1:(ny + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[ng + g, j, k])
+            U[ng + 1 - g, j, k] = primitive_to_conserved(law, _reflect_primitive(law, w, 1))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_3d_right!(U::AbstractArray{T, 3}, ::ReflectiveBC, law, nx::Int, ny::Int, nz::Int, ng::Int, t) where {T}
+    for k in 1:(nz + 2 * ng), j in 1:(ny + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[nx + ng + 1 - g, j, k])
+            U[nx + ng + g, j, k] = primitive_to_conserved(law, _reflect_primitive(law, w, 1))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_3d_bottom!(U::AbstractArray{T, 3}, ::ReflectiveBC, law, nx::Int, ny::Int, nz::Int, ng::Int, t) where {T}
+    for k in 1:(nz + 2 * ng), i in 1:(nx + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[i, ng + g, k])
+            U[i, ng + 1 - g, k] = primitive_to_conserved(law, _reflect_primitive(law, w, 2))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_3d_top!(U::AbstractArray{T, 3}, ::ReflectiveBC, law, nx::Int, ny::Int, nz::Int, ng::Int, t) where {T}
+    for k in 1:(nz + 2 * ng), i in 1:(nx + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[i, ny + ng + 1 - g, k])
+            U[i, ny + ng + g, k] = primitive_to_conserved(law, _reflect_primitive(law, w, 2))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_3d_front!(U::AbstractArray{T, 3}, ::ReflectiveBC, law, nx::Int, ny::Int, nz::Int, ng::Int, t) where {T}
+    for j in 1:(ny + 2 * ng), i in 1:(nx + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[i, j, ng + g])
+            U[i, j, ng + 1 - g] = primitive_to_conserved(law, _reflect_primitive(law, w, 3))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_3d_back!(U::AbstractArray{T, 3}, ::ReflectiveBC, law, nx::Int, ny::Int, nz::Int, ng::Int, t) where {T}
+    for j in 1:(ny + 2 * ng), i in 1:(nx + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[i, j, nz + ng + 1 - g])
+            U[i, j, nz + ng + g] = primitive_to_conserved(law, _reflect_primitive(law, w, 3))
+        end
+    end
+    return nothing
+end
+
+# ============================================================
 # ReflectiveBC (3D Euler)
 # ============================================================
 

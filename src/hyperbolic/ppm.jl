@@ -1,23 +1,34 @@
 # ============================================================
-# PPM (Piecewise Parabolic Method) Reconstruction
+# PPM-style Limited Parabolic Reconstruction
 # ============================================================
-# Colella & Woodward (1984) third-order reconstruction.
-# Uses a 4-cell stencil {i-1, i, i+1, i+2} — 2 ghost cells.
+# Limited parabolic reconstruction inspired by Colella & Woodward (1984),
+# restricted to a 4-cell stencil {i-1, i, i+1, i+2} — 2 ghost cells.
+# NOT classical PPM: the shared 4th-order face value and C&W monotonicity
+# constraints are used, but the outer faces of each cell fall back to
+# 2nd-order averages because the wider (3-ghost) stencil classical PPM
+# needs is unavailable. Formal accuracy is 2nd order.
 
 """
     PPMReconstruction
 
-Piecewise Parabolic Method (PPM) reconstruction — third-order spatial
-accuracy using parabolic interpolation within each cell, subject to
-monotonicity constraints that prevent new extrema at cell interfaces.
+Limited parabolic reconstruction with PPM-style monotonicity constraints —
+**not** the classical Colella-Woodward PPM scheme, despite the (kept for
+API stability) name.
 
-Uses a 4-cell stencil and 2 ghost cells per side (same as MUSCL/WENO3).
-Particularly effective for resolving contact discontinuities and
-compressive waves in gas dynamics.
+The interface value shared by the two cells adjacent to a face uses the
+4th-order C&W formula, and each cell's parabola is monotonized with the
+C&W constraints (eqs. 1.10-1.11). However, the scheme is restricted to a
+4-cell stencil (2 ghost cells per side, same as MUSCL/WENO3), so the
+outer face of each cell is only a 2nd-order average; classical PPM
+requires a 6-cell stencil (3 ghost cells) with 4th-order values at *all*
+faces. The resulting reconstruction is formally 2nd-order accurate, with
+sharper resolution of contact discontinuities than plain MUSCL.
 
 ## References
 - Colella, P. & Woodward, P. R. (1984). "The Piecewise Parabolic Method (PPM)
   for gas-dynamical simulations." *J. Comput. Phys.*, 54(1), 174–201.
+  (Source of the face-value formula and monotonicity constraints only;
+  this implementation is not the full scheme from that paper.)
 """
 struct PPMReconstruction end
 

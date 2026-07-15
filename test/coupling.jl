@@ -416,9 +416,10 @@ end
     cooling = CoolingSource(T -> 0.01; mu_mol = 1.0)
     dx, dy = mesh.dx, mesh.dy
 
-    # Initial mass
+    # Initial mass (padding follows the reconstruction's ghost count)
     U0 = FiniteVolumeMethod.initialize_2d(prob)
-    mass_0 = sum(U0[ix + 2, iy + 2][1] * dx * dy for iy in 1:20, ix in 1:20)
+    ng0 = FiniteVolumeMethod._nghost_for_reconstruction(prob.reconstruction)
+    mass_0 = sum(U0[ix + ng0, iy + ng0][1] * dx * dy for iy in 1:20, ix in 1:20)
 
     _, U_final, _ = solve_coupled(prob, cooling; splitting = StrangSplitting())
     mass_f = sum(U_final[ix, iy][1] * dx * dy for iy in 1:20, ix in 1:20)

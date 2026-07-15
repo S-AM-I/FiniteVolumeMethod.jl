@@ -48,6 +48,9 @@ nvariables(ns::NavierStokesEquations{2}) = 4
 @inline conserved_to_primitive(ns::NavierStokesEquations{2}, u::SVector{4}) = conserved_to_primitive(ns.euler, u)
 @inline primitive_to_conserved(ns::NavierStokesEquations{2}, w::SVector{4}) = primitive_to_conserved(ns.euler, w)
 
+# Same primitive layout as the wrapped Euler law.
+normal_velocity_index(ns::NavierStokesEquations, dir::Int) = normal_velocity_index(ns.euler, dir)
+
 # ============================================================
 # HLLC forwarding — HLLC dispatches on EulerEquations{D}
 # ============================================================

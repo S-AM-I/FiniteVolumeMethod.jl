@@ -53,6 +53,55 @@ function apply_bc_2d_top!(U::AbstractMatrix, ::TransmissiveBC, law, nx::Int, ny:
 end
 
 # ============================================================
+# ReflectiveBC (2D generic fallbacks)
+# ============================================================
+#
+# Negate the normal-velocity component via the law's
+# `normal_velocity_index` interface. Law-specific methods (Euler{2},
+# IdealMHD{2}, GRMHD{2}, ...) take precedence by dispatch; laws without
+# the interface throw an informative ArgumentError.
+
+function apply_bc_2d_left!(U::AbstractMatrix, ::ReflectiveBC, law, nx::Int, ny::Int, ng::Int, t)
+    for j in 1:(ny + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[ng + g, j])
+            U[ng + 1 - g, j] = primitive_to_conserved(law, _reflect_primitive(law, w, 1))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_2d_right!(U::AbstractMatrix, ::ReflectiveBC, law, nx::Int, ny::Int, ng::Int, t)
+    for j in 1:(ny + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[nx + ng + 1 - g, j])
+            U[nx + ng + g, j] = primitive_to_conserved(law, _reflect_primitive(law, w, 1))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_2d_bottom!(U::AbstractMatrix, ::ReflectiveBC, law, nx::Int, ny::Int, ng::Int, t)
+    for i in 1:(nx + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[i, ng + g])
+            U[i, ng + 1 - g] = primitive_to_conserved(law, _reflect_primitive(law, w, 2))
+        end
+    end
+    return nothing
+end
+
+function apply_bc_2d_top!(U::AbstractMatrix, ::ReflectiveBC, law, nx::Int, ny::Int, ng::Int, t)
+    for i in 1:(nx + 2 * ng)
+        for g in 1:ng
+            w = conserved_to_primitive(law, U[i, ny + ng + 1 - g])
+            U[i, ny + ng + g] = primitive_to_conserved(law, _reflect_primitive(law, w, 2))
+        end
+    end
+    return nothing
+end
+
+# ============================================================
 # ReflectiveBC (2D Euler)
 # ============================================================
 

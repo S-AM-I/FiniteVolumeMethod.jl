@@ -248,3 +248,66 @@ end
     @test prob3.cfl === prob.cfl
     @test prob3.regrid_interval === prob.regrid_interval
 end
+
+# ============================================================
+# Semidiscrete ODEProblem remake: u0/tspan/p passthrough
+# ============================================================
+using SciMLBase: SciMLBase
+
+@testset "remake semidiscrete ODEProblem honors u0/tspan/p" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{1}(eos)
+    mesh = StructuredMesh1D(0.0, 1.0, 16)
+    ic = x -> SVector(1.0, 0.0, 1.0)
+    prob = HyperbolicProblem(
+        law, mesh, HLLCSolver(), CellCenteredMUSCL(),
+        TransmissiveBC(), TransmissiveBC(), ic; final_time = 0.2
+    )
+    ode = SciMLBase.ODEProblem(prob)
+
+    @testset "u0 passthrough" begin
+        u0_new = copy(ode.u0) .* 2.0
+        ode2 = SciMLBase.remake(ode; u0 = u0_new)
+        @test ode2.u0 === u0_new
+    end
+
+    @testset "tspan passthrough" begin
+        ode2 = SciMLBase.remake(ode; tspan = (0.0, 0.05))
+        @test ode2.tspan == (0.0, 0.05)
+    end
+
+    @testset "u0 + tspan + physics kwarg together" begin
+        u0_new = copy(ode.u0)
+        ode2 = SciMLBase.remake(ode; u0 = u0_new, tspan = (0.0, 0.07), cfl = 0.3)
+        @test ode2.u0 === u0_new
+        @test ode2.tspan == (0.0, 0.07)
+        @test ode2.p.prob.cfl == 0.3
+    end
+
+    @testset "wrong-length u0 throws" begin
+        @test_throws ArgumentError SciMLBase.remake(ode; u0 = [1.0, 2.0])
+    end
+
+    @testset "foreign p throws (never silently dropped)" begin
+        @test_throws ArgumentError SciMLBase.remake(ode; p = (1.0, 2.0))
+        @test_throws ArgumentError SciMLBase.remake(ode; p = [1.0, 2.0])
+    end
+
+    @testset "same-cache p accepted (solve specialization path)" begin
+        ode2 = SciMLBase.remake(ode; u0 = ode.u0, p = ode.p, tspan = ode.tspan)
+        @test ode2 isa SciMLBase.ODEProblem
+        @test ode2.p.prob.cfl == ode.p.prob.cfl
+    end
+
+    @testset "compatible cache p is honored" begin
+        prob2 = remake(prob; cfl = 0.25)
+        cache2 = FiniteVolumeMethod.build_cache(prob2)
+        ode2 = SciMLBase.remake(ode; p = cache2)
+        @test ode2.p.prob.cfl == 0.25
+    end
+
+    @testset "foreign f throws" begin
+        other_f = (du, u, p, t) -> nothing
+        @test_throws ArgumentError SciMLBase.remake(ode; f = other_f)
+    end
+end

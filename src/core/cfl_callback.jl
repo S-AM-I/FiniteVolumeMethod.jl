@@ -11,8 +11,13 @@
 Create a `DiscreteCallback` that enforces CFL timestep control.
 
 After each step, the callback unfolds the current state into the
-ghost-padded array, computes the CFL-limited dt, and proposes it
-for the next step via `set_proposed_dt!`.
+ghost-padded array, computes the CFL-limited dt, and sets it as the
+next step size. Following Trixi.jl's `StepsizeCallback`, the dt is
+applied through three channels so it takes effect for both adaptive
+and non-adaptive (`adaptive = false`) integrators:
+`set_proposed_dt!` (adaptive proposal), `integrator.opts.dtmax`
+(adaptive clamp), and `integrator.dtcache` (the step size actually
+used by fixed-step integrators, which ignore `set_proposed_dt!`).
 """
 function cfl_stepsize_callback(cache::AbstractSemidiscreteCache)
     condition = (u, t, integrator) -> true
@@ -23,7 +28,17 @@ function cfl_stepsize_callback(cache::AbstractSemidiscreteCache)
         if dt_cfl > t_remaining && t_remaining > zero(t_remaining)
             dt_cfl = t_remaining
         end
-        return set_proposed_dt!(integrator, dt_cfl)
+        set_proposed_dt!(integrator, dt_cfl)
+        # Fixed-step integrators (adaptive = false) ignore the proposed dt;
+        # mirror Trixi's StepsizeCallback and set the step size directly.
+        if hasproperty(integrator, :opts) && hasproperty(integrator.opts, :dtmax)
+            integrator.opts.dtmax = dt_cfl
+        end
+        if hasproperty(integrator, :dtcache)
+            integrator.dtcache = dt_cfl
+        end
+        SciMLBase.u_modified!(integrator, false)
+        return nothing
     end
     return DiscreteCallback(condition, affect!; save_positions = (false, false))
 end

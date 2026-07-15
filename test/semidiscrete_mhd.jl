@@ -265,3 +265,44 @@ end
         @test w_leg[5] > 0
     end
 end
+
+# ============================================================
+# SciMLStructures repack round-trip for MHD (Dim preserved)
+# ============================================================
+using SciMLBase: SciMLBase
+import SciMLBase.SciMLStructures as SciMLStructuresMod
+
+@testset "SciMLStructures Tunable repack for MHD caches" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{1}(eos)
+    mesh = StructuredMesh1D(0.0, 1.0, 16)
+    ic = x -> SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.75, 1.0, 0.0)
+    prob = HyperbolicProblem(
+        law, mesh, HLLDSolver(), CellCenteredMUSCL(),
+        TransmissiveBC(), TransmissiveBC(), ic;
+        final_time = 0.1, cfl = 0.5
+    )
+    cache = FiniteVolumeMethod.build_cache(prob)
+
+    vals, repack, alias = SciMLStructuresMod.canonicalize(SciMLStructuresMod.Tunable(), cache)
+    @test vals == [5.0 / 3.0, 0.5]
+
+    # Round-trip with unchanged values preserves everything
+    cache_rt = repack(copy(vals))
+    @test cache_rt.prob.law isa IdealMHDEquations{1}
+    @test cache_rt.prob.law.eos.gamma == 5.0 / 3.0
+    @test cache_rt.prob.cfl == 0.5
+
+    # Repack with new values: Dim parameter must be preserved
+    # (this used to throw a MethodError — IdealMHDEquations has no
+    # Dim-less constructor).
+    cache2 = repack([1.4, 0.9])
+    @test cache2.prob.law isa IdealMHDEquations{1}
+    @test cache2.prob.law.eos.gamma == 1.4
+    @test cache2.prob.cfl == 0.9
+
+    # SciMLStructures.replace also works
+    cache3 = SciMLStructuresMod.replace(SciMLStructuresMod.Tunable(), cache, [2.0, 0.3])
+    @test cache3.prob.law isa IdealMHDEquations{1}
+    @test cache3.prob.law.eos.gamma == 2.0
+end

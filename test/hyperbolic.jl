@@ -499,3 +499,107 @@ end
     @test λ_min ≈ 0.5 - c
     @test λ_max ≈ 0.5 + c
 end
+
+# ============================================================
+# Per-cell dx: nonuniform 1D meshes (CFL + flux differencing)
+# ============================================================
+
+# Minimal nonuniform 1D mesh implementing the AbstractMesh interface.
+struct NonUniformTestMesh1D <: FiniteVolumeMethod.AbstractMesh{1}
+    edges::Vector{Float64}
+end
+FiniteVolumeMethod.ncells(m::NonUniformTestMesh1D) = length(m.edges) - 1
+FiniteVolumeMethod.cell_center(m::NonUniformTestMesh1D, i::Int) = 0.5 * (m.edges[i] + m.edges[i + 1])
+FiniteVolumeMethod.cell_volume(m::NonUniformTestMesh1D, i::Int) = m.edges[i + 1] - m.edges[i]
+
+@testset "1D solver honors per-cell dx (nonuniform mesh)" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{1}(eos)
+    mesh = NonUniformTestMesh1D([0.0, 0.1, 0.3, 0.6, 1.0])
+    ic = x -> SVector(1.0, 1.0, 1.0)
+    prob = HyperbolicProblem(
+        law, mesh, HLLCSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(), ic;
+        final_time = 10.0, cfl = 0.5
+    )
+
+    # CFL must be limited by the smallest cell (dx = 0.1), not cell 1's dx
+    U = FiniteVolumeMethod.initialize_1d(prob)
+    dt = FiniteVolumeMethod.compute_dt(prob, U, 0.0)
+    w = SVector(1.0, 1.0, 1.0)
+    λ = max_wave_speed(law, w, 1)
+    @test dt ≈ 0.5 * 0.1 / λ rtol = 1.0e-12
+
+    # A uniform state must stay exactly uniform under flux differencing
+    # regardless of the per-cell volumes (free-stream preservation).
+    dU = similar(U)
+    FiniteVolumeMethod.hyperbolic_rhs!(dU, U, prob, 0.0)
+    ng = FiniteVolumeMethod._nghost_for_reconstruction(prob.reconstruction)
+    for i in 1:4
+        @test maximum(abs.(dU[i + ng])) < 1.0e-13
+    end
+end
+
+@testset "1D RHS face-loop restructure is bitwise identical (Sod)" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{1}(eos)
+    mesh = StructuredMesh1D(0.0, 1.0, 64)
+    ic = x -> x < 0.5 ? SVector(1.0, 0.0, 1.0) : SVector(0.125, 0.0, 0.1)
+    prob = HyperbolicProblem(
+        law, mesh, HLLCSolver(), CellCenteredMUSCL(),
+        TransmissiveBC(), TransmissiveBC(), ic; final_time = 0.2
+    )
+    nc = 64
+    ng = FiniteVolumeMethod._nghost_for_reconstruction(prob.reconstruction)
+    U = FiniteVolumeMethod.initialize_1d(prob)
+    dU_new = similar(U)
+    FiniteVolumeMethod.hyperbolic_rhs!(dU_new, U, prob, 0.0)
+
+    # Reference: the pre-restructure per-cell double-flux computation
+    dU_ref = similar(U)
+    dx = FiniteVolumeMethod.cell_volume(mesh, 1)
+    FiniteVolumeMethod.apply_boundary_conditions!(U, prob, ng, 0.0)
+    for i in 1:nc
+        wLl, wRl = FiniteVolumeMethod._reconstruct_face(prob.reconstruction, law, U, i - 1, nc)
+        F_left = solve_riemann(prob.riemann_solver, law, wLl, wRl, 1)
+        wLr, wRr = FiniteVolumeMethod._reconstruct_face(prob.reconstruction, law, U, i, nc)
+        F_right = solve_riemann(prob.riemann_solver, law, wLr, wRr, 1)
+        dU_ref[i + ng] = -(F_right - F_left) / dx
+    end
+    @test all(i -> dU_new[i + ng] === dU_ref[i + ng], 1:nc)
+end
+
+# ============================================================
+# Generic ReflectiveBC via normal_velocity_index
+# ============================================================
+@testset "ReflectiveBC generic fallback (ShallowWater)" begin
+    law = ShallowWaterEquations{1}(9.81)
+    ng = 2
+    nc = 4
+    U = [zero(SVector{2, Float64}) for _ in 1:(nc + 2 * ng)]
+    for i in 1:nc
+        U[i + ng] = primitive_to_conserved(law, SVector(2.0, 1.0 * i))
+    end
+    # Previously this threw a MethodError; now the generic fallback applies.
+    FiniteVolumeMethod.apply_bc_left!(U, ReflectiveBC(), law, nc, ng, 0.0)
+    FiniteVolumeMethod.apply_bc_right!(U, ReflectiveBC(), law, nc, ng, 0.0)
+    for g in 1:ng
+        w_int = conserved_to_primitive(law, U[ng + g])
+        w_gho = conserved_to_primitive(law, U[ng + 1 - g])
+        @test w_gho[1] ≈ w_int[1]
+        @test w_gho[2] ≈ -w_int[2]
+        w_int_r = conserved_to_primitive(law, U[nc + ng + 1 - g])
+        w_gho_r = conserved_to_primitive(law, U[nc + ng + g])
+        @test w_gho_r[1] ≈ w_int_r[1]
+        @test w_gho_r[2] ≈ -w_int_r[2]
+    end
+end
+
+# A law without the velocity-index interface must fail loudly, not silently.
+struct ReflectiveBCUnsupportedLaw <: FiniteVolumeMethod.AbstractConservationLaw{1} end
+
+@testset "ReflectiveBC unsupported law errors informatively" begin
+    @test_throws ArgumentError FiniteVolumeMethod._reflect_primitive(
+        ReflectiveBCUnsupportedLaw(), SVector(1.0, 2.0), 1
+    )
+end

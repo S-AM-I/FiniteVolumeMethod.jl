@@ -18,50 +18,9 @@
 # ============================================================
 # 2D ReflectiveBC for MHD
 # ============================================================
-
-# Left wall: negate vx (index 2)
-function apply_bc_2d_left!(U::AbstractMatrix, ::ReflectiveBC, law::IdealMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for j in 1:(ny + 4)
-        w1 = conserved_to_primitive(law, U[3, j])
-        w2 = conserved_to_primitive(law, U[4, j])
-        U[2, j] = primitive_to_conserved(law, SVector(w1[1], -w1[2], w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[1, j] = primitive_to_conserved(law, SVector(w2[1], -w2[2], w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
-
-# Right wall: negate vx
-function apply_bc_2d_right!(U::AbstractMatrix, ::ReflectiveBC, law::IdealMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for j in 1:(ny + 4)
-        w1 = conserved_to_primitive(law, U[nx + 2, j])
-        w2 = conserved_to_primitive(law, U[nx + 1, j])
-        U[nx + 3, j] = primitive_to_conserved(law, SVector(w1[1], -w1[2], w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[nx + 4, j] = primitive_to_conserved(law, SVector(w2[1], -w2[2], w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
-
-# Bottom wall: negate vy (index 3)
-function apply_bc_2d_bottom!(U::AbstractMatrix, ::ReflectiveBC, law::IdealMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for i in 1:(nx + 4)
-        w1 = conserved_to_primitive(law, U[i, 3])
-        w2 = conserved_to_primitive(law, U[i, 4])
-        U[i, 2] = primitive_to_conserved(law, SVector(w1[1], w1[2], -w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[i, 1] = primitive_to_conserved(law, SVector(w2[1], w2[2], -w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
-
-# Top wall: negate vy
-function apply_bc_2d_top!(U::AbstractMatrix, ::ReflectiveBC, law::IdealMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for i in 1:(nx + 4)
-        w1 = conserved_to_primitive(law, U[i, ny + 2])
-        w2 = conserved_to_primitive(law, U[i, ny + 1])
-        U[i, ny + 3] = primitive_to_conserved(law, SVector(w1[1], w1[2], -w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[i, ny + 4] = primitive_to_conserved(law, SVector(w2[1], w2[2], -w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
+# Handled by the generic ng-aware ReflectiveBC fallbacks in
+# boundary_conditions_2d.jl via normal_velocity_index(::IdealMHDEquations).
+# (The previous law-specific methods here hard-coded a 2-ghost layout.)
 
 # ============================================================
 # CT Periodic Enforcement
@@ -124,7 +83,11 @@ function _mhd_compute_fluxes_2d!(
     solver = prob.riemann_solver
     recon = prob.reconstruction
     N = nvariables(law)
-    ng = _nghost_for_reconstruction(recon)
+    # Ghost layers from the padded array itself: the legacy path pads with
+    # the reconstruction's nghost while the SciML cache always pads 2, so
+    # deriving ng from the reconstruction misindexes whenever the two differ
+    # (e.g. NoReconstruction used to BoundsError here).
+    ng = (size(U, 1) - nx) ÷ 2
     FT = eltype(U[ng + 1, ng + 1])
 
     # Apply BCs to fill ghost cells
@@ -137,24 +100,24 @@ function _mhd_compute_fluxes_2d!(
     end
 
     # ---- X-direction sweeps (including ghost rows) ----
-    # row_idx = 1:ny+2 maps to padded jj = 2:ny+3
+    # row_idx = 1:ny+2 maps to padded jj = (ng+1)-1 : ny+ng+1
     for row_idx in 1:(ny + 2)
-        jj = row_idx + 1  # padded j index
+        jj = row_idx + ng - 1  # padded j index
         for face_i in 1:(nx + 1)
-            iL = face_i + 1
-            iR = face_i + 2
+            iL = face_i + ng - 1
+            iR = iL + 1
             wL_face, wR_face = _reconstruct_face_2d(recon, law, U, iL, iR, jj, 1, nx)
             Fx_all[face_i, row_idx] = solve_riemann(solver, law, wL_face, wR_face, 1)
         end
     end
 
     # ---- Y-direction sweeps (including ghost columns) ----
-    # col_idx = 1:nx+2 maps to padded ii = 2:nx+3
+    # col_idx = 1:nx+2 maps to padded ii = (ng+1)-1 : nx+ng+1
     for col_idx in 1:(nx + 2)
-        ii = col_idx + 1  # padded i index
+        ii = col_idx + ng - 1  # padded i index
         for face_j in 1:(ny + 1)
-            jL = face_j + 1
-            jR = face_j + 2
+            jL = face_j + ng - 1
+            jR = jL + 1
             wL_face, wR_face = _reconstruct_face_2d_y(recon, law, U, ii, jL, jR, ny)
             Fy_all[col_idx, face_j] = solve_riemann(solver, law, wL_face, wR_face, 2)
         end
@@ -232,15 +195,18 @@ function solve_hyperbolic(
         "`sciml_problem(prob; vector_potential = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem2D{<:IdealMHDEquations{2}})", backend)
+    _validate_ct_reconstruction(prob.reconstruction)
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy
     law = prob.law
     N = nvariables(law)  # 8
-    ng = _nghost_for_reconstruction(prob.reconstruction)
+    # The CT machinery (face_to_cell_B!, EMF corner loops) assumes a fixed
+    # 2-ghost layout, so pad with 2 layers regardless of the reconstruction.
+    ng = 2
 
     # Initialize cell-centered solution (padded array)
-    U = initialize_2d(prob)
+    U = initialize_2d(prob; nghost = ng)
     FT = eltype(U[3, 3])
 
     # Initialize CT data (face-centered B)

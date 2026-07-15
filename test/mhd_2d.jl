@@ -668,3 +668,29 @@ end
         @test divB_val > 0
     end
 end
+
+# ============================================================
+# CT path rejects reconstructions needing more than 2 ghosts
+# ============================================================
+@testset "WENO5 on the CT path errors cleanly" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    law = IdealMHDEquations{2}(eos)
+    mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 8, 8)
+    ic = (x, y) -> SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.1, 0.1, 0.0)
+    prob = HyperbolicProblem2D(
+        law, mesh, HLLDSolver(), WENO5(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        ic; final_time = 0.1
+    )
+    @test_throws ArgumentError build_mhd_ct_cache(prob)
+
+    # 2-ghost schemes still build fine
+    prob_ok = HyperbolicProblem2D(
+        law, mesh, HLLDSolver(), CellCenteredMUSCL(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+        ic; final_time = 0.1
+    )
+    @test build_mhd_ct_cache(prob_ok) isa FiniteVolumeMethod.MHDCTCache2D
+end

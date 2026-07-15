@@ -15,7 +15,13 @@
 # where n_fine is the number of fine faces covering one coarse face
 # (2 in 2D, 4 in 3D).
 #
-# This ensures global conservation across refinement level interfaces.
+# When applied, this restores global conservation across refinement
+# level interfaces.
+#
+# NOTE: these routines are currently NOT called by solve_amr,
+# solve_amr_subcycled, or the AMR ODEProblem RHS — no flux correction
+# is performed during AMR time stepping. They are exported for
+# standalone use and are exercised directly by tests.
 
 """
     FluxRegister{N, FT, Dim}

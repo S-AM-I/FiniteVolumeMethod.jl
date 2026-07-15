@@ -1180,3 +1180,37 @@ end
         @test W_mhd[ix, iy, iz][5] ≈ W_euler[ix, iy, iz][5] atol = 1.0e-10  # P
     end
 end
+
+# ============================================================
+# HLLD dir == 3 (z-face) regression
+# ============================================================
+# A 1D Riemann problem oriented along z must reproduce the dir = 1
+# solution with components rotated by the cyclic map (x,y,z) -> (y,z,x).
+@testset "HLLD z-face flux matches rotated x-face flux" begin
+    law = IdealMHDEquations{3}(IdealGasEOS(gamma = 5.0 / 3.0))
+    solver = HLLDSolver()
+
+    wL = SVector(1.0, 0.4, 0.3, 0.2, 1.0, 0.75, 1.0, 0.5)
+    wR = SVector(0.6, -0.2, 0.1, -0.3, 0.8, 0.75, -1.0, 0.2)
+
+    # Cyclic rotation: new (vx,vy,vz) = old (vy,vz,vx), same for B, so the
+    # old x-direction becomes the new z-direction.
+    rot(w) = SVector(w[1], w[3], w[4], w[2], w[5], w[7], w[8], w[6])
+
+    F1 = solve_riemann(solver, law, wL, wR, 1)
+    F3 = solve_riemann(solver, law, rot(wL), rot(wR), 3)
+    expected = rot(F1)
+    for k in 1:8
+        @test F3[k] ≈ expected[k] atol = 1.0e-13
+    end
+
+    # Also check a state on the other side of the contact (SM < 0 branch)
+    wL2 = SVector(0.6, -0.6, 0.1, -0.3, 0.8, 0.75, -1.0, 0.2)
+    wR2 = SVector(1.0, -0.9, 0.3, 0.2, 1.0, 0.75, 1.0, 0.5)
+    G1 = solve_riemann(solver, law, wL2, wR2, 1)
+    G3 = solve_riemann(solver, law, rot(wL2), rot(wR2), 3)
+    expectedG = rot(G1)
+    for k in 1:8
+        @test G3[k] ≈ expectedG[k] atol = 1.0e-13
+    end
+end

@@ -21,7 +21,7 @@ for the 3D IdealMHDEquations.
     B_sq = Bx^2 + By^2 + Bz^2
     P_tot = P + 0.5 * B_sq
     KE = 0.5 * ρ * (vx^2 + vy^2 + vz^2)
-    E = P / (law.eos.gamma - 1) + KE + 0.5 * B_sq
+    E = ρ * internal_energy(law.eos, ρ, P) + KE + 0.5 * B_sq
 
     if dir == 1  # x-flux
         return SVector(

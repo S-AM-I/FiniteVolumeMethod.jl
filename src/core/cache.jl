@@ -245,6 +245,30 @@ function _nghost_for_reconstruction(rec)
 end
 
 """
+    _validate_ct_reconstruction(reconstruction)
+
+Throw an informative `ArgumentError` when `reconstruction` needs more than
+2 ghost cells. The constrained-transport MHD/GRMHD paths (caches and flux
+loops) hard-code a 2-ghost-cell layout, so wider stencils (e.g. WENO5 with
+nghost = 3) would read out of bounds or misaligned data.
+"""
+function _validate_ct_reconstruction(reconstruction)
+    ng_recon = _nghost_for_reconstruction(reconstruction)
+    if ng_recon > 2
+        throw(
+            ArgumentError(
+                "The constrained-transport MHD/GRMHD solvers assume a 2-ghost-cell " *
+                    "layout, but $(typeof(reconstruction)) requires nghost = $ng_recon " *
+                    "ghost cells. WENO5 (and any nghost > 2 scheme) is not supported " *
+                    "on the CT path; use a 2-ghost reconstruction such as " *
+                    "CellCenteredMUSCL, WENO3, or PPMReconstruction."
+            )
+        )
+    end
+    return nothing
+end
+
+"""
     build_cache(prob, backend::AbstractBackend = CPUBackend())
 
 Build a pre-allocated workspace cache for the given problem.
@@ -329,6 +353,7 @@ end
 """Build a pre-allocated `MHDCTCache2D` (or `MHDCTCache3D`) for MHD constrained-transport problems."""
 function build_mhd_ct_cache(prob::HyperbolicProblem2D, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_mhd_ct_cache", backend)
+    _validate_ct_reconstruction(prob.reconstruction)
     nx, ny = prob.mesh.nx, prob.mesh.ny
     N = nvariables(prob.law)
     ng = 2
@@ -362,6 +387,7 @@ function build_mhd_ct_cache(
         backend::AbstractBackend = CPUBackend(),
     )
     _cpu_backend_only("build_mhd_ct_cache", backend)
+    _validate_ct_reconstruction(prob.reconstruction)
     nx, ny, nz = prob.mesh.nx, prob.mesh.ny, prob.mesh.nz
     N = nvariables(prob.law)
     ng = 2
@@ -396,6 +422,8 @@ end
 """Build a pre-allocated `GRMHDCTCache2D` for GRMHD constrained-transport problems with metric data."""
 function build_grmhd_ct_cache(prob::HyperbolicProblem2D{<:GRMHDEquations{2}}, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_grmhd_ct_cache", backend)
+    _validate_ct_reconstruction(prob.reconstruction)
+    _warn_grmhd_flat_space_only(prob.law)
     nx, ny = prob.mesh.nx, prob.mesh.ny
     N = nvariables(prob.law)
     ng = 2

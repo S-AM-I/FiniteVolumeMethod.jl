@@ -59,8 +59,67 @@ end
 Reflective (slip wall) boundary condition. The normal velocity component
 is negated in the ghost cells while density, pressure, and tangential
 velocities are copied.
+
+Supported for any conservation law that implements
+[`normal_velocity_index`](@ref); laws without that method throw an
+informative error at the first boundary application.
 """
 struct ReflectiveBC <: AbstractHyperbolicBC end
+
+"""
+    normal_velocity_index(law, dir::Int) -> Union{Int, Nothing}
+
+Return the index of the `dir`-direction velocity component in the law's
+*primitive* variable vector, or `nothing` if the law does not expose one.
+
+Used by the generic [`ReflectiveBC`](@ref) fallbacks to negate the normal
+velocity in ghost cells. Laws with the standard `[ρ, vx, (vy, vz), P, ...]`
+layout return `dir + 1`.
+"""
+normal_velocity_index(law, dir::Int) = nothing
+
+normal_velocity_index(::EulerEquations, dir::Int) = dir + 1
+
+"""
+    _reflect_primitive(law, w, dir) -> SVector
+
+Return the primitive state `w` with the `dir`-direction velocity component
+negated, using [`normal_velocity_index`](@ref). Throws an informative
+`ArgumentError` when the law does not implement the interface.
+"""
+@inline function _reflect_primitive(law, w, dir::Int)
+    idx = normal_velocity_index(law, dir)
+    idx === nothing && throw(
+        ArgumentError(
+            "ReflectiveBC is not supported for $(typeof(law)): no " *
+                "`normal_velocity_index(law, dir)` method is defined. Define " *
+                "`FiniteVolumeMethod.normal_velocity_index(::$(nameof(typeof(law))), dir::Int)` " *
+                "returning the primitive-variable index of the dir-direction " *
+                "velocity, or use a law-specific ReflectiveBC method."
+        )
+    )
+    return Base.setindex(w, -w[idx], idx)
+end
+
+# Generic 1D ReflectiveBC fallbacks: negate the normal (x) velocity via the
+# law's primitive velocity index. Law-specific methods (Euler, MHD, SRMHD,
+# ...) take precedence by dispatch.
+function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law, ncells::Int, ng::Int, t)
+    for g in 1:ng
+        w = conserved_to_primitive(law, U[ng + g])
+        U[ng + 1 - g] = primitive_to_conserved(law, _reflect_primitive(law, w, 1))
+    end
+    return nothing
+end
+
+function apply_bc_right!(U::AbstractVector, ::ReflectiveBC, law, ncells::Int, ng::Int, t)
+    last_interior = ncells + ng
+    for g in 1:ng
+        w = conserved_to_primitive(law, U[last_interior + 1 - g])
+        U[last_interior + g] = primitive_to_conserved(law, _reflect_primitive(law, w, 1))
+    end
+    return nothing
+end
 
 function apply_bc_left!(U::AbstractVector, ::ReflectiveBC, law::EulerEquations{1}, ncells::Int, ng::Int, t)
     # Reflect: negate velocity

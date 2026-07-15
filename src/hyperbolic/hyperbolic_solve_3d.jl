@@ -21,12 +21,12 @@
 Create the padded 3D solution array from the initial condition.
 Returns an array of size `(nx+4) x (ny+4) x (nz+4)`.
 """
-function initialize_3d(prob::HyperbolicProblem3D)
+function initialize_3d(prob::HyperbolicProblem3D; nghost::Union{Nothing, Int} = nothing)
     law = prob.law
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     N = nvariables(law)
-    ng = _nghost_for_reconstruction(prob.reconstruction)
+    ng = nghost === nothing ? _nghost_for_reconstruction(prob.reconstruction) : nghost
 
     # Determine element type from first cell
     x0, y0, z0 = cell_center(mesh, 1)
@@ -65,7 +65,9 @@ function compute_dt_3d(prob::HyperbolicProblem3D, U::AbstractArray{T, 3}, t) whe
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
     cfl = prob.cfl
     dx, dy, dz = mesh.dx, mesh.dy, mesh.dz
-    ng = _nghost_for_reconstruction(prob.reconstruction)
+    # Ghost layers from the padded array itself: the CT solvers always pad
+    # 2 layers regardless of the reconstruction's nghost.
+    ng = (size(U, 1) - nx) ÷ 2
 
     max_speed = zero(dx)
     for iz in 1:nz, iy in 1:ny, ix in 1:nx

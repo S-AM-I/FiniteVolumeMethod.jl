@@ -40,8 +40,12 @@ end
 """
     compute_dt(prob::HyperbolicProblem, U::AbstractVector, t) -> FT
 
-Compute the time step from the CFL condition:
-  `Δt = cfl * Δx / max(|λ|)`
+Compute the time step from the CFL condition, per cell:
+  `Δt = cfl * min_i(Δx_i / max(|λ_i|))`
+
+Uses the per-cell width `cell_volume(mesh, i)` so nonuniform 1D meshes
+are handled correctly (for a uniform mesh this reduces to
+`cfl * Δx / max(|λ|)`).
 """
 function compute_dt(prob::HyperbolicProblem, U::AbstractVector, t)
     law = prob.law
@@ -50,14 +54,15 @@ function compute_dt(prob::HyperbolicProblem, U::AbstractVector, t)
     cfl = prob.cfl
     ng = _nghost_for_reconstruction(prob.reconstruction)
 
-    λ_max = zero(mesh.dx)
+    dx1 = cell_volume(mesh, 1)
+    dt_min = typemax(typeof(dx1))
     for i in 1:nc
         w = conserved_to_primitive(law, U[i + ng])
         λ = max_wave_speed(law, w, 1)
-        λ_max = max(λ_max, λ)
+        dt_min = min(dt_min, cell_volume(mesh, i) / λ)
     end
 
-    dt = cfl * cell_volume(mesh, 1) / λ_max
+    dt = cfl * dt_min
 
     # Don't overshoot final time
     if t + dt > prob.final_time
@@ -101,7 +106,6 @@ function hyperbolic_rhs!(dU::AbstractVector, U::AbstractVector, prob::Hyperbolic
     nc = ncells(mesh)
     solver = prob.riemann_solver
     recon = prob.reconstruction
-    dx = cell_volume(mesh, 1)
 
     ng = _nghost_for_reconstruction(recon)
 
@@ -115,18 +119,23 @@ function hyperbolic_rhs!(dU::AbstractVector, U::AbstractVector, prob::Hyperbolic
     #   Face 0: left boundary face (between ghost and cell 1)
     #   Face i (1 <= i <= nc-1): internal face
     #   Face nc: right boundary face (between cell nc and ghost)
+    #
+    # Each face flux is computed exactly once; the flux at cell i's right
+    # face is reused as the left-face flux of cell i+1. Flux differencing
+    # uses the per-cell width so nonuniform 1D meshes are handled correctly.
 
-    # Update each interior cell
+    # Face 0 (left boundary face)
+    wL_left, wR_left = _reconstruct_face(recon, law, U, 0, nc)
+    F_left = solve_riemann(solver, law, wL_left, wR_left, 1)
+
     for i in 1:nc
-        # Left face flux (face i-1 in 0-based: between cell i-1 and cell i)
-        wL_left, wR_left = _reconstruct_face(recon, law, U, i - 1, nc)
-        F_left = solve_riemann(solver, law, wL_left, wR_left, 1)
-
         # Right face flux (face i in 0-based: between cell i and cell i+1)
         wL_right, wR_right = _reconstruct_face(recon, law, U, i, nc)
         F_right = solve_riemann(solver, law, wL_right, wR_right, 1)
 
-        dU[i + ng] = -(F_right - F_left) / dx
+        dU[i + ng] = -(F_right - F_left) / cell_volume(mesh, i)
+
+        F_left = F_right
     end
 
     return nothing

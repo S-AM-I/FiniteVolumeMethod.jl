@@ -76,14 +76,17 @@ function solve_hyperbolic(
         "`sciml_problem(prob; vector_potential = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem2D{<:SRMHDEquations{2}})", backend)
+    _validate_ct_reconstruction(prob.reconstruction)
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy
     law = prob.law
     N = nvariables(law)
 
-    ng = _nghost_for_reconstruction(prob.reconstruction)
-    U = initialize_2d(prob)
+    # The CT machinery (face_to_cell_B!, EMF loops) assumes a fixed
+    # 2-ghost layout, so pad with 2 layers regardless of the reconstruction.
+    ng = 2
+    U = initialize_2d(prob; nghost = ng)
     FT = eltype(U[ng + 1, ng + 1])
 
     ct = CTData2D(nx, ny, FT)

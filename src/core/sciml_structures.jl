@@ -50,7 +50,7 @@ end
 
 # Law reconstruction: create a new law with a new EOS
 _rebuild_law(law::EulerEquations{D}, eos) where {D} = EulerEquations{D}(eos)
-_rebuild_law(law::IdealMHDEquations, eos) = IdealMHDEquations(eos)
+_rebuild_law(law::IdealMHDEquations{D}, eos) where {D} = IdealMHDEquations{D}(eos)
 _rebuild_law(law::NavierStokesEquations{D}, eos) where {D} =
     NavierStokesEquations{D}(eos; mu = law.mu, Pr = law.Pr)
 _rebuild_law(law, _) = law  # fallback — no EOS to replace

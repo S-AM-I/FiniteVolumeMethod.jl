@@ -254,11 +254,19 @@ end
 # Accepts keyword args for the physics problem fields (cfl, final_time, etc.)
 # as well as `vector_potential` for MHD/CT problems.
 #
-# NOTE: SciML's `solve` internally calls `remake(prob; f=..., u0=..., p=..., tspan=...)`
-# to specialize the ODEFunction. We must accept and ignore these standard ODEProblem
-# kwargs so they don't get forwarded to the inner physics problem's `remake`.
+# Standard ODEProblem kwargs are handled explicitly:
+# - `u0` and `tspan` are honored: the rebuilt problem uses them directly.
+# - `p` is honored only when it is a semidiscrete cache (the cache-as-parameter
+#   design means `p` *is* the discretization); the physics problem inside the
+#   provided cache becomes the base for the rebuild. Any other `p` throws an
+#   informative `ArgumentError` — it is never silently dropped.
+# - `f` cannot be replaced (the RHS closure is generated from the physics
+#   problem); passing a different `f` throws.
+# NOTE: SciML's `solve` may internally call `remake(prob; u0=..., p=..., tspan=...)`
+# with the problem's *own* (possibly type-promoted) values to specialize the
+# ODEFunction; those calls are honored by the passthrough logic above.
 
-# Standard ODEProblem kwargs that SciML may pass during solve specialization
+# Structural ODEProblem kwargs that never map to physics-problem fields
 const _ODE_REMAKE_KEYS = (:f, :u0, :p, :tspan, :prob_type, :problem_type, :kwargs, :callback)
 
 function _filter_physics_kwargs(; kwargs...)
@@ -274,65 +282,158 @@ function _rebuild_semidiscrete_problem(physics_prob; callback = nothing, kwargs.
     return ODEProblem(physics_prob; callback, kwargs...)
 end
 
+# `missing` is the SciMLBase remake convention for "not provided"; `nothing`
+# means "recompute from defaults", which for us is the rebuilt problem's value.
+_ode_override_unset(x) = x === missing || x === nothing
+
+# Resolve the base physics problem for a semidiscrete remake, honoring a
+# user-provided `p` when it is a compatible semidiscrete cache.
+function _remake_base_physics_prob(ode_prob, p)
+    _ode_override_unset(p) && return ode_prob.p.prob
+    p === ode_prob.p && return ode_prob.p.prob
+    if p isa AbstractSemidiscreteCache && hasproperty(p, :prob)
+        return p.prob
+    end
+    throw(
+        ArgumentError(
+            "remake: cannot replace `p` of a semidiscrete ODEProblem with a " *
+                "$(typeof(p)). The parameter object is a pre-allocated semidiscrete " *
+                "cache (cache-as-parameter design); pass a compatible cache, or " *
+                "remake physics fields directly (e.g. `remake(ode_prob; cfl = ..., " *
+                "law = ...)`), or rebuild via `ODEProblem(physics_prob)`."
+        )
+    )
+end
+
+function _remake_check_f(ode_prob, f)
+    _ode_override_unset(f) && return nothing
+    f === ode_prob.f && return nothing
+    # SciML's solve specialization may pass a re-wrapped ODEFunction (or the
+    # raw closure) around the *same* underlying RHS — accept those, since the
+    # rebuild regenerates an equivalent RHS from the physics problem anyway.
+    raw_old = SciMLBase.unwrapped_f(ode_prob.f)
+    raw_new = SciMLBase.unwrapped_f(f)
+    (raw_new === raw_old || raw_new === ode_prob.f.f) && return nothing
+    throw(
+        ArgumentError(
+            "remake: cannot replace `f` of a semidiscrete ODEProblem — the RHS " *
+                "closure is generated from the physics problem and its cache. " *
+                "Remake physics fields instead (e.g. `remake(ode_prob; law = ...)`)."
+        )
+    )
+end
+
+# Apply u0/tspan overrides to a freshly rebuilt semidiscrete ODEProblem.
+function _apply_ode_overrides(new_ode, u0, tspan)
+    _ode_override_unset(u0) && _ode_override_unset(tspan) && return new_ode
+    new_u0 = _ode_override_unset(u0) ? new_ode.u0 : u0
+    if new_u0 !== new_ode.u0
+        length(new_u0) == length(new_ode.u0) || throw(
+            ArgumentError(
+                "remake: `u0` has length $(length(new_u0)) but the semidiscrete " *
+                    "state has length $(length(new_ode.u0)) (flat interior-cell " *
+                    "vector). Provide a flat state of matching length."
+            )
+        )
+    end
+    new_tspan = _ode_override_unset(tspan) ? new_ode.tspan : tspan
+    return SciMLBase.ODEProblem{SciMLBase.isinplace(new_ode)}(
+        new_ode.f, new_u0, new_tspan, new_ode.p; new_ode.kwargs...
+    )
+end
+
 """
     SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache1D}; kwargs...)
 
 Remake a semidiscrete 1D ODEProblem. Accepts any keyword argument valid for
-`remake(::HyperbolicProblem; ...)` (e.g. `cfl`, `final_time`, `initial_condition`).
+`remake(::HyperbolicProblem; ...)` (e.g. `cfl`, `final_time`, `initial_condition`),
+plus the standard ODEProblem kwargs `u0` and `tspan` (used directly by the
+rebuilt problem) and `p` (must be a compatible semidiscrete cache).
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache1D};
+        f = missing,
+        u0 = missing,
+        p = missing,
+        tspan = missing,
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    _remake_check_f(ode_prob, f)
+    base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
-    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return _rebuild_semidiscrete_problem(physics_prob; callback)
+    physics_prob = SciMLBase.remake(base_prob; physics_kwargs...)
+    new_ode = _rebuild_semidiscrete_problem(physics_prob; callback)
+    return _apply_ode_overrides(new_ode, u0, tspan)
 end
 
 """
     SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache2D}; kwargs...)
 
-Remake a semidiscrete 2D ODEProblem.
+Remake a semidiscrete 2D ODEProblem. Honors `u0`/`tspan` passthrough; see the
+1D method for the `p`/`f` contract.
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache2D};
+        f = missing,
+        u0 = missing,
+        p = missing,
+        tspan = missing,
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    _remake_check_f(ode_prob, f)
+    base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
-    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return _rebuild_semidiscrete_problem(physics_prob; callback)
+    physics_prob = SciMLBase.remake(base_prob; physics_kwargs...)
+    new_ode = _rebuild_semidiscrete_problem(physics_prob; callback)
+    return _apply_ode_overrides(new_ode, u0, tspan)
 end
 
 """
     SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache3D}; kwargs...)
 
-Remake a semidiscrete 3D ODEProblem.
+Remake a semidiscrete 3D ODEProblem. Honors `u0`/`tspan` passthrough; see the
+1D method for the `p`/`f` contract.
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache3D};
+        f = missing,
+        u0 = missing,
+        p = missing,
+        tspan = missing,
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    _remake_check_f(ode_prob, f)
+    base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
-    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return _rebuild_semidiscrete_problem(physics_prob; callback)
+    physics_prob = SciMLBase.remake(base_prob; physics_kwargs...)
+    new_ode = _rebuild_semidiscrete_problem(physics_prob; callback)
+    return _apply_ode_overrides(new_ode, u0, tspan)
 end
 
 """
     SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:UnstructuredCache}; kwargs...)
 
-Remake a semidiscrete unstructured ODEProblem.
+Remake a semidiscrete unstructured ODEProblem. Honors `u0`/`tspan` passthrough;
+see the 1D method for the `p`/`f` contract.
 """
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:UnstructuredCache};
+        f = missing,
+        u0 = missing,
+        p = missing,
+        tspan = missing,
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    _remake_check_f(ode_prob, f)
+    base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
-    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return _rebuild_semidiscrete_problem(physics_prob; callback)
+    physics_prob = SciMLBase.remake(base_prob; physics_kwargs...)
+    new_ode = _rebuild_semidiscrete_problem(physics_prob; callback)
+    return _apply_ode_overrides(new_ode, u0, tspan)
 end
 
 """
@@ -344,12 +445,19 @@ Remake a semidiscrete MHD/CT ODEProblem.
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:MHDCTCache2D};
         vector_potential = nothing,
+        f = missing,
+        u0 = missing,
+        p = missing,
+        tspan = missing,
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    _remake_check_f(ode_prob, f)
+    base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
-    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return _rebuild_semidiscrete_problem(physics_prob; callback, vector_potential = vector_potential)
+    physics_prob = SciMLBase.remake(base_prob; physics_kwargs...)
+    new_ode = _rebuild_semidiscrete_problem(physics_prob; callback, vector_potential = vector_potential)
+    return _apply_ode_overrides(new_ode, u0, tspan)
 end
 
 """
@@ -361,12 +469,19 @@ Remake a semidiscrete GRMHD/CT ODEProblem.
 function SciMLBase.remake(
         ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:GRMHDCTCache2D};
         vector_potential = nothing,
+        f = missing,
+        u0 = missing,
+        p = missing,
+        tspan = missing,
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    _remake_check_f(ode_prob, f)
+    base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
-    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return _rebuild_semidiscrete_problem(physics_prob; callback, vector_potential = vector_potential)
+    physics_prob = SciMLBase.remake(base_prob; physics_kwargs...)
+    new_ode = _rebuild_semidiscrete_problem(physics_prob; callback, vector_potential = vector_potential)
+    return _apply_ode_overrides(new_ode, u0, tspan)
 end
 
 """
@@ -381,18 +496,25 @@ function SciMLBase.remake(
         vector_potential_x = nothing,
         vector_potential_y = nothing,
         vector_potential_z = nothing,
+        f = missing,
+        u0 = missing,
+        p = missing,
+        tspan = missing,
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    _remake_check_f(ode_prob, f)
+    base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
-    physics_prob = SciMLBase.remake(ode_prob.p.prob; physics_kwargs...)
-    return _rebuild_semidiscrete_problem(
+    physics_prob = SciMLBase.remake(base_prob; physics_kwargs...)
+    new_ode = _rebuild_semidiscrete_problem(
         physics_prob;
         callback,
         vector_potential_x = vector_potential_x,
         vector_potential_y = vector_potential_y,
         vector_potential_z = vector_potential_z,
     )
+    return _apply_ode_overrides(new_ode, u0, tspan)
 end
 
 # ── Incompressible problem remake ────────────────────────────────────

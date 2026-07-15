@@ -5,15 +5,22 @@
 # Berger-Oliger AMR time integration with recursive subcycling:
 # - Fine levels take 2x as many steps as the next coarser level
 # - After fine steps complete, restriction averages fine -> coarse
-# - Flux correction ensures conservation at level interfaces
 #
 # The time stepping proceeds level-by-level:
 #   1. Compute dt at the coarsest level
 #   2. Advance coarsest level by dt
 #   3. Advance finer levels by dt/2 (twice), recursively
 #   4. Restrict fine solution to coarse
-#   5. Apply flux corrections at level interfaces
-#   6. Check refinement criteria and regrid if needed
+#   5. Check refinement criteria and regrid if needed
+#
+# HONESTY NOTE: blocks never exchange ghost data — _advance_block! fills
+# each block's ghost cells by zero-gradient extrapolation from that
+# block's *own* interior, ignoring both neighboring blocks and the
+# problem's boundary conditions. The Berger-Colella flux-correction
+# routines (apply_flux_correction_2d!/3d!) exist but are NEVER called
+# here, so conservation at level interfaces is NOT enforced. solve_amr
+# therefore errors for multi-block grids and warns for single-block
+# grids (see _amr_ghost_exchange_guard).
 
 """
     AMRProblem{Grid, RS, Rec, BCs, FT}
@@ -165,7 +172,10 @@ end
     _advance_block!(block, law, solver, recon, dt)
 
 Advance a single block by one Euler step.
-Ghost cells are filled from neighbor data (simplified: zero-gradient at block boundaries).
+
+Ghost cells are filled by zero-gradient extrapolation from this block's
+own interior — NOT from neighboring blocks and NOT from the problem's
+boundary conditions. See `_amr_ghost_exchange_guard`.
 """
 function _advance_block!(block::AMRBlock{N, FT, 2}, law, solver, recon, dt) where {N, FT}
     nx, ny = block.dims
@@ -372,9 +382,52 @@ function _restrict_level!(grid::AMRGrid, level::Int)
 end
 
 """
+    _amr_ghost_exchange_guard(grid, context::AbstractString)
+
+Guard against physically wrong AMR results: the block advance routines
+fill each block's ghost cells by zero-gradient extrapolation from that
+block's own interior — blocks never exchange ghost data, the problem's
+boundary conditions are never applied at block boundaries, and the
+exported flux-correction routines are never called. For a multi-block
+grid waves cannot cross block boundaries at all, so this throws an
+`ArgumentError`; for a single-block grid it emits a one-time warning
+(the only inaccuracy there is the implicit zero-gradient boundary).
+"""
+function _amr_ghost_exchange_guard(grid, context::AbstractString)
+    n_active = count(b -> b.active, values(grid.blocks))
+    if n_active > 1
+        throw(
+            ArgumentError(
+                "$context: the AMR block advance fills ghost cells by zero-gradient " *
+                    "extrapolation from each block's own interior — blocks never " *
+                    "exchange ghost data and flux correction is never applied. With " *
+                    "$n_active active blocks, waves cannot cross block boundaries " *
+                    "and the results would be physically wrong. Use a single-block " *
+                    "grid (no refinement), or the structured solvers " *
+                    "(HyperbolicProblem2D/HyperbolicProblem3D)."
+            )
+        )
+    end
+    @warn "$context: block ghost cells are filled by zero-gradient extrapolation " *
+        "from the block's own interior; the problem's boundary conditions are " *
+        "not applied at block boundaries and inter-block flux correction is " *
+        "never performed. Results are only meaningful for a single block with " *
+        "outflow-like boundaries." maxlog = 1
+    return nothing
+end
+
+"""
     solve_amr(prob::AMRProblem; method=:subcycling) -> (grid, t_final)
 
 Solve an AMR problem with Berger-Oliger subcycling time integration.
+
+!!! warning
+    Blocks never exchange ghost data and flux correction is never applied:
+    multi-block grids throw an `ArgumentError` (results would be physically
+    wrong), and single-block grids emit a one-time warning because the
+    problem's boundary conditions are replaced by zero-gradient
+    extrapolation. If regridding creates additional blocks mid-run, the
+    solve aborts at that point.
 
 # Returns
 - `grid`: The final AMR grid with solution data.
@@ -387,6 +440,7 @@ function solve_amr(
     )
     _v2_api_depwarn(:solve_amr, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     grid = prob.grid
+    _amr_ghost_exchange_guard(grid, "solve_amr")
     t = prob.initial_time
     step = 0
 
@@ -431,6 +485,10 @@ function solve_amr(
                     end
                 end
             end
+
+            # Regridding may have split the domain into multiple blocks,
+            # which this solver cannot advance correctly (no ghost exchange).
+            _amr_ghost_exchange_guard(grid, "solve_amr (after regrid)")
         end
     end
 

@@ -8,9 +8,7 @@
 #   1. Precomputed metric data at cell centers and faces
 #   2. Valencia flux correction: F_face = alpha * F_riemann - beta * U
 #   3. Geometric source terms from the curved spacetime
-#   4. Densitized conserved variables: U_tilde = sqrt(gamma) * U
-#   5. Metric-aware con2prim at each cell
-#   6. Constrained transport for divergence-free B
+#   4. Constrained transport for divergence-free B
 #
 # The approach follows:
 #   - Riemann problem is solved in the LOCAL flat-space-like frame
@@ -20,51 +18,21 @@
 #   - Geometric source terms are added after flux differencing
 #   - CT operates on the coordinate-frame B (same as SRMHD/MHD)
 #
-# For Minkowski metric, this reduces to the SRMHD solver exactly.
+# HONESTY NOTE (flat-spacetime only): primitives are recovered with the
+# *flat-space* srmhd_con2prim at every cell — the metric-aware
+# grmhd_con2prim is NOT called by this solver — and the sqrt(gamma)
+# densitization is dropped from the fluxes while applied to the sources.
+# For the Minkowski metric this reduces to the SRMHD solver exactly and
+# is correct; for any curved metric the results are NOT physically
+# correct, and a loud warning is emitted at setup
+# (see _warn_grmhd_flat_space_only).
 
 # ============================================================
 # 2D ReflectiveBC for GRMHD
 # ============================================================
-
-function apply_bc_2d_left!(U::AbstractMatrix, ::ReflectiveBC, law::GRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for j in 1:(ny + 4)
-        w1 = conserved_to_primitive(law, U[3, j])
-        w2 = conserved_to_primitive(law, U[4, j])
-        U[2, j] = primitive_to_conserved(law, SVector(w1[1], -w1[2], w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[1, j] = primitive_to_conserved(law, SVector(w2[1], -w2[2], w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
-
-function apply_bc_2d_right!(U::AbstractMatrix, ::ReflectiveBC, law::GRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for j in 1:(ny + 4)
-        w1 = conserved_to_primitive(law, U[nx + 2, j])
-        w2 = conserved_to_primitive(law, U[nx + 1, j])
-        U[nx + 3, j] = primitive_to_conserved(law, SVector(w1[1], -w1[2], w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[nx + 4, j] = primitive_to_conserved(law, SVector(w2[1], -w2[2], w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
-
-function apply_bc_2d_bottom!(U::AbstractMatrix, ::ReflectiveBC, law::GRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for i in 1:(nx + 4)
-        w1 = conserved_to_primitive(law, U[i, 3])
-        w2 = conserved_to_primitive(law, U[i, 4])
-        U[i, 2] = primitive_to_conserved(law, SVector(w1[1], w1[2], -w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[i, 1] = primitive_to_conserved(law, SVector(w2[1], w2[2], -w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
-
-function apply_bc_2d_top!(U::AbstractMatrix, ::ReflectiveBC, law::GRMHDEquations{2}, nx::Int, ny::Int, ng::Int, t)
-    for i in 1:(nx + 4)
-        w1 = conserved_to_primitive(law, U[i, ny + 2])
-        w2 = conserved_to_primitive(law, U[i, ny + 1])
-        U[i, ny + 3] = primitive_to_conserved(law, SVector(w1[1], w1[2], -w1[3], w1[4], w1[5], w1[6], w1[7], w1[8]))
-        U[i, ny + 4] = primitive_to_conserved(law, SVector(w2[1], w2[2], -w2[3], w2[4], w2[5], w2[6], w2[7], w2[8]))
-    end
-    return nothing
-end
+# Handled by the generic ng-aware ReflectiveBC fallbacks in
+# boundary_conditions_2d.jl via normal_velocity_index(::GRMHDEquations).
+# (The previous law-specific methods here hard-coded a 2-ghost layout.)
 
 # ============================================================
 # CFL Calculation (Metric-Corrected)
@@ -85,7 +53,9 @@ function compute_dt_2d(
     nx, ny = mesh.nx, mesh.ny
     cfl = prob.cfl
     dx, dy = mesh.dx, mesh.dy
-    ng = _nghost_for_reconstruction(prob.reconstruction)
+    # Ghost layers from the padded array itself (the CT path pads 2 layers
+    # regardless of the reconstruction's nghost).
+    ng = (size(U, 1) - nx) ÷ 2
 
     max_speed = zero(dx)
     for iy in 1:ny, ix in 1:nx
@@ -141,7 +111,9 @@ function _grmhd_compute_fluxes_2d!(
     solver = prob.riemann_solver
     recon = prob.reconstruction
     N = nvariables(law)
-    ng = _nghost_for_reconstruction(recon)
+    # Ghost layers from the padded array itself (legacy path pads with the
+    # reconstruction's nghost, the SciML cache always pads 2).
+    ng = (size(U, 1) - nx) ÷ 2
     FT = eltype(U[ng + 1, ng + 1])
 
     # Unpack face metric data
@@ -158,10 +130,10 @@ function _grmhd_compute_fluxes_2d!(
 
     # ---- X-direction sweeps (including ghost rows for EMF) ----
     for row_idx in 1:(ny + 2)
-        jj = row_idx + 1  # padded j index
+        jj = row_idx + ng - 1  # padded j index
         for face_i in 1:(nx + 1)
-            iL = face_i + 1
-            iR = face_i + 2
+            iL = face_i + ng - 1
+            iR = iL + 1
             wL_face, wR_face = _reconstruct_face_2d(recon, law, U, iL, iR, jj, 1, nx)
 
             # Flat-space Riemann flux
@@ -191,10 +163,10 @@ function _grmhd_compute_fluxes_2d!(
 
     # ---- Y-direction sweeps (including ghost columns for EMF) ----
     for col_idx in 1:(nx + 2)
-        ii = col_idx + 1  # padded i index
+        ii = col_idx + ng - 1  # padded i index
         for face_j in 1:(ny + 1)
-            jL = face_j + 1
-            jR = face_j + 2
+            jL = face_j + ng - 1
+            jR = jL + 1
             wL_face, wR_face = _reconstruct_face_2d_y(recon, law, U, ii, jL, jR, ny)
 
             F_riemann = solve_riemann(solver, law, wL_face, wR_face, 2)
@@ -277,15 +249,18 @@ function solve_hyperbolic(
         "`sciml_problem(prob; vector_potential = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem2D{<:GRMHDEquations{2}})", backend)
+    _validate_ct_reconstruction(prob.reconstruction)
+    _warn_grmhd_flat_space_only(prob.law)
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy
     law = prob.law
     N = nvariables(law)
 
-    # Initialize cell-centered solution (padded array, undensitized)
-    ng = _nghost_for_reconstruction(prob.reconstruction)
-    U = initialize_2d(prob)
+    # Initialize cell-centered solution (padded array, undensitized). The CT
+    # machinery (face_to_cell_B!, EMF loops) assumes a fixed 2-ghost layout.
+    ng = 2
+    U = initialize_2d(prob; nghost = ng)
     FT = eltype(U[ng + 1, ng + 1])
 
     # Precompute metric data at cell centers and faces

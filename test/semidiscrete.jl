@@ -274,17 +274,22 @@ end
     cache = build_cache(prob)
     u0 = initial_state_flat(prob, cache)
 
+    # Padding follows the reconstruction's ghost count (NoReconstruction
+    # pads a single layer); interior cells live at ng+1 : nc+ng.
+    ng = cache.ng
+    @test ng == FiniteVolumeMethod._nghost_for_reconstruction(prob.reconstruction)
+
     # Unfold to padded
     unfold_to_padded!(cache, u0)
 
     # Check interior cells match
     u0_sv = reinterpret(SVector{3, Float64}, u0)
     for i in 1:20
-        @test cache.padded_U[i + 2] == u0_sv[i]
+        @test cache.padded_U[i + ng] == u0_sv[i]
     end
 
     # Set padded_dU to known values and fold back
-    for i in 3:22
+    for i in (ng + 1):(20 + ng)
         cache.padded_dU[i] = SVector(Float64(i), 0.0, 0.0)
     end
 
@@ -292,7 +297,7 @@ end
     fold_from_padded!(du, cache)
     du_sv = reinterpret(SVector{3, Float64}, du)
     for i in 1:20
-        @test du_sv[i][1] == Float64(i + 2)
+        @test du_sv[i][1] == Float64(i + ng)
     end
 end
 
@@ -318,11 +323,59 @@ end
     cache = build_cache(prob)
     u0 = initial_state_flat(prob, cache)
 
+    # Padding follows the reconstruction's ghost count (NoReconstruction
+    # pads a single layer).
+    ng = cache.ng
+
     # Unfold and check
     unfold_to_padded!(cache, u0)
     u0_sv = reinterpret(SVector{4, Float64}, u0)
     for iy in 1:ny, ix in 1:nx
         flat_idx = (iy - 1) * nx + ix
-        @test cache.padded_U[ix + 2, iy + 2] == u0_sv[flat_idx]
+        @test cache.padded_U[ix + ng, iy + ng] == u0_sv[flat_idx]
     end
+end
+
+# ============================================================
+# CFL callback must control dt under adaptive = false
+# ============================================================
+# Regression for the audit finding that the callback only called
+# set_proposed_dt!, which fixed-step integrators ignore — making the
+# documented `solve(ode_prob, SSPRK33(); adaptive = false, dt = dt0)`
+# usage run at a frozen dt forever.
+using SciMLBase: SciMLBase
+
+@testset "CFL callback drives dt with adaptive = false" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{1}(eos)
+    mesh = StructuredMesh1D(0.0, 1.0, 100)
+    # Blast-wave-like IC: the shock accelerates into the low-pressure
+    # ambient, so the CFL-limited dt must change during the run.
+    ic = x -> abs(x - 0.5) < 0.05 ? SVector(1.0, 0.0, 100.0) : SVector(1.0, 0.0, 1.0e-2)
+    prob = HyperbolicProblem(
+        law, mesh, HLLCSolver(), CellCenteredMUSCL(),
+        TransmissiveBC(), TransmissiveBC(), ic;
+        final_time = 0.02, cfl = 0.4
+    )
+    ode = ODEProblem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+
+    dts = Float64[]
+    recorder = DiscreteCallback(
+        (u, t, integrator) -> true,
+        integrator -> begin
+            push!(dts, integrator.dt)
+            u_modified!(integrator, false)
+        end;
+        save_positions = (false, false)
+    )
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, callback = recorder)
+
+    @test SciMLBase.successful_retcode(sol)
+    # The integrator's dt must actually track the CFL callback: at least
+    # one step after the first must differ from the initial dt.
+    @test length(dts) > 2
+    @test any(d -> abs(d - dt0) > 1.0e-12 * dt0, dts[2:end])
+    # And the solution must stay finite (no blow-up from a frozen dt)
+    @test all(isfinite, sol.u[end])
 end

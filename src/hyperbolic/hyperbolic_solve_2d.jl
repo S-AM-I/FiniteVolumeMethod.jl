@@ -13,17 +13,23 @@
 # Interior cell (ix, iy) (1-based) maps to U[ix+ng, iy+ng].
 
 """
-    initialize_2d(prob::HyperbolicProblem2D; backend=CPUBackend()) -> Matrix{SVector{N,FT}}
+    initialize_2d(prob::HyperbolicProblem2D; backend=CPUBackend(), nghost=nothing) -> Matrix{SVector{N,FT}}
 
 Create the padded 2D solution array from the initial condition.
 Returns a matrix of size `(nx+2*ng) x (ny+2*ng)`, optionally transferred to `backend`.
+`nghost` overrides the reconstruction-derived ghost count (the constrained
+transport solvers always use a 2-ghost layout).
 """
-function initialize_2d(prob::HyperbolicProblem2D; backend::AbstractBackend = CPUBackend())
+function initialize_2d(
+        prob::HyperbolicProblem2D;
+        backend::AbstractBackend = CPUBackend(),
+        nghost::Union{Nothing, Int} = nothing,
+    )
     law = prob.law
     mesh = prob.mesh
     nx, ny = mesh.nx, mesh.ny
     N = nvariables(law)
-    ng = _nghost_for_reconstruction(prob.reconstruction)
+    ng = nghost === nothing ? _nghost_for_reconstruction(prob.reconstruction) : nghost
 
     # Determine element type from first cell
     x0, y0 = cell_center(mesh, 1)
@@ -62,7 +68,9 @@ function compute_dt_2d(prob::HyperbolicProblem2D, U::AbstractMatrix, t)
     nx, ny = mesh.nx, mesh.ny
     cfl = prob.cfl
     dx, dy = mesh.dx, mesh.dy
-    ng = _nghost_for_reconstruction(prob.reconstruction)
+    # Ghost layers from the padded array itself: the CT solvers always pad
+    # 2 layers regardless of the reconstruction's nghost.
+    ng = (size(U, 1) - nx) ÷ 2
 
     max_speed = zero(dx)
     for iy in 1:ny, ix in 1:nx

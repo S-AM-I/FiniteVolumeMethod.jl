@@ -1389,3 +1389,45 @@ end
     jmid, kmid = 2, 2
     @test W[1, jmid, kmid][1] > W[nx, jmid, kmid][1]
 end
+
+# ============================================================
+# HLLC for 3D Euler (previously a dispatch hole)
+# ============================================================
+@testset "HLLC EulerEquations{3}" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{3}(eos)
+    solver = HLLCSolver()
+
+    wL = SVector(1.0, 0.3, -0.2, 0.1, 1.0)
+    wR = SVector(0.5, -0.1, 0.4, -0.3, 0.4)
+
+    @testset "consistency: equal states give the exact flux" begin
+        for dir in 1:3
+            F = solve_riemann(solver, law, wL, wL, dir)
+            Fex = physical_flux(law, wL, dir)
+            for k in 1:5
+                @test F[k] ≈ Fex[k] atol = 1.0e-13
+            end
+        end
+    end
+
+    @testset "rotation: z-face flux matches rotated x-face flux" begin
+        # Cyclic rotation (vx,vy,vz) -> (vy,vz,vx): old x becomes new z.
+        rot(w) = SVector(w[1], w[3], w[4], w[2], w[5])
+        F1 = solve_riemann(solver, law, wL, wR, 1)
+        F3 = solve_riemann(solver, law, rot(wL), rot(wR), 3)
+        expected = rot(F1)
+        for k in 1:5
+            @test F3[k] ≈ expected[k] atol = 1.0e-13
+        end
+    end
+
+    @testset "supersonic states return upwind flux" begin
+        w_fast = SVector(1.0, 0.0, 0.0, 10.0, 1.0)  # supersonic in +z
+        F = solve_riemann(solver, law, w_fast, w_fast, 3)
+        Fex = physical_flux(law, w_fast, 3)
+        for k in 1:5
+            @test F[k] ≈ Fex[k] atol = 1.0e-12
+        end
+    end
+end

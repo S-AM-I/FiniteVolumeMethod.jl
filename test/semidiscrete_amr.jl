@@ -199,3 +199,33 @@ end
     @test u_L[3] == 0.0  # rho*vy
     @test u_L[4] == P_L / (gamma - 1)  # E = P/(gamma-1) for zero velocity
 end
+
+# ============================================================
+# AMR ODEProblem honesty guards
+# ============================================================
+@testset "ODEProblem(::AMRProblem) guards" begin
+    criterion = GradientRefinement(; refine_threshold = 0.5, coarsen_threshold = 0.05)
+    grid = AMRGrid(SD_LAW, criterion, (8, 8), 2, (0.0, 0.0), (1.0, 1.0), Val(SD_NVAR))
+    root = grid.blocks[1]
+    for j in 1:8, i in 1:8
+        root.U[i, j] = primitive_to_conserved(SD_LAW, SVector(1.0, 0.0, 0.0, 1.0))
+    end
+    bcs = (TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC())
+
+    @testset "non-default reconstruction warns (RHS is first-order only)" begin
+        prob_muscl = AMRProblem(
+            grid, HLLCSolver(), CellCenteredMUSCL(), bcs;
+            final_time = 0.01, cfl = 0.4
+        )
+        @test_logs (:warn,) match_mode = :any ODEProblem(prob_muscl)
+    end
+
+    @testset "multi-block grid throws" begin
+        refine_block!(grid, 1)
+        prob = AMRProblem(
+            grid, HLLCSolver(), NoReconstruction(), bcs;
+            final_time = 0.01, cfl = 0.4
+        )
+        @test_throws ArgumentError ODEProblem(prob)
+    end
+end

@@ -343,8 +343,24 @@ Create an `ODEProblem` for an AMR problem.
 All active block interiors are flattened into a single state vector.
 Uses finest-level CFL as the global dt (no subcycling).
 For subcycled AMR, use `solve_amr` or `solve_amr_subcycled` directly.
+
+!!! warning
+    The AMR RHS fills each block's ghost cells by zero-gradient
+    extrapolation from that block's own interior (no inter-block ghost
+    exchange, no flux correction, and the problem's boundary conditions
+    are not applied), so multi-block grids throw an `ArgumentError` and
+    single-block grids emit a one-time warning. The RHS is also
+    first-order only: `prob.reconstruction` is not used, and a warning is
+    emitted when a higher-order scheme is requested.
 """
 function SciMLBase.ODEProblem(prob::AMRProblem; callback = nothing, kwargs...)
+    _amr_ghost_exchange_guard(prob.grid, "ODEProblem(::AMRProblem)")
+    if !(prob.reconstruction isa NoReconstruction)
+        @warn "ODEProblem(::AMRProblem): the AMR RHS uses first-order " *
+            "(piecewise-constant) reconstruction; the requested " *
+            "$(typeof(prob.reconstruction)) is ignored. Pass " *
+            "NoReconstruction() to silence this warning." maxlog = 1
+    end
     cache = build_amr_cache(prob)
     u0 = flatten_amr_state(cache)
     tspan = (prob.initial_time, prob.final_time)
@@ -354,9 +370,6 @@ function SciMLBase.ODEProblem(prob::AMRProblem; callback = nothing, kwargs...)
         # Zero dU for all blocks
         for bid in p.block_ids
             du_pad = p.per_block_dU[bid]
-            block = p.grid.blocks[bid]
-            nx, ny = block.dims[1], block.dims[2]
-            N_var = size(du_pad, 1) > 4 ? size(p.per_block_padded[bid][3, 3], 1) : 0
             zero_state = zero(eltype(du_pad))
             for j in axes(du_pad, 2), i in axes(du_pad, 1)
                 du_pad[i, j] = zero_state

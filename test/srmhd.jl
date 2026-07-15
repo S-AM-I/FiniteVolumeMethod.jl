@@ -502,3 +502,20 @@ end
     l2_err = sqrt(sum((ρ_sr .- ρ_mhd) .^ 2) / length(ρ_sr))
     @test l2_err < 0.15  # generous tolerance for different formulations
 end
+
+# ============================================================
+# con2prim convergence flag is checked (no silent bad states)
+# ============================================================
+@testset "con2prim non-convergence errors informatively" begin
+    eos = IdealGasEOS(gamma = 5.0 / 3.0)
+    # maxiter = 0 guarantees the Newton loop cannot converge
+    law = SRMHDEquations{1}(eos; con2prim_tol = 1.0e-16, con2prim_maxiter = 0)
+    w = SVector(1.0, 0.5, 0.0, 0.0, 1.0, 0.5, 0.5, 0.0)
+    u = primitive_to_conserved(law, w)
+    @test_throws ErrorException conserved_to_primitive(law, u)
+
+    # A well-posed state with normal settings still converges
+    law_ok = SRMHDEquations{1}(eos)
+    w2 = conserved_to_primitive(law_ok, u)
+    @test w2[1] ≈ w[1] rtol = 1.0e-8
+end

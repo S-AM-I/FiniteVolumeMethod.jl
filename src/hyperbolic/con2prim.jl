@@ -32,6 +32,24 @@ struct Con2PrimResult{FT}
 end
 
 """
+    _con2prim_convergence_error(law_name, result, u)
+
+Throw an informative error for a failed conservative-to-primitive recovery.
+Out-of-line (`@noinline`) so the happy path stays allocation-free.
+"""
+@noinline function _con2prim_convergence_error(law_name::AbstractString, result::Con2PrimResult, u)
+    return error(
+        "srmhd_con2prim failed to converge for $law_name after ",
+        result.iterations, " iterations (residual = ", result.residual, ") ",
+        "on conserved state ", u, ". The recovered primitives would be ",
+        "unreliable, so the solve is aborted instead of silently proceeding. ",
+        "Consider raising con2prim_maxiter, loosening con2prim_tol, or ",
+        "checking the state for unphysical values (negative density/pressure, ",
+        "superluminal momentum)."
+    )
+end
+
+"""
     srmhd_con2prim(eos, u::SVector{8}, tol, maxiter) -> (SVector{8}, Con2PrimResult)
 
 Recover primitive variables `[ρ, vx, vy, vz, P, Bx, By, Bz]` from

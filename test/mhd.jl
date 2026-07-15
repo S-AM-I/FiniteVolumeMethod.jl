@@ -762,3 +762,52 @@ end
     @test all(ρ .> 0)
     @test all(P .> 0)
 end
+
+# ============================================================
+# HLLD signed-Bn regression (Miyoshi & Kusano eqs 44-47)
+# ============================================================
+# The single-star tangential jump must use the *signed* normal field.
+# Mirroring a Riemann problem (x -> -x combined with the B -> -B
+# symmetry of ideal MHD) flips Bn; the fluxes must mirror exactly.
+@testset "HLLD mirror symmetry under Bn sign flip" begin
+    law = IdealMHDEquations{1}(IdealGasEOS(gamma = 5.0 / 3.0))
+    solver = HLLDSolver()
+
+    # Generic states with nonzero tangential v and B on both sides so the
+    # single-star and double-star branches are both exercised.
+    wL = SVector(1.0, 0.4, 0.3, 0.2, 1.0, 0.75, 1.0, 0.5)
+    wR = SVector(0.6, -0.2, 0.1, -0.3, 0.8, 0.75, -1.0, 0.2)
+
+    # Mirror: x -> -x (vn flips) composed with global B -> -B, so the
+    # normal field flips sign while tangential B is unchanged; L/R swap.
+    mirror(w) = SVector(w[1], -w[2], w[3], w[4], w[5], -w[6], w[7], w[8])
+
+    F = solve_riemann(solver, law, wL, wR, 1)
+    Fm = solve_riemann(solver, law, mirror(wR), mirror(wL), 1)
+
+    # Component parities of the x-flux under this transformation:
+    # mass -, x-momentum +, y/z-momentum -, energy -, Bx +, By/Bz -.
+    expected = SVector(-F[1], F[2], -F[3], -F[4], -F[5], F[6], -F[7], -F[8])
+    for k in 1:8
+        @test Fm[k] ≈ expected[k] atol = 1.0e-13
+    end
+end
+
+# ============================================================
+# MHD conversions must route through the EOS interface
+# ============================================================
+@testset "MHD round-trip with non-ideal EOS" begin
+    eos = StiffenedGasEOS(4.4, 600.0)
+    law = IdealMHDEquations{1}(eos)
+    w = SVector(1.2, 0.3, -0.1, 0.2, 2.5, 0.4, -0.3, 0.1)
+    u = primitive_to_conserved(law, w)
+    w2 = conserved_to_primitive(law, u)
+    for k in 1:8
+        @test w2[k] ≈ w[k] atol = 1.0e-12
+    end
+
+    # Flux energy must be consistent with the same EOS
+    F = physical_flux(law, w, 1)
+    ρ, vx = w[1], w[2]
+    @test F[1] ≈ ρ * vx atol = 1.0e-14
+end

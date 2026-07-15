@@ -189,3 +189,106 @@ normal velocity jumps to `S_star`.
         )
     end
 end
+
+# ============================================================
+# 3D HLLC
+# ============================================================
+
+function solve_riemann(::HLLCSolver, law::EulerEquations{3}, wL::SVector{5}, wR::SVector{5}, dir::Int)
+    ρL, vxL, vyL, vzL, PL = wL
+    ρR, vxR, vyR, vzR, PR = wR
+    γ = law.eos.gamma
+
+    # Normal and tangential velocities
+    if dir == 1
+        vnL, vt1L, vt2L = vxL, vyL, vzL
+        vnR, vt1R, vt2R = vxR, vyR, vzR
+    elseif dir == 2
+        vnL, vt1L, vt2L = vyL, vxL, vzL
+        vnR, vt1R, vt2R = vyR, vxR, vzR
+    else  # dir == 3
+        vnL, vt1L, vt2L = vzL, vxL, vyL
+        vnR, vt1R, vt2R = vzR, vxR, vyR
+    end
+
+    # Conserved states
+    uL = primitive_to_conserved(law, wL)
+    uR = primitive_to_conserved(law, wR)
+    EL = uL[5]
+    ER = uR[5]
+
+    # Sound speeds
+    cL = sound_speed(law.eos, ρL, PL)
+    cR = sound_speed(law.eos, ρR, PR)
+
+    # Wave speed estimates (PVRS)
+    ρ_avg = 0.5 * (ρL + ρR)
+    c_avg = 0.5 * (cL + cR)
+    P_pvrs = 0.5 * (PL + PR) - 0.5 * (vnR - vnL) * ρ_avg * c_avg
+    P_star = max(P_pvrs, zero(P_pvrs))
+
+    qL = _pressure_wave_factor(P_star, PL, γ)
+    qR = _pressure_wave_factor(P_star, PR, γ)
+
+    SL = vnL - cL * qL
+    SR = vnR + cR * qR
+
+    # Contact wave speed
+    S_star = (PR - PL + ρL * vnL * (SL - vnL) - ρR * vnR * (SR - vnR)) /
+        (ρL * (SL - vnL) - ρR * (SR - vnR))
+
+    if SL >= zero(SL)
+        return physical_flux(law, wL, dir)
+    elseif SR <= zero(SR)
+        return physical_flux(law, wR, dir)
+    elseif S_star >= zero(S_star)
+        # Star-left region
+        fL = physical_flux(law, wL, dir)
+        u_star_L = _hllc_star_state_3d(ρL, vnL, vt1L, vt2L, EL, PL, SL, S_star, dir)
+        return fL + SL * (u_star_L - uL)
+    else
+        # Star-right region
+        fR = physical_flux(law, wR, dir)
+        u_star_R = _hllc_star_state_3d(ρR, vnR, vt1R, vt2R, ER, PR, SR, S_star, dir)
+        return fR + SR * (u_star_R - uR)
+    end
+end
+
+"""
+    _hllc_star_state_3d(ρ, vn, vt1, vt2, E, P, S_K, S_star, dir) -> SVector{5}
+
+Compute the HLLC star-region conserved state for 3D Euler.
+Both tangential velocities are preserved across the contact, only the
+normal velocity jumps to `S_star`. The tangential ordering matches the
+decomposition in `solve_riemann` (dir=1: vt1=vy, vt2=vz; dir=2: vt1=vx,
+vt2=vz; dir=3: vt1=vx, vt2=vy).
+"""
+@inline function _hllc_star_state_3d(ρ, vn, vt1, vt2, E, P, S_K, S_star, dir)
+    factor = ρ * (S_K - vn) / (S_K - S_star)
+    E_star = E / ρ + (S_star - vn) * (S_star + P / (ρ * (S_K - vn)))
+    if dir == 1
+        return SVector(
+            factor,
+            factor * S_star,   # ρ* vx* (normal is x)
+            factor * vt1,      # ρ* vy* (tangential preserved)
+            factor * vt2,      # ρ* vz* (tangential preserved)
+            factor * E_star
+        )
+    elseif dir == 2
+        return SVector(
+            factor,
+            factor * vt1,      # ρ* vx* (tangential preserved)
+            factor * S_star,   # ρ* vy* (normal is y)
+            factor * vt2,      # ρ* vz* (tangential preserved)
+            factor * E_star
+        )
+    else  # dir == 3
+        return SVector(
+            factor,
+            factor * vt1,      # ρ* vx* (tangential preserved)
+            factor * vt2,      # ρ* vy* (tangential preserved)
+            factor * S_star,   # ρ* vz* (normal is z)
+            factor * E_star
+        )
+    end
+end

@@ -794,3 +794,29 @@ end
     @test crit_g isa AbstractRefinementCriterion
     @test crit_c isa AbstractRefinementCriterion
 end
+
+# ============================================================
+# AMR honesty guards: no inter-block ghost exchange
+# ============================================================
+@testset "solve_amr guards against multi-block grids" begin
+    criterion = GradientRefinement(; refine_threshold = 0.5, coarsen_threshold = 0.05)
+    grid = AMRGrid(AMR_LAW, criterion, (8, 8), 2, (0.0, 0.0), (1.0, 1.0), Val(AMR_NVAR))
+    root = grid.blocks[1]
+    for j in 1:8, i in 1:8
+        root.U[i, j] = primitive_to_conserved(AMR_LAW, SVector(1.0, 0.0, 0.0, 1.0))
+    end
+    bcs = (TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC())
+    prob = AMRProblem(
+        grid, HLLCSolver(), NoReconstruction(), bcs;
+        final_time = 1.0e-4, cfl = 0.4, regrid_interval = 0
+    )
+
+    # Single block: warns (once) but solves
+    grid_out, t_final = @test_logs (:warn,) match_mode = :any solve_amr(prob)
+    @test t_final > 0.0
+
+    # Multi-block: waves cannot cross block boundaries -> must throw
+    refine_block!(grid, 1)
+    @test count(b -> b.active, values(grid.blocks)) > 1
+    @test_throws ArgumentError solve_amr(prob)
+end

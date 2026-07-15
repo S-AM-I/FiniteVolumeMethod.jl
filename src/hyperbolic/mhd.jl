@@ -24,7 +24,8 @@ conducting inviscid fluid in the infinite-conductivity (ideal) limit.
 - Primitive: `W = [ρ, vx, vy, vz, P, Bx, By, Bz]`
 - Conserved: `U = [ρ, ρvx, ρvy, ρvz, E, Bx, By, Bz]`
 
-Total energy: `E = P/(γ-1) + ½ρ|v|² + ½|B|²`
+Total energy: `E = ρ ε(ρ, P) + ½ρ|v|² + ½|B|²`, with the specific internal
+energy `ε` supplied by the EOS interface (`ρ ε = P/(γ-1)` for an ideal gas).
 
 The system must satisfy the solenoidal constraint `∇·B = 0`, which is
 maintained to machine precision via constrained transport (see [`CTData2D`](@ref)).
@@ -90,7 +91,10 @@ conserved `[ρ, ρvx, ρvy, ρvz, E, Bx, By, Bz]`.
     ρ, vx, vy, vz, P, Bx, By, Bz = w
     KE = 0.5 * ρ * (vx^2 + vy^2 + vz^2)
     ME = 0.5 * (Bx^2 + By^2 + Bz^2)
-    E = P / (law.eos.gamma - 1) + KE + ME
+    # Route through the EOS interface so the round-trip with
+    # conserved_to_primitive (which uses pressure(eos, ρ, ε)) is exact
+    # for non-ideal equations of state.
+    E = ρ * internal_energy(law.eos, ρ, P) + KE + ME
     return SVector(ρ, ρ * vx, ρ * vy, ρ * vz, E, Bx, By, Bz)
 end
 
@@ -115,7 +119,7 @@ y-flux: `G = [ρvy, ρvx·vy-Bx·By, ρvy²+Ptot-By², ρvy·vz-By·Bz,
     B_sq = Bx^2 + By^2 + Bz^2
     P_tot = P + 0.5 * B_sq
     KE = 0.5 * ρ * (vx^2 + vy^2 + vz^2)
-    E = P / (law.eos.gamma - 1) + KE + 0.5 * B_sq
+    E = ρ * internal_energy(law.eos, ρ, P) + KE + 0.5 * B_sq
 
     if dir == 1  # x-flux
         return SVector(
@@ -212,6 +216,9 @@ Return the fastest left-going and right-going wave speeds (fast magnetosonic).
     cf = fast_magnetosonic_speed(law, w, dir)
     return vn - cf, vn + cf
 end
+
+# Primitive layout [ρ, vx, vy, vz, P, Bx, By, Bz] — velocity for dir is at dir+1.
+normal_velocity_index(::IdealMHDEquations, dir::Int) = dir + 1
 
 # ============================================================
 # ReflectiveBC for 1D MHD

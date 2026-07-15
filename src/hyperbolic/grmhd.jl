@@ -49,6 +49,14 @@ using the Valencia formulation.
 The `physical_flux` method returns the flat-space-like flux `f^i`. The solver
 applies the Valencia correction `alpha * F_riemann - beta * U` at each face.
 
+!!! warning "Only validated for flat (Minkowski) spacetime"
+    The current 2D CT solver recovers primitives with the *flat-space*
+    `srmhd_con2prim` everywhere (the metric-aware `grmhd_con2prim` is not
+    wired into the solver), and the `sqrt(gamma)` densitization is not
+    applied consistently between fluxes and sources. Runs with a
+    non-Minkowski metric emit a loud warning and their results are not
+    physically correct in curved spacetime.
+
 # Fields
 - `eos::EOS`: Equation of state.
 - `metric::M`: Spacetime metric.
@@ -62,6 +70,25 @@ struct GRMHDEquations{Dim, EOS <: AbstractEOS, M <: AbstractMetric{Dim}} <: Abst
     con2prim_maxiter::Int
 end
 
+"""
+    _warn_grmhd_flat_space_only(law::GRMHDEquations)
+
+Emit a loud one-time warning when the GRMHD solver is set up with a
+non-Minkowski metric: the implementation is only valid for flat spacetime
+(see the `GRMHDEquations` docstring).
+"""
+function _warn_grmhd_flat_space_only(law::GRMHDEquations)
+    law.metric isa MinkowskiMetric && return nothing
+    @warn "GRMHD solver constructed with a non-Minkowski metric " *
+        "($(typeof(law.metric))). The current implementation uses the " *
+        "flat-space SRMHD con2prim everywhere (the metric-aware " *
+        "grmhd_con2prim is never called by the solver) and the sqrt(gamma) " *
+        "densitization is dropped from the fluxes while applied to the " *
+        "sources. Results in curved spacetime are NOT physically correct; " *
+        "only Minkowski-metric runs are valid." maxlog = 1
+    return nothing
+end
+
 function GRMHDEquations{Dim}(
         eos::EOS, metric::M;
         con2prim_tol = 1.0e-12, con2prim_maxiter = 50
@@ -70,6 +97,9 @@ function GRMHDEquations{Dim}(
 end
 
 nvariables(::GRMHDEquations) = 8
+
+# Primitive layout [ρ, vx, vy, vz, P, Bx, By, Bz] — velocity for dir is at dir+1.
+normal_velocity_index(::GRMHDEquations, dir::Int) = dir + 1
 
 # ============================================================
 # Conserved <-> Primitive Conversion
@@ -95,7 +125,8 @@ index operations. For metric-aware recovery, use `grmhd_con2prim`.
 @inline function conserved_to_primitive(law::GRMHDEquations, u::SVector{8})
     # Delegate to the SRMHD con2prim since the functional form is identical
     # for undensitized variables with flat-space index raising
-    w, _ = srmhd_con2prim(law.eos, u, law.con2prim_tol, law.con2prim_maxiter)
+    w, result = srmhd_con2prim(law.eos, u, law.con2prim_tol, law.con2prim_maxiter)
+    result.converged || _con2prim_convergence_error("GRMHDEquations", result, u)
     return w
 end
 
