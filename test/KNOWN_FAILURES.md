@@ -9,7 +9,7 @@ is `validation/manifest.toml`; this document is a human-readable companion.
 | Test | Status | Notes |
 |------|--------|-------|
 | `Aqua.test_unbound_args` | Disabled | Re-checked 2026-07-15: still fails on the `NTuple{Dim,T}`-parametrised constructors `FixedVelocityBC` / `FlowRateInletBC` in `src/incompressible/boundary_conditions.jl`. Tracked in `test/QUALITY_LEDGER.toml`. |
-| `Aqua.test_ambiguities` | Enabled, FAILING locally (2026-07-15) | 2 method ambiguities between `SciMLBase.ODEProblem(f::AbstractODEFunction, u0, tspan, ...)` and `ODEProblem(model, mesh::AbstractParabolicMesh, bcs...)` in `src/parabolic/sciml_bridge.jl:129` (plus its kwcall twin). Needs a disambiguating method from the parabolic solver owners; the gate is intentionally left on. |
+| `Aqua.test_ambiguities` | Enabled, passing (fixed 2026-07-15) | The `ODEProblem(model, mesh::AbstractParabolicMesh, bcs...)` overload in `src/parabolic/sciml_bridge.jl` is now constrained to `model::AbstractEquationModel`, removing both ambiguities against `SciMLBase.ODEProblem(f::AbstractODEFunction, ...)`. |
 | `ReferenceTests` image baselines | At risk on Linux CI | `JULIA_REFERENCETESTS_UPDATE=true` removed from CI in v3.112; committed baselines in `test/test_figures/` were rendered on macOS. See "Validation Level Notes". |
 | `keller_segel_chemotaxis.jl` | Skipped | Excluded from tutorial test loop (marked `manual_review` in manifest). |
 

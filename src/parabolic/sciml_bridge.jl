@@ -127,7 +127,7 @@ sol = solve(prob, ImplicitEuler(); adaptive = false, dt = 0.01)
 ```
 """
 function SciMLBase.ODEProblem(
-        model, mesh::AbstractParabolicMesh, bcs...;
+        model::AbstractEquationModel, mesh::AbstractParabolicMesh, bcs...;
         tspan::Tuple,
         u0::AbstractVector,
         source = nothing,
