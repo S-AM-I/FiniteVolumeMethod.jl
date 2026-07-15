@@ -66,11 +66,21 @@ prob_atm = HyperbolicProblem2D(
 )
 coords_atm, U_atm, t_atm, _ = solve_hyperbolic(prob_atm; vector_potential = nothing)
 
-## Compute maximum density drift
+## Compute maximum density drift.
+## On the curved (non-Minkowski) path the returned state is the
+## DENSITIZED Valencia state sqrt(gamma)*[D, S_j, tau, B], so primitives
+## must be recovered with the metric-aware con2prim; the flat
+## `conserved_to_primitive` would misread the sqrt(gamma) factor
+## (~0.22 at the inner boundary) as a spurious density drift.
+## Note also that a uniform-pressure fluid at rest is only a
+## *near*-equilibrium in Schwarzschild (the geometric sources drive a
+## weak physical infall, |v| ~ 1e-2 by t = 0.5 at these radii); the
+## measured drift is that genuine weak-field response plus truncation
+## error, about 6.5e-3 on this grid — well within the 0.05 gate.
+W_atm = FiniteVolumeMethod.grmhd_recover_primitive_field(law_atm, U_atm, mesh_atm)
 max_drift = 0.0
 for iy in 1:N_atm, ix in 1:N_atm
-    w = conserved_to_primitive(law_atm, U_atm[ix, iy])
-    drift = abs(w[1] - rho_atm) / rho_atm
+    drift = abs(W_atm[ix, iy][1] - rho_atm) / rho_atm
     global max_drift = max(max_drift, drift)
 end
 
@@ -93,7 +103,7 @@ ax2 = Axis(
     title = "Density Drift (static atm, t=$(round(t_atm, digits = 2)))",
 )
 drift_map = [
-    abs(conserved_to_primitive(law_atm, U_atm[ix, iy])[1] - rho_atm) / rho_atm
+    abs(W_atm[ix, iy][1] - rho_atm) / rho_atm
         for ix in 1:N_atm, iy in 1:N_atm
 ]
 xc = [coords_atm[i, 1][1] for i in 1:N_atm]

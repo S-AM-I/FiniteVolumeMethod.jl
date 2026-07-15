@@ -166,9 +166,28 @@ end
 
     # Pointwise comparison to the exact Riemann solution. Skip cells
     # within 3·h of each wave location (head, tail, contact, shock) —
-    # MUSCL smears those by O(h).
+    # MUSCL smears those by O(h). (The left window x < 0.3 contains the
+    # rarefaction head at x ≈ 0.2634 and the right window x > 0.85
+    # starts essentially AT the shock, x ≈ 0.8504, so without the skip
+    # these pointwise gates measure the O(h) wave smear, not the
+    # piecewise-smooth regions they are meant to police.)
     mesh = r.mesh
     h = 1.0 / r.N
+
+    γ_bench = 1.4
+    c_left = sqrt(γ_bench * 1.0 / 1.0)
+    c_star_left = sqrt(γ_bench * 0.30313017805064707 / 0.42631942817849544)
+    x_head_w = 0.5 - c_left * r.t_final
+    x_tail_w = 0.5 + (0.92745262004895057 - c_star_left) * r.t_final
+    x_contact_w = 0.5 + 0.92745262004895057 * r.t_final
+    c_right = sqrt(γ_bench * 0.1 / 0.125)
+    S_shock_w = c_right * sqrt(
+        (γ_bench + 1) / (2γ_bench) * 0.30313017805064707 / 0.1 +
+            (γ_bench - 1) / (2γ_bench)
+    )
+    x_shock_w = 0.5 + S_shock_w * r.t_final
+    wave_locations = (x_head_w, x_tail_w, x_contact_w, x_shock_w)
+    near_wave(x) = any(abs(x - xw) <= 3 * h for xw in wave_locations)
 
     # Sample L¹ errors in three piecewise-smooth regions.
     exact_vals = [sod_exact_primitive(cell_center(mesh, i), r.t_final) for i in 1:r.N]
@@ -177,6 +196,7 @@ end
     right_errs = Float64[]
     for i in 1:r.N
         x = cell_center(mesh, i)
+        near_wave(x) && continue
         ρ_ex, _, _ = exact_vals[i]
         ρ_num, _, _ = prims[i]
         if x < 0.3
