@@ -628,7 +628,14 @@ export
     RotationalMRFZone,
     angular_velocity_vector,
     mrf_momentum_source,
-    mrf_momentum_source_2d_planar
+    mrf_momentum_source_2d_planar,
+    MRFZone,
+    MultiMRF,
+    build_multi_mrf_from_zones,
+    mrf_frame_velocity,
+    mrf_frame_flux,
+    mrf_make_relative!,
+    mrf_make_absolute!
 
 # --- Stage 6c Porous media ---
 export
@@ -636,7 +643,9 @@ export
     DarcyPorous,
     DarcyForchheimerPorous,
     OrthotropicPorous,
-    porous_momentum_source
+    porous_momentum_source,
+    PorousZone,
+    darcy_forchheimer_source
 
 # --- Stage 6d Cavitation ---
 export
@@ -644,14 +653,22 @@ export
     KunzCavitation,
     SchnerrSauerCavitation,
     MerkleCavitation,
-    cavitation_source
+    cavitation_source,
+    AbstractCavitationVaporModel,
+    CavitationProperties,
+    KunzModel,
+    SchnerrSauerModel,
+    MerkleModel,
+    compute_vapor_source
 
 # --- Stage 6f Aeroacoustics ---
 export
     FWHSurface,
     FWHObserver,
     curle_dipole_pressure,
-    fwh_monopole_pressure
+    fwh_monopole_pressure,
+    CurleSurface,
+    fwh_farassat1a
 
 # --- Stage 6g Population balance moment methods ---
 export

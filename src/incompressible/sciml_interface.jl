@@ -25,6 +25,10 @@ Returns an [`IncompressibleSolution`](@ref) with symbolic field access.
 - `edm::EddyDissipationModel` — EDM reaction model (required with `combustion_props`)
 - `bcs_species` — species boundary conditions
 - `Y_init` — initial mass fractions `Dict{Symbol, T}`
+- `porous_zones::Vector{PorousZone}` — Darcy-Forchheimer porous zones
+  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
+- `mrf_zones::Vector{MRFZone}` — rotating reference-frame zones
+  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
 """
 function CommonSolve.solve(
         prob::IncompressibleProblem{Dim, T},
@@ -33,6 +37,9 @@ function CommonSolve.solve(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        # Zone kwargs
+        porous_zones = nothing,
+        mrf_zones = nothing,
         # Turbulence kwargs
         turb_model = nothing,
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
@@ -50,6 +57,17 @@ function CommonSolve.solve(
         Y_init = Dict{Symbol, Float64}(),
     ) where {Dim, T}
     actual_prob = alg === prob.algorithm ? prob : remake(prob; algorithm = alg)
+
+    if (porous_zones !== nothing || mrf_zones !== nothing) &&
+            (combustion_props !== nothing || rad_model !== nothing)
+        throw(
+            ArgumentError(
+                "porous_zones/mrf_zones are supported on the plain, " *
+                    "turbulent, and thermal solve paths only (not with " *
+                    "combustion_props or rad_model)"
+            )
+        )
+    end
 
     if combustion_props !== nothing
         # ── Reacting flow ──────────────────────────────────────
@@ -125,6 +143,7 @@ function CommonSolve.solve(
             T_init = actual_T_init,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     elseif turb_model !== nothing
@@ -134,6 +153,7 @@ function CommonSolve.solve(
             turb_bcs = turb_bcs,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     else
@@ -142,6 +162,7 @@ function CommonSolve.solve(
             actual_prob;
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     end
@@ -159,6 +180,10 @@ Returns an [`IncompressibleSolution`](@ref) with symbolic field access.
 - `thermal_props::FluidThermalProperties` — enables energy equation
 - `bcs_T` — temperature boundary conditions (required when `thermal_props` given)
 - `T_init` — initial temperature (defaults to `thermal_props.T_ref`)
+- `porous_zones::Vector{PorousZone}` — Darcy-Forchheimer porous zones
+  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
+- `mrf_zones::Vector{MRFZone}` — rotating reference-frame zones
+  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
 """
 function CommonSolve.solve(
         prob::IncompressibleProblem{Dim, T},
@@ -170,6 +195,9 @@ function CommonSolve.solve(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        # Zone kwargs
+        porous_zones = nothing,
+        mrf_zones = nothing,
         # Initial conditions (plain incompressible path only)
         U0::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
         p0::Union{Nothing, Vector{T}} = nothing,
@@ -199,6 +227,7 @@ function CommonSolve.solve(
             save_every = save_every,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     elseif turb_model !== nothing
@@ -209,6 +238,7 @@ function CommonSolve.solve(
             save_every = save_every,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     else
@@ -218,6 +248,7 @@ function CommonSolve.solve(
             save_every = save_every, linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
             U0 = U0, p0 = p0,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     end

@@ -559,3 +559,172 @@ include("TestHelpers.jl")
         @test isempty(sres.snapshots)
     end
 end
+
+# ── Porous zones (Darcy-Forchheimer, implicit diagonal treatment) ─────
+@testset "Porous zones in momentum equation" begin
+    nx, ny = 60, 5
+    mesh = build_cartesian_unstructured_mesh(nx, ny, 1.0, 0.2)
+    nc = length(mesh.cell_volumes)
+    zone_cells = [c for c in 1:nc if 0.4 <= mesh.cell_centers[1, c] <= 0.6]
+
+    u_in = 0.05
+    nu = 0.01
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => FixedVelocityBC(SVector(u_in, 0.0)),
+        :right => FixedPressureBC(0.0),
+        :bottom => SlipWallBC(),
+        :top => SlipWallBC(),
+    )
+    algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 600, tolerance = 1.0e-8)
+    prob = IncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1.0)
+    row = 3
+    cell_at(i) = (row - 1) * nx + i
+
+    @testset "1D Darcy column: dp = nu*L*u/K" begin
+        K = 1.0e-4
+        zone = PorousZone(zone_cells; K = K, F = 0.0)
+        res = FiniteVolumeMethod.solve_simple(
+            prob; linear_solver = LUFactorization(), porous_zones = [zone],
+        )
+        @test res.converged
+        dp = res.state.p.internal[cell_at(21)] - res.state.p.internal[cell_at(40)]
+        dp_ana = nu * 0.2 * u_in / K   # kinematic pressure drop
+        # first-order interface treatment: ~3% deficit on this mesh
+        @test isapprox(dp, dp_ana; rtol = 0.05)
+        # plug flow preserved through the zone (mass conservation)
+        @test isapprox(res.state.U.internal[cell_at(30)][1], u_in; rtol = 1.0e-3)
+    end
+
+    @testset "High-resistance zone stays stable (implicit)" begin
+        zone = PorousZone(zone_cells; K = 1.0e-8, F = 100.0)
+        res = FiniteVolumeMethod.solve_simple(
+            prob; linear_solver = LUFactorization(), porous_zones = [zone],
+        )
+        @test res.converged
+        @test all(u -> all(isfinite, u), res.state.U.internal)
+        @test all(isfinite, res.state.p.internal)
+        # Darcy term dominates: dp within 5% of nu*L*u/K + Forchheimer part
+        dp = res.state.p.internal[cell_at(21)] - res.state.p.internal[cell_at(40)]
+        dp_ana = nu * 0.2 * u_in / 1.0e-8 + 0.5 * 100.0 * u_in^2 * 0.2
+        @test isapprox(dp, dp_ana; rtol = 0.05)
+    end
+
+    @testset "Zero-zone regression (empty vector == nothing)" begin
+        res_none = FiniteVolumeMethod.solve_simple(prob; linear_solver = LUFactorization())
+        res_empty = FiniteVolumeMethod.solve_simple(
+            prob; linear_solver = LUFactorization(),
+            porous_zones = PorousZone{Float64}[],
+        )
+        for c in 1:nc
+            @test res_none.state.U.internal[c] == res_empty.state.U.internal[c]
+        end
+        @test res_none.state.p.internal == res_empty.state.p.internal
+    end
+
+    @testset "Porous density invariance (kinematic form)" begin
+        zone = PorousZone(zone_cells; K = 1.0e-4, F = 0.0)
+        prob_heavy = IncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1000.0)
+        res_1 = FiniteVolumeMethod.solve_simple(
+            prob; linear_solver = LUFactorization(), porous_zones = [zone],
+        )
+        res_1000 = FiniteVolumeMethod.solve_simple(
+            prob_heavy; linear_solver = LUFactorization(), porous_zones = [zone],
+        )
+        maxdiff = maximum(
+            maximum(abs.(res_1.state.U.internal[c] - res_1000.state.U.internal[c]))
+                for c in 1:nc
+        )
+        @test maxdiff < 1.0e-12
+    end
+end
+
+# ── MRF zones (absolute-velocity formulation, relative flux) ─────────
+@testset "MRF zones in momentum equation" begin
+    nx = 16
+    mesh = build_cartesian_unstructured_mesh(nx, nx, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+    omega_z = 5.0
+    origin = SVector(0.5, 0.5, 0.0)
+
+    @testset "Fully-rotating zone reaches solid-body rotation" begin
+        zone = MRFZone{Float64}(SVector(0.0, 0.0, omega_z), origin, collect(1:nc))
+        frame_vel(x) = SVector(-omega_z * (x[2] - 0.5), omega_z * (x[1] - 0.5))
+        wall = SpatialVelocityBC(frame_vel, Val(2), Float64)
+        bcs = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => wall, :right => wall, :bottom => wall, :top => wall,
+        )
+        # NOTE convergence flag: for exact solid-body rotation the RELATIVE
+        # flux tends to zero, so the flux-normalized continuity residual is
+        # 0/0-degenerate and never crosses the tolerance — gate on the
+        # velocity error instead.
+        algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 800, tolerance = 1.0e-9)
+        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.05, density = 1.0)
+        res = FiniteVolumeMethod.solve_simple(
+            prob; linear_solver = LUFactorization(), mrf_zones = [zone],
+        )
+        err = 0.0
+        scale = 0.0
+        for c in 1:nc
+            x = SVector(mesh.cell_centers[1, c], mesh.cell_centers[2, c])
+            err += norm(res.state.U.internal[c] - frame_vel(x))
+            scale += norm(frame_vel(x))
+        end
+        @test err / scale < 0.02
+    end
+
+    @testset "Omega = 0 zone == no-zone regression" begin
+        bcs = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => NoSlipWallBC(), :right => NoSlipWallBC(),
+            :bottom => NoSlipWallBC(), :top => FixedVelocityBC(SVector(1.0, 0.0)),
+        )
+        algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 200, tolerance = 1.0e-8)
+        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
+        zone0 = MRFZone{Float64}(SVector(0.0, 0.0, 0.0), origin, collect(1:nc))
+        res_a = FiniteVolumeMethod.solve_simple(prob; linear_solver = LUFactorization())
+        res_b = FiniteVolumeMethod.solve_simple(
+            prob; linear_solver = LUFactorization(), mrf_zones = [zone0],
+        )
+        for c in 1:nc
+            @test res_a.state.U.internal[c] == res_b.state.U.internal[c]
+        end
+        @test res_a.state.p.internal == res_b.state.p.internal
+    end
+
+    @testset "makeRelative/makeAbsolute conserve mass across interface" begin
+        zone_part = MRFZone{Float64}(
+            SVector(0.0, 0.0, 3.0), origin,
+            [
+                c for c in 1:nc if
+                    norm(SVector(mesh.cell_centers[1, c], mesh.cell_centers[2, c]) - SVector(0.5, 0.5)) < 0.3
+            ],
+        )
+        nf = size(mesh.face_cells, 2)
+        phi = rand(nf)
+        phi0 = copy(phi)
+        mrf_make_relative!(phi, mesh, [zone_part])
+        @test maximum(abs.(phi .- phi0)) > 0        # conversion does something
+        mrf_make_absolute!(phi, mesh, [zone_part])
+        @test maximum(abs.(phi .- phi0)) < 1.0e-13  # exact round trip
+
+        # The frame flux itself is divergence-free (rigid rotation is a
+        # linear, solenoidal field — Gauss on linear fields is exact), so
+        # for every ZONE cell (all of whose faces are converted) the
+        # conversion never changes the cell's mass balance.  Stationary
+        # neighbours across a jagged interface see the frame flux through
+        # the single interface face — which is why, as in OpenFOAM, MRF
+        # interfaces must be (approximate) surfaces of revolution about
+        # the axis, where the frame flux normal component vanishes.
+        phi_frame = zeros(nf)
+        mrf_make_relative!(phi_frame, mesh, [zone_part])
+        imb = zeros(nc)
+        for f in 1:nf
+            P = FiniteVolumeMethod.owner(mesh, f)
+            imb[P] += phi_frame[f]
+            N = FiniteVolumeMethod.neighbour(mesh, f)
+            if N != 0
+                imb[N] -= phi_frame[f]
+            end
+        end
+        @test maximum(abs(imb[c]) for c in zone_part.cells) < 1.0e-14
+    end
+end

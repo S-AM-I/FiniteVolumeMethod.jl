@@ -1,21 +1,23 @@
-# pressure_based/compressible_simple.jl — Weakly-compressible SIMPLE
+# pressure_based/compressible_simple.jl — Compressible (subsonic) SIMPLE
 #
-# Stage 3 pressure-based extension.  HONESTY NOTE (what this solver
-# actually does): the pressure-velocity loop reuses the incompressible
-# `assemble_pressure!` unchanged, so the continuity constraint enforced
-# is `div(U) = 0` — NOT the steady compressible `div(ρU) = 0`.  Density
-# is refreshed from the EOS between iterations (`update_density!`) and
-# face densities `rho_f` are computed, but neither enters the mass
-# balance: `update_mass_flux!` is never called and `rho_f` is unused by
-# the coupling loop.
+# Stage 3 pressure-based extension, upgraded to a real compressible
+# pressure equation (rhoSimpleFoam-style, subsonic branch):
 #
-# The result is a low-Mach, weakly-compressible approximation:
-#   1. `update_density!` refreshes ρ = EOS(p, T) as a POST-update
-#   2. `update_viscosity!` for Sutherland / tabulated μ(T)
-#   3. Optional energy equation
-# Mass is NOT conserved for genuinely compressible cases; a @warn at
-# solver entry states this.  Do not treat this as a rhoSimpleFoam
-# analogue.
+#   * The momentum equations stay in kinematic form but the pressure
+#     source is `-(1/ρ_c) ∇p V_c` (`rho_p` kwarg of `assemble_momentum!`),
+#     so `state.p` is the ABSOLUTE pressure.
+#   * The pressure equation enforces steady MASS continuity
+#     `div(ρ U) = 0`: the H/A flux is density-weighted through
+#     `compute_face_densities!` + `update_mass_flux!`, and the Laplacian
+#     coefficient `ρ_f (V/(ρ A_P))_f ≈ (V/A_P)_f` matches the velocity
+#     correction `U = H/A_P - (V/(ρ A_P)) ∇p`.
+#   * `update_density!` refreshes ρ = EOS(p, T); `update_viscosity!` for
+#     Sutherland / tabulated μ(T).
+#
+# The transient counterpart (`compressible_pimple.jl`) adds the
+# `ddt(ψ p)` compressibility term with ψ = ∂ρ/∂p and a conservative
+# linearized density update, which makes total mass exactly telescoping
+# (conserved to linear-solver tolerance) in closed domains.
 #
 # The algorithm type `CompressibleSIMPLE{T}` and its `PIMPLE` counterpart
 # live here so the same `solve_compressible(prob, alg)` dispatch works.
@@ -27,23 +29,24 @@ using Printf: @sprintf
 @doc """
     CompressibleSIMPLE{T} <: AbstractPVCoupling
 
-Weakly-compressible SIMPLE algorithm (low-Mach approximation).
-Reuses the existing incompressible `assemble_momentum!` and
-`assemble_pressure!` kernels — the pressure equation enforces
-INCOMPRESSIBLE continuity `div(U) = 0`; density is refreshed from the
-EOS between iterations but never enters the mass balance, so mass is
-not conserved for genuinely compressible flows.  Each outer iteration:
+Steady compressible SIMPLE algorithm (subsonic, rhoSimpleFoam-style).
+The pressure equation enforces steady MASS continuity `div(ρU) = 0`
+with density-weighted H/A mass fluxes (`compute_face_densities!` +
+`update_mass_flux!`); the momentum equations use the `-(1/ρ)∇p`
+kinematic pressure source so `p` is the absolute pressure driving the
+EOS.  Each outer iteration:
 
-1. Update μ(T) and ρ(p, T) from the current fields.
-2. Assemble + solve momentum (under-relaxed).
+1. Update μ(T), ρ_f(p, T) from the current fields.
+2. Assemble + solve momentum (under-relaxed, `rho_p = ρ`).
 3. Extract A_P, H(U) from the solved, relaxed equations.
-4. Assemble + solve the (incompressible) pressure Poisson equation.
-5. Under-relax pressure, update ρ (EOS post-update), correct velocity,
-   correct fluxes.
-6. (Optional) Solve the energy equation.
-7. Check momentum + continuity + (optional) energy residuals.
+4. Assemble + solve the compressible pressure equation
+   (`-div((V/A_P)∇p) = -div(ρ_f φ_HbyA)`).
+5. Under-relax pressure, update ρ = EOS(p, T) (under-relaxed), correct
+   velocity + fluxes, update the mass flux `phi_mass = ρ_f φ`.
+6. Check momentum + continuity + density residuals.
 
-Valid only for low-Mach, weakly-compressible use.
+The transonic `fvm::div(phid, p)` convective-pressure term is not
+implemented — subsonic use only.
 
 # Fields
 - `alpha_U::T`        — velocity under-relaxation factor
@@ -92,6 +95,8 @@ it is pinned to the problem's reference `T_ref`.
 - `T_cells::Vector{T}`    — cell temperature (K)
 - `rho_f::Vector{T}`      — face-interpolated density (kg/m³, length = nfaces)
 - `mu_cells::Vector{T}`   — cell molecular viscosity (Pa·s)
+- `phi_mass::Vector{T}`   — face MASS flux `ρ_f φ_f` (kg/s, length = nfaces),
+  maintained via [`update_mass_flux!`](@ref) after every flux correction
 """
 mutable struct CompressibleState{Dim, T}
     base::IncompressibleState{Dim, T}
@@ -99,6 +104,7 @@ mutable struct CompressibleState{Dim, T}
     T_cells::Vector{T}
     rho_f::Vector{T}
     mu_cells::Vector{T}
+    phi_mass::Vector{T}
 end
 
 @doc """
@@ -122,7 +128,149 @@ function CompressibleState(
     T_cells = fill(T(T0), nc)
     rho_f = fill(T(density_at(model, T(p0), T(T0))), nf)
     mu_cells = fill(T(viscosity_at(model, T(T0))), nc)
-    return CompressibleState{Dim, T}(base, rho, T_cells, rho_f, mu_cells)
+    phi_mass = zeros(T, nf)
+    return CompressibleState{Dim, T}(base, rho, T_cells, rho_f, mu_cells, phi_mass)
+end
+
+@doc """
+    total_mass(cstate::CompressibleState, mesh) -> T
+
+Total fluid mass `Σ_c ρ_c V_c` — the conserved quantity of the transient
+compressible solver in closed domains.
+"""
+function total_mass(
+        cstate::CompressibleState{Dim, T}, mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    m = zero(T)
+    @inbounds for c in eachindex(cstate.rho)
+        m += cstate.rho[c] * mesh.cell_volumes[c]
+    end
+    return m
+end
+
+# ── Compressible pressure equation ──────────────────────────────────
+
+@doc """
+    assemble_pressure_compressible!(
+        p_eq, state, prob_shim, rho, rho_f, mesh;
+        psi = nothing, rho_old = nothing, dt = nothing,
+    )
+
+Assemble the compressible pressure equation.
+
+Steady (`psi === nothing`):
+```
+    -div((V/A_P) ∇p) = -div(ρ_f φ_HbyA)
+```
+Transient (ψ, ρ_old, dt given — PIMPLE):
+```
+    (ψ_c V_c / dt) p + -div((V/A_P) ∇p)
+        = (ρ_old,c - ρ_c + ψ_c p_c) V_c / dt - div(ρ_f φ_HbyA)
+```
+which is the Newton linearization of `ddt(ρ) + div(ρU) = 0` about the
+current `(ρ_c, p_c)`; the matching conservative density update is
+`ρ ← ρ_c + ψ_c (p_new - p_c)` (see `_conservative_density_update!`).
+Because the Laplacian rows sum to zero (Neumann walls) and the mass-flux
+divergence telescopes, total mass `Σ ρ V` is conserved to linear-solver
+tolerance in closed domains — no pressure reference or mean-anchor is
+needed (the ψ diagonal removes the Neumann null space).
+
+The Laplacian coefficient is `D_c = V_c / A_P[c]`: with the kinematic
+momentum correction `U = H/A - (V/(ρA))∇p`, the face MASS-flux
+correction coefficient is `ρ_f · (V/(ρA))_f ≈ (V/A)_f` (Picard-frozen
+ρ), so this is the mass-continuity Laplacian.
+
+Returns the density-weighted H/A mass flux vector (`ρ_f φ_HbyA`,
+computed via [`update_mass_flux!`](@ref)) for optional reuse.
+"""
+function assemble_pressure_compressible!(
+        p_eq::CollocatedEquation{T},
+        state::IncompressibleState{Dim, T},
+        prob_shim::IncompressibleProblem{Dim, T},
+        rho::Vector{T},
+        rho_f::Vector{T},
+        mesh::UnstructuredFVMMesh{Dim, T};
+        psi::Union{Nothing, Vector{T}} = nothing,
+        rho_old::Union{Nothing, Vector{T}} = nothing,
+        dt::Union{Nothing, T} = nothing,
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+
+    # Mass-continuity Laplacian coefficient D = V / A_P (see docstring).
+    D = Vector{T}(undef, nc)
+    for c in 1:nc
+        D[c] = mesh.cell_volumes[c] / state.A_P[c]
+    end
+    bcs_p = expand_bcs_pressure(prob_shim.bcs)
+    grad_p = gradient(state.p, mesh)
+    assemble_laplacian!(
+        p_eq, D, mesh, bcs_p;
+        non_ortho_correction = true, grad_phi = grad_p,
+    )
+
+    # RHS: -div(ρ_f φ_HbyA) — the face densities are actually consumed
+    # by the mass balance here (update_mass_flux! wired into the loop).
+    phi_HbyA = compute_HbyA_flux(state, mesh)
+    m_HbyA = Vector{T}(undef, nf)
+    update_mass_flux!(m_HbyA, phi_HbyA, rho_f)
+    for f in 1:nf
+        P = owner(mesh, f)
+        p_eq.b[P] -= m_HbyA[f]
+        N = neighbour(mesh, f)
+        if N != 0
+            p_eq.b[N] += m_HbyA[f]
+        end
+    end
+
+    # Transient compressibility: ddt(ρ) ≈ (ρ* + ψ(p^{n+1} - p*) - ρ_old)/dt
+    if psi !== nothing
+        dt === nothing && error("assemble_pressure_compressible!: psi requires dt")
+        rho_old === nothing && error("assemble_pressure_compressible!: psi requires rho_old")
+        for c in 1:nc
+            V_dt = mesh.cell_volumes[c] / dt
+            add_diag!(p_eq, c, psi[c] * V_dt)
+            p_eq.b[c] += (rho_old[c] - rho[c] + psi[c] * state.p.internal[c]) * V_dt
+        end
+    end
+
+    return m_HbyA
+end
+
+"""
+    _correct_fluxes_compressible!(cstate, mesh)
+
+Rhie-Chow flux correction with the compressible face coefficient
+`D_f = V/(ρ A_P)` (harmonic, matching the `-(1/ρ)∇p` momentum form),
+followed by the mass-flux update `phi_mass = ρ_f φ`.
+"""
+function _correct_fluxes_compressible!(
+        cstate::CompressibleState{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    state = cstate.base
+    A_scaled = state.A_P .* cstate.rho
+    rhie_chow_correction!(state.phi, state.U, state.p, A_scaled, mesh)
+    update_mass_flux!(cstate.phi_mass, state.phi.values, cstate.rho_f)
+    return nothing
+end
+
+"""
+    _conservative_density_update!(rho, psi, p_new, p_star)
+
+Linearized-EOS density update `ρ ← ρ + ψ (p_new - p*)`, matching the
+`ddt(ψ p)` linearization in `assemble_pressure_compressible!` so the
+per-step mass balance telescopes exactly.  For an isothermal ideal gas
+this coincides with the exact EOS (`ρ = ψ p`).
+"""
+function _conservative_density_update!(
+        rho::Vector{T}, psi::Vector{T},
+        p_new::AbstractVector{T}, p_star::AbstractVector{T},
+    ) where {T}
+    @inbounds for c in eachindex(rho)
+        rho[c] += psi[c] * (p_new[c] - p_star[c])
+    end
+    return nothing
 end
 
 # ── CompressibleProblem thin wrapper ────────────────────────────────
@@ -192,10 +340,15 @@ end
 @doc """
     solve_compressible(prob::CompressibleProblem; kwargs...) -> SolveResult
 
-Run the compressible SIMPLE loop (steady-state). Dispatch on the
-`algorithm` field selects SIMPLE vs PIMPLE at construction time; this
-method handles [`CompressibleSIMPLE`](@ref). For the transient
+Run the compressible SIMPLE loop (steady-state, subsonic). Dispatch on
+the `algorithm` field selects SIMPLE vs PIMPLE at construction time;
+this method handles [`CompressibleSIMPLE`](@ref). For the transient
 [`CompressiblePIMPLE`](@ref), use `solve_compressible(prob, tspan, dt)`.
+
+# Keyword Arguments
+- `linear_solver`, `solver_config`, `verbose` — as in `solve_simple`
+- `p0` — initial absolute pressure level (Pa); for closed (all-Neumann)
+  domains the converged mean pressure is anchored to the initial mean
 """
 function solve_compressible(
         prob::CompressibleProblem{Dim, T, Mesh, BC, CompressibleSIMPLE{T}, Model};
@@ -204,10 +357,6 @@ function solve_compressible(
         verbose::Bool = false,
         p0::Real = 1.01325e5,
     ) where {Dim, T, Mesh, BC, Model}
-    @warn "CompressibleSIMPLE enforces incompressible continuity (div(U)=0) " *
-        "with an EOS density post-update. Mass is NOT conserved for genuinely " *
-        "compressible cases — use this solver only for low-Mach, " *
-        "weakly-compressible flows." maxlog = 1
     algo = prob.algorithm
     mesh = prob.mesh
     alpha_U = algo.alpha_U
@@ -235,10 +384,15 @@ function solve_compressible(
 
     rho_prev = copy(cstate.rho)
 
+    # Equation workspace: allocate once, reset! + reassemble per iteration.
+    cell_pairs = _cyclic_cell_pairs(mesh, cyclic_pairs)
+    eqs = [CollocatedEquation(mesh; extra_cell_pairs = cell_pairs) for _ in 1:Dim]
+    p_eq = CollocatedEquation(mesh; extra_cell_pairs = cell_pairs)
+
     for iter in 1:max_iter
         final_iter = iter
 
-        # ── 1. Update μ(T) and ρ(p, T) ──────────────────────────────
+        # ── 1. Update μ(T) and ρ_f(p, T) ────────────────────────────
         update_viscosity!(cstate.mu_cells, prob.thermo, cstate.T_cells)
         mu_mean = sum(cstate.mu_cells) / nc
         rho_mean = sum(cstate.rho) / nc
@@ -247,20 +401,19 @@ function solve_compressible(
             mesh, state.p.internal, cstate.T_cells
         )
 
-        # ── 2. Momentum solve (reuse incompressible machinery) ──────
+        # ── 2. Momentum solve (kinematic, -(1/ρ)∇p pressure source) ─
         shim = _incompressible_shim(prob, rho_mean, mu_mean)
-        eqs = CollocatedEquation{T}[]
         for d in 1:Dim
-            eq = CollocatedEquation(mesh)
+            reset!(eqs[d])
             assemble_momentum!(
-                eq, state, shim, d;
-                nu_eff = cstate.mu_cells ./ cstate.rho
+                eqs[d], state, shim, d;
+                nu_eff = cstate.mu_cells ./ cstate.rho,
+                rho_p = cstate.rho,
             )
             apply_cyclic_to_equation!(
-                eq, _make_scalar_field(_extract_component(state.U, d), state),
+                eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                 mesh, cyclic_pairs,
             )
-            push!(eqs, eq)
         end
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
@@ -275,20 +428,21 @@ function solve_compressible(
         update_boundary_velocity!(state, prob.bcs, mesh)
 
         # Extract A_P/H(U) from the relaxed, solved equations
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; rho_p = cstate.rho)
 
-        # ── 3. Pressure solve (rhoSimpleFoam-style) ─────────────────
-        # For a closed (Neumann-only) compressible system the absolute
+        # ── 3. Compressible pressure solve: div(ρ_f φ) = 0 ──────────
+        # For a closed (Neumann-only) steady system the absolute
         # pressure level is anchored by the imposed `p0` — we solve for
-        # the pressure correction, then shift the result so that
-        # `mean(p) == p0`. Pinning cell-1 to zero as in the incompressible
-        # case would erase the physical absolute pressure (ρ = p/(R T)
-        # needs it).
+        # the pressure, then shift the result so the mean is preserved.
+        # Pinning cell-1 to zero as in the incompressible case would
+        # erase the physical absolute pressure (ρ = p/(R T) needs it).
         needs_ref = _needs_pressure_reference(prob.bcs)
         p_mean_target = needs_ref ? sum(state.p.internal) / nc : zero(T)
 
-        p_eq = CollocatedEquation(mesh)
-        assemble_pressure!(p_eq, state, shim)
+        reset!(p_eq)
+        assemble_pressure_compressible!(
+            p_eq, state, shim, cstate.rho, cstate.rho_f, mesh,
+        )
         apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if needs_ref
             fix_pressure_reference!(p_eq, 1, state.p.internal[1])
@@ -311,11 +465,11 @@ function solve_compressible(
         end
         update_boundary_pressure!(state, prob.bcs, mesh)
 
-        # ── 4. Correct velocity + fluxes ────────────────────────────
-        correct_velocity!(state, mesh)
+        # ── 4. Correct velocity + fluxes (compressible D = V/(ρA)) ──
+        correct_velocity!(state, mesh; rho_p = cstate.rho)
         update_boundary_velocity!(state, prob.bcs, mesh)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
-        correct_fluxes!(state, mesh)
+        _correct_fluxes_compressible!(cstate, mesh)
 
         # ── 5. Density update with under-relaxation ─────────────────
         copyto!(rho_prev, cstate.rho)

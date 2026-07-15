@@ -71,6 +71,7 @@ end
     assemble_alpha!(
         eq, alpha, phi, mesh, bcs_alpha;
         dt, C_alpha = 1.0, use_mules = true,
+        mdot_v = nothing, rho_l = 1.0,
     )
 
 Assemble the volume fraction transport equation.
@@ -84,6 +85,19 @@ the solve reduces to the trivial identity `(V/dt) α^{n+1} = (V/dt) α^n - Σ F^
 
 When `use_mules = false` the legacy implicit assembly is used — useful
 for diagnostics and regression against the pre-v3.92 behaviour.
+
+# Cavitation / phase-change kwargs
+- `mdot_v` — optional per-cell VAPOUR mass source [kg/(m³·s)] with the
+  `compute_vapor_source` sign convention (positive ⇒ vapour produced,
+  i.e. LIQUID destroyed).  `alpha` is interpreted as the LIQUID volume
+  fraction (`α = 1` liquid, `α = 0` vapour — the `TwoPhaseProperties`
+  fluid-1 convention), so the liquid-continuity source is
+  `-ṁ_v / ρ_l` per unit volume.  The destruction branch (`ṁ_v > 0`)
+  is linearized IMPLICITLY à la Patankar — `A[c,c] += V ṁ⁺/(ρ_l α_c)` —
+  which guarantees `α ≥ 0`; the production branch (condensation,
+  `ṁ_v < 0`) is added explicitly to the RHS.
+- `rho_l` — liquid density [kg/m³] used to convert the mass source to a
+  volumetric α-source (required when `mdot_v` is given).
 """
 function assemble_alpha!(
         eq::CollocatedEquation{T},
@@ -94,16 +108,59 @@ function assemble_alpha!(
         dt::T,
         C_alpha::T = one(T),
         use_mules::Bool = true,
+        mdot_v::Union{Nothing, Vector{T}} = nothing,
+        rho_l::T = one(T),
     ) where {Dim, T}
     if use_mules
-        return _assemble_alpha_mules!(
+        _assemble_alpha_mules!(
             eq, alpha, phi, mesh, bcs_alpha; dt = dt, C_alpha = C_alpha,
         )
     else
-        return _assemble_alpha_legacy!(
+        _assemble_alpha_legacy!(
             eq, alpha, phi, mesh, bcs_alpha; dt = dt, C_alpha = C_alpha,
         )
     end
+    if mdot_v !== nothing
+        _add_alpha_mass_transfer!(eq, alpha, mdot_v, rho_l, mesh)
+    end
+    return nothing
+end
+
+# ── Cavitation mass-transfer source (Patankar-implicit destruction) ──
+
+"""
+    _add_alpha_mass_transfer!(eq, alpha, mdot_v, rho_l, mesh)
+
+Add the phase-change source `-ṁ_v/ρ_l` to the LIQUID-fraction transport
+equation.  Evaporation (`ṁ_v > 0`, liquid destroyed) is treated
+implicitly via the Patankar linearization `S = -(ṁ⁺/(ρ_l α*)) α`, adding
+`V ṁ⁺/(ρ_l α*)` to the diagonal so `α` cannot be driven negative;
+condensation (`ṁ_v < 0`, liquid produced) is an explicit RHS source.
+`α*` is the current iterate, floored at `1e-8` (all shipped cavitation
+models vanish as `α → 0`, so the ratio stays bounded).
+"""
+function _add_alpha_mass_transfer!(
+        eq::CollocatedEquation{T},
+        alpha::CollocatedScalarField{T},
+        mdot_v::Vector{T},
+        rho_l::T,
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    alpha_floor = T(1.0e-8)
+    @inbounds for c in 1:nc
+        V_c = mesh.cell_volumes[c]
+        m = mdot_v[c]
+        if m > zero(T)
+            # Evaporation: destroys liquid — implicit (Patankar)
+            a_star = max(alpha.internal[c], alpha_floor)
+            add_diag!(eq, c, V_c * m / (rho_l * a_star))
+        elseif m < zero(T)
+            # Condensation: produces liquid — explicit
+            eq.b[c] += V_c * (-m) / rho_l
+        end
+    end
+    return nothing
 end
 
 # ── Legacy (implicit + explicit compression, hard-clip safety) ───────

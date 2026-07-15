@@ -18,6 +18,9 @@ Solve steady incompressible flow with RANS turbulence using SIMPLE.
 
 Same algorithm as `solve_simple` but with turbulence equations solved
 after each velocity correction and `nu_eff = nu + nu_t` used in momentum.
+Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
+as [`solve_simple`](@ref) (Darcy-Forchheimer sinks use the MOLECULAR
+viscosity `prob.nu`, not `nu_eff`).
 """
 function solve_simple_turbulent(
         prob::IncompressibleProblem{Dim, T},
@@ -26,6 +29,8 @@ function solve_simple_turbulent(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
     mesh = prob.mesh
@@ -58,7 +63,10 @@ function solve_simple_turbulent(
         # ── Momentum ────────────────────────────────────────────
         for d in 1:Dim
             reset!(eqs[d])
-            assemble_momentum!(eqs[d], state, prob, d; nu_eff = nu_eff)
+            assemble_momentum!(
+                eqs[d], state, prob, d; nu_eff = nu_eff,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
+            )
             apply_cyclic_to_equation!(
                 eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                 mesh, cyclic_pairs,
@@ -78,11 +86,11 @@ function solve_simple_turbulent(
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
 
         # Extract A_P/H(U) from the relaxed, solved equations
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
         # ── Pressure ────────────────────────────────────────────
         reset!(p_eq)
-        assemble_pressure!(p_eq, state, prob)
+        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
         apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
@@ -95,10 +103,13 @@ function solve_simple_turbulent(
         end
         update_boundary_pressure!(state, prob.bcs, mesh)
 
-        correct_velocity!(state, mesh)
+        correct_velocity!(state, mesh; porous_zones = porous_zones)
         update_boundary_velocity!(state, prob.bcs, mesh)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
-        correct_fluxes!(state, mesh)
+        correct_fluxes!(state, mesh; porous_zones = porous_zones)
+        if mrf_zones !== nothing
+            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+        end
 
         # ── Turbulence ──────────────────────────────────────────
         _update_turbulence!(
@@ -138,6 +149,8 @@ end
     ) -> Tuple{SolveResult, RANSTurbulenceState}
 
 Solve transient incompressible flow with RANS turbulence using PISO or PIMPLE.
+Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
+as [`solve_incompressible`](@ref).
 """
 function solve_incompressible_turbulent(
         prob::IncompressibleProblem{Dim, T},
@@ -149,6 +162,8 @@ function solve_incompressible_turbulent(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -183,12 +198,14 @@ function solve_incompressible_turbulent(
                 state, prob, dt_actual, prob.algorithm.n_correctors,
                 nu_eff; linear_solver = linear_solver, solver_config = solver_config,
                 cyclic_pairs = cyclic_pairs, t = t + dt_actual, ws = ws,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
         elseif prob.algorithm isa PIMPLE
             _turbulent_pimple_step!(
                 state, prob, dt_actual, nu_eff;
                 linear_solver = linear_solver, solver_config = solver_config,
                 cyclic_pairs = cyclic_pairs, t = t + dt_actual, ws = ws,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
         end
 
@@ -233,6 +250,8 @@ function _turbulent_piso_step!(
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
         t::T = zero(T),
         ws = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -243,7 +262,10 @@ function _turbulent_piso_step!(
 
     for d in 1:Dim
         reset!(eqs[d])
-        assemble_momentum!(eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t)
+        assemble_momentum!(
+            eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
+        )
         apply_cyclic_to_equation!(
             eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
             mesh, cyclic_pairs,
@@ -260,11 +282,11 @@ function _turbulent_piso_step!(
     update_boundary_velocity!(state, prob.bcs, mesh; t = t)
     update_boundary_cyclic!(state, mesh, cyclic_pairs)
 
-    extract_momentum_operators!(state, eqs, mesh)
+    extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
     for k in 1:n_correctors
         reset!(p_eq)
-        assemble_pressure!(p_eq, state, prob)
+        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
         apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
@@ -276,21 +298,27 @@ function _turbulent_piso_step!(
             state.p.internal[c] = p_sol.u[c]
         end
         update_boundary_pressure!(state, prob.bcs, mesh)
-        correct_velocity!(state, mesh)
+        correct_velocity!(state, mesh; porous_zones = porous_zones)
         update_boundary_velocity!(state, prob.bcs, mesh; t = t)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
-        correct_fluxes!(state, mesh)
+        correct_fluxes!(state, mesh; porous_zones = porous_zones)
+        if mrf_zones !== nothing
+            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+        end
 
         if k < n_correctors
             for d in 1:Dim
                 reset!(eqs[d])
-                assemble_momentum!(eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t)
+                assemble_momentum!(
+                    eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t,
+                    porous_zones = porous_zones, mrf_zones = mrf_zones,
+                )
                 apply_cyclic_to_equation!(
                     eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                     mesh, cyclic_pairs,
                 )
             end
-            extract_momentum_operators!(state, eqs, mesh)
+            extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
         end
     end
 
@@ -308,6 +336,8 @@ function _turbulent_pimple_step!(
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
         t::T = zero(T),
         ws = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -323,7 +353,10 @@ function _turbulent_pimple_step!(
 
         for d in 1:Dim
             reset!(eqs[d])
-            assemble_momentum!(eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t)
+            assemble_momentum!(
+                eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
+            )
             apply_cyclic_to_equation!(
                 eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                 mesh, cyclic_pairs,
@@ -344,12 +377,12 @@ function _turbulent_pimple_step!(
         update_boundary_velocity!(state, prob.bcs, mesh; t = t)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
 
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
         nc = length(mesh.cell_volumes)
         for k in 1:algo.n_correctors
             reset!(p_eq)
-            assemble_pressure!(p_eq, state, prob)
+            assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
             apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
             if _needs_pressure_reference(prob.bcs)
                 fix_pressure_reference!(p_eq, 1, zero(T))
@@ -366,10 +399,13 @@ function _turbulent_pimple_step!(
                 end
             end
             update_boundary_pressure!(state, prob.bcs, mesh)
-            correct_velocity!(state, mesh)
+            correct_velocity!(state, mesh; porous_zones = porous_zones)
             update_boundary_velocity!(state, prob.bcs, mesh; t = t)
             update_boundary_cyclic!(state, mesh, cyclic_pairs)
-            correct_fluxes!(state, mesh)
+            correct_fluxes!(state, mesh; porous_zones = porous_zones)
+            if mrf_zones !== nothing
+                mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+            end
         end
     end
 

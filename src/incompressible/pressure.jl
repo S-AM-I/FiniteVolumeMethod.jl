@@ -76,11 +76,19 @@ reference is fixed at cell 1 to make the system non-singular.
 - `eq::CollocatedEquation{T}` — equation (modified in-place)
 - `state::IncompressibleState` — current solver state
 - `prob::IncompressibleProblem` — problem definition
+
+# Keyword Arguments
+- `mrf_zones` — optional `Vector{MRFZone{T}}`.  When given, the H/A flux
+  is converted to the MRF RELATIVE flux via [`mrf_make_relative!`](@ref)
+  before its divergence is assembled (OpenFOAM: `MRF.makeRelative(phiHbyA)`
+  in `pEqn.H`), so continuity is enforced on the relative flux inside
+  rotating zones.
 """
 function assemble_pressure!(
         eq::CollocatedEquation{T},
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
+        prob::IncompressibleProblem{Dim, T};
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
@@ -111,6 +119,9 @@ function assemble_pressure!(
     # -div(D*grad(p)) = -div(phi_HbyA), and the RHS needs the NEGATIVE
     # divergence of the HbyA flux.
     phi_HbyA = compute_HbyA_flux(state, mesh)
+    if mrf_zones !== nothing
+        mrf_make_relative!(phi_HbyA, mesh, mrf_zones)
+    end
     for f in 1:nf
         P = owner(mesh, f)
         eq.b[P] -= phi_HbyA[f]

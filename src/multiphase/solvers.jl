@@ -45,6 +45,21 @@ Each time step:
   adhesion (default: `nothing`)
 - `wall_patches` — list of face-tag symbols treated as walls for the
   contact-angle correction (default: empty)
+- `cavitation_model` — optional `AbstractCavitationVaporModel`
+  (`KunzModel`, `SchnerrSauerModel`, `MerkleModel`).  When given (with
+  `cavitation_props`), the vapour mass source `ṁ_v` is evaluated once per
+  time step from the frozen pressure via `compute_vapor_source` and wired
+  into (a) the α-transport equation as `-ṁ_v/ρ_l` (Patankar-implicit
+  destruction, explicit condensation; see [`assemble_alpha!`](@ref)) and
+  (b) the pressure equation as the volumetric dilatation source
+  `ṁ_v (1/ρ_v - 1/ρ_l) V_c`.  CONVENTION: `alpha` is the LIQUID fraction,
+  i.e. fluid 1 must be the liquid (`props.rho1 = ρ_l`) and fluid 2 the
+  vapour (`props.rho2 = ρ_v`); the vapour fraction passed to the model is
+  `1 - α`.  Default `nothing` — behaviour is bitwise identical to the
+  cavitation-free solver.
+- `cavitation_props` — `CavitationProperties(rho_l, rho_v, p_sat)`;
+  required when `cavitation_model` is given.  `rho_l`/`rho_v` should
+  match `props.rho1`/`props.rho2`.
 - `save_every` — save interval
 - `verbose` — print progress
 
@@ -69,10 +84,16 @@ function solve_vof(
         use_iso_advector::Bool = false,
         contact_angle::Union{Nothing, AbstractContactAngleModel} = nothing,
         wall_patches::Vector{Symbol} = Symbol[],
+        cavitation_model::Union{Nothing, AbstractCavitationVaporModel{T}} = nothing,
+        cavitation_props::Union{Nothing, CavitationProperties{T}} = nothing,
         save_every::Int = 1,
         verbose::Bool = false,
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
+
+    if cavitation_model !== nothing && cavitation_props === nothing
+        throw(ArgumentError("cavitation_model requires cavitation_props"))
+    end
 
     # Create incompressible problem (density=1 placeholder, actual rho handled via body force)
     prob = IncompressibleProblem(mesh, bcs_U, algorithm; nu = T(1.0e-3), density = one(T))
@@ -104,6 +125,25 @@ function solve_vof(
     while t < t_end - eps(T) * abs(t_end)
         dt_actual = min(dt, t_end - t)
 
+        # -- 0. Cavitation vapour mass source (frozen p, once per step) ---
+        # Sign convention: positive ⇒ vapour produced ⇒ liquid destroyed.
+        mdot_v = nothing
+        psi_m = nothing
+        if cavitation_model !== nothing
+            alpha_v = Vector{T}(undef, nc)
+            for c in 1:nc
+                alpha_v[c] = one(T) - vof_state.alpha.internal[c]
+            end
+            mdot_v = compute_vapor_source(
+                cavitation_model, state.p.internal, alpha_v, mesh,
+                cavitation_props,
+            )
+            psi_m = _cavitation_dmdot_dp(
+                cavitation_model, state.p.internal, alpha_v, mesh,
+                cavitation_props,
+            )
+        end
+
         # -- 1. Alpha transport -------------------------------------------
         if use_iso_advector
             # Geometric interface reconstruction — bypasses the linear
@@ -123,11 +163,22 @@ function solve_vof(
                     vof_state.alpha.internal[N] += F / mesh.cell_volumes[N]
                 end
             end
+            # Explicit cavitation source on the geometric path (the
+            # implicit Patankar variant lives in the linear-system path);
+            # boundedness is restored by clip_alpha! below.
+            if mdot_v !== nothing
+                for c in 1:nc
+                    vof_state.alpha.internal[c] -=
+                        dt_actual * mdot_v[c] / cavitation_props.rho_l
+                end
+            end
         else
             alpha_eq = CollocatedEquation(mesh)
             assemble_alpha!(
                 alpha_eq, vof_state.alpha, state.phi, mesh, bcs_alpha;
                 dt = dt_actual, C_alpha = C_alpha, use_mules = use_mules,
+                mdot_v = mdot_v,
+                rho_l = cavitation_props === nothing ? one(T) : cavitation_props.rho_l,
             )
             alpha_sol = _dispatch_solve(to_linear_problem(alpha_eq), linear_solver, solver_config, :alpha)
             for c in 1:nc
@@ -142,9 +193,14 @@ function solve_vof(
         update_mixture_properties!(vof_state, props)
 
         # -- 4. Body forces (gravity + surface tension) -------------------
+        # KINEMATIC form (force per unit mass): the momentum equation uses
+        # kinematic convection/diffusion and the -(1/rho) grad(p) pressure
+        # source (rho_p), so body forces must be accelerations.  gravity
+        # is already an acceleration; the CSF surface-tension force (per
+        # unit volume) is divided by the local mixture density.
         body_force = Vector{SVector{Dim, T}}(undef, nc)
         for c in 1:nc
-            body_force[c] = vof_state.rho[c] * g
+            body_force[c] = g
         end
 
         # Surface tension (with optional wall-adhesion via contact angle)
@@ -154,7 +210,7 @@ function solve_vof(
         )
         if F_st !== nothing
             for c in 1:nc
-                body_force[c] = body_force[c] + F_st[c]
+                body_force[c] = body_force[c] + F_st[c] / vof_state.rho[c]
             end
         end
 
@@ -170,12 +226,16 @@ function solve_vof(
                 state, prob, dt_actual, algorithm.n_correctors,
                 nu_eff, body_force, vof_state.rho;
                 linear_solver = linear_solver, solver_config = solver_config,
+                mdot_v = mdot_v, psi_m = psi_m,
+                cavitation_props = cavitation_props,
             )
         elseif algorithm isa PIMPLE
             _vof_pimple_step!(
                 state, prob, dt_actual,
                 nu_eff, body_force, vof_state.rho;
                 linear_solver = linear_solver, solver_config = solver_config,
+                mdot_v = mdot_v, psi_m = psi_m,
+                cavitation_props = cavitation_props,
             )
         end
 
@@ -201,6 +261,95 @@ function solve_vof(
     return (result, vof_state)
 end
 
+# -- Cavitation pressure-equation source ----------------------------------
+
+"""
+    _add_pressure_mass_transfer!(p_eq, mdot_v, psi_m, p_star, props, mesh)
+
+Add the phase-change dilatation source to the pressure equation with
+IMPLICIT pressure linearization (interPhaseChangeFoam `vDotP`-style).
+Mixture continuity with mass transfer gives
+`div(U) = ṁ_v(p) (1/ρ_v - 1/ρ_l)`; linearizing `ṁ_v(p) ≈ ṁ* + ψ_m (p - p*)`
+about the current pressure `p*` and moving the `p`-proportional part to
+the LHS yields
+
+```
+    -div(D ∇p) - ψ_m Δv V p = -div(φ_HbyA) + (ṁ* - ψ_m p*) Δv V
+```
+
+with `Δv = 1/ρ_v - 1/ρ_l`.  All shipped models have `∂ṁ_v/∂p ≤ 0`
+(lower pressure ⇒ more vapour), so `-ψ_m Δv V ≥ 0` ADDS to the diagonal
+— the Patankar-stable direction.  Without this implicit part the
+`p → ṁ_v → div(U) → p` feedback diverges violently for any realistic
+transfer coefficient.  `psi_m` entries are clamped to `≤ 0`.
+"""
+function _add_pressure_mass_transfer!(
+        p_eq::CollocatedEquation{T},
+        mdot_v::Vector{T},
+        psi_m::Vector{T},
+        p_star::AbstractVector{T},
+        props::CavitationProperties{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    inv_dv = one(T) / props.rho_v - one(T) / props.rho_l
+    nc = length(mesh.cell_volumes)
+    @inbounds for c in 1:nc
+        V_c = mesh.cell_volumes[c]
+        psi_c = min(psi_m[c], zero(T))
+        add_diag!(p_eq, c, -psi_c * inv_dv * V_c)
+        p_eq.b[c] += (mdot_v[c] - psi_c * p_star[c]) * inv_dv * V_c
+    end
+    return nothing
+end
+
+"""
+    _cavitation_dmdot_dp(model, p, alpha_v, mesh, props) -> Vector{T}
+
+Central finite-difference `∂ṁ_v/∂p` per cell, used for the implicit
+pressure linearization in [`_add_pressure_mass_transfer!`](@ref).  The
+step is `δ = max(10⁻³ |p - p_sat|, 10⁻²)` Pa, small enough to resolve
+the piecewise-linear Kunz/Merkle branches away from `p_sat` and safe at
+the kink (where FD returns the average slope of the two branches).
+"""
+function _cavitation_dmdot_dp(
+        model::AbstractCavitationVaporModel{T},
+        p::AbstractVector{T},
+        alpha_v::Vector{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        props::CavitationProperties{T},
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    psi_m = Vector{T}(undef, nc)
+    @inbounds for c in 1:nc
+        delta = max(T(1.0e-3) * abs(p[c] - props.p_sat), T(1.0e-2))
+        m_hi = _vapor_source_cell(model, p[c] + delta, alpha_v[c], props)
+        m_lo = _vapor_source_cell(model, p[c] - delta, alpha_v[c], props)
+        psi_m[c] = (m_hi - m_lo) / (2 * delta)
+    end
+    return psi_m
+end
+
+"""
+    _vof_correct_fluxes!(state, rho, mesh)
+
+Density-consistent Rhie-Chow flux correction for the VOF steps: the
+pressure equation uses `D = V/(rho A_P)`, so the face correction
+coefficient must be the harmonic mean of the same quantity — achieved by
+passing the scaled diagonal `rho .* A_P` to `rhie_chow_correction!`.
+(The previous unscaled call overcorrected fluxes by a factor of the
+local density, which destabilized any run with a nonzero pressure field
+at large density ratios.)
+"""
+function _vof_correct_fluxes!(
+        state::IncompressibleState{Dim, T},
+        rho::Vector{T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    A_scaled = state.A_P .* rho
+    rhie_chow_correction!(state.phi, state.U, state.p, A_scaled, mesh)
+    return nothing
+end
+
 # -- VOF PISO step (variable density) ------------------------------------
 
 function _vof_piso_step!(
@@ -212,6 +361,9 @@ function _vof_piso_step!(
         rho::Vector{T};
         linear_solver = nothing,
         solver_config = nothing,
+        mdot_v::Union{Nothing, Vector{T}} = nothing,
+        psi_m::Union{Nothing, Vector{T}} = nothing,
+        cavitation_props::Union{Nothing, CavitationProperties{T}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
@@ -225,7 +377,8 @@ function _vof_piso_step!(
         eq = CollocatedEquation(mesh)
         assemble_momentum!(
             eq, state, prob, d;
-            dt = dt, nu_eff = nu_eff, body_force = body_force
+            dt = dt, nu_eff = nu_eff, body_force = body_force,
+            rho_p = rho,
         )
         push!(eqs, eq)
     end
@@ -240,7 +393,7 @@ function _vof_piso_step!(
     update_boundary_velocity!(state, prob.bcs, mesh)
 
     # Extract A_P/H(U) from the solved equations
-    extract_momentum_operators!(state, eqs, mesh)
+    extract_momentum_operators!(state, eqs, mesh; rho_p = rho)
 
     # Pressure corrector with density-weighted diffusivity
     for k in 1:n_correctors
@@ -267,6 +420,13 @@ function _vof_piso_step!(
             end
         end
 
+        # Cavitation dilatation (implicit p-linearization; see helper)
+        if mdot_v !== nothing
+            _add_pressure_mass_transfer!(
+                p_eq, mdot_v, psi_m, state.p.internal, cavitation_props, mesh,
+            )
+        end
+
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
@@ -277,9 +437,9 @@ function _vof_piso_step!(
         end
 
         update_boundary_pressure!(state, prob.bcs, mesh)
-        correct_velocity!(state, mesh)
+        correct_velocity!(state, mesh; rho_p = rho)
         update_boundary_velocity!(state, prob.bcs, mesh)
-        correct_fluxes!(state, mesh)
+        _vof_correct_fluxes!(state, rho, mesh)
 
         if k < n_correctors
             eqs_k = CollocatedEquation{T}[]
@@ -287,11 +447,12 @@ function _vof_piso_step!(
                 eq = CollocatedEquation(mesh)
                 assemble_momentum!(
                     eq, state, prob, d;
-                    dt = dt, nu_eff = nu_eff, body_force = body_force
+                    dt = dt, nu_eff = nu_eff, body_force = body_force,
+                    rho_p = rho,
                 )
                 push!(eqs_k, eq)
             end
-            extract_momentum_operators!(state, eqs_k, mesh)
+            extract_momentum_operators!(state, eqs_k, mesh; rho_p = rho)
         end
     end
 
@@ -309,6 +470,9 @@ function _vof_pimple_step!(
         rho::Vector{T};
         linear_solver = nothing,
         solver_config = nothing,
+        mdot_v::Union{Nothing, Vector{T}} = nothing,
+        psi_m::Union{Nothing, Vector{T}} = nothing,
+        cavitation_props::Union{Nothing, CavitationProperties{T}} = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -325,7 +489,8 @@ function _vof_pimple_step!(
             eq = CollocatedEquation(mesh)
             assemble_momentum!(
                 eq, state, prob, d;
-                dt = dt, nu_eff = nu_eff, body_force = body_force
+                dt = dt, nu_eff = nu_eff, body_force = body_force,
+                rho_p = rho,
             )
             push!(eqs, eq)
         end
@@ -344,7 +509,7 @@ function _vof_pimple_step!(
         update_boundary_velocity!(state, prob.bcs, mesh)
 
         # Extract A_P/H(U) from the (relaxed) solved equations
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; rho_p = rho)
 
         for k in 1:algo.n_correctors
             p_eq = CollocatedEquation(mesh)
@@ -368,6 +533,13 @@ function _vof_pimple_step!(
                 end
             end
 
+            # Cavitation dilatation (implicit p-linearization; see helper)
+            if mdot_v !== nothing
+                _add_pressure_mass_transfer!(
+                    p_eq, mdot_v, psi_m, state.p.internal, cavitation_props, mesh,
+                )
+            end
+
             if _needs_pressure_reference(prob.bcs)
                 fix_pressure_reference!(p_eq, 1, zero(T))
             end
@@ -385,9 +557,9 @@ function _vof_pimple_step!(
             end
 
             update_boundary_pressure!(state, prob.bcs, mesh)
-            correct_velocity!(state, mesh)
+            correct_velocity!(state, mesh; rho_p = rho)
             update_boundary_velocity!(state, prob.bcs, mesh)
-            correct_fluxes!(state, mesh)
+            _vof_correct_fluxes!(state, rho, mesh)
         end
     end
 

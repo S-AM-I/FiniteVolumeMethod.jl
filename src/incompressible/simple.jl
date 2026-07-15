@@ -29,6 +29,12 @@ The algorithm iterates:
 # Keyword Arguments
 - `linear_solver` — solver algorithm for `LinearProblem` (default: `nothing` → backslash)
 - `verbose::Bool` — print residuals each iteration (default: `false`)
+- `porous_zones` — optional `Vector{PorousZone{T}}` Darcy-Forchheimer
+  zones added to the momentum equations (implicit diagonal treatment;
+  see [`assemble_momentum!`](@ref))
+- `mrf_zones` — optional `Vector{MRFZone{T}}` rotating reference-frame
+  zones (absolute-velocity MRF formulation; frame source in momentum,
+  relative flux in continuity via [`mrf_make_relative!`](@ref))
 
 # Returns
 A [`SolveResult`](@ref) containing convergence status, iteration count,
@@ -39,6 +45,8 @@ function solve_simple(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
     mesh = prob.mesh
@@ -75,7 +83,10 @@ function solve_simple(
         # ── 1. Assemble momentum equations ──────────────────────────
         for d in 1:Dim
             reset!(eqs[d])
-            assemble_momentum!(eqs[d], state, prob, d)
+            assemble_momentum!(
+                eqs[d], state, prob, d;
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
+            )
             # Apply cyclic coupling to momentum
             apply_cyclic_to_equation!(
                 eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
@@ -102,11 +113,11 @@ function solve_simple(
         # momentum equations — standard SIMPLE ordering, so that
         # D = V/A_P in the pressure equation is consistent with the
         # velocity actually produced by the momentum solve.
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
         # ── 5. Assemble + solve pressure ────────────────────────────
         reset!(p_eq)
-        assemble_pressure!(p_eq, state, prob)
+        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
         apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
@@ -124,10 +135,13 @@ function solve_simple(
         update_boundary_pressure!(state, prob.bcs, mesh)
 
         # ── 8. Correct velocity + fluxes ────────────────────────────
-        correct_velocity!(state, mesh)
+        correct_velocity!(state, mesh; porous_zones = porous_zones)
         update_boundary_velocity!(state, prob.bcs, mesh)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
-        correct_fluxes!(state, mesh)
+        correct_fluxes!(state, mesh; porous_zones = porous_zones)
+        if mrf_zones !== nothing
+            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+        end
 
         # ── 9. Compute residuals + check convergence ────────────────
         max_residual = zero(T)

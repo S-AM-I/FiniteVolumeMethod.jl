@@ -6,8 +6,14 @@
 # cavitation, HEM phase-change) plug in by subtyping and overloading
 # `mass_transfer_source_alpha` / `mass_transfer_source_energy`.
 #
-# This file deliberately does not couple to cavitation models yet —
-# those ship as part of v3.1 Agent B's scope.
+# Cavitation coupling into the single-field VOF solver landed via the
+# `cavitation_model` / `cavitation_props` keywords of `solve_vof`
+# (src/multiphase/solvers.jl): the vapour mass source enters the
+# α-transport equation (Patankar-implicit destruction) and the pressure
+# equation (implicitly p-linearized dilatation).  The Eulerian TWO-FLUID
+# solver below still uses `NoMassTransfer` by default — wiring the
+# cavitation models through `mass_transfer_source_alpha` for the
+# two-fluid path remains open.
 
 """
     AbstractMassTransferModel

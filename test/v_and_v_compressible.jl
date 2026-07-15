@@ -353,3 +353,122 @@ end
     @test FiniteVolumeMethod.is_compressible(PengRobinson())
     @test FiniteVolumeMethod.is_compressible(RedlichKwong())
 end
+
+# ── Real compressible continuity gates (v3.1x) ──────────────────────
+
+@testset "V&V: CompressiblePIMPLE conserves total mass in a closed box" begin
+    mesh = build_cartesian_unstructured_mesh(12, 12, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => NoSlipWallBC(), :right => NoSlipWallBC(),
+        :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
+    )
+    gas = IdealGas(; gamma = 1.4, R = 287.05, mu = 1.8e-5)
+    alg = CompressiblePIMPLE(;
+        n_outer = 2, n_correctors = 2,
+        alpha_U = 0.7, alpha_p = 0.5, alpha_rho = 0.7, tolerance = 1.0e-8,
+    )
+    prob = CompressibleProblem(mesh, bcs, alg, gas; T_ref = 300.0)
+
+    p0 = 1.0e5
+    p_init = [
+        p0 * (
+                1.0 + 0.05 * exp(
+                    -(
+                        (mesh.cell_centers[1, c] - 0.5)^2 +
+                        (mesh.cell_centers[2, c] - 0.5)^2
+                    ) / 0.02
+                )
+            )
+            for c in 1:nc
+    ]
+    dt = 2.0e-5
+    res = solve_compressible(
+        prob, (0.0, 40 * dt), dt;
+        linear_solver = LUFactorization(), p_init = p_init,
+    )
+    mass0 = sum(p_init[c] / (287.05 * 300.0) * mesh.cell_volumes[c] for c in 1:nc)
+    mass_hist = res.residuals[:total_mass]
+    @test length(mass_hist) == 40
+    # ddt(psi p) + conservative linearized rho update => telescoping mass
+    @test maximum(abs.(mass_hist .- mass0)) / mass0 < 1.0e-12
+    @test all(u -> all(isfinite, u), res.state.base.U.internal)
+end
+
+@testset "V&V: pressure pulse propagates at finite (acoustic) speed" begin
+    # 1D-ish closed channel; isothermal sound speed sqrt(R T) = 293.5 m/s.
+    nx, ny = 100, 4
+    mesh = build_cartesian_unstructured_mesh(nx, ny, 1.0, 0.04)
+    nc = length(mesh.cell_volumes)
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => SlipWallBC(), :right => SlipWallBC(),
+        :bottom => SlipWallBC(), :top => SlipWallBC(),
+    )
+    gas = IdealGas(; gamma = 1.4, R = 287.05, mu = 1.8e-5)
+    alg = CompressiblePIMPLE(;
+        n_outer = 2, n_correctors = 2,
+        alpha_U = 0.7, alpha_p = 0.5, alpha_rho = 0.7, tolerance = 1.0e-8,
+    )
+    prob = CompressibleProblem(mesh, bcs, alg, gas; T_ref = 300.0)
+    p0 = 1.0e5
+    amp = 0.01
+    p_init = [
+        p0 * (1.0 + amp * exp(-(mesh.cell_centers[1, c] - 0.15)^2 / 0.002))
+            for c in 1:nc
+    ]
+    probe = (2 - 1) * nx + 85     # x = 0.845, far from the pulse
+    dt = 2.0e-5
+
+    # Early time: front (c*t + width ~ 0.33) has NOT reached the probe.
+    res_early = solve_compressible(
+        prob, (0.0, 6.0e-4), dt;
+        linear_solver = LUFactorization(), p_init = copy(p_init),
+    )
+    dev_early = abs(res_early.state.base.p.internal[probe] - p0) / (amp * p0)
+    @test dev_early < 1.0e-6      # elliptic coupling would react instantly
+
+    # Late time: front has passed the probe -> clear signal.
+    res_late = solve_compressible(
+        prob, (0.0, 2.4e-3), dt;
+        linear_solver = LUFactorization(), p_init = copy(p_init),
+    )
+    dev_late = abs(res_late.state.base.p.internal[probe] - p0) / (amp * p0)
+    @test dev_late > 1.0e-2
+
+    # Mass conserved through the acoustic transient as well.
+    mh = res_late.residuals[:total_mass]
+    @test maximum(abs.(mh .- mh[1])) / mh[1] < 1.0e-12
+end
+
+@testset "V&V: steady mass flux is divergence-free (compressible SIMPLE)" begin
+    # Driven cavity at low Mach: after convergence the MASS flux
+    # phi_mass = rho_f * phi must be (discretely) divergence-free.
+    mesh = build_cartesian_unstructured_mesh(8, 8, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => NoSlipWallBC(), :right => NoSlipWallBC(),
+        :bottom => NoSlipWallBC(),
+        :top => FixedVelocityBC(SVector(1.0e-3, 0.0)),
+    )
+    gas = IdealGas(; gamma = 1.4, R = 287.05, mu = 1.8e-5)
+    alg = CompressibleSIMPLE(;
+        alpha_U = 0.7, alpha_p = 0.3, alpha_rho = 0.9,
+        max_iterations = 300, tolerance = 1.0e-10,
+    )
+    prob = CompressibleProblem(mesh, bcs, alg, gas; T_ref = 300.0)
+    res = solve_compressible(prob; linear_solver = LUFactorization(), p0 = 1.01325e5)
+
+    phi_mass = res.state.phi_mass
+    imb = zeros(nc)
+    nf = size(mesh.face_cells, 2)
+    for f in 1:nf
+        P = FiniteVolumeMethod.owner(mesh, f)
+        imb[P] += phi_mass[f]
+        N = FiniteVolumeMethod.neighbour(mesh, f)
+        if N != 0
+            imb[N] -= phi_mass[f]
+        end
+    end
+    scale = sum(abs, phi_mass) + eps()
+    @test sum(abs, imb) / scale < 5.0e-2
+end

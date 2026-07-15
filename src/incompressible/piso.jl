@@ -33,6 +33,8 @@ The algorithm proceeds as:
 
 # Keyword Arguments
 - `linear_solver` — solver algorithm for `LinearProblem` (default: `nothing`)
+- `porous_zones` — optional Darcy-Forchheimer zones (see [`assemble_momentum!`](@ref))
+- `mrf_zones` — optional MRF zones (see [`assemble_momentum!`](@ref))
 """
 function _piso_step!(
         state::IncompressibleState{Dim, T},
@@ -44,6 +46,8 @@ function _piso_step!(
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
         t::T = zero(T),
         ws = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -58,7 +62,10 @@ function _piso_step!(
     # ── 1. Momentum predictor (no under-relaxation) ─────────────────
     for d in 1:Dim
         reset!(eqs[d])
-        assemble_momentum!(eqs[d], state, prob, d; dt = dt, t = t)
+        assemble_momentum!(
+            eqs[d], state, prob, d; dt = dt, t = t,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
+        )
         # Apply cyclic coupling to momentum
         apply_cyclic_to_equation!(
             eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
@@ -79,13 +86,13 @@ function _piso_step!(
 
     # Extract operators AFTER the momentum solve so H(U) uses the solved
     # velocity (standard PISO ordering).
-    extract_momentum_operators!(state, eqs, mesh)
+    extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
     # ── 2. Pressure corrector loop ──────────────────────────────────
     for k in 1:n_correctors
         # 2a. Assemble + solve pressure
         reset!(p_eq)
-        assemble_pressure!(p_eq, state, prob)
+        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
         apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
@@ -103,23 +110,29 @@ function _piso_step!(
         update_boundary_pressure!(state, prob.bcs, mesh)
 
         # 2d. Correct velocity + fluxes
-        correct_velocity!(state, mesh)
+        correct_velocity!(state, mesh; porous_zones = porous_zones)
         update_boundary_velocity!(state, prob.bcs, mesh; t = t)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
-        correct_fluxes!(state, mesh)
+        correct_fluxes!(state, mesh; porous_zones = porous_zones)
+        if mrf_zones !== nothing
+            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+        end
 
         # 2e. Re-assemble momentum + extract operators for next corrector
         # (ddt still against state.U_old — the time-step snapshot)
         if k < n_correctors
             for d in 1:Dim
                 reset!(eqs[d])
-                assemble_momentum!(eqs[d], state, prob, d; dt = dt, t = t)
+                assemble_momentum!(
+                    eqs[d], state, prob, d; dt = dt, t = t,
+                    porous_zones = porous_zones, mrf_zones = mrf_zones,
+                )
                 apply_cyclic_to_equation!(
                     eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                     mesh, cyclic_pairs,
                 )
             end
-            extract_momentum_operators!(state, eqs, mesh)
+            extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
         end
     end
 

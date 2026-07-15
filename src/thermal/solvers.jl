@@ -27,6 +27,9 @@ Each iteration:
 5. Solve turbulence (if turbulence model provided)
 6. Assemble + solve energy equation
 7. Check convergence
+
+Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
+as [`solve_simple`](@ref).
 """
 function solve_simple_thermal(
         prob::IncompressibleProblem{Dim, T},
@@ -38,6 +41,8 @@ function solve_simple_thermal(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
     mesh = prob.mesh
@@ -85,7 +90,8 @@ function solve_simple_thermal(
             eq = CollocatedEquation(mesh)
             assemble_momentum!(
                 eq, state, prob, d;
-                nu_eff = nu_eff, body_force = body_force
+                nu_eff = nu_eff, body_force = body_force,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
             push!(eqs, eq)
         end
@@ -102,11 +108,11 @@ function solve_simple_thermal(
         update_boundary_velocity!(state, prob.bcs, mesh)
 
         # Extract A_P/H(U) from the relaxed, solved equations
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
         # ── Pressure ────────────────────────────────────────────
         p_eq = CollocatedEquation(mesh)
-        assemble_pressure!(p_eq, state, prob)
+        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
@@ -117,9 +123,12 @@ function solve_simple_thermal(
         end
         update_boundary_pressure!(state, prob.bcs, mesh)
 
-        correct_velocity!(state, mesh)
+        correct_velocity!(state, mesh; porous_zones = porous_zones)
         update_boundary_velocity!(state, prob.bcs, mesh)
-        correct_fluxes!(state, mesh)
+        correct_fluxes!(state, mesh; porous_zones = porous_zones)
+        if mrf_zones !== nothing
+            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+        end
 
         # ── Turbulence (optional) ───────────────────────────────
         if turb_model !== nothing
@@ -180,6 +189,8 @@ end
     ) -> Tuple{SolveResult, ThermalState}
 
 Solve transient incompressible flow with energy equation using PISO or PIMPLE.
+Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
+as [`solve_incompressible`](@ref).
 """
 function solve_incompressible_thermal(
         prob::IncompressibleProblem{Dim, T},
@@ -194,6 +205,8 @@ function solve_incompressible_thermal(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
@@ -235,11 +248,13 @@ function solve_incompressible_thermal(
                 state, prob, dt_actual, prob.algorithm.n_correctors,
                 nu_eff, body_force;
                 linear_solver = linear_solver, solver_config = solver_config,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
         elseif prob.algorithm isa PIMPLE
             _thermal_pimple_step!(
                 state, prob, dt_actual, nu_eff, body_force;
                 linear_solver = linear_solver, solver_config = solver_config,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
         end
 
@@ -300,6 +315,8 @@ function _thermal_piso_step!(
         body_force::Union{Nothing, Vector{SVector{Dim, T}}};
         linear_solver = nothing,
         solver_config = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -311,7 +328,8 @@ function _thermal_piso_step!(
         eq = CollocatedEquation(mesh)
         assemble_momentum!(
             eq, state, prob, d;
-            dt = dt, nu_eff = nu_eff, body_force = body_force
+            dt = dt, nu_eff = nu_eff, body_force = body_force,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         push!(eqs, eq)
     end
@@ -326,11 +344,11 @@ function _thermal_piso_step!(
     update_boundary_velocity!(state, prob.bcs, mesh)
 
     # Extract A_P/H(U) from the solved equations
-    extract_momentum_operators!(state, eqs, mesh)
+    extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
     for k in 1:n_correctors
         p_eq = CollocatedEquation(mesh)
-        assemble_pressure!(p_eq, state, prob)
+        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
@@ -341,9 +359,12 @@ function _thermal_piso_step!(
             state.p.internal[c] = p_sol.u[c]
         end
         update_boundary_pressure!(state, prob.bcs, mesh)
-        correct_velocity!(state, mesh)
+        correct_velocity!(state, mesh; porous_zones = porous_zones)
         update_boundary_velocity!(state, prob.bcs, mesh)
-        correct_fluxes!(state, mesh)
+        correct_fluxes!(state, mesh; porous_zones = porous_zones)
+        if mrf_zones !== nothing
+            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+        end
 
         if k < n_correctors
             eqs_k = CollocatedEquation{T}[]
@@ -351,11 +372,12 @@ function _thermal_piso_step!(
                 eq = CollocatedEquation(mesh)
                 assemble_momentum!(
                     eq, state, prob, d;
-                    dt = dt, nu_eff = nu_eff, body_force = body_force
+                    dt = dt, nu_eff = nu_eff, body_force = body_force,
+                    porous_zones = porous_zones, mrf_zones = mrf_zones,
                 )
                 push!(eqs_k, eq)
             end
-            extract_momentum_operators!(state, eqs_k, mesh)
+            extract_momentum_operators!(state, eqs_k, mesh; porous_zones = porous_zones)
         end
     end
 
@@ -372,6 +394,8 @@ function _thermal_pimple_step!(
         body_force::Union{Nothing, Vector{SVector{Dim, T}}};
         linear_solver = nothing,
         solver_config = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -387,7 +411,8 @@ function _thermal_pimple_step!(
             eq = CollocatedEquation(mesh)
             assemble_momentum!(
                 eq, state, prob, d;
-                dt = dt, nu_eff = nu_eff, body_force = body_force
+                dt = dt, nu_eff = nu_eff, body_force = body_force,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
             push!(eqs, eq)
         end
@@ -406,12 +431,12 @@ function _thermal_pimple_step!(
         update_boundary_velocity!(state, prob.bcs, mesh)
 
         # Extract A_P/H(U) from the (relaxed) solved equations
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
         nc = length(mesh.cell_volumes)
         for k in 1:algo.n_correctors
             p_eq = CollocatedEquation(mesh)
-            assemble_pressure!(p_eq, state, prob)
+            assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
             if _needs_pressure_reference(prob.bcs)
                 fix_pressure_reference!(p_eq, 1, zero(T))
             end
@@ -427,9 +452,12 @@ function _thermal_pimple_step!(
                 end
             end
             update_boundary_pressure!(state, prob.bcs, mesh)
-            correct_velocity!(state, mesh)
+            correct_velocity!(state, mesh; porous_zones = porous_zones)
             update_boundary_velocity!(state, prob.bcs, mesh)
-            correct_fluxes!(state, mesh)
+            correct_fluxes!(state, mesh; porous_zones = porous_zones)
+            if mrf_zones !== nothing
+                mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+            end
         end
     end
 

@@ -33,6 +33,29 @@ The assembled equation is:
   Must be in kinematic units (force per unit mass), consistent with the
   rest of the equation.
 - `t` — current simulation time, used to evaluate time-dependent BCs
+- `rho_p` — optional per-cell density used to scale the pressure-gradient
+  source to `-(1/ρ_c) ∇p V_c`.  Used by the compressible pressure-based
+  solvers where `state.p` holds the ABSOLUTE pressure; `nothing` (default)
+  keeps the incompressible convention where `p` is already kinematic.
+  Callers passing `rho_p` here must pass the same vector to
+  [`extract_momentum_operators!`](@ref) and [`correct_velocity!`](@ref).
+- `porous_zones` — optional `Vector{PorousZone{T}}` of Darcy-Forchheimer
+  zones.  The sink `-(ν K⁻¹ + ½ F |U|) U` (kinematic form: dynamic
+  coefficients divided by density, so results are density-invariant at
+  fixed ν) is added with IMPLICIT diagonal treatment — the tensor
+  diagonal goes into `A[c,c]`, only the off-diagonal tensor remainder is
+  explicit.  The Darcy term uses the molecular viscosity `prob.nu`.
+- `mrf_zones` — optional `Vector{MRFZone{T}}` of rotating reference-frame
+  zones.  Uses the OpenFOAM absolute-velocity MRF formulation: the solved
+  `U` is the absolute velocity, convection inside zones uses the relative
+  flux (see [`mrf_make_relative!`](@ref)), and the frame term enters as
+  the explicit source `-(Ω × U) V_c` (per unit mass).  This is
+  algebraically equivalent to the relative-velocity form with Coriolis
+  `-2Ω×u_rel` and centrifugal `-Ω×(Ω×r)` sources.  Explicit treatment is
+  used because `Ω×U` is skew-symmetric across velocity components: in a
+  segregated per-component solve its diagonal contribution is identically
+  zero, so there is nothing to treat implicitly; stability is provided by
+  the outer under-relaxation (standard OpenFOAM `MRFZone` practice).
 """
 function assemble_momentum!(
         eq::CollocatedEquation{T},
@@ -44,6 +67,9 @@ function assemble_momentum!(
         nu_eff::Union{T, Vector{T}} = prob.nu,
         body_force::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
         t::T = zero(T),
+        rho_p::Union{Nothing, Vector{T}} = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
@@ -71,11 +97,22 @@ function assemble_momentum!(
         assemble_ddt_euler!(eq, one(T), phi_old, mesh, dt)
     end
 
-    # Pressure gradient source: -dp/dx_d * V_c
-    # Compute gradient of pressure
-    grad_p = gradient(state.p, mesh)
-    for c in 1:nc
-        eq.b[c] -= grad_p[c][component] * mesh.cell_volumes[c]
+    # Pressure gradient source: -dp/dx_d * V_c  (divided by ρ_c when the
+    # pressure field is absolute — compressible callers pass rho_p).
+    # With active porous zones the face pressures are resistance-weighted
+    # (see _porous_weighted_pressure_gradient) so the discontinuous
+    # pressure slope at zone interfaces does not smear into free cells.
+    grad_p = _use_porous_path(porous_zones) ?
+        _porous_weighted_pressure_gradient(state, mesh) :
+        gradient(state.p, mesh)
+    if rho_p === nothing
+        for c in 1:nc
+            eq.b[c] -= grad_p[c][component] * mesh.cell_volumes[c]
+        end
+    else
+        for c in 1:nc
+            eq.b[c] -= grad_p[c][component] * mesh.cell_volumes[c] / rho_p[c]
+        end
     end
 
     # Body force (buoyancy, etc.)
@@ -85,6 +122,167 @@ function assemble_momentum!(
         end
     end
 
+    # Darcy-Forchheimer porous sink (implicit diagonal + explicit
+    # off-diagonal tensor remainder)
+    if porous_zones !== nothing
+        _assemble_porous_sink!(eq, state.U, porous_zones, prob.nu, component, mesh)
+    end
+
+    # MRF frame source -(Ω × U) V_c (explicit; see docstring)
+    if mrf_zones !== nothing
+        _assemble_mrf_source!(eq, state.U, mrf_zones, component, mesh)
+    end
+
+    return nothing
+end
+
+# ── Porous helpers ──────────────────────────────────────────────────
+
+"""
+    _use_porous_path(porous_zones) -> Bool
+
+True when at least one non-empty porous zone is active — gates the
+porous-consistent gradient / correction / flux variants.
+"""
+_use_porous_path(::Nothing) = false
+function _use_porous_path(zones::Vector{PorousZone{T}}) where {T}
+    return any(z -> !isempty(z.cell_indices), zones)
+end
+
+@doc """
+    _porous_weighted_pressure_gradient(state, mesh) -> Vector{SVector}
+
+Green-Gauss pressure gradient with RESISTANCE-WEIGHTED internal face
+pressures.  With mobility `D_c = V_c / A_P[c]` and sub-cell resistances
+`R_P = δ_P / D_P`, `R_N = δ_N / D_N` (`δ` = cell-center → face-center
+distance), the face pressure is
+
+```
+    p_f = (R_N p_P + R_P p_N) / (R_P + R_N)
+```
+
+which is the exact interface pressure of the piecewise-linear 1D profile
+carrying a uniform flux through cells of different mobility.  For
+uniform `A_P` it reduces to the standard distance-weighted linear
+interpolation.  At a porous interface (mobility jump of many orders of
+magnitude) the plain linear interpolation smears the in-zone pressure
+slope into the free cell, producing spurious momentum sources that
+destabilize the outer loop; the resistance weighting removes the
+artifact at its root (Mencinger & Žun-style pressure-weighted
+interpolation).  Boundary faces use the boundary pressure values.
+"""
+function _porous_weighted_pressure_gradient(
+        state::IncompressibleState{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+    p = state.p
+    bmap = build_boundary_map(p, mesh)
+    grad = fill(zero(SVector{Dim, T}), nc)
+
+    @inbounds for f in 1:nf
+        S_f = face_normal_area(mesh, f)
+        P = owner(mesh, f)
+        if is_internal_face(mesh, f)
+            N = neighbour(mesh, f)
+            x_f = face_center(mesh, f)
+            delta_P = norm(x_f - cell_center(mesh, P))
+            delta_N = norm(x_f - cell_center(mesh, N))
+            D_P = mesh.cell_volumes[P] / state.A_P[P]
+            D_N = mesh.cell_volumes[N] / state.A_P[N]
+            R_P = delta_P / max(D_P, eps(T))
+            R_N = delta_N / max(D_N, eps(T))
+            p_f = (R_N * p.internal[P] + R_P * p.internal[N]) / max(R_P + R_N, eps(T))
+        else
+            p_f = p.boundary[bmap[f]]
+        end
+        grad[P] += p_f * S_f
+        if is_internal_face(mesh, f)
+            N = neighbour(mesh, f)
+            grad[N] -= p_f * S_f
+        end
+    end
+
+    @inbounds for c in 1:nc
+        grad[c] /= mesh.cell_volumes[c]
+    end
+    return grad
+end
+
+# ── Porous zone sink ────────────────────────────────────────────────
+
+@doc """
+    _assemble_porous_sink!(eq, U, zones, nu, component, mesh)
+
+Add the kinematic Darcy-Forchheimer momentum sink to the component-`d`
+momentum equation:
+
+```
+    S_d = -[ν K⁻¹ + ½ F |U|]_{d,:} · U
+```
+
+(the dynamic OpenFOAM form `-(μ K⁻¹ + ½ ρ F |U|) U` divided by density,
+matching the kinematic momentum convention).  The tensor DIAGONAL entry
+`R[d,d] V_c` is added IMPLICITLY to `A[c,c]` — essential for stability in
+high-resistance zones — while the off-diagonal tensor remainder
+`Σ_{e≠d} R[d,e] U_e V_c` is added explicitly to the RHS (zero for
+isotropic / diagonal-tensor zones).
+"""
+function _assemble_porous_sink!(
+        eq::CollocatedEquation{T},
+        U::CollocatedVectorField{Dim, T},
+        zones::Vector{PorousZone{T}},
+        nu::T,
+        component::Int,
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    d = component
+    for zone in zones
+        @inbounds for c in zone.cell_indices
+            U3 = _lift_to_3d(U.internal[c], T)
+            u_mag = norm(U3)
+            R = nu * zone.K_inv + T(0.5) * zone.F * u_mag
+            V_c = mesh.cell_volumes[c]
+            add_diag!(eq, c, R[d, d] * V_c)
+            explicit_rem = zero(T)
+            for e in 1:3
+                e == d && continue
+                explicit_rem += R[d, e] * U3[e]
+            end
+            eq.b[c] -= explicit_rem * V_c
+        end
+    end
+    return nothing
+end
+
+# ── MRF frame source ────────────────────────────────────────────────
+
+@doc """
+    _assemble_mrf_source!(eq, U, zones, component, mesh)
+
+Add the explicit absolute-velocity MRF frame source `-(Ω × U)_d V_c` for
+every cell in each `MRFZone` (kinematic — per unit mass, no density).
+2D velocities are lifted to 3D with `U_z = 0`, so a planar rotation about
+`Ω = (0, 0, ω_z)` produces the exact in-plane source
+`-ω_z (-U_y, U_x)` rather than the legacy `_cross` 2D stub behaviour.
+"""
+function _assemble_mrf_source!(
+        eq::CollocatedEquation{T},
+        U::CollocatedVectorField{Dim, T},
+        zones::Vector{MRFZone{T}},
+        component::Int,
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    d = component
+    for zone in zones
+        omega = zone.omega
+        @inbounds for c in zone.cells
+            U3 = _lift_to_3d(U.internal[c], T)
+            src3 = -cross(omega, U3)
+            eq.b[c] += src3[d] * mesh.cell_volumes[c]
+        end
+    end
     return nothing
 end
 
@@ -137,15 +335,34 @@ Call this AFTER the momentum solve (and after under-relaxation), while
 - `state::IncompressibleState` — state (A_P and H_U modified in-place)
 - `eqs::Vector{CollocatedEquation{T}}` — assembled momentum equations (one per component)
 - `mesh::UnstructuredFVMMesh` — mesh
+
+# Keyword Arguments
+- `rho_p` — per-cell density used by [`assemble_momentum!`](@ref) to scale
+  the pressure-gradient source; must match what was passed there so the
+  same `(1/ρ_c) ∇p V_c` term is added back (compressible solvers only,
+  default `nothing`).
+- `porous_zones` — must match the zones passed to
+  [`assemble_momentum!`](@ref): when active, the pressure add-back uses
+  the same resistance-weighted gradient
+  ([`_porous_weighted_pressure_gradient`](@ref)) that assembly
+  subtracted, evaluated with the PRE-UPDATE `A_P` (i.e. the one that was
+  in effect during assembly), so H stays exactly pressure-free.
 """
 function extract_momentum_operators!(
         state::IncompressibleState{Dim, T},
         eqs::Vector{CollocatedEquation{T}},
-        mesh::UnstructuredFVMMesh{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T};
+        rho_p::Union{Nothing, Vector{T}} = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
     A = eqs[1].A  # Matrix structure is the same for all components
     pat = eqs[1].pattern
+
+    # Porous path: evaluate the weighted gradient BEFORE state.A_P is
+    # overwritten below, so it matches the gradient used at assembly time.
+    grad_p_porous = _use_porous_path(porous_zones) ?
+        _porous_weighted_pressure_gradient(state, mesh) : nothing
 
     # Store diagonal via pre-computed nzval indices (O(1) per entry)
     for c in 1:nc
@@ -165,11 +382,12 @@ function extract_momentum_operators!(
 
     # Initialize H with RHS values, removing the pressure-gradient source
     # that assemble_momentum! added to b (H must be pressure-free).
-    grad_p = gradient(state.p, mesh)
+    grad_p = grad_p_porous === nothing ? gradient(state.p, mesh) : grad_p_porous
     for c in 1:nc
         V_c = mesh.cell_volumes[c]
+        inv_rho = rho_p === nothing ? one(T) : one(T) / rho_p[c]
         h = ntuple(Val(Dim)) do d
-            eqs[d].b[c] + grad_p[c][d] * V_c
+            eqs[d].b[c] + grad_p[c][d] * V_c * inv_rho
         end
         state.H_U[c] = SVector{Dim, T}(h)
     end

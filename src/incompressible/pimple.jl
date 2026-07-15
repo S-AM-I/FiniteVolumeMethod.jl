@@ -31,6 +31,8 @@ correctors:
 
 # Keyword Arguments
 - `linear_solver` — solver algorithm for `LinearProblem` (default: `nothing`)
+- `porous_zones` — optional Darcy-Forchheimer zones (see [`assemble_momentum!`](@ref))
+- `mrf_zones` — optional MRF zones (see [`assemble_momentum!`](@ref))
 """
 function _pimple_step!(
         state::IncompressibleState{Dim, T},
@@ -41,6 +43,8 @@ function _pimple_step!(
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
         t::T = zero(T),
         ws = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -64,7 +68,10 @@ function _pimple_step!(
         # ── 1. Assemble momentum ────────────────────────────────────
         for d in 1:Dim
             reset!(eqs[d])
-            assemble_momentum!(eqs[d], state, prob, d; dt = dt, t = t)
+            assemble_momentum!(
+                eqs[d], state, prob, d; dt = dt, t = t,
+                porous_zones = porous_zones, mrf_zones = mrf_zones,
+            )
             apply_cyclic_to_equation!(
                 eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                 mesh, cyclic_pairs,
@@ -88,14 +95,14 @@ function _pimple_step!(
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
 
         # ── 3. Extract operators from the (relaxed) solved equations ─
-        extract_momentum_operators!(state, eqs, mesh)
+        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
 
         # ── 4. PISO inner corrector loop ────────────────────────────
         nc = length(mesh.cell_volumes)
         for k in 1:n_correctors
             # 4a. Pressure solve
             reset!(p_eq)
-            assemble_pressure!(p_eq, state, prob)
+            assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
             apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
             if _needs_pressure_reference(prob.bcs)
                 fix_pressure_reference!(p_eq, 1, zero(T))
@@ -118,10 +125,13 @@ function _pimple_step!(
             update_boundary_pressure!(state, prob.bcs, mesh)
 
             # 4d. Correct velocity + fluxes
-            correct_velocity!(state, mesh)
+            correct_velocity!(state, mesh; porous_zones = porous_zones)
             update_boundary_velocity!(state, prob.bcs, mesh; t = t)
             update_boundary_cyclic!(state, mesh, cyclic_pairs)
-            correct_fluxes!(state, mesh)
+            correct_fluxes!(state, mesh; porous_zones = porous_zones)
+            if mrf_zones !== nothing
+                mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+            end
         end
     end
 
@@ -190,6 +200,8 @@ State snapshots are stored every `save_every` time steps.  The returned
   (default `nothing` = zero field)
 - `p0::Union{Nothing, Vector{T}}` — initial cell pressures
   (default `nothing` = zero field)
+- `porous_zones` — optional Darcy-Forchheimer zones (see [`assemble_momentum!`](@ref))
+- `mrf_zones` — optional MRF zones (see [`assemble_momentum!`](@ref))
 
 # Returns
 A [`SolveResult`](@ref) with:
@@ -210,6 +222,8 @@ function solve_incompressible(
         cfl_max::Union{Nothing, T} = nothing,
         U0::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
         p0::Union{Nothing, Vector{T}} = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     algo = prob.algorithm
@@ -231,6 +245,9 @@ function solve_incompressible(
     if U0 !== nothing
         # Consistent initial face fluxes from the initial velocity
         compute_face_flux!(state.phi, state.U, mesh)
+        if mrf_zones !== nothing
+            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
+        end
     end
 
     # Pre-compute cyclic face pairs (empty vector if no CyclicBC)
@@ -260,6 +277,7 @@ function solve_incompressible(
             state, prob, dt_actual;
             linear_solver = linear_solver, solver_config = solver_config,
             t = t + dt_actual, ws = ws,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         t += dt_actual
         n_steps += 1
@@ -310,11 +328,13 @@ function _select_step_function(
         state, prob, dt;
         linear_solver = nothing, solver_config = nothing,
         t = zero(dt), ws = nothing,
+        porous_zones = nothing, mrf_zones = nothing,
     ) ->
     _piso_step!(
         state, prob, dt, n_correctors;
         linear_solver = linear_solver, solver_config = solver_config,
         cyclic_pairs = cyclic_pairs, t = t, ws = ws,
+        porous_zones = porous_zones, mrf_zones = mrf_zones,
     )
 end
 
@@ -326,11 +346,13 @@ function _select_step_function(
         state, prob, dt;
         linear_solver = nothing, solver_config = nothing,
         t = zero(dt), ws = nothing,
+        porous_zones = nothing, mrf_zones = nothing,
     ) ->
     _pimple_step!(
         state, prob, dt;
         linear_solver = linear_solver, solver_config = solver_config,
         cyclic_pairs = cyclic_pairs, t = t, ws = ws,
+        porous_zones = porous_zones, mrf_zones = mrf_zones,
     )
 end
 

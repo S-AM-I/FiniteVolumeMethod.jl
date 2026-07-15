@@ -95,6 +95,44 @@ function update_viscosity!(
     return nothing
 end
 
+# ── Compressibility ψ = ∂ρ/∂p|_T ────────────────────────────────────
+
+"""
+    psi_at(model::AbstractThermoModel, p, T) -> FT
+
+Isothermal compressibility `ψ = ∂ρ/∂p|_T` [s²/m²] used by the
+compressible pressure equation (`ddt(ψ p)` term).  Analytic for
+`IdealGas` (`ψ = 1/(R T)`); other models fall back to a central finite
+difference of `density_at` with step `δ = 1e-4 · max(|p|, 1)` (adequate
+because ψ only enters as a Picard-frozen linearization coefficient —
+mass conservation is enforced through the matching `ρ ← ρ* + ψ(p - p*)`
+update, not through the accuracy of ψ itself).
+"""
+@inline function psi_at(model::AbstractThermoModel, p, T)
+    delta = 1.0e-4 * max(abs(p), one(p))
+    return (density_at(model, p + delta, T) - density_at(model, p - delta, T)) /
+        (2 * delta)
+end
+
+@inline psi_at(m::IdealGas, p, T) = 1 / (m.R * max(T, eps(typeof(float(T)))))
+
+"""
+    update_psi!(psi, model, p, T)
+
+Write `psi[c] = psi_at(model, p[c], T[c])` for every interior cell.
+"""
+function update_psi!(
+        psi::Vector{FT},
+        model::AbstractThermoModel,
+        p::AbstractVector{FT},
+        T::AbstractVector{FT},
+    ) where {FT}
+    @inbounds for c in eachindex(psi)
+        psi[c] = FT(psi_at(model, p[c], T[c]))
+    end
+    return nothing
+end
+
 # ── Face-centered density ───────────────────────────────────────────
 
 """
