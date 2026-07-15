@@ -48,8 +48,11 @@ function correct_velocity!(
     end
     nc = length(mesh.cell_volumes)
 
-    # Compute pressure gradient
-    grad_p = gradient(state.p, mesh)
+    # Pressure gradient — density-weighted face pressures on the
+    # variable-density (rho_p) path, matching assemble_momentum! /
+    # extract_momentum_operators! (see _rho_weighted_pressure_gradient).
+    grad_p = rho_p === nothing ? gradient(state.p, mesh) :
+        _rho_weighted_pressure_gradient(state, mesh, rho_p)
 
     for c in 1:nc
         V_c = mesh.cell_volumes[c]

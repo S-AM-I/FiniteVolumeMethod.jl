@@ -19,3 +19,7 @@ validation/release_outputs/
 docker-compose.override.yml
 .claude/
 .lycheecache
+
+# Benchmark harness artifacts (local provenance, not committed)
+test/benchmarks/.cache/
+benchmark_summary.toml

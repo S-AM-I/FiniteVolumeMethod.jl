@@ -172,7 +172,10 @@ function solve_simple_thermal(
             _print_simple_residuals(iter, residuals, component_labels)
         end
 
-        if max_res < algo.tolerance
+        # No convergence exit on the first outer iteration — the
+        # buoyancy-driven startup iterate (U = 0, uniform T) has exactly
+        # zero momentum residuals before the energy solve feeds back.
+        if iter > 1 && max_res < algo.tolerance
             converged = true
             break
         end

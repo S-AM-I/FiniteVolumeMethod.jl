@@ -27,7 +27,9 @@ The assembled equation is:
   is assembled against `state.U_old` (the old-time-level snapshot), with
   unit coefficient — the momentum equation is in *kinematic* form (ν,
   volumetric flux, p/ρ), so density must not appear in the temporal term.
-- `scheme` — convection interpolation scheme
+- `scheme` — convection interpolation scheme (`CONV_UPWIND`,
+  `CONV_LINEAR`, `CONV_BLENDED`)
+- `blend` — blending factor for `CONV_BLENDED` (0 = upwind, 1 = central)
 - `nu_eff` — effective viscosity: scalar `T` or per-cell `Vector{T}` (default: `prob.nu`)
 - `body_force` — per-cell body force vector (e.g. buoyancy), or `nothing`.
   Must be in kinematic units (force per unit mass), consistent with the
@@ -64,6 +66,7 @@ function assemble_momentum!(
         component::Int;
         dt::Union{Nothing, T} = nothing,
         scheme::ConvectionScheme = CONV_UPWIND,
+        blend::T = T(0.5),
         nu_eff::Union{T, Vector{T}} = prob.nu,
         body_force::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
         t::T = zero(T),
@@ -78,7 +81,7 @@ function assemble_momentum!(
     bcs_U = expand_bcs_velocity(prob.bcs, component; t = t)
 
     # Convection: div(phi * u_d)
-    assemble_convection!(eq, state.phi, mesh, bcs_U; scheme = scheme)
+    assemble_convection!(eq, state.phi, mesh, bcs_U; scheme = scheme, blend = blend)
 
     # Diffusion: -div(nu_eff * grad(u_d))  (Laplacian assembles as
     # positive-definite operator on the LHS).  The explicit non-orthogonal
@@ -98,13 +101,12 @@ function assemble_momentum!(
     end
 
     # Pressure gradient source: -dp/dx_d * V_c  (divided by ρ_c when the
-    # pressure field is absolute — compressible callers pass rho_p).
-    # With active porous zones the face pressures are resistance-weighted
-    # (see _porous_weighted_pressure_gradient) so the discontinuous
-    # pressure slope at zone interfaces does not smear into free cells.
-    grad_p = _use_porous_path(porous_zones) ?
-        _porous_weighted_pressure_gradient(state, mesh) :
-        gradient(state.p, mesh)
+    # pressure field is absolute — compressible/VOF callers pass rho_p).
+    # Porous zones use the mobility-weighted face pressures; the
+    # variable-density (rho_p) path uses density-weighted face pressures
+    # so hydrostatic kinks at fluid interfaces do not smear into the
+    # light-fluid cells (see the *_weighted_pressure_gradient helpers).
+    grad_p = _momentum_pressure_gradient(state, mesh, rho_p, porous_zones)
     if rho_p === nothing
         for c in 1:nc
             eq.b[c] -= grad_p[c][component] * mesh.cell_volumes[c]
@@ -208,6 +210,85 @@ function _porous_weighted_pressure_gradient(
         grad[c] /= mesh.cell_volumes[c]
     end
     return grad
+end
+
+@doc """
+    _rho_weighted_pressure_gradient(state, mesh, rho) -> Vector{SVector}
+
+Green-Gauss pressure gradient with DENSITY-WEIGHTED internal face
+pressures:
+
+```
+    p_f = (R_N p_P + R_P p_N) / (R_P + R_N),   R_i = δ_i ρ_i
+```
+
+(`δ` = cell-center → face-center distance).  In hydrostatic equilibrium
+the pressure profile is piecewise linear with slope `ρ g` — its kink
+sits on the interface face between fluids of different density.  This
+weighting reproduces that kink EXACTLY, so the kinematic momentum
+balance `-(1/ρ_c) ∇p + g` vanishes discretely cell-by-cell.  The plain
+linearly-interpolated gradient smears the heavy-fluid slope into the
+light-fluid cell, producing spurious interface accelerations of order
+`(ρ_heavy/ρ_light) g / 2` (≈ 400 g for air-water) that destabilize
+gravity-driven VOF within a few steps.  For uniform density it reduces
+to the standard distance-weighted interpolation.  Boundary faces use
+the boundary pressure values.
+"""
+function _rho_weighted_pressure_gradient(
+        state::IncompressibleState{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        rho::Vector{T},
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+    p = state.p
+    bmap = build_boundary_map(p, mesh)
+    grad = fill(zero(SVector{Dim, T}), nc)
+
+    @inbounds for f in 1:nf
+        S_f = face_normal_area(mesh, f)
+        P = owner(mesh, f)
+        if is_internal_face(mesh, f)
+            N = neighbour(mesh, f)
+            x_f = face_center(mesh, f)
+            R_P = norm(x_f - cell_center(mesh, P)) * rho[P]
+            R_N = norm(x_f - cell_center(mesh, N)) * rho[N]
+            p_f = (R_N * p.internal[P] + R_P * p.internal[N]) / max(R_P + R_N, eps(T))
+            grad[P] += p_f * S_f
+            grad[N] -= p_f * S_f
+        else
+            grad[P] += p.boundary[bmap[f]] * S_f
+        end
+    end
+
+    @inbounds for c in 1:nc
+        grad[c] /= mesh.cell_volumes[c]
+    end
+    return grad
+end
+
+"""
+    _momentum_pressure_gradient(state, mesh, rho_p, porous_zones)
+
+Select the pressure gradient consistent with the momentum source
+convention: porous zones → mobility-weighted; `rho_p` (variable-density
+kinematic form) → density-weighted; otherwise plain Green-Gauss.  Used
+identically by `assemble_momentum!` and `extract_momentum_operators!`
+so H stays exactly pressure-free.
+"""
+function _momentum_pressure_gradient(
+        state::IncompressibleState{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+        rho_p::Union{Nothing, Vector{T}},
+        porous_zones,
+    ) where {Dim, T}
+    if _use_porous_path(porous_zones)
+        return _porous_weighted_pressure_gradient(state, mesh)
+    elseif rho_p !== nothing
+        return _rho_weighted_pressure_gradient(state, mesh, rho_p)
+    else
+        return gradient(state.p, mesh)
+    end
 end
 
 # ── Porous zone sink ────────────────────────────────────────────────
@@ -359,10 +440,10 @@ function extract_momentum_operators!(
     A = eqs[1].A  # Matrix structure is the same for all components
     pat = eqs[1].pattern
 
-    # Porous path: evaluate the weighted gradient BEFORE state.A_P is
-    # overwritten below, so it matches the gradient used at assembly time.
-    grad_p_porous = _use_porous_path(porous_zones) ?
-        _porous_weighted_pressure_gradient(state, mesh) : nothing
+    # Evaluate the (possibly weighted) gradient BEFORE state.A_P is
+    # overwritten below, so it matches the gradient used at assembly time
+    # (the porous weighting reads state.A_P).
+    grad_p = _momentum_pressure_gradient(state, mesh, rho_p, porous_zones)
 
     # Store diagonal via pre-computed nzval indices (O(1) per entry)
     for c in 1:nc
@@ -382,7 +463,6 @@ function extract_momentum_operators!(
 
     # Initialize H with RHS values, removing the pressure-gradient source
     # that assemble_momentum! added to b (H must be pressure-free).
-    grad_p = grad_p_porous === nothing ? gradient(state.p, mesh) : grad_p_porous
     for c in 1:nc
         V_c = mesh.cell_volumes[c]
         inv_rho = rho_p === nothing ? one(T) : one(T) / rho_p[c]

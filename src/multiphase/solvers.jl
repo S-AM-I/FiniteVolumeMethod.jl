@@ -332,21 +332,49 @@ end
 """
     _vof_correct_fluxes!(state, rho, mesh)
 
-Density-consistent Rhie-Chow flux correction for the VOF steps: the
-pressure equation uses `D = V/(rho A_P)`, so the face correction
-coefficient must be the harmonic mean of the same quantity — achieved by
-passing the scaled diagonal `rho .* A_P` to `rhie_chow_correction!`.
-(The previous unscaled call overcorrected fluxes by a factor of the
-local density, which destabilized any run with a nonzero pressure field
-at large density ratios.)
+Density-consistent, pressure-equation-consistent flux update for the
+VOF steps (OpenFOAM `phi = phiHbyA - pEqn.flux()` form):
+
+```
+    φ_f = interp(H/A_P)·S_f - D_f (p_N - p_P)/|d| |S_f|,
+    D_f = harmonic{ V/(ρ A_P) }
+```
+
+matching the `D = V/(ρ A_P)` Laplacian of the VOF pressure equation.
+The Rhie-Chow deferred-correction form is NOT used here: it subtracts
+the linearly-interpolated Green-Gauss cell gradient, which is polluted
+at large density ratios where the hydrostatic pressure slope is
+discontinuous across the interface (the cell velocities are corrected
+with the density-weighted gradient instead — see
+`_rho_weighted_pressure_gradient`).  By construction `div(φ)` equals
+the pressure-solve residual plus the explicit mass-transfer source.
 """
 function _vof_correct_fluxes!(
         state::IncompressibleState{Dim, T},
         rho::Vector{T},
         mesh::UnstructuredFVMMesh{Dim, T},
     ) where {Dim, T}
-    A_scaled = state.A_P .* rho
-    rhie_chow_correction!(state.phi, state.U, state.p, A_scaled, mesh)
+    nf = size(mesh.face_cells, 2)
+    phi_HbyA = compute_HbyA_flux(state, mesh)
+
+    @inbounds for f in 1:nf
+        if is_internal_face(mesh, f)
+            P = owner(mesh, f)
+            N = neighbour(mesh, f)
+            w = face_weight(mesh, f)
+
+            D_P = mesh.cell_volumes[P] / (rho[P] * state.A_P[P])
+            D_N = mesh.cell_volumes[N] / (rho[N] * state.A_P[N])
+            denom = w * D_N + (one(T) - w) * D_P
+            D_f = denom > zero(T) ? D_P * D_N / denom : zero(T)
+
+            _, d_mag = owner_neighbour_distance(mesh, f)
+            snGrad = (state.p.internal[N] - state.p.internal[P]) / d_mag
+            state.phi.values[f] = phi_HbyA[f] - D_f * snGrad * mesh.face_areas[f]
+        else
+            state.phi.values[f] = phi_HbyA[f]
+        end
+    end
     return nothing
 end
 

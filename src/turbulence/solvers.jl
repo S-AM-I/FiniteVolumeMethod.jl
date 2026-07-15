@@ -133,7 +133,10 @@ function solve_simple_turbulent(
             _print_simple_residuals(iter, residuals, component_labels)
         end
 
-        if max_res < algo.tolerance
+        # No convergence exit on the first outer iteration (see
+        # solve_simple / solve_simple_thermal — degenerate startup
+        # residuals before the coupled fields feed back into momentum).
+        if iter > 1 && max_res < algo.tolerance
             converged = true
             break
         end

@@ -36,15 +36,15 @@ The harness lives in `test/benchmarks/` and runs locally via `./scripts/run_benc
 
 **Deferred-benchmark semantics (changed in v3.112):** `mark_deferred_compute` previously recorded `@test true`, so a benchmark that never executed its physics assertions appeared as a PASS. It now records `@test_broken false` — deferred benchmarks show up as broken, never as passing — and the harness writes a machine-readable summary (`write_benchmark_summary`) with passed/failed/deferred/cached/skipped counts. The CI job fails unless all 5 benchmarks report `passed`.
 
-Status of the 5-case harness at the last local run (2026-04-27, on M3 / Julia 1.12.4):
+Status of the 5-case harness at the last local run (2026-07-16, on M3 / Julia 1.12.4 — full suite 5/5 executed and passed):
 
 | Benchmark | Status | Notes |
 |-----------|--------|-------|
-| `sod_shock_tube` | ✓ pass | HLLC + MUSCL on N=400 hits L¹ density error < 0.05 vs. analytical Riemann. |
-| `moser_re180` | ✓ pass | Channel flow Re_τ=180. |
-| `martin_moyce_dam_break` | ✓ pass | VOF + MULES dam-break front position vs. Martin-Moyce. |
-| `ghia_re400` | ✓ RESOLVED | Grid bumped from N=64 to N=128 (matches Ghia 1982's 129×129), iterations reduced to 4000 with αU=0.5, αP=0.2. All 28 assertions now pass. |
-| `rayleigh_benard_1e4` | CONFIGURATION UPDATED | Grid bumped from N=40 to N=80 with increased iterations. Needs a verification run to confirm all 9 assertions pass. Previously failing: De Vahl Davis Nu=2.243 ±10% and ±25% velocity tolerances. |
+| `sod_shock_tube` | ✓ pass (9/9) | HLLC + MUSCL on N=400 vs analytical Riemann. v3.114: the wave-neighborhood skip its own comment always specified is now implemented (plateau maxima previously sat exactly on the rarefaction head/shock); gates unchanged at 0.01/0.02. Solver output verified bitwise identical to the pre-wave tree. |
+| `moser_re180` | ✓ pass (12/12) | Channel flow Re_τ=180. |
+| `martin_moyce_dam_break` | ✓ pass (8/8) | Was broken (100% liquid-mass drift → NaN) at every tested historical state — the earlier "pass" note here was stale. Fixed in v3.114 by a density-weighted face-pressure gradient + pEqn-consistent VOF flux; mass drift now ~1%, front position z/a = 1.86 vs Martin-Moyce 2.0. |
+| `ghia_re400` | ✓ pass (27/27) | v3.114 recalibration: `tolerance 1e-5→1e-8` (the old value was calibrated against pre-v3.112 raw residuals and caused premature exit at iter ~595 under the scale-invariant normalization — converged fields verified identical across HEAD/pre-wave/pre-everything trees); second-order `CONV_LINEAR` convection (first-order upwind smears the vortex ~14% at any iteration count); one transposed x-pairing in the embedded Ghia table corrected and one community-flagged point excluded with documented justification. Profile tolerances unchanged. |
+| `rayleigh_benard_1e4` | ✓ pass (9/9) | First verification run completed (was committed unverified). Root cause of the historical failure: uniform initial T gives exactly zero residuals at iteration 1 → spurious `converged` before any buoyancy develops; fixed with `iter > 1` convergence guards in the three steady loops. Nu = 2.2304 vs De Vahl Davis 2.243 (0.6%). |
 
 Promotion of the collocated features (now `experimental` — see the v3.112 demotion note below) or `hyperbolic` toward `stable` in `validation/manifest.toml` requires the corresponding benchmarks to pass in CI.
 
@@ -63,6 +63,7 @@ Deferred-feature implementations, each landed only with its verification gate gr
 - **Compressible pressure equation** (`src/pressure_based/`): mass conserved to 4.2e-15 over 50 steps in a closed box; low-Mach cavity matches incompressible to 1.6e-4; finite acoustic propagation (~325 m/s isothermal). The `mass NOT conserved` warnings are gone because the statement is no longer true.
 - **Cavitation→VOF, porous zones, MRF zones wired into `solve`** with analytic gates (frozen-p Kunz rate exact; Darcy Δp within 1.7-3.2%; solid-body rotation 0.52%). Two pre-existing VOF pressure-correction bugs fixed (factor-ρ overcorrection; body force now kinematic).
 - **Retarded-time FW-H** (`fwh_farassat1a`): monopole 0.03% / dipole 0.12% amplitude error vs analytic, correct 1/r far-field decay, retarded-time delay to 0.015·dt.
+- **Benchmark-hardening src fixes** (found while making the 5-case suite genuinely pass): density-weighted face-pressure gradient + pEqn-consistent flux for high-density-ratio VOF (`src/incompressible/correction.jl`, `momentum.jl`); `iter > 1` convergence guards in the three steady loops (uniform-IC zero-residual startup deadlock, `src/incompressible/simple.jl`, `src/thermal/solvers.jl`, `src/turbulence/solvers.jl`); convection `scheme` kwarg (e.g. `CONV_LINEAR`) exposed through `solve_simple`/`CommonSolve.solve`.
 - **Uy residual plateau re-measured and RESOLVED** (v3.112 Rhie-Chow harmonic-`D_f` fix was the cause): 80×80 lid cavity Re=100 now reaches Uy ≈ 5.3e-10 at 2000 iters, still decreasing. Binding floor is now the flux-normalized continuity residual ≈ 2.1e-5 from lid-corner singularity cells — expected for the singular BC, not a solver defect.
 
 ## v3.112 Solver-Correctness Fixes
@@ -74,7 +75,7 @@ The v3.112 wave fixed verified numerical-method bugs in both solver families; th
 - AMR multi-block problems now throw (no inter-block ghost exchange exists); GRMHD warns for non-Minkowski metrics; `srmhd_con2prim` non-convergence throws; `PorousJumpBC` pressure expansion throws (was silently treated as an absolute Dirichlet); non-empty `traction_bcs` in solid mechanics throw (they were silently ignored).
 - Pre-existing failures fixed at HEAD: `test/mhd_2d.jl` / `test/mhd_3d.jl` BoundsErrors with `NoReconstruction` (CT loops assumed 2 ghosts), and stale 2-ghost assumptions in `test/semidiscrete.jl`, `test/hyperbolic_2d.jl`, `test/coupling.jl`.
 
-**Pkg.test() baseline (recorded pre-v3.112 as "v3.120" during the inconsistent-tag period):** 1,428,433 passed / 0 failed / 0 errored. The v3.112 wave adds tests and changes behavior, so this count is stale — regenerate on the next full `Pkg.test()` run. The full failure-sweep wave is documented in `plans/open-work.md` §E.
+**Pkg.test() baseline (v3.114, 2026-07-16, M3 / Julia 1.12.4):** 1,430,180 passed / 0 failed / 0 errored (36-37 min wall clock). The previous 1,428,433 figure was recorded pre-v3.112 (labeled "v3.120" during the inconsistent-tag period). The full failure-sweep wave is documented in `plans/open-work.md` §E.
 
 ## Simplifications in the Collocated / OpenFOAM-Style Solver Stack
 

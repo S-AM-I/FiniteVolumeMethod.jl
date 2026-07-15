@@ -29,6 +29,9 @@ Returns an [`IncompressibleSolution`](@ref) with symbolic field access.
   (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
 - `mrf_zones::Vector{MRFZone}` — rotating reference-frame zones
   (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
+- `scheme::ConvectionScheme`, `blend` — momentum convection scheme for
+  the plain path (default first-order `CONV_UPWIND`; see
+  [`solve_simple`](@ref))
 """
 function CommonSolve.solve(
         prob::IncompressibleProblem{Dim, T},
@@ -40,6 +43,9 @@ function CommonSolve.solve(
         # Zone kwargs
         porous_zones = nothing,
         mrf_zones = nothing,
+        # Convection scheme kwargs (plain path; see solve_simple)
+        scheme::ConvectionScheme = CONV_UPWIND,
+        blend::T = T(0.5),
         # Turbulence kwargs
         turb_model = nothing,
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
@@ -163,6 +169,7 @@ function CommonSolve.solve(
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
             porous_zones = porous_zones, mrf_zones = mrf_zones,
+            scheme = scheme, blend = blend,
         )
         return IncompressibleSolution(result, actual_prob)
     end

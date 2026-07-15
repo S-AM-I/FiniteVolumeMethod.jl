@@ -35,6 +35,10 @@ The algorithm iterates:
 - `mrf_zones` — optional `Vector{MRFZone{T}}` rotating reference-frame
   zones (absolute-velocity MRF formulation; frame source in momentum,
   relative flux in continuity via [`mrf_make_relative!`](@ref))
+- `scheme::ConvectionScheme` — momentum convection scheme
+  (default `CONV_UPWIND`; `CONV_LINEAR` / `CONV_BLENDED` reduce the
+  first-order smearing at higher Re — see [`assemble_momentum!`](@ref))
+- `blend::T` — blending factor for `CONV_BLENDED` (0 = upwind, 1 = central)
 
 # Returns
 A [`SolveResult`](@ref) containing convergence status, iteration count,
@@ -47,6 +51,8 @@ function solve_simple(
         verbose::Bool = false,
         porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
         mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
+        scheme::ConvectionScheme = CONV_UPWIND,
+        blend::T = T(0.5),
     ) where {Dim, T}
     algo = prob.algorithm::SIMPLE{T}
     mesh = prob.mesh
@@ -86,6 +92,7 @@ function solve_simple(
             assemble_momentum!(
                 eqs[d], state, prob, d;
                 porous_zones = porous_zones, mrf_zones = mrf_zones,
+                scheme = scheme, blend = blend,
             )
             # Apply cyclic coupling to momentum
             apply_cyclic_to_equation!(
@@ -159,7 +166,13 @@ function solve_simple(
             _print_simple_residuals(iter, residuals, component_labels)
         end
 
-        if max_residual < tol
+        # Never declare convergence on the FIRST outer iteration: the
+        # residuals of the startup iterate are degenerate whenever the
+        # initial fields solve the momentum equations trivially (e.g. a
+        # buoyancy-driven cavity starts with U = 0, uniform T ⇒ zero
+        # body force ⇒ exactly zero residuals), and coupled quantities
+        # (temperature, turbulence) have not yet fed back into momentum.
+        if iter > 1 && max_residual < tol
             converged = true
             break
         end
