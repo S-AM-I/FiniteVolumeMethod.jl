@@ -50,6 +50,22 @@ function extract_boundary_patches(mesh::UnstructuredFVMMesh)
     return [BoundaryPatch(name, idxs) for (name, idxs) in sort!(collect(groups); by = first)]
 end
 
+# ── Function-valued Dirichlet primitive ─────────────────────────────
+
+"""
+    ParabolicDirichletFunc{F} <: AbstractBoundaryCondition
+
+Spatially-varying Dirichlet primitive for the collocated operators.
+`func(x_f::SVector) -> value` is evaluated at each boundary face center
+during assembly, so spatially- and time-varying high-level BCs (e.g.
+`SpatialVelocityBC`, `CodedFixedValueBC`) enter the matrix/RHS with their
+true per-face values instead of a `Dirichlet(0)` placeholder.  Time
+dependence is baked into the closure by the expansion step.
+"""
+struct ParabolicDirichletFunc{F} <: AbstractBoundaryCondition
+    func::F
+end
+
 # ── Collocated scalar field ──────────────────────────────────────────
 
 """
@@ -234,47 +250,33 @@ struct SparsityPattern
 end
 
 """
-    build_collocated_sparsity(mesh::UnstructuredFVMMesh{Dim, T}) -> (A, pattern)
+    build_collocated_sparsity(
+        mesh::UnstructuredFVMMesh{Dim, T};
+        extra_cell_pairs = Tuple{Int, Int}[],
+    ) -> (A, pattern)
 
 Build the empty matrix `A` (with all cell-neighbour structural entries
 already present) and a `SparsityPattern` of `nzval` indices. After this,
 an assembly kernel can write `A.nzval[pattern.diag_idx[c]] += …` etc.
 without any structural changes to `A`.
+
+`extra_cell_pairs` pre-allocates additional symmetric couplings
+`A[c1, c2]` / `A[c2, c1]` beyond the face-neighbour stencil — used for
+cyclic (periodic) boundary coupling so that `apply_cyclic_bc!` never
+inserts new structural entries (which would invalidate the pre-computed
+`nzval` index tables of a reused equation).
 """
-function build_collocated_sparsity(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim, T}
+function build_collocated_sparsity(
+        mesh::UnstructuredFVMMesh{Dim, T};
+        extra_cell_pairs::Vector{Tuple{Int, Int}} = Tuple{Int, Int}[],
+    ) where {Dim, T}
     nc = length(mesh.cell_volumes)
     nf = size(mesh.face_cells, 2)
 
-    # Phase 1: compute how many nonzeros each column has.
-    # Columns in CSC correspond to the "input" index j of A[i, j]. For our
-    # stencil each cell has one diagonal entry plus one off-diagonal per
-    # internal face touching it. So each column j (cell j) has 1 + degree(j)
-    # structural nonzeros.
-    nnz_per_col = Vector{Int}(undef, nc)
-    fill!(nnz_per_col, 1)  # diagonal contribution
-    for f in 1:nf
-        if mesh.face_cells[2, f] != 0
-            P = mesh.face_cells[1, f]
-            N = mesh.face_cells[2, f]
-            # A[P, N] lives in column N; A[N, P] lives in column P.
-            nnz_per_col[N] += 1
-            nnz_per_col[P] += 1
-        end
-    end
-
-    total_nnz = sum(nnz_per_col)
-    colptr = Vector{Int}(undef, nc + 1)
-    colptr[1] = 1
-    for j in 1:nc
-        colptr[j + 1] = colptr[j] + nnz_per_col[j]
-    end
-
-    rowval = Vector{Int}(undef, total_nnz)
-    nzval = zeros(T, total_nnz)
-
-    # Phase 2: for each column j, collect the row indices that touch j.
-    # We know: row j itself (diagonal) plus every owner P with neighbour j
-    # plus every neighbour N of owner j.
+    # Phase 2 (moved first): for each column j, collect the row indices
+    # that touch j.  We know: row j itself (diagonal) plus every owner P
+    # with neighbour j plus every neighbour N of owner j, plus any extra
+    # cell-pair couplings.
     col_rows = [Int[] for _ in 1:nc]
     for j in 1:nc
         push!(col_rows[j], j)  # diagonal
@@ -289,10 +291,28 @@ function build_collocated_sparsity(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim
             push!(col_rows[P], N)
         end
     end
+    for (c1, c2) in extra_cell_pairs
+        c1 == c2 && continue
+        push!(col_rows[c2], c1)  # A[c1, c2]
+        push!(col_rows[c1], c2)  # A[c2, c1]
+    end
 
-    # Sort each column's rows and fill rowval
+    # Sort each column's rows, deduplicate, and build colptr/rowval.
     for j in 1:nc
         sort!(col_rows[j])
+        unique!(col_rows[j])
+    end
+
+    colptr = Vector{Int}(undef, nc + 1)
+    colptr[1] = 1
+    for j in 1:nc
+        colptr[j + 1] = colptr[j] + length(col_rows[j])
+    end
+    total_nnz = colptr[nc + 1] - 1
+
+    rowval = Vector{Int}(undef, total_nnz)
+    nzval = zeros(T, total_nnz)
+    for j in 1:nc
         k = colptr[j]
         for r in col_rows[j]
             rowval[k] = r
@@ -355,16 +375,23 @@ mutable struct CollocatedEquation{T}
 end
 
 """
-    CollocatedEquation(mesh::UnstructuredFVMMesh{Dim, T})
+    CollocatedEquation(mesh::UnstructuredFVMMesh{Dim, T}; extra_cell_pairs = Tuple{Int, Int}[])
 
 Construct an empty equation (zero matrix + zero RHS) sized for `mesh`.
 The sparsity structure of `A` is built eagerly from the mesh's
 cell-neighbour connectivity, so subsequent `assemble_*!` calls never
 modify `A`'s structure — they only write into `A.nzval`.
+
+Pass `extra_cell_pairs` (e.g. cyclic-partner owner-cell pairs) to
+pre-allocate cross-boundary couplings so the equation can be safely
+reused across iterations with `reset!` even when cyclic BCs are applied.
 """
-function CollocatedEquation(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim, T}
+function CollocatedEquation(
+        mesh::UnstructuredFVMMesh{Dim, T};
+        extra_cell_pairs::Vector{Tuple{Int, Int}} = Tuple{Int, Int}[],
+    ) where {Dim, T}
     nc = length(mesh.cell_volumes)
-    A, pattern = build_collocated_sparsity(mesh)
+    A, pattern = build_collocated_sparsity(mesh; extra_cell_pairs = extra_cell_pairs)
     b = zeros(T, nc)
     source = zeros(T, nc)
     return CollocatedEquation{T}(A, b, source, pattern)

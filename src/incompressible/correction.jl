@@ -63,23 +63,31 @@ end
 # ── Boundary velocity update ────────────────────────────────────────
 
 @doc """
-    update_boundary_velocity!(state, bcs, mesh)
+    update_boundary_velocity!(state, bcs, mesh; t = 0)
 
 Update boundary face velocity values according to the boundary condition
 types:
 - `FixedVelocityBC` → prescribed value
-- `NoSlipWallBC` → zero
-- Others (SlipWallBC, FixedPressureBC, InletOutletBC) → copy owner cell value
+- `SpatialVelocityBC` → `bc.func(x_f)`
+- `TimeDependentVelocityBC`, `UniformFixedValueBC` → `bc.func(t)`
+- `CodedFixedValueBC` → `bc.func(x_f, t)` (same scalar per component)
+- `NoSlipWallBC`, `WallFunctionBC` → zero (wall)
+- `SlipWallBC`, `SymmetryBC` → owner cell value with the wall-normal
+  component projected out, so the boundary face flux `U_b · S_f` is
+  exactly zero (no mass leak through slip/symmetry planes)
+- Others (FixedPressureBC, outlets) → copy owner cell value
 
 # Arguments
 - `state::IncompressibleState` — state (U.boundary modified in-place)
 - `bcs::Dict{Symbol, <:AbstractBoundaryCondition}` — boundary conditions
 - `mesh::UnstructuredFVMMesh` — mesh
+- `t` — current simulation time for time-dependent BCs (default `0`)
 """
 function update_boundary_velocity!(
         state::IncompressibleState{Dim, T},
         bcs::Dict{Symbol, <:AbstractBoundaryCondition},
-        mesh::UnstructuredFVMMesh{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T};
+        t::T = zero(T),
     ) where {Dim, T}
     for (i, f) in enumerate(state.U.boundary_face_indices)
         tag = _face_tag(mesh, f)
@@ -93,12 +101,27 @@ function update_boundary_velocity!(
         elseif bc isa SpatialVelocityBC
             x_f = face_center(mesh, f)
             state.U.boundary[i] = bc.func(x_f)
-        elseif bc isa NoSlipWallBC
+        elseif bc isa TimeDependentVelocityBC
+            state.U.boundary[i] = bc.func(t)
+        elseif bc isa UniformFixedValueBC
+            state.U.boundary[i] = bc.func(t)
+        elseif bc isa CodedFixedValueBC
+            x_f = face_center(mesh, f)
+            v = T(bc.func(x_f, t))
+            state.U.boundary[i] = SVector{Dim, T}(ntuple(_ -> v, Val(Dim)))
+        elseif bc isa NoSlipWallBC || bc isa WallFunctionBC
             state.U.boundary[i] = zero(SVector{Dim, T})
         elseif bc isa InletOutletBC
             state.U.boundary[i] = bc.inlet_value
+        elseif bc isa SlipWallBC || bc isa SymmetryBC
+            # Tangential extrapolation: remove the face-normal component
+            # so the boundary flux is exactly zero.
+            S_f = face_normal_area(mesh, f)
+            n_hat = S_f / mesh.face_areas[f]
+            U_P = state.U.internal[P]
+            state.U.boundary[i] = U_P - dot(U_P, n_hat) * n_hat
         else
-            # SlipWallBC, FixedPressureBC, etc.: extrapolate from owner cell
+            # FixedPressureBC, outlets, etc.: extrapolate from owner cell
             state.U.boundary[i] = state.U.internal[P]
         end
     end

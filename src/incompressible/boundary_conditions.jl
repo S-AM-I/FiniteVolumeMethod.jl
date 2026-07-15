@@ -386,12 +386,33 @@ PorousJumpBC(; D::Real = 0.0, I_coeff::Real = 0.0, power::Real = 0.0) =
 # ── Velocity BC expansion ──────────────────────────────────────────
 
 @doc """
-    expand_velocity_bc(bc, component::Int) -> AbstractBoundaryCondition
+    expand_velocity_bc(bc, component::Int[, t]) -> AbstractBoundaryCondition
 
-Convert an incompressible BC into the primitive `ParabolicDirichlet` or
-`ParabolicNeumann` for the given velocity component equation.
+Convert an incompressible BC into the primitive `ParabolicDirichlet`,
+`ParabolicDirichletFunc`, or `ParabolicNeumann` for the given velocity
+component equation.  The 3-argument form evaluates time-dependent BCs
+at simulation time `t`; time-independent BCs fall back to the
+2-argument method.
 """
 function expand_velocity_bc end
+
+# Time-independent fallback: ignore t.
+expand_velocity_bc(bc::AbstractBoundaryCondition, component::Int, t) =
+    expand_velocity_bc(bc, component)
+
+function expand_velocity_bc(bc::TimeDependentVelocityBC, component::Int, t)
+    return ParabolicDirichlet(bc.func(t)[component])
+end
+
+function expand_velocity_bc(bc::UniformFixedValueBC, component::Int, t)
+    return ParabolicDirichlet(bc.func(t)[component])
+end
+
+function expand_velocity_bc(bc::CodedFixedValueBC, ::Int, t)
+    # Bake the current time into a spatial closure; evaluated per-face
+    # at assembly time.
+    return ParabolicDirichletFunc(x -> bc.func(x, t))
+end
 
 function expand_velocity_bc(bc::FixedVelocityBC, component::Int)
     return ParabolicDirichlet(bc.value[component])
@@ -433,16 +454,22 @@ function expand_velocity_bc(bc::TimeDependentVelocityBC, component::Int)
     return ParabolicDirichlet(bc.func(bc.t_ref)[component])
 end
 
-function expand_velocity_bc(::SpatialVelocityBC, ::Int)
-    # Spatially-varying BC: the actual per-face Dirichlet value is set by
-    # `update_boundary_velocity!` using `bc.func(face_center)`. For the
-    # momentum Laplacian assembly we fall back to a Dirichlet(0) placeholder
-    # on the LHS and let the face-by-face BC application do the real work.
-    return ParabolicDirichlet(0.0)
+function expand_velocity_bc(bc::SpatialVelocityBC, component::Int)
+    # Spatially-varying Dirichlet: evaluated per boundary face at assembly
+    # time so the matrix/RHS see the true face values (previously a
+    # Dirichlet(0) placeholder that silently zeroed the boundary term).
+    return ParabolicDirichletFunc(x -> bc.func(x)[component])
 end
 
 function expand_velocity_bc(::WallFunctionBC, ::Int)
-    return ParabolicNeumann(0.0)
+    # No-slip Dirichlet at the wall (OpenFOAM convention): the wall shear
+    # enters the momentum equation through the boundary diffusion term
+    # gamma_f * A_f / d_n * (0 - u_P), with gamma_f = nu + nu_t of the
+    # wall-adjacent cell.  The turbulence wall-function machinery
+    # (`apply_wall_functions!`) sets that nu_t from the log law, so the
+    # effective wall stress matches tau_w = u_tau^2.  The previous
+    # Neumann(0) expansion produced a stress-free (free-slip) wall.
+    return ParabolicDirichlet(0.0)
 end
 
 function expand_velocity_bc(::ConvectiveOutletBC, ::Int)
@@ -466,11 +493,15 @@ function expand_velocity_bc(bc::CustomBC, ::Int)
 end
 
 function expand_velocity_bc(bc::UniformFixedValueBC{Dim, T}, component::Int) where {Dim, T}
+    # 2-arg form: evaluate at t = 0.  The solver loops use the 3-arg form
+    # with the actual simulation time.
     return ParabolicDirichlet(bc.func(zero(T))[component])
 end
 
 function expand_velocity_bc(bc::CodedFixedValueBC, ::Int)
-    return ParabolicDirichlet(0.0)  # placeholder; dynamic update needed
+    # 2-arg form: evaluate at the BC's reference time.  The solver loops
+    # use the 3-arg form with the actual simulation time.
+    return ParabolicDirichletFunc(x -> bc.func(x, bc.t_ref))
 end
 
 function expand_velocity_bc(::WaveTransmissiveBC, ::Int)
@@ -582,22 +613,35 @@ function expand_pressure_bc(::AtmosphericBLProfileBC)
 end
 
 function expand_pressure_bc(bc::PorousJumpBC)
-    return ParabolicDirichlet(bc.power)  # pressure jump as Dirichlet approx
+    # A porous jump is a pressure DIFFERENCE across the patch, not an
+    # absolute pressure level.  Expanding it as Dirichlet(power) — as this
+    # method previously did — anchored the absolute pressure to the fan
+    # power, which is physically wrong.  Proper support requires a
+    # face-jump (baffle) treatment in the pressure assembly, which is not
+    # implemented for the collocated solver.
+    error(
+        "PorousJumpBC is not implemented for the collocated pressure " *
+            "equation: a pressure jump cannot be expressed as an absolute " *
+            "Dirichlet value. Use an internal-baffle jump treatment (not " *
+            "yet available) or model the fan as a momentum source instead.",
+    )
 end
 
 # ── Batch expansion helpers ─────────────────────────────────────────
 
 @doc """
-    expand_bcs_velocity(bcs::Dict{Symbol, <:AbstractBoundaryCondition}, component::Int)
+    expand_bcs_velocity(bcs::Dict{Symbol, <:AbstractBoundaryCondition}, component::Int; t = 0.0)
 
 Expand all incompressible BCs to primitive velocity BCs for the given
-component.  Returns a `Dict{Symbol, AbstractBoundaryCondition}`.
+component, evaluating time-dependent BCs at simulation time `t`.
+Returns a `Dict{Symbol, AbstractBoundaryCondition}`.
 """
 function expand_bcs_velocity(
-        bcs::Dict{Symbol, <:AbstractBoundaryCondition}, component::Int,
+        bcs::Dict{Symbol, <:AbstractBoundaryCondition}, component::Int;
+        t = 0.0,
     )
     return Dict{Symbol, AbstractBoundaryCondition}(
-        name => expand_velocity_bc(bc, component)
+        name => expand_velocity_bc(bc, component, t)
             for (name, bc) in bcs
     )
 end
@@ -652,6 +696,26 @@ function collect_cyclic_pairs(
     end
 
     return all_pairs
+end
+
+"""
+    _cyclic_cell_pairs(mesh, cyclic_pairs) -> Vector{Tuple{Int, Int}}
+
+Convert matched cyclic FACE pairs into owner-CELL pairs, for
+pre-allocating the cross-boundary structural entries in
+`CollocatedEquation(mesh; extra_cell_pairs = ...)`.
+"""
+function _cyclic_cell_pairs(
+        mesh::UnstructuredFVMMesh,
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}},
+    )
+    cell_pairs = Tuple{Int, Int}[]
+    for pairs in cyclic_pairs
+        for (f1, f2) in pairs
+            push!(cell_pairs, (owner(mesh, f1), owner(mesh, f2)))
+        end
+    end
+    return cell_pairs
 end
 
 """

@@ -215,9 +215,22 @@ function _apply_convection_bc!(
     if bc isa ParabolicDirichlet
         # Known boundary value: explicit contribution to RHS
         eq.b[P] -= F_f * bc.value
+    elseif bc isa ParabolicDirichletFunc
+        # Spatially-varying boundary value: evaluate at the face center
+        x_f = face_center(mesh, f)
+        eq.b[P] -= F_f * T(bc.func(x_f))
     elseif bc isa ParabolicNeumann
-        # Zero-gradient: φ_f = φ_P for both inflow and outflow
+        # Fixed gradient: φ_f = φ_P + g·d_n where g = bc.value and d_n is
+        # the cell-center-to-face distance.  Implicit part on the diagonal,
+        # explicit gradient contribution to the RHS.  (A nonzero gradient
+        # used to be silently treated as zero-gradient here.)
         add_diag!(eq, P, F_f)
+        if bc.value != zero(T)
+            x_f = face_center(mesh, f)
+            c_P = cell_center(mesh, P)
+            d_n = norm(x_f - c_P)
+            eq.b[P] -= F_f * T(bc.value) * d_n
+        end
     else
         error("Unsupported boundary condition type $(typeof(bc)) for convection")
     end

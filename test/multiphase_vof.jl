@@ -244,4 +244,67 @@ include("TestHelpers.jl")
         @test all(x -> x > 0, vof_state.rho)
         @test all(x -> x > 0, vof_state.mu)
     end
+
+    # ── 14. MULES honors alpha BCs at inflow faces ─────────────────────
+    @testset "MULES inflow alpha BC (water injection)" begin
+        mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
+        nc = length(mesh.cell_volumes)
+        nf = size(mesh.face_cells, 2)
+        dt = 0.1
+        u_in = 0.25
+
+        # Uniform +x flow: left boundary faces are INFLOW (F_f < 0
+        # against the outward normal), right boundary faces are outflow.
+        state = IncompressibleState(mesh)
+        for f in 1:nf
+            S_f = FiniteVolumeMethod.face_normal_area(mesh, f)
+            state.phi.values[f] = u_in * S_f[1]
+        end
+
+        alpha = FiniteVolumeMethod.CollocatedScalarField(:alpha, mesh; value = 0.0)
+        bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => ParabolicDirichlet(1.0),   # water injected at inlet
+            :right => ParabolicNeumann(0.0),
+            :bottom => ParabolicNeumann(0.0),
+            :top => ParabolicNeumann(0.0),
+        )
+
+        eq = FiniteVolumeMethod.CollocatedEquation(mesh)
+        assemble_alpha!(
+            eq, alpha, state.phi, mesh, bcs_alpha;
+            dt = dt, C_alpha = 1.0, use_mules = true,
+        )
+        sol = solve(FiniteVolumeMethod.to_linear_problem(eq))
+
+        # Inflowing alpha equals the BC value: the first column of cells
+        # receives water; total liquid volume grows at exactly the
+        # injection rate (u_in * inlet_area * alpha_in * dt).
+        V_new = sum(mesh.cell_volumes[c] * sol.u[c] for c in 1:nc)
+        @test V_new ≈ u_in * 1.0 * 1.0 * dt rtol = 1.0e-12
+
+        # Only the inlet-adjacent column has picked up alpha in one step
+        for c in 1:nc
+            x = mesh.cell_centers[1, c]
+            if x < 0.25
+                @test sol.u[c] > 0.0
+            else
+                @test abs(sol.u[c]) < 1.0e-14
+            end
+        end
+
+        # Regression guard: with a zero-Dirichlet inlet BC nothing enters
+        bcs_zero = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => ParabolicDirichlet(0.0),
+            :right => ParabolicNeumann(0.0),
+            :bottom => ParabolicNeumann(0.0),
+            :top => ParabolicNeumann(0.0),
+        )
+        eq0 = FiniteVolumeMethod.CollocatedEquation(mesh)
+        assemble_alpha!(
+            eq0, alpha, state.phi, mesh, bcs_zero;
+            dt = dt, C_alpha = 1.0, use_mules = true,
+        )
+        sol0 = solve(FiniteVolumeMethod.to_linear_problem(eq0))
+        @test all(x -> abs(x) < 1.0e-14, sol0.u)
+    end
 end

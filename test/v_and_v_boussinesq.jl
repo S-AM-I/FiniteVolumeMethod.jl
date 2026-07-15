@@ -61,7 +61,7 @@ end
     end
 end
 
-@testset "V&V: Boussinesq — algebraic identity F = −ρβΔT·g" begin
+@testset "V&V: Boussinesq — kinematic identity F = −βΔT·g" begin
     mesh = build_cartesian_unstructured_mesh(16, 16, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
 
@@ -84,11 +84,21 @@ end
 
     F = compute_buoyancy_source(T_field, props, rho)
 
+    # KINEMATIC form (force per unit mass): the momentum equation is
+    # assembled kinematically (ν, volumetric flux, p/ρ), so the buoyancy
+    # source must NOT be scaled by ρ — the previous −ρβΔT·g identity
+    # asserted the dynamic form that silently broke momentum for ρ ≠ 1.
     for c in 1:nc
         dT = T_field.internal[c] - T_ref
-        F_expected = -rho * beta * dT * g_vec
+        F_expected = -beta * dT * g_vec
         @test isapprox(F[c][1], F_expected[1]; rtol = 1.0e-12, atol = 1.0e-14)
         @test isapprox(F[c][2], F_expected[2]; rtol = 1.0e-12, atol = 1.0e-14)
+    end
+
+    # Density invariance: the density argument no longer scales the force
+    F_heavy = compute_buoyancy_source(T_field, props, 1000.0)
+    for c in 1:nc
+        @test isapprox(F[c][2], F_heavy[c][2]; rtol = 1.0e-14)
     end
 end
 

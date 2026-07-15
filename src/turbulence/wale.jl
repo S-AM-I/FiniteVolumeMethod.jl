@@ -45,6 +45,8 @@ function _compute_velocity_gradient_tensor(
         mesh::UnstructuredFVMMesh{Dim, T},
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
+    # Face → boundary-slot map built once (avoids O(n_b²) findfirst)
+    ubmap = build_boundary_map(U, mesh)
     grad_U = Vector{Vector{SVector{Dim, T}}}(undef, Dim)
     for d in 1:Dim
         u_d_field = CollocatedScalarField(
@@ -55,8 +57,8 @@ function _compute_velocity_gradient_tensor(
             u_d_field.internal[c] = U.internal[c][d]
         end
         for (i, f) in enumerate(u_d_field.boundary_face_indices)
-            bi = findfirst(==(f), U.boundary_face_indices)
-            if bi !== nothing
+            bi = ubmap[f]
+            if bi != 0
                 u_d_field.boundary[i] = U.boundary[bi][d]
             end
         end

@@ -39,6 +39,8 @@ function _pimple_step!(
         linear_solver = nothing,
         solver_config = nothing,
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
+        t::T = zero(T),
+        ws = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -47,25 +49,29 @@ function _pimple_step!(
     alpha_U = algo.alpha_U
     alpha_p = algo.alpha_p
 
+    # Snapshot the old-time velocity ONCE per time step: all outer
+    # iterations discretize (U^{n+1} - U^n)/dt against this snapshot.
+    # (Previously the ddt was assembled against the previous OUTER
+    # ITERATE, so outer iterations 2+ degenerated toward the steady
+    # equations.)
+    _snapshot_old_time!(state)
+
+    eqs, p_eq = ws === nothing ? _make_incompressible_workspace(prob, cyclic_pairs) : ws
+
     for outer in 1:n_outer
         is_final = (outer == n_outer)
 
         # ── 1. Assemble momentum ────────────────────────────────────
-        eqs = CollocatedEquation{T}[]
         for d in 1:Dim
-            eq = CollocatedEquation(mesh)
-            assemble_momentum!(eq, state, prob, d; dt = dt)
+            reset!(eqs[d])
+            assemble_momentum!(eqs[d], state, prob, d; dt = dt, t = t)
             apply_cyclic_to_equation!(
-                eq, _make_scalar_field(_extract_component(state.U, d), state),
+                eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                 mesh, cyclic_pairs,
             )
-            push!(eqs, eq)
         end
 
-        # ── 2. Extract operators ────────────────────────────────────
-        extract_momentum_operators!(state, eqs, mesh)
-
-        # ── 3. Under-relax (except final outer iteration) + solve ───
+        # ── 2. Under-relax (except final outer iteration) + solve ───
         for d in 1:Dim
             if !is_final
                 U_old_d = _extract_component(state.U, d)
@@ -78,14 +84,17 @@ function _pimple_step!(
             )
             _set_component!(state.U, d, sol.u)
         end
-        update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_velocity!(state, prob.bcs, mesh; t = t)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
+
+        # ── 3. Extract operators from the (relaxed) solved equations ─
+        extract_momentum_operators!(state, eqs, mesh)
 
         # ── 4. PISO inner corrector loop ────────────────────────────
         nc = length(mesh.cell_volumes)
         for k in 1:n_correctors
             # 4a. Pressure solve
-            p_eq = CollocatedEquation(mesh)
+            reset!(p_eq)
             assemble_pressure!(p_eq, state, prob)
             apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
             if _needs_pressure_reference(prob.bcs)
@@ -110,7 +119,7 @@ function _pimple_step!(
 
             # 4d. Correct velocity + fluxes
             correct_velocity!(state, mesh)
-            update_boundary_velocity!(state, prob.bcs, mesh)
+            update_boundary_velocity!(state, prob.bcs, mesh; t = t)
             update_boundary_cyclic!(state, mesh, cyclic_pairs)
             correct_fluxes!(state, mesh)
         end
@@ -148,7 +157,7 @@ function _copy_state(
     phi = FaceFluxField{T}(state.phi.name, copy(state.phi.values))
     A_P = copy(state.A_P)
     H_U = copy(state.H_U)
-    return IncompressibleState{Dim, T}(U, p, phi, A_P, H_U)
+    return IncompressibleState{Dim, T}(U, p, phi, A_P, H_U, copy(state.U_old))
 end
 
 # ── Unified transient solver ───────────────────────────────────────
@@ -177,13 +186,18 @@ State snapshots are stored every `save_every` time steps.  The returned
 - `cfl_max::Union{Nothing, T}` — if set, adaptively adjust `dt` each step
   to keep the maximum face Courant number below this limit (default: `nothing`,
   i.e. fixed time step)
+- `U0::Union{Nothing, Vector{SVector{Dim, T}}}` — initial cell velocities
+  (default `nothing` = zero field)
+- `p0::Union{Nothing, Vector{T}}` — initial cell pressures
+  (default `nothing` = zero field)
 
 # Returns
 A [`SolveResult`](@ref) with:
-- `converged = true` (transient solvers always complete the time span)
+- `converged` — `true` iff the run completed with finite final residuals
 - `iterations` = number of time steps taken
 - `residuals[:continuity]` = continuity residual at each saved step
 - `state` = final solver state
+- `snapshots` = state snapshots saved every `save_every` steps
 """
 function solve_incompressible(
         prob::IncompressibleProblem{Dim, T},
@@ -194,18 +208,36 @@ function solve_incompressible(
         solver_config = nothing,
         verbose::Bool = false,
         cfl_max::Union{Nothing, T} = nothing,
+        U0::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
+        p0::Union{Nothing, Vector{T}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
     algo = prob.algorithm
     t_start, t_end = tspan
+    nc = length(mesh.cell_volumes)
 
-    # Initialize state
+    # Initialize state (with optional initial conditions)
     state = IncompressibleState(mesh)
-    update_boundary_velocity!(state, prob.bcs, mesh)
+    if U0 !== nothing
+        length(U0) == nc || throw(ArgumentError("U0 must have length ncells = $nc"))
+        copyto!(state.U.internal, U0)
+    end
+    if p0 !== nothing
+        length(p0) == nc || throw(ArgumentError("p0 must have length ncells = $nc"))
+        copyto!(state.p.internal, p0)
+    end
+    update_boundary_velocity!(state, prob.bcs, mesh; t = t_start)
     update_boundary_pressure!(state, prob.bcs, mesh)
+    if U0 !== nothing
+        # Consistent initial face fluxes from the initial velocity
+        compute_face_flux!(state.phi, state.U, mesh)
+    end
 
     # Pre-compute cyclic face pairs (empty vector if no CyclicBC)
     cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+
+    # Equation workspace: allocate once per solve, reuse in every step
+    ws = _make_incompressible_workspace(prob, cyclic_pairs)
 
     # Determine step function
     step_fn! = _select_step_function(algo, cyclic_pairs)
@@ -223,7 +255,12 @@ function solve_incompressible(
     dt_current = dt
     while t < t_end - eps(T) * abs(t_end)
         dt_actual = min(dt_current, t_end - t)
-        step_fn!(state, prob, dt_actual; linear_solver = linear_solver, solver_config = solver_config)
+        # BCs of the implicit step are evaluated at the NEW time level
+        step_fn!(
+            state, prob, dt_actual;
+            linear_solver = linear_solver, solver_config = solver_config,
+            t = t + dt_actual, ws = ws,
+        )
         t += dt_actual
         n_steps += 1
 
@@ -249,7 +286,12 @@ function solve_incompressible(
         end
     end
 
-    return SolveResult{Dim, T}(true, n_steps, residuals, state)
+    # A transient run "converged" iff it completed with finite residuals
+    # (converged used to be hardcoded true, masking NaN/Inf blow-ups).
+    r_hist = residuals[:continuity]
+    converged = isempty(r_hist) || isfinite(r_hist[end])
+
+    return SolveResult{Dim, T}(converged, n_steps, residuals, state, snapshots)
 end
 
 # ── Step function dispatch ─────────────────────────────────────────
@@ -264,11 +306,15 @@ function _select_step_function(
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
     )
     n_correctors = algo.n_correctors
-    return (state, prob, dt; linear_solver = nothing, solver_config = nothing) ->
+    return (
+        state, prob, dt;
+        linear_solver = nothing, solver_config = nothing,
+        t = zero(dt), ws = nothing,
+    ) ->
     _piso_step!(
         state, prob, dt, n_correctors;
         linear_solver = linear_solver, solver_config = solver_config,
-        cyclic_pairs = cyclic_pairs,
+        cyclic_pairs = cyclic_pairs, t = t, ws = ws,
     )
 end
 
@@ -276,11 +322,15 @@ function _select_step_function(
         algo::PIMPLE,
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
     )
-    return (state, prob, dt; linear_solver = nothing, solver_config = nothing) ->
+    return (
+        state, prob, dt;
+        linear_solver = nothing, solver_config = nothing,
+        t = zero(dt), ws = nothing,
+    ) ->
     _pimple_step!(
         state, prob, dt;
         linear_solver = linear_solver, solver_config = solver_config,
-        cyclic_pairs = cyclic_pairs,
+        cyclic_pairs = cyclic_pairs, t = t, ws = ws,
     )
 end
 

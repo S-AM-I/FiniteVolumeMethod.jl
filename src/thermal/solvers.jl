@@ -90,8 +90,6 @@ function solve_simple_thermal(
             push!(eqs, eq)
         end
 
-        extract_momentum_operators!(state, eqs, mesh)
-
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
@@ -102,6 +100,9 @@ function solve_simple_thermal(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+
+        # Extract A_P/H(U) from the relaxed, solved equations
+        extract_momentum_operators!(state, eqs, mesh)
 
         # ── Pressure ────────────────────────────────────────────
         p_eq = CollocatedEquation(mesh)
@@ -127,6 +128,7 @@ function solve_simple_thermal(
                 linear_solver = linear_solver,
             )
             turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
+            _apply_realizability!(turb_state, turb_model, state.U, mesh)
         end
 
         # ── Energy equation ─────────────────────────────────────
@@ -248,6 +250,7 @@ function solve_incompressible_thermal(
                 prob.nu, mesh, turb_bcs; dt = dt_actual, linear_solver = linear_solver
             )
             turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
+            _apply_realizability!(turb_state, turb_model, state.U, mesh)
         end
 
         # Energy equation
@@ -300,6 +303,9 @@ function _thermal_piso_step!(
     ) where {Dim, T}
     mesh = prob.mesh
 
+    # Old-time snapshot for the ddt term (once per time step)
+    _snapshot_old_time!(state)
+
     eqs = CollocatedEquation{T}[]
     for d in 1:Dim
         eq = CollocatedEquation(mesh)
@@ -310,8 +316,6 @@ function _thermal_piso_step!(
         push!(eqs, eq)
     end
 
-    extract_momentum_operators!(state, eqs, mesh)
-
     for d in 1:Dim
         sol = _dispatch_solve(
             to_linear_problem(eqs[d]), linear_solver, solver_config,
@@ -320,6 +324,9 @@ function _thermal_piso_step!(
         _set_component!(state.U, d, sol.u)
     end
     update_boundary_velocity!(state, prob.bcs, mesh)
+
+    # Extract A_P/H(U) from the solved equations
+    extract_momentum_operators!(state, eqs, mesh)
 
     for k in 1:n_correctors
         p_eq = CollocatedEquation(mesh)
@@ -369,6 +376,9 @@ function _thermal_pimple_step!(
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
 
+    # Old-time snapshot for the ddt term (shared by all outer iterations)
+    _snapshot_old_time!(state)
+
     for outer in 1:algo.n_outer
         is_final = (outer == algo.n_outer)
 
@@ -381,7 +391,6 @@ function _thermal_pimple_step!(
             )
             push!(eqs, eq)
         end
-        extract_momentum_operators!(state, eqs, mesh)
 
         for d in 1:Dim
             if !is_final
@@ -395,6 +404,9 @@ function _thermal_pimple_step!(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+
+        # Extract A_P/H(U) from the (relaxed) solved equations
+        extract_momentum_operators!(state, eqs, mesh)
 
         nc = length(mesh.cell_volumes)
         for k in 1:algo.n_correctors

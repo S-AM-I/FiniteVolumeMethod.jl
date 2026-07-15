@@ -216,6 +216,9 @@ function _vof_piso_step!(
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
 
+    # Old-time snapshot for the ddt term (once per time step)
+    _snapshot_old_time!(state)
+
     # Momentum predictor
     eqs = CollocatedEquation{T}[]
     for d in 1:Dim
@@ -227,8 +230,6 @@ function _vof_piso_step!(
         push!(eqs, eq)
     end
 
-    extract_momentum_operators!(state, eqs, mesh)
-
     for d in 1:Dim
         sol = _dispatch_solve(
             to_linear_problem(eqs[d]), linear_solver, solver_config,
@@ -237,6 +238,9 @@ function _vof_piso_step!(
         _set_component!(state.U, d, sol.u)
     end
     update_boundary_velocity!(state, prob.bcs, mesh)
+
+    # Extract A_P/H(U) from the solved equations
+    extract_momentum_operators!(state, eqs, mesh)
 
     # Pressure corrector with density-weighted diffusivity
     for k in 1:n_correctors
@@ -310,6 +314,9 @@ function _vof_pimple_step!(
     mesh = prob.mesh
     nc = length(mesh.cell_volumes)
 
+    # Old-time snapshot for the ddt term (shared by all outer iterations)
+    _snapshot_old_time!(state)
+
     for outer in 1:algo.n_outer
         is_final = (outer == algo.n_outer)
 
@@ -322,7 +329,6 @@ function _vof_pimple_step!(
             )
             push!(eqs, eq)
         end
-        extract_momentum_operators!(state, eqs, mesh)
 
         for d in 1:Dim
             if !is_final
@@ -336,6 +342,9 @@ function _vof_pimple_step!(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+
+        # Extract A_P/H(U) from the (relaxed) solved equations
+        extract_momentum_operators!(state, eqs, mesh)
 
         for k in 1:algo.n_correctors
             p_eq = CollocatedEquation(mesh)

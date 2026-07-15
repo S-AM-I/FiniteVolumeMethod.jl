@@ -325,4 +325,191 @@ include("TestHelpers.jl")
         @test wbc_sa[:nu_tilde] isa ParabolicDirichlet
         @test wbc_sa[:nu_tilde].value == 0.0
     end
+
+    # Shared helper for the new regression testsets below
+    function _full_ke_bcs()
+        inner(v_k, v_e) = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => ParabolicDirichlet(v_k),
+            :right => ParabolicNeumann(0.0),
+            :bottom => ParabolicNeumann(0.0),
+            :top => ParabolicNeumann(0.0),
+        )
+        return Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
+            :k => inner(1.0e-4, 0.0),
+            :epsilon => inner(1.0e-5, 0.0),
+        )
+    end
+
+    # ── Durbin realizability cap must survive to momentum's nu_t ──────
+    @testset "Durbin cap survives nu_t recompute" begin
+        mesh = build_cartesian_unstructured_mesh(8, 4, 2.0, 1.0)
+        nc = length(mesh.cell_volumes)
+        ke = StandardKEpsilon()
+
+        # High-shear velocity field with large k and tiny epsilon so the
+        # uncapped nu_t = C_mu k^2/eps grossly violates the Durbin bound.
+        bcs = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => FixedVelocityBC((1.0, 0.0)),
+            :right => FixedPressureBC(0.0),
+            :bottom => NoSlipWallBC(),
+            :top => NoSlipWallBC(),
+        )
+        prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3)
+        state = IncompressibleState(mesh)
+        for c in 1:nc
+            y = mesh.cell_centers[2, c]
+            state.U.internal[c] = SVector(4.0 * y, 0.0)  # strong shear
+        end
+        FiniteVolumeMethod.update_boundary_velocity!(state, bcs, mesh)
+
+        turb_state = RANSTurbulenceState(ke, mesh; k = 0.5, epsilon = 1.0e-4)
+        FiniteVolumeMethod._update_turbulence!(
+            turb_state, ke, state, prob, mesh, _full_ke_bcs(),
+        )
+
+        # After the full update (transport solve + nu_t recompute + cap
+        # re-application), the momentum-visible nu_t must satisfy the
+        # Durbin bound wherever |S| is significant.
+        S_mag = FiniteVolumeMethod.compute_strain_rate(state.U, mesh)
+        C_T = 0.6
+        k_int = turb_state.fields[:k].internal
+        n_checked = 0
+        for c in 1:nc
+            if S_mag[c] > 1.0e-8
+                cap = C_T * max(k_int[c], 1.0e-10) / S_mag[c]
+                @test turb_state.nu_t[c] <= cap * (1.0 + 1.0e-12)
+                n_checked += 1
+            end
+        end
+        @test n_checked > 0
+    end
+
+    # ── Missing turbulence BCs must fail fast with a clear message ────
+    @testset "Turbulence BC validation up front" begin
+        mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
+        ke = StandardKEpsilon()
+        state = IncompressibleState(mesh)
+        turb_state = RANSTurbulenceState(ke, mesh; k = 1.0e-3, epsilon = 1.0e-4)
+        phi = FiniteVolumeMethod.FaceFluxField(:phi, mesh; value = 0.0)
+
+        # Entirely missing bcs dict
+        err = try
+            solve_turbulence!(
+                turb_state, ke, state.U, phi, 1.0e-3, mesh,
+                Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
+            )
+            nothing
+        catch e
+            e
+        end
+        @test err isa ErrorException
+        @test occursin("epsilon", sprint(showerror, err))
+        @test occursin(":k", sprint(showerror, err))
+
+        # Partially missing patches: message must name the patches
+        partial = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
+            :k => Dict{Symbol, AbstractBoundaryCondition}(
+                :left => ParabolicNeumann(0.0),
+            ),
+            :epsilon => Dict{Symbol, AbstractBoundaryCondition}(
+                :left => ParabolicNeumann(0.0),
+                :right => ParabolicNeumann(0.0),
+                :bottom => ParabolicNeumann(0.0),
+                :top => ParabolicNeumann(0.0),
+            ),
+        )
+        err2 = try
+            solve_turbulence!(
+                turb_state, ke, state.U, phi, 1.0e-3, mesh, partial,
+            )
+            nothing
+        catch e
+            e
+        end
+        @test err2 isa ErrorException
+        msg = sprint(showerror, err2)
+        @test occursin("right", msg) && occursin("top", msg) && occursin("bottom", msg)
+    end
+
+    # ── WallFunctionBC produces wall drag in the momentum equation ────
+    @testset "WallFunctionBC adds wall shear (not stress-free)" begin
+        mesh = build_cartesian_unstructured_mesh(8, 4, 2.0, 1.0)
+        nc = length(mesh.cell_volumes)
+
+        # Channel with wall-function walls: velocity expansion must be
+        # no-slip Dirichlet so the boundary diffusion term produces drag.
+        @test FiniteVolumeMethod.expand_velocity_bc(WallFunctionBC(), 1) isa
+            ParabolicDirichlet
+        @test FiniteVolumeMethod.expand_velocity_bc(WallFunctionBC(), 1).value == 0.0
+
+        bcs_wf = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => FixedVelocityBC((0.5, 0.0)),
+            :right => FixedPressureBC(0.0),
+            :bottom => WallFunctionBC(),
+            :top => WallFunctionBC(),
+        )
+        bcs_free = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => FixedVelocityBC((0.5, 0.0)),
+            :right => FixedPressureBC(0.0),
+            :bottom => ZeroGradientBC(),  # stress-free comparison
+            :top => ZeroGradientBC(),
+        )
+        prob_wf = IncompressibleProblem(mesh, bcs_wf, SIMPLE(); nu = 1.0e-3)
+        prob_free = IncompressibleProblem(mesh, bcs_free, SIMPLE(); nu = 1.0e-3)
+        state = IncompressibleState(mesh)
+        for c in 1:nc
+            state.U.internal[c] = SVector(0.5, 0.0)
+        end
+
+        eq_wf = FiniteVolumeMethod.CollocatedEquation(mesh)
+        FiniteVolumeMethod.assemble_momentum!(eq_wf, state, prob_wf, 1)
+        eq_free = FiniteVolumeMethod.CollocatedEquation(mesh)
+        FiniteVolumeMethod.assemble_momentum!(eq_free, state, prob_free, 1)
+
+        # Wall-adjacent cells must carry a strictly larger diagonal with
+        # the wall function than with the stress-free wall.
+        n_larger = 0
+        for c in 1:nc
+            y = mesh.cell_centers[2, c]
+            if y < 0.3 || y > 0.7  # wall-adjacent rows
+                if eq_wf.A[c, c] > eq_free.A[c, c] + 1.0e-12
+                    n_larger += 1
+                end
+            end
+        end
+        @test n_larger == 16  # all wall-adjacent cells see the drag term
+
+        # Boundary velocity update zeroes the wall value (wall does not
+        # inherit the cell velocity → zero wall flux)
+        FiniteVolumeMethod.update_boundary_velocity!(state, bcs_wf, mesh)
+        for (i, f) in enumerate(state.U.boundary_face_indices)
+            tag = FiniteVolumeMethod._face_tag(mesh, f)
+            if tag === :bottom || tag === :top
+                @test state.U.boundary[i] == zero(SVector{2, Float64})
+            end
+        end
+
+        # End-to-end: turbulent channel with wall functions develops a
+        # velocity DEFICIT at the walls relative to the centerline
+        ke = StandardKEpsilon()
+        result, turb_state = solve_simple_turbulent(
+            IncompressibleProblem(
+                mesh, bcs_wf, SIMPLE(; max_iterations = 20); nu = 1.0e-3,
+            ),
+            ke; turb_bcs = _full_ke_bcs(),
+        )
+        u_wall_cells = Float64[]
+        u_center_cells = Float64[]
+        for c in 1:nc
+            y = mesh.cell_centers[2, c]
+            u = result.state.U.internal[c][1]
+            if y < 0.3 || y > 0.7
+                push!(u_wall_cells, u)
+            else
+                push!(u_center_cells, u)
+            end
+        end
+        # Drag at the wall: near-wall velocity below centerline velocity
+        @test maximum(u_wall_cells) < maximum(u_center_cells)
+    end
 end

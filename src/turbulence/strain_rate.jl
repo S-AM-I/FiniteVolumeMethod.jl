@@ -25,7 +25,10 @@ function compute_strain_rate(
     nc = length(mesh.cell_volumes)
     S_mag = Vector{T}(undef, nc)
 
-    # Compute gradient of each velocity component
+    # Compute gradient of each velocity component.  The face → boundary
+    # slot map is built once (O(n_b)) instead of a findfirst per face
+    # (O(n_b²)).
+    ubmap = build_boundary_map(U, mesh)
     grad_U = Vector{Vector{SVector{Dim, T}}}(undef, Dim)
     for d in 1:Dim
         u_d_field = CollocatedScalarField(
@@ -38,8 +41,8 @@ function compute_strain_rate(
         end
         # Copy boundary values
         for (i, f) in enumerate(u_d_field.boundary_face_indices)
-            bi = findfirst(==(f), U.boundary_face_indices)
-            if bi !== nothing
+            bi = ubmap[f]
+            if bi != 0
                 u_d_field.boundary[i] = U.boundary[bi][d]
             end
         end

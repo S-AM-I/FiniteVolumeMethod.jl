@@ -303,4 +303,58 @@ include("TestHelpers.jl")
             @test isfinite(q)
         end
     end
+
+    # ── Buoyancy is kinematic: velocity independent of density ────────
+    @testset "Boussinesq buoyancy in kinematic form" begin
+        mesh = build_cartesian_unstructured_mesh(6, 6, 1.0, 1.0)
+        nc = length(mesh.cell_volumes)
+        props = FluidThermalProperties{2}(; k = 0.6, Cp = 4000.0, beta = 2.0e-4, T_ref = 300.0)
+
+        # Unit test: the buoyancy source is per unit mass (no rho factor)
+        T_field = FiniteVolumeMethod.CollocatedScalarField(:T, mesh; value = 310.0)
+        f1 = compute_buoyancy_source(T_field, props, 1.0)
+        f1000 = compute_buoyancy_source(T_field, props, 1000.0)
+        @test f1 !== nothing && f1000 !== nothing
+        for c in 1:nc
+            @test f1[c] ≈ f1000[c] atol = 1.0e-15
+            # -beta * dT * g with dT = 10, g = (0, -9.81)
+            @test f1[c] ≈ SVector(0.0, 2.0e-4 * 10.0 * 9.81) atol = 1.0e-12
+        end
+
+        # End-to-end: heated-cavity velocity must not depend on density
+        # when nu AND the thermal diffusivity alpha = k/(rho*Cp) are held
+        # fixed (k scales with rho).  Under Boussinesq, rho then cancels
+        # everywhere — the previous rho-scaled buoyancy force broke this.
+        bcs = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => NoSlipWallBC(), :right => NoSlipWallBC(),
+            :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
+        )
+        bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
+            :left => ParabolicDirichlet(310.0),
+            :right => ParabolicDirichlet(290.0),
+            :bottom => ParabolicNeumann(0.0),
+            :top => ParabolicNeumann(0.0),
+        )
+        # tolerance = 0 forces all iterations: the initial state (U = 0,
+        # uniform T) has identically zero residuals, so any positive
+        # tolerance would exit before the temperature field develops.
+        algo = SIMPLE(; max_iterations = 10, tolerance = 0.0)
+        props_a = FluidThermalProperties{2}(;
+            k = 0.6, Cp = 1.0, beta = 2.0e-4, T_ref = 300.0,
+        )
+        props_b = FluidThermalProperties{2}(;
+            k = 600.0, Cp = 1.0, beta = 2.0e-4, T_ref = 300.0,
+        )
+        prob_a = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
+        prob_b = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1000.0)
+        ra, tsa = solve_simple_thermal(prob_a, props_a; bcs_T = bcs_T)
+        rb, tsb = solve_simple_thermal(prob_b, props_b; bcs_T = bcs_T)
+        # Buoyancy must actually drive a flow...
+        @test maximum(norm.(ra.state.U.internal)) > 0
+        # ...and the velocity + temperature fields must be density-invariant
+        for c in 1:nc
+            @test ra.state.U.internal[c] ≈ rb.state.U.internal[c] rtol = 1.0e-10
+            @test tsa.T_field.internal[c] ≈ tsb.T_field.internal[c] rtol = 1.0e-10
+        end
+    end
 end

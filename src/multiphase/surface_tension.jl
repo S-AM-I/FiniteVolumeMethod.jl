@@ -240,6 +240,13 @@ end
 
 Compute the CSF surface tension body force: `F_st = σ · κ · ∇α`.
 
+UNITS NOTE: the returned force is per unit VOLUME (dynamic, N/m³).
+The VOF solver consumes it with a unit reference density (ρ_ref = 1,
+`prob.density == 1` in `solve_vof`), under which dynamic force per
+volume and kinematic force per unit mass coincide numerically.  If you
+feed this force into a kinematic momentum equation with ρ_ref ≠ 1,
+divide by the density first.
+
 Returns `nothing` when `sigma == 0` (surface tension disabled).
 
 When `contact_angle` is supplied, the curvature field is computed with

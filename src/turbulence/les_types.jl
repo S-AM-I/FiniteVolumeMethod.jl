@@ -117,6 +117,11 @@ function _update_turbulence!(
     )
     turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
 
+    # Re-apply any realizability constraint (e.g. the Durbin cap for k-ε)
+    # AFTER the uncapped recompute above, so the momentum equation sees
+    # the capped eddy viscosity.
+    _apply_realizability!(turb_state, turb_model, state.U, mesh)
+
     # Apply equilibrium wall functions to wall-adjacent cells
     wall_patches = _detect_wall_patches(prob.bcs)
     if !isempty(wall_patches)

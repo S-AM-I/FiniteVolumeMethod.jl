@@ -97,9 +97,24 @@ function solve_turbulence!(
     k_field = turb_state.fields[:k]
     eps_field = turb_state.fields[:epsilon]
 
-    # Compute the strain rate magnitude |S| = √(2 S_ij S_ij). This is
-    # reused for the Durbin cap and the production term below.
-    S_mag = compute_strain_rate(U, mesh)
+    # Fail fast with a clear message if any turbulence BCs are missing
+    # (previously this defaulted to an empty Dict and errored mid-solve
+    # at the first boundary face).
+    _validate_turbulence_bcs(bcs_turb, mesh, model)
+
+    # Compute the velocity gradient tensor ONCE; both the strain-rate
+    # magnitude (Durbin cap) and the full-tensor production are derived
+    # from it (previously the gradients were reconstructed twice).
+    grad_U = _compute_velocity_gradient_tensor(U, mesh)
+    S_mag = Vector{T}(undef, nc)
+    S_mag_sq_cells = Vector{T}(undef, nc)
+    for c in 1:nc
+        S_comp = _strain_components(grad_U, c, Val(Dim))
+        # |S|² = 2 S_ij S_ij (reduced-component form)
+        s2 = max(_sym_self_magnitude_sq(S_comp, Val(Dim)), zero(T))
+        S_mag_sq_cells[c] = s2
+        S_mag[c] = sqrt(s2)
+    end
 
     # Durbin realizability cap (v3.0). Enforces
     #   ν_t ≤ C_T · k / |S|   (C_T ≈ 0.6, Durbin 1996)
@@ -109,23 +124,15 @@ function solve_turbulence!(
     # override via `StandardKEpsilon(; realizability_alpha = ...)`.
     _apply_durbin_cap!(turb_state.nu_t, k_field, S_mag, _durbin_C_T(model))
 
-    # Full-tensor production P_k = 2 ν_t S_ij S_ij. Under the
-    # `|S| = √(2 S_ij S_ij)` convention this equals ν_t · |S|², but we
-    # assemble the strain components explicitly and contract through
-    # `_sym_self_magnitude_sq` so the tensor origin is obvious and the
-    # path is ready for an anisotropic ν_t generalisation.
-    grad_U = _compute_velocity_gradient_tensor(U, mesh)
+    # Full-tensor production P_k = 2 ν_t S_ij S_ij.
     P_k = Vector{T}(undef, nc)
     for c in 1:nc
-        S_comp = _strain_components(grad_U, c, Val(Dim))
-        # |S|² = 2 S_ij S_ij (reduced-component form)
-        S_mag_sq = _sym_self_magnitude_sq(S_comp, Val(Dim))
-        P_k[c] = turb_state.nu_t[c] * S_mag_sq
+        P_k[c] = turb_state.nu_t[c] * S_mag_sq_cells[c]
     end
 
     # ── k equation ───────────────────────────────────────────────
-    k_eq = CollocatedEquation(mesh)
-    bcs_k = get(bcs_turb, :k, Dict{Symbol, AbstractBoundaryCondition}())
+    k_eq = _cached_equation!(turb_state, :k, mesh)
+    bcs_k = bcs_turb[:k]
 
     # Convection
     assemble_convection!(k_eq, phi, mesh, bcs_k)
@@ -157,8 +164,8 @@ function solve_turbulence!(
     end
 
     # ── ε equation ───────────────────────────────────────────────
-    eps_eq = CollocatedEquation(mesh)
-    bcs_eps = get(bcs_turb, :epsilon, Dict{Symbol, AbstractBoundaryCondition}())
+    eps_eq = _cached_equation!(turb_state, :epsilon, mesh)
+    bcs_eps = bcs_turb[:epsilon]
 
     # Convection
     assemble_convection!(eps_eq, phi, mesh, bcs_eps)
@@ -190,5 +197,27 @@ function solve_turbulence!(
         eps_field.internal[c] = max(sol_eps.u[c], T(1.0e-10))
     end
 
+    return nothing
+end
+
+# ── Realizability hook (see interface.jl) ────────────────────────────
+
+"""
+    _apply_realizability!(turb_state, model::StandardKEpsilon, U, mesh)
+
+Re-apply the Durbin cap after `turbulent_viscosity!` recomputes
+`nu_t = C_mu k²/ε` from the transport fields.  Without this, the cap
+applied inside `solve_turbulence!` was discarded by the uncapped
+recompute in `_update_turbulence!`, so the momentum equation never saw
+the realizability-limited eddy viscosity.
+"""
+function _apply_realizability!(
+        turb_state::RANSTurbulenceState{T},
+        model::StandardKEpsilon,
+        U::CollocatedVectorField{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T},
+    ) where {Dim, T}
+    S_mag = compute_strain_rate(U, mesh)
+    _apply_durbin_cap!(turb_state.nu_t, turb_state.fields[:k], S_mag, _durbin_C_T(model))
     return nothing
 end

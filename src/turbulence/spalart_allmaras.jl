@@ -118,6 +118,8 @@ function solve_turbulence!(
         linear_solver = nothing,
         solver_config = nothing,
     ) where {Dim, T}
+    # Fail fast with a clear message if any turbulence BCs are missing.
+    _validate_turbulence_bcs(bcs_turb, mesh, model)
     nc = length(mesh.cell_volumes)
     nt_field = turb_state.fields[:nu_tilde]
 

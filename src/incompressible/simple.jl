@@ -54,6 +54,7 @@ function solve_simple(
 
     # Pre-compute cyclic face pairs (empty vector if no CyclicBC)
     cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+    cell_pairs = _cyclic_cell_pairs(mesh, cyclic_pairs)
 
     # Residual history
     component_labels = _velocity_labels(Val(Dim))
@@ -64,26 +65,25 @@ function solve_simple(
     converged = false
     final_iter = 0
 
+    # Allocate equations once; reset! + reassemble each iteration.
+    eqs = [CollocatedEquation(mesh; extra_cell_pairs = cell_pairs) for _ in 1:Dim]
+    p_eq = CollocatedEquation(mesh; extra_cell_pairs = cell_pairs)
+
     for iter in 1:max_iter
         final_iter = iter
 
         # ── 1. Assemble momentum equations ──────────────────────────
-        eqs = CollocatedEquation{T}[]
         for d in 1:Dim
-            eq = CollocatedEquation(mesh)
-            assemble_momentum!(eq, state, prob, d)
+            reset!(eqs[d])
+            assemble_momentum!(eqs[d], state, prob, d)
             # Apply cyclic coupling to momentum
             apply_cyclic_to_equation!(
-                eq, _make_scalar_field(_extract_component(state.U, d), state),
+                eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                 mesh, cyclic_pairs,
             )
-            push!(eqs, eq)
         end
 
-        # ── 2. Extract un-relaxed operators (A_P, H_U) ─────────────
-        extract_momentum_operators!(state, eqs, mesh)
-
-        # ── 3. Under-relax + solve momentum ─────────────────────────
+        # ── 2. Under-relax + solve momentum ─────────────────────────
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, alpha_U)
@@ -95,11 +95,17 @@ function solve_simple(
             _set_component!(state.U, d, sol.u)
         end
 
-        # ── 4. Update boundary velocity ─────────────────────────────
+        # ── 3. Update boundary velocity ─────────────────────────────
         update_boundary_velocity!(state, prob.bcs, mesh)
 
+        # ── 4. Extract operators (A_P, H_U) from the RELAXED, solved
+        # momentum equations — standard SIMPLE ordering, so that
+        # D = V/A_P in the pressure equation is consistent with the
+        # velocity actually produced by the momentum solve.
+        extract_momentum_operators!(state, eqs, mesh)
+
         # ── 5. Assemble + solve pressure ────────────────────────────
-        p_eq = CollocatedEquation(mesh)
+        reset!(p_eq)
         assemble_pressure!(p_eq, state, prob)
         apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)

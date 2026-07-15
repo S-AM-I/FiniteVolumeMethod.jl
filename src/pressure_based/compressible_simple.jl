@@ -1,20 +1,21 @@
-# pressure_based/compressible_simple.jl — Compressible SIMPLE (rhoSimpleFoam analogue)
+# pressure_based/compressible_simple.jl — Weakly-compressible SIMPLE
 #
-# Stage 3 compressible extension. The incompressible `SIMPLE` loop in
-# `src/incompressible/simple.jl` assembles a pressure-correction equation
-# from `div(U) = 0`. The compressible extension replaces that with
-# `div(ρU) = 0` (steady compressible continuity), adding a density
-# update between momentum and pressure steps.
+# Stage 3 pressure-based extension.  HONESTY NOTE (what this solver
+# actually does): the pressure-velocity loop reuses the incompressible
+# `assemble_pressure!` unchanged, so the continuity constraint enforced
+# is `div(U) = 0` — NOT the steady compressible `div(ρU) = 0`.  Density
+# is refreshed from the EOS between iterations (`update_density!`) and
+# face densities `rho_f` are computed, but neither enters the mass
+# balance: `update_mass_flux!` is never called and `rho_f` is unused by
+# the coupling loop.
 #
-# Architecture: we reuse `assemble_momentum!`, `assemble_pressure!`, and
-# `correct_velocity!` unchanged from the incompressible stack. The
-# compressibility enters via:
-#
-#   1. `update_density!` after momentum to refresh ρ = EOS(p, T)
-#   2. A compressibility flux `(δρ/δp) · φ · p'` added implicitly to the
-#      pressure equation (captured as an extra diagonal contribution)
-#   3. `update_viscosity!` for Sutherland / tabulated μ(T)
-#   4. Optional energy equation + pressure-work coupling
+# The result is a low-Mach, weakly-compressible approximation:
+#   1. `update_density!` refreshes ρ = EOS(p, T) as a POST-update
+#   2. `update_viscosity!` for Sutherland / tabulated μ(T)
+#   3. Optional energy equation
+# Mass is NOT conserved for genuinely compressible cases; a @warn at
+# solver entry states this.  Do not treat this as a rhoSimpleFoam
+# analogue.
 #
 # The algorithm type `CompressibleSIMPLE{T}` and its `PIMPLE` counterpart
 # live here so the same `solve_compressible(prob, alg)` dispatch works.
@@ -26,20 +27,23 @@ using Printf: @sprintf
 @doc """
     CompressibleSIMPLE{T} <: AbstractPVCoupling
 
-Density-coupled SIMPLE algorithm (OpenFOAM `rhoSimpleFoam` analogue).
+Weakly-compressible SIMPLE algorithm (low-Mach approximation).
 Reuses the existing incompressible `assemble_momentum!` and
-`assemble_pressure!` kernels and inserts a density update between the
-momentum and pressure steps. Each outer iteration:
+`assemble_pressure!` kernels — the pressure equation enforces
+INCOMPRESSIBLE continuity `div(U) = 0`; density is refreshed from the
+EOS between iterations but never enters the mass balance, so mass is
+not conserved for genuinely compressible flows.  Each outer iteration:
 
 1. Update μ(T) and ρ(p, T) from the current fields.
 2. Assemble + solve momentum (under-relaxed).
-3. Extract A_P, H(U).
-4. Assemble + solve the pressure Poisson equation with RHS
-   `div(ρ · H/A)` and explicit compressibility diagonal
-   `ψ/dt` (steady-state: only explicit).
-5. Under-relax pressure, update ρ, correct velocity, correct fluxes.
+3. Extract A_P, H(U) from the solved, relaxed equations.
+4. Assemble + solve the (incompressible) pressure Poisson equation.
+5. Under-relax pressure, update ρ (EOS post-update), correct velocity,
+   correct fluxes.
 6. (Optional) Solve the energy equation.
 7. Check momentum + continuity + (optional) energy residuals.
+
+Valid only for low-Mach, weakly-compressible use.
 
 # Fields
 - `alpha_U::T`        — velocity under-relaxation factor
@@ -200,6 +204,10 @@ function solve_compressible(
         verbose::Bool = false,
         p0::Real = 1.01325e5,
     ) where {Dim, T, Mesh, BC, Model}
+    @warn "CompressibleSIMPLE enforces incompressible continuity (div(U)=0) " *
+        "with an EOS density post-update. Mass is NOT conserved for genuinely " *
+        "compressible cases — use this solver only for low-Mach, " *
+        "weakly-compressible flows." maxlog = 1
     algo = prob.algorithm
     mesh = prob.mesh
     alpha_U = algo.alpha_U
@@ -254,7 +262,6 @@ function solve_compressible(
             )
             push!(eqs, eq)
         end
-        extract_momentum_operators!(state, eqs, mesh)
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, alpha_U)
@@ -266,6 +273,9 @@ function solve_compressible(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+
+        # Extract A_P/H(U) from the relaxed, solved equations
+        extract_momentum_operators!(state, eqs, mesh)
 
         # ── 3. Pressure solve (rhoSimpleFoam-style) ─────────────────
         # For a closed (Neumann-only) compressible system the absolute

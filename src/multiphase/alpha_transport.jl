@@ -96,7 +96,9 @@ function assemble_alpha!(
         use_mules::Bool = true,
     ) where {Dim, T}
     if use_mules
-        return _assemble_alpha_mules!(eq, alpha, phi, mesh; dt = dt, C_alpha = C_alpha)
+        return _assemble_alpha_mules!(
+            eq, alpha, phi, mesh, bcs_alpha; dt = dt, C_alpha = C_alpha,
+        )
     else
         return _assemble_alpha_legacy!(
             eq, alpha, phi, mesh, bcs_alpha; dt = dt, C_alpha = C_alpha,
@@ -152,7 +154,9 @@ function _assemble_alpha_mules!(
         eq::CollocatedEquation{T},
         alpha::CollocatedScalarField{T},
         phi::FaceFluxField{T},
-        mesh::UnstructuredFVMMesh{Dim, T};
+        mesh::UnstructuredFVMMesh{Dim, T},
+        bcs_alpha::Dict{Symbol, <:AbstractBoundaryCondition} =
+            Dict{Symbol, AbstractBoundaryCondition}();
         dt::T,
         C_alpha::T = one(T),
     ) where {Dim, T}
@@ -192,10 +196,26 @@ function _assemble_alpha_mules!(
             alpha_comp = alpha_lin * (one(T) - alpha_lin)
             phi_hi.values[f] = F_f * alpha_lin + phi_c[f] * alpha_comp
         else
-            # Boundary face — keep upwind from owner; compression term
-            # is zero (compute_compression_flux is zero on boundaries).
-            phi_up.values[f] = F_f * alpha.internal[P]
-            phi_hi.values[f] = F_f * alpha.internal[P]
+            # Boundary face — compression term is zero
+            # (compute_compression_flux is zero on boundaries).
+            # OUTFLOW (F_f ≥ 0): upwind from the owner cell.
+            # INFLOW  (F_f < 0): the transported α must come from the
+            # boundary condition — a Dirichlet α BC (e.g. water injection
+            # at an inlet) sets the inflowing composition for both the
+            # low- and high-order fluxes.  Previously the owner value was
+            # used regardless of flux direction, so inflow ignored the BC.
+            alpha_b = alpha.internal[P]
+            if F_f < zero(T)
+                tag = _face_tag(mesh, f)
+                bc = get(bcs_alpha, tag, nothing)
+                if bc isa ParabolicDirichlet
+                    alpha_b = T(bc.value)
+                elseif bc isa ParabolicDirichletFunc
+                    alpha_b = T(bc.func(face_center(mesh, f)))
+                end
+            end
+            phi_up.values[f] = F_f * alpha_b
+            phi_hi.values[f] = F_f * alpha_b
         end
     end
 

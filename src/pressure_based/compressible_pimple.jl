@@ -1,9 +1,19 @@
-# pressure_based/compressible_pimple.jl — Compressible PIMPLE (rhoPimpleFoam analogue)
+# pressure_based/compressible_pimple.jl — Weakly-compressible PIMPLE
 #
 # Transient counterpart of `CompressibleSIMPLE`. Structure mirrors the
 # incompressible `_pimple_step!`: outer SIMPLE-like passes with inner
 # PISO correctors. Each step advances the solution by a fixed dt and
 # updates ρ and (optionally) T so the EOS coupling can relax.
+#
+# HONESTY NOTE (what this solver actually does): the pressure-velocity
+# loop enforces INCOMPRESSIBLE continuity (div(U) = 0); density is
+# updated from the EOS only AFTER each outer pass and never enters the
+# continuity constraint (face densities `rho_f` are computed but the
+# mass flux is not density-weighted).  This is a low-Mach,
+# weakly-compressible approximation: valid when density variations are
+# small and slow.  It is NOT a conservative rhoPimpleFoam analogue —
+# mass is NOT conserved for genuinely compressible flows.  A @warn at
+# solver entry states this.
 
 using Printf: @sprintf
 
@@ -12,11 +22,13 @@ using Printf: @sprintf
 @doc """
     CompressiblePIMPLE{T} <: AbstractPVCoupling
 
-Transient compressible pressure-based coupling. Combines outer
+Transient weakly-compressible pressure-based coupling. Combines outer
 SIMPLE-style under-relaxation with inner PISO correctors and an
-explicit density update. Suited to unsteady compressible flows with
-low-to-moderate Mach numbers; at high Mach the density-based stack
-in `src/hyperbolic/` is more appropriate.
+explicit EOS density post-update.  The inner loop enforces
+INCOMPRESSIBLE continuity (`div(U) = 0`); density never enters the
+mass balance, so mass is not conserved for genuinely compressible
+flows.  Valid only for low-Mach, weakly-compressible use; at higher
+Mach the density-based stack in `src/hyperbolic/` is appropriate.
 
 # Fields
 - `n_outer::Int`       — number of outer iterations per time step
@@ -81,6 +93,9 @@ function _compressible_pimple_step!(
     nc = length(mesh.cell_volumes)
     rho_prev = copy(cstate.rho)
 
+    # Old-time snapshot for the ddt term (shared by all outer iterations)
+    _snapshot_old_time!(state)
+
     for outer in 1:n_outer
         is_final = (outer == n_outer)
 
@@ -109,7 +124,6 @@ function _compressible_pimple_step!(
             )
             push!(eqs, eq)
         end
-        extract_momentum_operators!(state, eqs, mesh)
         for d in 1:Dim
             if !is_final
                 U_old_d = _extract_component(state.U, d)
@@ -124,6 +138,9 @@ function _compressible_pimple_step!(
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
+
+        # Extract A_P/H(U) from the (relaxed) solved equations
+        extract_momentum_operators!(state, eqs, mesh)
 
         # PISO inner corrector loop
         for k in 1:n_correctors
@@ -200,6 +217,10 @@ function solve_compressible(
         verbose::Bool = false,
         p0::Real = 1.01325e5,
     ) where {Dim, T, Mesh, BC, Model}
+    @warn "CompressiblePIMPLE enforces incompressible continuity (div(U)=0) " *
+        "with an EOS density post-update. Mass is NOT conserved for genuinely " *
+        "compressible cases — use this solver only for low-Mach, " *
+        "weakly-compressible flows." maxlog = 1
     mesh = prob.mesh
     t_start, t_end = tspan
 

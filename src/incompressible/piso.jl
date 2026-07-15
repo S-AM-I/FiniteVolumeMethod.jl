@@ -42,23 +42,29 @@ function _piso_step!(
         linear_solver = nothing,
         solver_config = nothing,
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
+        t::T = zero(T),
+        ws = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
+    # Snapshot the old-time velocity ONCE per time step: every momentum
+    # assembly in this step (predictor + corrector re-assemblies) uses it
+    # as the ddt old-time value.
+    _snapshot_old_time!(state)
+
+    # Equation workspace: reuse caller-provided equations when available.
+    eqs, p_eq = ws === nothing ? _make_incompressible_workspace(prob, cyclic_pairs) : ws
+
     # ── 1. Momentum predictor (no under-relaxation) ─────────────────
-    eqs = CollocatedEquation{T}[]
     for d in 1:Dim
-        eq = CollocatedEquation(mesh)
-        assemble_momentum!(eq, state, prob, d; dt = dt)
+        reset!(eqs[d])
+        assemble_momentum!(eqs[d], state, prob, d; dt = dt, t = t)
         # Apply cyclic coupling to momentum
         apply_cyclic_to_equation!(
-            eq, _make_scalar_field(_extract_component(state.U, d), state),
+            eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
             mesh, cyclic_pairs,
         )
-        push!(eqs, eq)
     end
-
-    extract_momentum_operators!(state, eqs, mesh)
 
     for d in 1:Dim
         lp = to_linear_problem(eqs[d])
@@ -68,13 +74,17 @@ function _piso_step!(
         )
         _set_component!(state.U, d, sol.u)
     end
-    update_boundary_velocity!(state, prob.bcs, mesh)
+    update_boundary_velocity!(state, prob.bcs, mesh; t = t)
     update_boundary_cyclic!(state, mesh, cyclic_pairs)
+
+    # Extract operators AFTER the momentum solve so H(U) uses the solved
+    # velocity (standard PISO ordering).
+    extract_momentum_operators!(state, eqs, mesh)
 
     # ── 2. Pressure corrector loop ──────────────────────────────────
     for k in 1:n_correctors
         # 2a. Assemble + solve pressure
-        p_eq = CollocatedEquation(mesh)
+        reset!(p_eq)
         assemble_pressure!(p_eq, state, prob)
         apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
@@ -94,25 +104,43 @@ function _piso_step!(
 
         # 2d. Correct velocity + fluxes
         correct_velocity!(state, mesh)
-        update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_velocity!(state, prob.bcs, mesh; t = t)
         update_boundary_cyclic!(state, mesh, cyclic_pairs)
         correct_fluxes!(state, mesh)
 
         # 2e. Re-assemble momentum + extract operators for next corrector
+        # (ddt still against state.U_old — the time-step snapshot)
         if k < n_correctors
-            eqs_k = CollocatedEquation{T}[]
             for d in 1:Dim
-                eq = CollocatedEquation(mesh)
-                assemble_momentum!(eq, state, prob, d; dt = dt)
+                reset!(eqs[d])
+                assemble_momentum!(eqs[d], state, prob, d; dt = dt, t = t)
                 apply_cyclic_to_equation!(
-                    eq, _make_scalar_field(_extract_component(state.U, d), state),
+                    eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
                     mesh, cyclic_pairs,
                 )
-                push!(eqs_k, eq)
             end
-            extract_momentum_operators!(state, eqs_k, mesh)
+            extract_momentum_operators!(state, eqs, mesh)
         end
     end
 
     return nothing
+end
+
+"""
+    _make_incompressible_workspace(prob, cyclic_pairs) -> (eqs, p_eq)
+
+Allocate the per-component momentum equations and the pressure equation
+with the cyclic cross-couplings pre-allocated in the sparsity structure.
+Allocate once per solve and pass to the step functions via `ws` to avoid
+rebuilding the sparsity pattern every iteration.
+"""
+function _make_incompressible_workspace(
+        prob::IncompressibleProblem{Dim, T},
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}},
+    ) where {Dim, T}
+    mesh = prob.mesh
+    cell_pairs = _cyclic_cell_pairs(mesh, cyclic_pairs)
+    eqs = [CollocatedEquation(mesh; extra_cell_pairs = cell_pairs) for _ in 1:Dim]
+    p_eq = CollocatedEquation(mesh; extra_cell_pairs = cell_pairs)
+    return (eqs, p_eq)
 end

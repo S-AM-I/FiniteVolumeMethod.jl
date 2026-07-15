@@ -22,7 +22,8 @@
 #      Rhie-Chow design goal.
 
 using FiniteVolumeMethod
-using LinearAlgebra: norm
+using LinearAlgebra: norm, dot
+using LinearSolve
 using StaticArrays: SVector
 using Test
 
@@ -178,4 +179,110 @@ end
         max_diff = max(max_diff, abs(phi_rc.values[f] - phi_naive.values[f]))
     end
     @test max_diff < 1.0e-10
+end
+
+@testset "V&V: Rhie-Chow face coefficient is the harmonic pressure-Laplacian D_f" begin
+    # Finding: the corrected flux can only be divergence-consistent with
+    # the pressure equation if the D_f used by `rhie_chow_correction!` is
+    # IDENTICAL to the face diffusivity of the pressure Laplacian
+    # (harmonic mean via `_face_diffusivity`).  This identity test
+    # reconstructs the expected flux with the harmonic D_f and compares —
+    # with the previous arithmetic interpolation it fails whenever A_P
+    # varies across a face.
+    N = 10
+    mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+
+    U = CollocatedVectorField(:U, mesh)
+    p = CollocatedScalarField(:p, mesh)
+    A_P = Vector{Float64}(undef, nc)
+    for c in 1:nc
+        x = mesh.cell_centers[1, c]
+        y = mesh.cell_centers[2, c]
+        U.internal[c] = SVector(0.3 * sin(π * x), -0.2 * cos(π * y))
+        p.internal[c] = sin(2π * x) * cos(π * y)
+        A_P[c] = exp(2.0 * sin(2π * x) * sin(2π * y))  # strong variation
+    end
+    for (k, f) in enumerate(p.boundary_face_indices)
+        p.boundary[k] = p.internal[FiniteVolumeMethod.owner(mesh, f)]
+    end
+
+    phi = FaceFluxField(:phi, mesh; value = 0.0)
+    rhie_chow_correction!(phi, U, p, A_P, mesh)
+
+    D_vec = [mesh.cell_volumes[c] / A_P[c] for c in 1:nc]
+    grad_p = gradient(p, mesh)
+
+    n_varying = 0
+    for f in 1:nf
+        FiniteVolumeMethod.is_internal_face(mesh, f) || continue
+        P = FiniteVolumeMethod.owner(mesh, f)
+        Nc = FiniteVolumeMethod.neighbour(mesh, f)
+        w = FiniteVolumeMethod.face_weight(mesh, f)
+        S_f = FiniteVolumeMethod.face_normal_area(mesh, f)
+        U_f = w * U.internal[P] + (1.0 - w) * U.internal[Nc]
+        d_vec, d_mag = FiniteVolumeMethod.owner_neighbour_distance(mesh, f)
+        compact = (p.internal[Nc] - p.internal[P]) / d_mag * mesh.face_areas[f]
+        interp = dot(w * grad_p[P] + (1.0 - w) * grad_p[Nc], S_f)
+        D_f = FiniteVolumeMethod._face_diffusivity(D_vec, mesh, f)
+        expected = dot(U_f, S_f) - D_f * (compact - interp)
+        @test phi.values[f] ≈ expected atol = 1.0e-13
+        if abs(D_vec[P] - D_vec[Nc]) > 1.0e-3
+            n_varying += 1
+        end
+    end
+    # The mesh must actually exercise varying A_P across faces
+    @test n_varying > 50
+end
+
+@testset "V&V: projection with varying A_P reduces flux imbalance" begin
+    # End-to-end pressure projection with a strongly varying momentum
+    # diagonal: solving the pressure equation and applying the
+    # velocity/flux corrections must substantially reduce the raw cell
+    # flux imbalance of the H/A field.
+    mesh = build_cartesian_unstructured_mesh(12, 12, 1.0, 1.0)
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => NoSlipWallBC(), :right => NoSlipWallBC(),
+        :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
+    )
+    prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 0.01)
+    state = IncompressibleState(mesh)
+    for c in 1:nc
+        x = mesh.cell_centers[1, c]
+        y = mesh.cell_centers[2, c]
+        state.A_P[c] = exp(3.0 * sin(2π * x) * sin(2π * y))
+        state.H_U[c] = state.A_P[c] * 0.1 * SVector(sin(π * x), sin(π * y))
+    end
+    FiniteVolumeMethod.update_boundary_velocity!(state, bcs, mesh)
+
+    phi_HbyA = FiniteVolumeMethod.compute_HbyA_flux(state, mesh)
+    imb0 = zeros(nc)
+    for f in 1:nf
+        P = FiniteVolumeMethod.owner(mesh, f)
+        Nc = FiniteVolumeMethod.neighbour(mesh, f)
+        imb0[P] += phi_HbyA[f]
+        Nc != 0 && (imb0[Nc] -= phi_HbyA[f])
+    end
+    r_pre = sum(abs, imb0)
+    @test r_pre > 0.1  # a genuinely non-solenoidal starting field
+
+    p_eq = CollocatedEquation(mesh)
+    FiniteVolumeMethod.assemble_pressure!(p_eq, state, prob)
+    FiniteVolumeMethod.fix_pressure_reference!(p_eq, 1, 0.0)
+    p_sol = solve(to_linear_problem(p_eq))
+    state.p.internal .= p_sol.u
+    FiniteVolumeMethod.update_boundary_pressure!(state, bcs, mesh)
+    FiniteVolumeMethod.correct_velocity!(state, mesh)
+    FiniteVolumeMethod.update_boundary_velocity!(state, bcs, mesh)
+    FiniteVolumeMethod.correct_fluxes!(state, mesh)
+
+    r_post = FiniteVolumeMethod.continuity_residual(state, mesh; normalize = false)
+    # One projection with the CONSISTENT harmonic D_f reduces the raw
+    # imbalance decisively (observed ratio ~0.34 for ~400x A_P variation;
+    # the remaining part is the Rhie-Chow gradient-smoothing term, which
+    # subsequent correctors remove).
+    @test r_post < 0.5 * r_pre
 end

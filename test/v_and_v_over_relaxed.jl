@@ -311,3 +311,100 @@ end
     @test err16 > err32
     @test observed_order > 1.8
 end
+
+# ── Sheared-mesh MMS: explicit correction must REDUCE the error ──────
+#
+# The center-shift "skewed" mesh above perturbs cell centers while
+# keeping face geometry, so its dominant error is SKEWNESS (face center
+# off the P–N midpoint), which the non-orthogonal correction cannot and
+# should not fix.  To test the correction itself we need a genuinely
+# non-orthogonal, skewness-free mesh: a uniform shear map
+# (x, y) → (x + λy, y).  Cell volumes are preserved, every face center
+# remains exactly at the P–N midpoint, and S_f is no longer parallel to
+# d̂ — pure non-orthogonality.
+#
+# Regression target: with the correct RHS sign (b[P] += Γ (∇φ)_f · T_f
+# under this file's negative-Laplacian/positive-diagonal convention),
+# two deferred-correction sweeps reduce the MMS error well below the
+# uncorrected one-pass error.  With the previously flipped sign the
+# "correction" roughly DOUBLED the error instead.
+function build_sheared_mesh(N::Int, lam::Float64)
+    mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
+    cc = copy(mesh.cell_centers)
+    fc = copy(mesh.face_centers)
+    fn = copy(mesh.face_normals)
+    fa = copy(mesh.face_areas)
+    for c in 1:size(cc, 2)
+        cc[1, c] += lam * cc[2, c]
+    end
+    nf = size(mesh.face_cells, 2)
+    s = sqrt(1 + lam^2)
+    for f in 1:nf
+        fc[1, f] += lam * fc[2, f]
+        if abs(fn[1, f]) > 0.5  # x-oriented face: tangent (0,1) → (λ,1)
+            sgn = sign(fn[1, f])
+            fn[1, f] = sgn * 1.0 / s
+            fn[2, f] = sgn * (-lam) / s
+            fa[f] = fa[f] * s
+        end
+    end
+    return FiniteVolumeMethod.UnstructuredFVMMesh{2, Float64}(
+        cc, mesh.cell_volumes, mesh.face_cells, fc, fa, fn,
+        mesh.face_tags, mesh.face_velocity, mesh.cell_faces,
+    )
+end
+
+sheared_phi_exact(x, y, lam) = sin(π * (x - lam * y)) * sin(π * y)
+sheared_forcing(x, y, lam) =
+    (2 + lam^2) * π^2 * sin(π * (x - lam * y)) * sin(π * y) +
+    2 * lam * π^2 * cos(π * (x - lam * y)) * cos(π * y)
+
+function solve_sheared_mms(N::Int, lam::Float64, sweeps::Int)
+    mesh = build_sheared_mesh(N, lam)
+    bcs = Dict{Symbol, AbstractBoundaryCondition}(
+        :left => ParabolicDirichlet(0.0),
+        :right => ParabolicDirichlet(0.0),
+        :bottom => ParabolicDirichlet(0.0),
+        :top => ParabolicDirichlet(0.0),
+    )
+    nc = length(mesh.cell_volumes)
+    phi_num = zeros(nc)
+    for it in 0:sweeps
+        eq = CollocatedEquation(mesh)
+        if it == 0
+            assemble_laplacian!(eq, 1.0, mesh, bcs)
+        else
+            pf = CollocatedScalarField(:phi, mesh)
+            pf.internal .= phi_num
+            g = gradient(pf, mesh)
+            assemble_laplacian!(
+                eq, 1.0, mesh, bcs;
+                non_ortho_correction = true, grad_phi = g,
+            )
+        end
+        for c in 1:nc
+            x = mesh.cell_centers[1, c]
+            y = mesh.cell_centers[2, c]
+            eq.b[c] += mesh.cell_volumes[c] * sheared_forcing(x, y, lam)
+        end
+        phi_num .= solve(to_linear_problem(eq)).u
+    end
+    err_sq = 0.0
+    for c in 1:nc
+        x = mesh.cell_centers[1, c]
+        y = mesh.cell_centers[2, c]
+        err_sq += mesh.cell_volumes[c] * (phi_num[c] - sheared_phi_exact(x, y, lam))^2
+    end
+    return sqrt(err_sq)
+end
+
+@testset "V&V: explicit non-ortho correction reduces error on sheared mesh" begin
+    for lam in (0.3, 0.5)
+        err_off = solve_sheared_mms(24, lam, 0)
+        err_on = solve_sheared_mms(24, lam, 2)
+        @test isfinite(err_off) && isfinite(err_on)
+        # The correction must HELP, decisively (observed ~9x reduction;
+        # the flipped sign gave ~2x INCREASE).
+        @test err_on < 0.5 * err_off
+    end
+end

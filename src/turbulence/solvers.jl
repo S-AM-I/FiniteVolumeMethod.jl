@@ -37,6 +37,12 @@ function solve_simple_turbulent(
     turb_state = _init_turb_state(turb_model, mesh)
     _update_turbulence!(turb_state, turb_model, state, prob, mesh, turb_bcs)
 
+    # Cyclic (periodic) support — mirror the laminar loop.  Previously the
+    # turbulent loops silently dropped cyclic coupling, so a periodic RANS
+    # channel decoupled across the boundary with no error.
+    cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+    eqs, p_eq = _make_incompressible_workspace(prob, cyclic_pairs)
+
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
         label => T[] for label in [component_labels..., :continuity]
@@ -50,14 +56,14 @@ function solve_simple_turbulent(
         nu_eff = compute_nu_eff(prob.nu, turb_state.nu_t)
 
         # ── Momentum ────────────────────────────────────────────
-        eqs = CollocatedEquation{T}[]
         for d in 1:Dim
-            eq = CollocatedEquation(mesh)
-            assemble_momentum!(eq, state, prob, d; nu_eff = nu_eff)
-            push!(eqs, eq)
+            reset!(eqs[d])
+            assemble_momentum!(eqs[d], state, prob, d; nu_eff = nu_eff)
+            apply_cyclic_to_equation!(
+                eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
+                mesh, cyclic_pairs,
+            )
         end
-
-        extract_momentum_operators!(state, eqs, mesh)
 
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
@@ -69,10 +75,15 @@ function solve_simple_turbulent(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_cyclic!(state, mesh, cyclic_pairs)
+
+        # Extract A_P/H(U) from the relaxed, solved equations
+        extract_momentum_operators!(state, eqs, mesh)
 
         # ── Pressure ────────────────────────────────────────────
-        p_eq = CollocatedEquation(mesh)
+        reset!(p_eq)
         assemble_pressure!(p_eq, state, prob)
+        apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
@@ -86,6 +97,7 @@ function solve_simple_turbulent(
 
         correct_velocity!(state, mesh)
         update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_cyclic!(state, mesh, cyclic_pairs)
         correct_fluxes!(state, mesh)
 
         # ── Turbulence ──────────────────────────────────────────
@@ -147,6 +159,10 @@ function solve_incompressible_turbulent(
     turb_state = _init_turb_state(turb_model, mesh)
     _update_turbulence!(turb_state, turb_model, state, prob, mesh, turb_bcs)
 
+    # Cyclic (periodic) support + equation workspace (allocated once)
+    cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+    ws = _make_incompressible_workspace(prob, cyclic_pairs)
+
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
         label => T[] for label in [component_labels..., :continuity]
@@ -166,11 +182,13 @@ function solve_incompressible_turbulent(
             _turbulent_piso_step!(
                 state, prob, dt_actual, prob.algorithm.n_correctors,
                 nu_eff; linear_solver = linear_solver, solver_config = solver_config,
+                cyclic_pairs = cyclic_pairs, t = t + dt_actual, ws = ws,
             )
         elseif prob.algorithm isa PIMPLE
             _turbulent_pimple_step!(
                 state, prob, dt_actual, nu_eff;
                 linear_solver = linear_solver, solver_config = solver_config,
+                cyclic_pairs = cyclic_pairs, t = t + dt_actual, ws = ws,
             )
         end
 
@@ -212,17 +230,25 @@ function _turbulent_piso_step!(
         nu_eff::Vector{T};
         linear_solver = nothing,
         solver_config = nothing,
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
+        t::T = zero(T),
+        ws = nothing,
     ) where {Dim, T}
     mesh = prob.mesh
 
-    eqs = CollocatedEquation{T}[]
-    for d in 1:Dim
-        eq = CollocatedEquation(mesh)
-        assemble_momentum!(eq, state, prob, d; dt = dt, nu_eff = nu_eff)
-        push!(eqs, eq)
-    end
+    # Old-time snapshot for the ddt term (once per time step)
+    _snapshot_old_time!(state)
 
-    extract_momentum_operators!(state, eqs, mesh)
+    eqs, p_eq = ws === nothing ? _make_incompressible_workspace(prob, cyclic_pairs) : ws
+
+    for d in 1:Dim
+        reset!(eqs[d])
+        assemble_momentum!(eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t)
+        apply_cyclic_to_equation!(
+            eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
+            mesh, cyclic_pairs,
+        )
+    end
 
     for d in 1:Dim
         sol = _dispatch_solve(
@@ -231,11 +257,15 @@ function _turbulent_piso_step!(
         )
         _set_component!(state.U, d, sol.u)
     end
-    update_boundary_velocity!(state, prob.bcs, mesh)
+    update_boundary_velocity!(state, prob.bcs, mesh; t = t)
+    update_boundary_cyclic!(state, mesh, cyclic_pairs)
+
+    extract_momentum_operators!(state, eqs, mesh)
 
     for k in 1:n_correctors
-        p_eq = CollocatedEquation(mesh)
+        reset!(p_eq)
         assemble_pressure!(p_eq, state, prob)
+        apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
         if _needs_pressure_reference(prob.bcs)
             fix_pressure_reference!(p_eq, 1, zero(T))
         end
@@ -247,17 +277,20 @@ function _turbulent_piso_step!(
         end
         update_boundary_pressure!(state, prob.bcs, mesh)
         correct_velocity!(state, mesh)
-        update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_velocity!(state, prob.bcs, mesh; t = t)
+        update_boundary_cyclic!(state, mesh, cyclic_pairs)
         correct_fluxes!(state, mesh)
 
         if k < n_correctors
-            eqs_k = CollocatedEquation{T}[]
             for d in 1:Dim
-                eq = CollocatedEquation(mesh)
-                assemble_momentum!(eq, state, prob, d; dt = dt, nu_eff = nu_eff)
-                push!(eqs_k, eq)
+                reset!(eqs[d])
+                assemble_momentum!(eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t)
+                apply_cyclic_to_equation!(
+                    eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
+                    mesh, cyclic_pairs,
+                )
             end
-            extract_momentum_operators!(state, eqs_k, mesh)
+            extract_momentum_operators!(state, eqs, mesh)
         end
     end
 
@@ -272,20 +305,30 @@ function _turbulent_pimple_step!(
         dt::T, nu_eff::Vector{T};
         linear_solver = nothing,
         solver_config = nothing,
+        cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
+        t::T = zero(T),
+        ws = nothing,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
 
+    # Old-time snapshot for the ddt term (once per time step, shared by
+    # all outer iterations)
+    _snapshot_old_time!(state)
+
+    eqs, p_eq = ws === nothing ? _make_incompressible_workspace(prob, cyclic_pairs) : ws
+
     for outer in 1:algo.n_outer
         is_final = (outer == algo.n_outer)
 
-        eqs = CollocatedEquation{T}[]
         for d in 1:Dim
-            eq = CollocatedEquation(mesh)
-            assemble_momentum!(eq, state, prob, d; dt = dt, nu_eff = nu_eff)
-            push!(eqs, eq)
+            reset!(eqs[d])
+            assemble_momentum!(eqs[d], state, prob, d; dt = dt, nu_eff = nu_eff, t = t)
+            apply_cyclic_to_equation!(
+                eqs[d], _make_scalar_field(_extract_component(state.U, d), state),
+                mesh, cyclic_pairs,
+            )
         end
-        extract_momentum_operators!(state, eqs, mesh)
 
         for d in 1:Dim
             if !is_final
@@ -298,12 +341,16 @@ function _turbulent_pimple_step!(
             )
             _set_component!(state.U, d, sol.u)
         end
-        update_boundary_velocity!(state, prob.bcs, mesh)
+        update_boundary_velocity!(state, prob.bcs, mesh; t = t)
+        update_boundary_cyclic!(state, mesh, cyclic_pairs)
+
+        extract_momentum_operators!(state, eqs, mesh)
 
         nc = length(mesh.cell_volumes)
         for k in 1:algo.n_correctors
-            p_eq = CollocatedEquation(mesh)
+            reset!(p_eq)
             assemble_pressure!(p_eq, state, prob)
+            apply_cyclic_to_equation!(p_eq, state.p, mesh, cyclic_pairs)
             if _needs_pressure_reference(prob.bcs)
                 fix_pressure_reference!(p_eq, 1, zero(T))
             end
@@ -320,7 +367,8 @@ function _turbulent_pimple_step!(
             end
             update_boundary_pressure!(state, prob.bcs, mesh)
             correct_velocity!(state, mesh)
-            update_boundary_velocity!(state, prob.bcs, mesh)
+            update_boundary_velocity!(state, prob.bcs, mesh; t = t)
+            update_boundary_cyclic!(state, mesh, cyclic_pairs)
             correct_fluxes!(state, mesh)
         end
     end

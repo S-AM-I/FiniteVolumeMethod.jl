@@ -74,11 +74,18 @@ end
 
 @doc """
     PISO(; n_correctors = 2)
+    PISO{T}(; n_correctors = 2)
 
 Construct a [`PISO`](@ref) algorithm with the given number of corrector steps.
+The unparameterized form defaults to `Float64`; use `PISO{T}(...)` for other
+floating-point types (matching `SIMPLE`'s type flexibility).
 """
 function PISO(; n_correctors::Int = 2)
     return PISO{Float64}(n_correctors)
+end
+
+function PISO{T}(; n_correctors::Int = 2) where {T}
+    return PISO{T}(n_correctors)
 end
 
 # ── PIMPLE ──────────────────────────────────────────────────────────
@@ -181,6 +188,12 @@ pressure-velocity coupling loop.
 - `phi::FaceFluxField{T}` — volumetric face flux
 - `A_P::Vector{T}` — diagonal momentum coefficients (per cell)
 - `H_U::Vector{SVector{Dim, T}}` — momentum H-operator values (per cell)
+- `U_old::Vector{SVector{Dim, T}}` — old-time-level velocity (per cell),
+  snapshot at the start of each transient time step via
+  [`_snapshot_old_time!`](@ref).  The `ddt` term in `assemble_momentum!`
+  is assembled against this field so that repeated assemblies within a
+  time step (PISO correctors, PIMPLE outer iterations) all discretize
+  `(Uⁿ⁺¹ - Uⁿ)/Δt` rather than drifting toward the previous iterate.
 """
 mutable struct IncompressibleState{Dim, T}
     U::CollocatedVectorField{Dim, T}
@@ -188,6 +201,35 @@ mutable struct IncompressibleState{Dim, T}
     phi::FaceFluxField{T}
     A_P::Vector{T}
     H_U::Vector{SVector{Dim, T}}
+    U_old::Vector{SVector{Dim, T}}
+end
+
+@doc """
+    IncompressibleState{Dim, T}(U, p, phi, A_P, H_U)
+
+Backward-compatible 5-argument constructor: initializes `U_old` as a copy
+of `U.internal`.
+"""
+function IncompressibleState{Dim, T}(
+        U::CollocatedVectorField{Dim, T},
+        p::CollocatedScalarField{T},
+        phi::FaceFluxField{T},
+        A_P::Vector{T},
+        H_U::Vector{SVector{Dim, T}},
+    ) where {Dim, T}
+    return IncompressibleState{Dim, T}(U, p, phi, A_P, H_U, copy(U.internal))
+end
+
+@doc """
+    _snapshot_old_time!(state::IncompressibleState)
+
+Copy the current velocity into `state.U_old`.  Must be called exactly once
+at the start of each transient time step, before the first momentum
+assembly of that step.
+"""
+function _snapshot_old_time!(state::IncompressibleState{Dim, T}) where {Dim, T}
+    copyto!(state.U_old, state.U.internal)
+    return nothing
 end
 
 @doc """
@@ -217,15 +259,36 @@ and the final state.
 
 # Fields
 - `converged::Bool` — whether the solver met the tolerance criterion
+  (for transient solvers: whether the run completed with finite residuals)
 - `iterations::Int` — number of outer iterations performed
 - `residuals::Dict{Symbol, Vector{T}}` — residual history per equation
 - `state::IncompressibleState{Dim, T}` — final solver state
+- `snapshots::Vector{IncompressibleState{Dim, T}}` — saved state snapshots
+  from transient solvers (every `save_every` steps); empty for steady solvers
 """
 struct SolveResult{Dim, T}
     converged::Bool
     iterations::Int
     residuals::Dict{Symbol, Vector{T}}
     state::IncompressibleState{Dim, T}
+    snapshots::Vector{IncompressibleState{Dim, T}}
+end
+
+@doc """
+    SolveResult{Dim, T}(converged, iterations, residuals, state)
+
+Backward-compatible 4-argument constructor with no snapshots.
+"""
+function SolveResult{Dim, T}(
+        converged::Bool,
+        iterations::Int,
+        residuals::Dict{Symbol, Vector{T}},
+        state::IncompressibleState{Dim, T},
+    ) where {Dim, T}
+    return SolveResult{Dim, T}(
+        converged, iterations, residuals, state,
+        IncompressibleState{Dim, T}[],
+    )
 end
 
 # ── Component extract / set helpers ─────────────────────────────────

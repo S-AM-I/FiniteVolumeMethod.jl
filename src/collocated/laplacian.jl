@@ -116,6 +116,12 @@ function assemble_laplacian!(
             # Explicit non-orthogonal correction using T_f = S_f - E_f.
             # Only applied if caller supplies a current gradient estimate
             # AND the mode is not NON_ORTHO_NONE (which zeroes T_f).
+            #
+            # Sign convention: the assembly is the NEGATIVE Laplacian with
+            # positive diagonal (see the Dirichlet/Neumann boundary branches
+            # below).  Face f contributes -Γ_f[(φ_N-φ_P)|E|/|d| + (∇φ)_f·T_f]
+            # to row P's LHS; moving the explicit tangential part to the RHS
+            # gives b[P] += Γ_f (∇φ)_f·T_f, and the opposite sign for N.
             if non_ortho_correction && grad_phi !== nothing &&
                     correction_mode !== NON_ORTHO_NONE
                 w = face_weight(mesh, f)
@@ -123,8 +129,8 @@ function assemble_laplacian!(
                 E_vec = E_mag * d_hat
                 T_vec = S_f - E_vec
                 correction = gamma_f * dot(grad_f, T_vec)
-                eq.b[P] -= correction
-                eq.b[N] += correction
+                eq.b[P] += correction
+                eq.b[N] -= correction
             end
         else
             # Boundary face
@@ -195,6 +201,11 @@ function _apply_laplacian_bc!(
         flux_coeff = gamma_f * A_f / d_n
         add_diag!(eq, P, flux_coeff)
         eq.b[P] += flux_coeff * bc.value
+    elseif bc isa ParabolicDirichletFunc
+        # Spatially-varying fixed value: evaluate at the face center
+        flux_coeff = gamma_f * A_f / d_n
+        add_diag!(eq, P, flux_coeff)
+        eq.b[P] += flux_coeff * T(bc.func(x_f))
     elseif bc isa ParabolicNeumann
         # Fixed gradient: explicit flux added to RHS
         eq.b[P] += gamma_f * bc.value * A_f

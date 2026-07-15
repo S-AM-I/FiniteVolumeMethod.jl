@@ -229,10 +229,14 @@ function rhie_chow_correction!(
             # Interpolate velocity to face
             U_f = w * U.internal[P] + (one(T) - w) * U.internal[N]
 
-            # Interpolate 1/a_P to face
+            # Face coefficient D_f = (V/a_P)_f via HARMONIC mean — must be
+            # identical to `_face_diffusivity` used by the pressure
+            # Laplacian assembly, otherwise the corrected fluxes cannot be
+            # divergence-free when A_P varies in space.
             D_P = mesh.cell_volumes[P] / A_P_diag[P]
             D_N = mesh.cell_volumes[N] / A_P_diag[N]
-            D_f = w * D_P + (one(T) - w) * D_N
+            denom = w * D_N + (one(T) - w) * D_P
+            D_f = denom > zero(T) ? D_P * D_N / denom : zero(T)
 
             # Compact face-normal pressure gradient: (p_N - p_P) / |d| * |S_f|
             d_vec, d_mag = owner_neighbour_distance(mesh, f)

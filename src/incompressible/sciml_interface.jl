@@ -170,6 +170,9 @@ function CommonSolve.solve(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
+        # Initial conditions (plain incompressible path only)
+        U0::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
+        p0::Union{Nothing, Vector{T}} = nothing,
         # Turbulence kwargs
         turb_model = nothing,
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
@@ -214,6 +217,7 @@ function CommonSolve.solve(
             actual_prob, tspan, dt;
             save_every = save_every, linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
+            U0 = U0, p0 = p0,
         )
         return IncompressibleSolution(result, actual_prob)
     end

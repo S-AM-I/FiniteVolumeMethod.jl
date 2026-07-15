@@ -95,8 +95,14 @@ function assemble_pressure!(
     # Expand BCs for pressure
     bcs_p = expand_bcs_pressure(prob.bcs)
 
-    # Assemble Laplacian: div(D * grad(p))
-    assemble_laplacian!(eq, D, mesh, bcs_p)
+    # Assemble Laplacian: div(D * grad(p)), with the explicit
+    # non-orthogonal correction driven by the current pressure gradient
+    # (compensates the over-relaxed implicit split on skewed meshes).
+    grad_p = gradient(state.p, mesh)
+    assemble_laplacian!(
+        eq, D, mesh, bcs_p;
+        non_ortho_correction = true, grad_phi = grad_p,
+    )
 
     # Compute H/A flux divergence and add to RHS.
     # The Laplacian assembles a positive-definite operator A*p where
@@ -115,10 +121,10 @@ function assemble_pressure!(
         end
     end
 
-    # Fix pressure reference if needed (pure Neumann problem)
-    if _needs_pressure_reference(prob.bcs)
-        fix_pressure_reference!(eq, 1, zero(T))
-    end
+    # NOTE: the pressure reference (for pure-Neumann systems) is fixed by
+    # the caller AFTER any cyclic coupling is applied — see the solver
+    # loops.  Fixing it here as well would run the elimination twice and
+    # could be undone by subsequent cyclic assembly into the reference row.
 
     return nothing
 end
@@ -128,8 +134,14 @@ end
 @doc """
     fix_pressure_reference!(eq, ref_cell, ref_value)
 
-Fix the pressure at `ref_cell` to `ref_value` by zeroing the row in
-the matrix, setting the diagonal to 1, and the RHS to `ref_value`.
+Fix the pressure at `ref_cell` to `ref_value` by SYMMETRIC elimination:
+both the row and the column of `ref_cell` are zeroed, with the column
+entries moved to the RHS (`b[i] -= A[i, ref] * ref_value`), the diagonal
+set to 1, and `b[ref] = ref_value`.
+
+Symmetric elimination keeps the pressure matrix symmetric (and SPD for
+the standard Laplacian), so CG/AMG solvers remain applicable.  The
+one-sided row-only elimination used previously destroyed symmetry.
 
 This removes the null-space from an all-Neumann pressure system.
 
@@ -143,13 +155,33 @@ function fix_pressure_reference!(
         ref_cell::Int,
         ref_value::T,
     ) where {T}
-    nc = size(eq.A, 1)
-    # Zero the entire row
-    for j in 1:nc
-        eq.A[ref_cell, j] = zero(T)
+    A = eq.A
+    nz = A.nzval
+    rows = A.rowval
+    colptr = A.colptr
+    nc = size(A, 1)
+
+    # Zero the column: move A[i, ref] * ref_value to the RHS, then clear.
+    @inbounds for k in colptr[ref_cell]:(colptr[ref_cell + 1] - 1)
+        i = rows[k]
+        if i != ref_cell
+            eq.b[i] -= nz[k] * ref_value
+            nz[k] = zero(T)
+        end
     end
+
+    # Zero the row: scan all columns for entries with rowval == ref_cell.
+    # (O(nnz) — robust to extra structural entries added by cyclic BCs.)
+    @inbounds for j in 1:nc
+        for k in colptr[j]:(colptr[j + 1] - 1)
+            if rows[k] == ref_cell && j != ref_cell
+                nz[k] = zero(T)
+            end
+        end
+    end
+
     # Set diagonal to 1, RHS to reference value
-    eq.A[ref_cell, ref_cell] = one(T)
+    A[ref_cell, ref_cell] = one(T)
     eq.b[ref_cell] = ref_value
     eq.source[ref_cell] = zero(T)
     return nothing

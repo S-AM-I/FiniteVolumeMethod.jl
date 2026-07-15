@@ -141,31 +141,44 @@ function continuity_residual_interior(
 end
 
 @doc """
-    continuity_residual(state, mesh) -> T
+    continuity_residual(state, mesh; normalize = true) -> T
 
 Compute the L1 continuity residual: the sum of absolute cell flux
-imbalances across all cells.
+imbalances across all cells, normalized (by default) by the total
+absolute face flux through the mesh.
 
-For each cell, the flux imbalance is the sum of face fluxes (with
-appropriate sign conventions).  A divergence-free velocity field
-yields zero imbalance.
+The normalization follows the OpenFOAM local-continuity-error convention:
+```
+    residual = Σ_c |Σ_f ±ϕ_f|  /  max(Σ_f |ϕ_f|, ε)
+```
+so that a single tolerance is meaningful across mesh sizes and velocity
+scales, and can be compared on equal footing with the (already
+normalized) momentum residuals.  Pass `normalize = false` for the raw
+dimensional L1 imbalance (m³/s).
+
+If the total flux scale is zero (quiescent field), the raw imbalance is
+returned (which is also zero for an exactly divergence-free field).
 
 # Arguments
 - `state::IncompressibleState` — current solver state (uses `phi`)
 - `mesh::UnstructuredFVMMesh` — mesh
+- `normalize::Bool` — divide by the global flux scale (default `true`)
 """
 function continuity_residual(
         state::IncompressibleState{Dim, T},
-        mesh::UnstructuredFVMMesh{Dim, T},
+        mesh::UnstructuredFVMMesh{Dim, T};
+        normalize::Bool = true,
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
     nf = size(mesh.face_cells, 2)
 
-    # Accumulate flux imbalance per cell
+    # Accumulate flux imbalance per cell and the global flux scale
     imbalance = zeros(T, nc)
+    flux_scale = zero(T)
 
     for f in 1:nf
         F_f = state.phi.values[f]
+        flux_scale += abs(F_f)
         P = owner(mesh, f)
         imbalance[P] += F_f
 
@@ -181,6 +194,9 @@ function continuity_residual(
         residual += abs(imbalance[c])
     end
 
+    if normalize && flux_scale > eps(T)
+        return residual / flux_scale
+    end
     return residual
 end
 

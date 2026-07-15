@@ -39,13 +39,19 @@ end
     @test r >= 0.0
     r_int = _continuity_interior(state, mesh)
     @test r_int >= 0.0
-    # Interior residual cannot exceed the full residual (strict subset).
-    @test r_int <= r + 1.0e-12
+    # Interior residual cannot exceed the full RAW residual (strict
+    # subset).  The default residual is now flux-normalized
+    # (OpenFOAM-style), so the subset comparison uses normalize = false.
+    r_raw = _continuity_res(state, mesh; normalize = false)
+    @test r_int <= r_raw + 1.0e-12
 end
 
-@testset "V&V: continuity_residual — linear flux scaling" begin
-    # continuity_residual is linear in phi (|Σε·αφ| = α·|Σε·φ|), so
-    # doubling phi doubles the residual.
+@testset "V&V: continuity_residual — flux scaling" begin
+    # The RAW residual is linear in phi (|Σε·αφ| = α·|Σε·φ|), so doubling
+    # phi doubles it.  The NORMALIZED residual (default) divides by the
+    # global flux scale Σ|phi_f| and is therefore scale-INVARIANT — the
+    # property that makes a single tolerance meaningful across velocity
+    # scales and mesh sizes.
     mesh = build_cartesian_unstructured_mesh(8, 8, 1.0, 1.0)
     state1 = IncompressibleState(mesh)
     state2 = IncompressibleState(mesh)
@@ -53,9 +59,12 @@ end
         state1.phi.values[f] = 0.1 * sin(f)
         state2.phi.values[f] = 0.2 * sin(f)
     end
+    r1_raw = _continuity_res(state1, mesh; normalize = false)
+    r2_raw = _continuity_res(state2, mesh; normalize = false)
+    @test r2_raw ≈ 2.0 * r1_raw rtol = 1.0e-14
     r1 = _continuity_res(state1, mesh)
     r2 = _continuity_res(state2, mesh)
-    @test r2 ≈ 2.0 * r1 rtol = 1.0e-14
+    @test r2 ≈ r1 rtol = 1.0e-14
 end
 
 @testset "V&V: continuity_residual — single-cell imbalance identity" begin
@@ -77,8 +86,10 @@ end
     end
     @test target_face > 0
     state.phi.values[target_face] = 0.5
-    # Both owner and neighbour contribute |0.5| each ⇒ residual = 1.0.
-    @test _continuity_res(state, mesh) ≈ 1.0 rtol = 1.0e-14
+    # Both owner and neighbour contribute |0.5| each ⇒ RAW residual = 1.0.
+    @test _continuity_res(state, mesh; normalize = false) ≈ 1.0 rtol = 1.0e-14
+    # Normalized: flux scale is the single |0.5| face ⇒ residual = 2.0.
+    @test _continuity_res(state, mesh) ≈ 2.0 rtol = 1.0e-14
 end
 
 @testset "V&V: continuity_residual_interior — larger band excludes more cells" begin
