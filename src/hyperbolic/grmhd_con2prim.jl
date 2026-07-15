@@ -18,11 +18,10 @@
 # For Minkowski metric (gamma^ij = delta_ij), this reduces to
 # the standard srmhd_con2prim exactly.
 #
-# NOTE: this metric-aware recovery is currently NOT wired into the 2D
-# GRMHD CT solver — grmhd_solve_2d.jl uses the flat-space srmhd_con2prim
-# at every cell, which is only correct for the Minkowski metric. This
-# routine is exercised directly by tests and kept for the future
-# curved-spacetime rebuild.
+# NOTE: this metric-aware recovery is the per-cell primitive recovery of
+# the curved (non-Minkowski) GRMHD path in grmhd_solve_2d.jl (see
+# _grmhd_recover_primitives_2d!). The Minkowski path continues to use
+# the flat-space srmhd_con2prim, to which this routine reduces exactly.
 
 """
     grmhd_con2prim(law::GRMHDEquations, u_tilde::SVector{8}, x, y)

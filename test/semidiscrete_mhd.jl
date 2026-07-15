@@ -306,3 +306,54 @@ import SciMLBase.SciMLStructures as SciMLStructuresMod
     @test cache3.prob.law isa IdealMHDEquations{1}
     @test cache3.prob.law.eos.gamma == 2.0
 end
+
+# ============================================================
+# Curved-spacetime GRMHD through the SciML ODEProblem path
+# ============================================================
+@testset "GRMHD curved atmosphere held (ODEProblem path)" begin
+    # Same static Kerr-Schild Schwarzschild atmosphere gate as
+    # test/grmhd_2d.jl, exercised through the SciML RHS (which shares
+    # _grmhd_stage_rhs! with the legacy solver, so the paths agree).
+    M_BH = 1.0
+    GAM = 5.0 / 3.0
+    K_POLY = 0.1
+    R0 = 6.0
+    H0 = 1.0 + GAM / (GAM - 1.0) * K_POLY
+
+    atmosphere_w(x, y) = begin
+        r = sqrt(x^2 + y^2)
+        h = H0 * sqrt((1 - 2 * M_BH / R0) / (1 - 2 * M_BH / r))
+        rho = ((h - 1) * (GAM - 1) / (GAM * K_POLY))^(1 / (GAM - 1))
+        P = K_POLY * rho^GAM
+        Hks = M_BH / r
+        vmag = 2 * Hks / sqrt(1 + 2 * Hks)
+        SVector(rho, vmag * x / r, vmag * y / r, 0.0, P, 0.0, 0.0, 0.0)
+    end
+
+    eos = IdealGasEOS(gamma = GAM)
+    metric = SchwarzschildMetric(M_BH; r_min = 1.5)
+    law = GRMHDEquations{2}(eos, metric)
+    N = 24
+    mesh = StructuredMesh2D(4.0, 8.0, -2.0, 2.0, N, N)
+    prob = HyperbolicProblem2D(
+        law, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
+        TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC(),
+        atmosphere_w; final_time = 0.5, cfl = 0.3
+    )
+    ode_prob = ODEProblem(prob)
+    sol = solve(ode_prob, SSPRK33(); adaptive = false, dt = 1.0e-3)
+    @test sol.retcode == SciMLBase.ReturnCode.Success
+
+    cache = ode_prob.p
+    u = sol.u[end]
+    u_sv = reinterpret(SVector{8, Float64}, @view u[1:(cache.n_cell_vars)])
+    U_mat = [u_sv[(iy - 1) * N + ix] for ix in 1:N, iy in 1:N]
+    W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U_mat, mesh)
+    m = N ÷ 4
+    drift = maximum(
+        abs(W[ix, iy][1] - atmosphere_w(cell_center(mesh, cell_idx(mesh, ix, iy))...)[1]) /
+            atmosphere_w(cell_center(mesh, cell_idx(mesh, ix, iy))...)[1]
+            for iy in (m + 1):(N - m), ix in (m + 1):(N - m)
+    )
+    @test drift < 2.0e-3
+end

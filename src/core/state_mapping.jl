@@ -280,7 +280,15 @@ end
 # AMR State Mapping
 # ============================================================
 
-"""Copy flat ODE state into per-block ghost-padded arrays for AMR RHS evaluation."""
+"""
+Copy flat ODE state into per-block ghost-padded arrays for AMR RHS evaluation.
+
+All block interiors are unfolded first; ghost cells are then filled with
+zero-gradient extrapolation (domain boundary and corner regions) and
+overwritten by inter-block ghost exchange (`_amr_exchange_ghosts_2d!`)
+wherever a neighboring leaf block exists, so every block sees consistent
+current-state neighbor data.
+"""
 function unfold_amr!(cache::AMRCache{N, FT}, u::AbstractVector) where {N, FT}
     for (idx, bid) in enumerate(cache.block_ids)
         offset = cache.block_offsets[idx]
@@ -293,8 +301,16 @@ function unfold_amr!(cache::AMRCache{N, FT}, u::AbstractVector) where {N, FT}
             flat_idx = (iy - 1) * nx + ix
             pad[ix + 2, iy + 2] = u_block[flat_idx]
         end
-        # Zero-gradient ghost cells
+    end
+    # Ghost fill after ALL interiors are current: zero-gradient baseline
+    # (domain boundary + corners), then inter-block exchange.
+    get_cell = (bid, i, j) -> cache.per_block_padded[bid][i + 2, j + 2]
+    for bid in cache.block_ids
+        block = cache.grid.blocks[bid]
+        nx, ny = block.dims[1], block.dims[2]
+        pad = cache.per_block_padded[bid]
         _fill_amr_ghost_2d!(pad, nx, ny)
+        _amr_exchange_ghosts_2d!(pad, block, cache.grid, get_cell)
     end
     return nothing
 end
@@ -475,7 +491,49 @@ function initial_mhd_augmented_state(
         cache.Fx_all, cache.Fy_all, cache.emf_z,
         cache.n_cell_vars, cache.n_bx_face, cache.n_by_face
     )
-    return initial_mhd_augmented_state(prob, temp_cache; vector_potential = vector_potential)
+    u0 = initial_mhd_augmented_state(prob, temp_cache; vector_potential = vector_potential)
+
+    law = prob.law
+    if _grmhd_is_curved(law)
+        # Curved path: state is the DENSITIZED Valencia state.
+        mesh = prob.mesh
+        metric = law.metric
+        nx, ny = cache.nx, cache.ny
+        dx, dy = mesh.dx, mesh.dy
+
+        # Overwrite cell-centered conserved with densitized prim2con
+        u0_sv = reinterpret(SVector{N, FT}, @view u0[1:(cache.n_cell_vars)])
+        for iy in 1:ny, ix in 1:nx
+            x, y = cell_center(mesh, cell_idx(mesh, ix, iy))
+            w = prob.initial_condition(x, y)
+            sg = sqrt_gamma(metric, x, y)
+            gm = spatial_metric(metric, x, y)
+            flat_idx = (iy - 1) * nx + ix
+            u0_sv[flat_idx] = _grmhd_prim2con_densitized(law.eos, w, sg, gm)
+        end
+
+        # Face B: the CT field is B_tilde = sqrt(gamma) B. Direct sampling
+        # of the primitive B must be scaled; curl(A) already yields B_tilde.
+        if vector_potential === nothing
+            bx_offset = cache.n_cell_vars
+            by_offset = cache.n_cell_vars + cache.n_bx_face
+            for j in 1:ny, i in 1:(nx + 1)
+                xf = mesh.xmin + (i - 1) * dx
+                yf = mesh.ymin + (j - FT(0.5)) * dy
+                u0[bx_offset + (j - 1) * (nx + 1) + i] *= sqrt_gamma(metric, xf, yf)
+            end
+            for j in 1:(ny + 1), i in 1:nx
+                xf = mesh.xmin + (i - FT(0.5)) * dx
+                yf = mesh.ymin + (j - 1) * dy
+                u0[by_offset + (j - 1) * nx + i] *= sqrt_gamma(metric, xf, yf)
+            end
+        end
+
+        # Re-sync cell-centered B_tilde from the densitized faces
+        _sync_cell_B_from_faces!(u0, cache)
+    end
+
+    return u0
 end
 
 function initial_mhd_augmented_state(

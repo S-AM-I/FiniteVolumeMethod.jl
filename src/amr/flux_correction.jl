@@ -18,10 +18,14 @@
 # When applied, this restores global conservation across refinement
 # level interfaces.
 #
-# NOTE: these routines are currently NOT called by solve_amr,
-# solve_amr_subcycled, or the AMR ODEProblem RHS — no flux correction
-# is performed during AMR time stepping. They are exported for
-# standalone use and are exercised directly by tests.
+# NOTE: these time-integrated flux-register routines are NOT called by
+# solve_amr, solve_amr_subcycled, or the AMR ODEProblem RHS. The 2D
+# stepping paths instead achieve conservation at single-level
+# coarse-fine seams with a method-of-lines seam-flux replacement
+# (`_amr_seam_flux_fix_2d!` in amr_solve.jl), which replaces the coarse
+# face flux with the area-averaged fine fluxes inside the RHS. The
+# registers here are exported for standalone use and are exercised
+# directly by tests.
 
 """
     FluxRegister{N, FT, Dim}

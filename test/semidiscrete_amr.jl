@@ -220,12 +220,155 @@ end
         @test_logs (:warn,) match_mode = :any ODEProblem(prob_muscl)
     end
 
-    @testset "multi-block grid throws" begin
+    @testset "multi-block grid is now supported (ghost exchange)" begin
         refine_block!(grid, 1)
         prob = AMRProblem(
             grid, HLLCSolver(), NoReconstruction(), bcs;
             final_time = 0.01, cfl = 0.4
         )
-        @test_throws ArgumentError ODEProblem(prob)
+        ode_prob = ODEProblem(prob)
+        @test ode_prob isa ODEProblem
+        # 4 blocks of 8x8 cells, 4 variables each
+        @test length(ode_prob.u0) == 4 * 8 * 8 * SD_NVAR
+    end
+
+    @testset "3D grid throws (AMR cache/RHS are 2D-only)" begin
+        law3 = EulerEquations{3}(SD_EOS)
+        grid3 = AMRGrid(law3, criterion, (4, 4, 4), 2, (0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+        u3 = primitive_to_conserved(law3, SVector(1.0, 0.0, 0.0, 0.0, 1.0))
+        b3 = grid3.blocks[1]
+        for k in 1:4, j in 1:4, i in 1:4
+            b3.U[i, j, k] = u3
+        end
+        prob3 = AMRProblem(
+            grid3, HLLCSolver(), NoReconstruction(), ntuple(_ -> TransmissiveBC(), 6);
+            final_time = 0.01, cfl = 0.4
+        )
+        @test_throws ArgumentError ODEProblem(prob3)
+    end
+end
+
+# ============================================================
+# Inter-block ghost exchange through the SciML RHS
+# ============================================================
+
+const SD_GX_CRIT = GradientRefinement(; refine_threshold = 1.0e9, coarsen_threshold = 0.0)
+const SD_GX_BCS = (TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC())
+
+function _sd_fill_ic!(grid, ic)
+    for b in values(grid.blocks)
+        b.active || continue
+        for j in 1:b.dims[2], i in 1:b.dims[1]
+            x, y = block_cell_center(b, i, j)
+            b.U[i, j] = primitive_to_conserved(SD_LAW, ic(x, y))
+        end
+    end
+    return grid
+end
+
+@testset "same-level multi-block matches single-block reference (SciML path)" begin
+    # Pulse advecting in +x across the vertical block seam at x = 0.5.
+    ic = (x, y) -> SVector(1.0 + 0.5 * exp(-200.0 * ((x - 0.35)^2 + (y - 0.5)^2)), 1.0, 0.0, 1.0)
+
+    grid4 = AMRGrid(SD_LAW, SD_GX_CRIT, (8, 8), 3, (0.0, 0.0), (1.0, 1.0), Val(SD_NVAR))
+    refine_block!(grid4, 1)
+    _sd_fill_ic!(grid4, ic)
+    grid1 = AMRGrid(SD_LAW, SD_GX_CRIT, (16, 16), 3, (0.0, 0.0), (1.0, 1.0), Val(SD_NVAR))
+    _sd_fill_ic!(grid1, ic)
+
+    prob4 = AMRProblem(
+        grid4, HLLCSolver(), NoReconstruction(), SD_GX_BCS;
+        final_time = 0.05, cfl = 0.4, regrid_interval = 0
+    )
+    prob1 = AMRProblem(
+        grid1, HLLCSolver(), NoReconstruction(), SD_GX_BCS;
+        final_time = 0.05, cfl = 0.4, regrid_interval = 0
+    )
+    op4 = ODEProblem(prob4)
+    op1 = ODEProblem(prob1)
+
+    dt = 0.4 * (1 / 16) / 4.0
+    sol4 = solve(op4, Euler(); dt = dt, adaptive = false)
+    sol1 = solve(op1, Euler(); dt = dt, adaptive = false)
+    @test sol4.retcode == SciMLBase.ReturnCode.Success
+    @test sol1.retcode == SciMLBase.ReturnCode.Success
+
+    cache4 = op4.p
+    u4 = reinterpret(SVector{SD_NVAR, Float64}, sol4.u[end])
+    u1 = reinterpret(SVector{SD_NVAR, Float64}, sol1.u[end])
+    ref = grid1.blocks[1]
+    maxdiff = 0.0
+    for (idx, bid) in enumerate(cache4.block_ids)
+        off = cache4.block_offsets[idx]
+        b = cache4.grid.blocks[bid]
+        nx, ny = b.dims
+        for j in 1:ny, i in 1:nx
+            x, y = block_cell_center(b, i, j)
+            ri = Int(floor((x - ref.origin[1]) / ref.dx[1])) + 1
+            rj = Int(floor((y - ref.origin[2]) / ref.dx[2])) + 1
+            v4 = u4[off + (j - 1) * nx + i]
+            v1 = u1[(rj - 1) * 16 + ri]
+            maxdiff = max(maxdiff, maximum(abs.(v4 - v1)))
+        end
+    end
+    @test maxdiff < 1.0e-13
+end
+
+@testset "multi-level RHS: uniform state and seam conservation (SciML path)" begin
+    # Refined patch on [0, 0.5]^2: 3 level-1 leaves + 4 level-2 leaves.
+    function build_patch_grid(ic)
+        grid = AMRGrid(SD_LAW, SD_GX_CRIT, (8, 8), 3, (0.0, 0.0), (1.0, 1.0), Val(SD_NVAR))
+        cids = refine_block!(grid, 1)
+        llid = first(cid for cid in cids if grid.blocks[cid].origin == (0.0, 0.0))
+        refine_block!(grid, llid)
+        return _sd_fill_ic!(grid, ic)
+    end
+
+    @testset "uniform state gives exactly zero RHS" begin
+        grid = build_patch_grid((x, y) -> SVector(1.3, 0.4, -0.2, 2.0))
+        prob = AMRProblem(
+            grid, HLLCSolver(), NoReconstruction(), SD_GX_BCS;
+            final_time = 0.01, cfl = 0.4, regrid_interval = 0
+        )
+        op = ODEProblem(prob)
+        du = zero(op.u0)
+        op.f(du, op.u0, op.p, 0.0)
+        @test maximum(abs.(du)) == 0.0
+    end
+
+    @testset "seam-straddling pulse: RHS conserves all invariants" begin
+        # Compact pulse straddling the level-2 -> level-1 seam at x = 0.5;
+        # boundary-adjacent cells are exactly background, so the total
+        # volume-weighted RHS must vanish to roundoff for every conserved
+        # variable. This is the conservation gate for the coarse-fine
+        # seam flux correction.
+        ic = (x, y) -> SVector(
+            (0.4 < x < 0.6 && 0.3 < y < 0.45) ? 1.5 : 1.0,
+            1.0, 0.2, 1.0
+        )
+        grid = build_patch_grid(ic)
+        prob = AMRProblem(
+            grid, HLLCSolver(), NoReconstruction(), SD_GX_BCS;
+            final_time = 0.01, cfl = 0.4, regrid_interval = 0
+        )
+        op = ODEProblem(prob)
+        cache = op.p
+        du = zero(op.u0)
+        op.f(du, op.u0, cache, 0.0)
+
+        du_sv = reinterpret(SVector{SD_NVAR, Float64}, du)
+        rate = zero(SVector{SD_NVAR, Float64})
+        for (idx, bid) in enumerate(cache.block_ids)
+            off = cache.block_offsets[idx]
+            b = cache.grid.blocks[bid]
+            nx, ny = b.dims
+            vol = b.dx[1] * b.dx[2]
+            for j in 1:ny, i in 1:nx
+                rate = rate + du_sv[off + (j - 1) * nx + i] * vol
+            end
+        end
+        for k in 1:SD_NVAR
+            @test abs(rate[k]) < 1.0e-13
+        end
     end
 end

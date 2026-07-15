@@ -2,6 +2,8 @@ using FiniteVolumeMethod
 using Test
 using StaticArrays
 using LinearAlgebra
+using OrdinaryDiffEq: SSPRK33
+using SciMLBase: SciMLBase
 
 # ============================================================
 # Exact Riemann solver for Sod shock tube (used for verification)
@@ -587,6 +589,20 @@ end
         @test err_32 < 0.01  # Should be small for smooth data
     end
 
+    @testset "WENO5 convergence and accuracy vs MUSCL" begin
+        err5_32 = compute_l1_error(32, WENO5())
+        err5_64 = compute_l1_error(64, WENO5())
+        @test err5_64 < err5_32
+
+        # Fifth-order WENO5 must clearly beat second-order MUSCL-minmod on
+        # smooth data at the same resolution (measured ratio is > 10^3).
+        for N in [32, 64]
+            err_muscl = compute_l1_error(N, CellCenteredMUSCL(MinmodLimiter()))
+            err_weno5 = compute_l1_error(N, WENO5())
+            @test err_weno5 < err_muscl / 10
+        end
+    end
+
     @testset "WENO3 error comparable to or smaller than MUSCL" begin
         # At same resolution, WENO3 should be at least comparable to MUSCL-minmod
         err_muscl = compute_l1_error(64, CellCenteredMUSCL(MinmodLimiter()))
@@ -720,6 +736,54 @@ end
         @test mass_final ≈ mass0 rtol = 1.0e-12
         @test momentum_final ≈ momentum0 rtol = 1.0e-12
         @test energy_final ≈ energy0 rtol = 1.0e-12
+    end
+
+    @testset "WENO5 Sod end-to-end, small and large grids (nghost=3 regression)" begin
+        # Regression for the historical WENO5 1D ghost-cell bug: the padded
+        # array, BC fill, and flux loop must all honor nghost(reconstruction)=3.
+        for N in [16, 200]
+            mesh = StructuredMesh1D(0.0, 1.0, N)
+            prob = HyperbolicProblem(
+                law, mesh, HLLCSolver(), WENO5(),
+                DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR),
+                x -> x < 0.5 ? wL : wR;
+                final_time = 0.2, cfl = 0.4
+            )
+
+            # Legacy path
+            x, U, t = solve_hyperbolic(prob)
+            W = to_primitive(law, U)
+            @test t ≈ 0.2 atol = 1.0e-10
+            @test all(i -> all(isfinite, W[i]) && W[i][1] > 0 && W[i][3] > 0, 1:N)
+
+            # SciML ODEProblem path must agree with the legacy path
+            ode_prob = SciMLBase.ODEProblem(prob)
+            dt0 = 0.4 * mesh.dx / 3.0
+            sol = SciMLBase.solve(ode_prob, SSPRK33(); adaptive = false, dt = dt0)
+            @test sol.retcode == SciMLBase.ReturnCode.Success
+            u_sv = reinterpret(SVector{3, Float64}, sol.u[end])
+            W_ode = [conserved_to_primitive(law, u_sv[i]) for i in 1:N]
+            @test all(i -> all(isfinite, W_ode[i]) && W_ode[i][1] > 0 && W_ode[i][3] > 0, 1:N)
+            dx = 1.0 / N
+            path_diff = sum(abs(W_ode[i][1] - W[i][1]) * dx for i in 1:N)
+            @test path_diff < 0.02
+        end
+    end
+
+    @testset "WENO5 free-stream preservation (exact)" begin
+        for N in [16, 64]
+            mesh = StructuredMesh1D(0.0, 1.0, N)
+            w0 = SVector(1.3, 0.7, 2.1)
+            prob = HyperbolicProblem(
+                law, mesh, HLLCSolver(), WENO5(),
+                PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
+                x -> w0;
+                final_time = 0.1, cfl = 0.4
+            )
+            x, U, t = solve_hyperbolic(prob)
+            u0 = primitive_to_conserved(law, w0)
+            @test maximum(maximum(abs.(U[i] - u0)) for i in 1:N) == 0.0
+        end
     end
 
     @testset "CharacteristicWENO3 on Sod" begin

@@ -423,7 +423,7 @@ end
 function build_grmhd_ct_cache(prob::HyperbolicProblem2D{<:GRMHDEquations{2}}, backend::AbstractBackend = CPUBackend())
     _cpu_backend_only("build_grmhd_ct_cache", backend)
     _validate_ct_reconstruction(prob.reconstruction)
-    _warn_grmhd_flat_space_only(prob.law)
+    _grmhd_curved_path_note(prob.law)
     nx, ny = prob.mesh.nx, prob.mesh.ny
     N = nvariables(prob.law)
     ng = 2

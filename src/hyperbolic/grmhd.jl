@@ -46,16 +46,27 @@ using the Valencia formulation.
 - Primitive: `W = [rho, vx, vy, vz, P, Bx, By, Bz]`
 - Conserved (densitized): `U = sqrt(gamma) * [D, Sx, Sy, Sz, tau, Bx, By, Bz]`
 
-The `physical_flux` method returns the flat-space-like flux `f^i`. The solver
-applies the Valencia correction `alpha * F_riemann - beta * U` at each face.
+The 2D CT solver dispatches on the metric:
 
-!!! warning "Only validated for flat (Minkowski) spacetime"
-    The current 2D CT solver recovers primitives with the *flat-space*
-    `srmhd_con2prim` everywhere (the metric-aware `grmhd_con2prim` is not
-    wired into the solver), and the `sqrt(gamma)` densitization is not
-    applied consistently between fluxes and sources. Runs with a
-    non-Minkowski metric emit a loud warning and their results are not
-    physically correct in curved spacetime.
+- **Minkowski**: the historical flat path (the problem's Riemann solver
+  with `physical_flux`, flat `srmhd_con2prim`), bitwise-identical to the
+  SRMHD solver.
+- **Non-Minkowski**: the consistent densitized Valencia path — state
+  `sqrt(gamma) * [D, S_j, tau, B]`, metric-aware `grmhd_con2prim` per
+  cell, densitized Valencia HLL fluxes with coordinate-frame wave
+  speeds, and exact stationary-spacetime geometric sources. Verified
+  against a static polytropic atmosphere in Kerr-Schild Schwarzschild
+  (exact continuum flux/source balance; discrete RHS residual and
+  held-state drift both converge with resolution — see
+  test/grmhd_2d.jl).
+
+!!! note "Curved-path scope"
+    On the curved path the problem's `riemann_solver` is superseded by
+    HLL, domain-boundary ghosts are zero-gradient in primitives (the
+    boundary state is not pinned to any exact exterior solution), and
+    magnetized curved-spacetime runs are validated for stability and
+    `div(sqrt(gamma) B) = 0` preservation only. A one-time informational
+    note is emitted at setup (see `_grmhd_curved_path_note`).
 
 # Fields
 - `eos::EOS`: Equation of state.
@@ -71,21 +82,21 @@ struct GRMHDEquations{Dim, EOS <: AbstractEOS, M <: AbstractMetric{Dim}} <: Abst
 end
 
 """
-    _warn_grmhd_flat_space_only(law::GRMHDEquations)
+    _grmhd_curved_path_note(law::GRMHDEquations)
 
-Emit a loud one-time warning when the GRMHD solver is set up with a
-non-Minkowski metric: the implementation is only valid for flat spacetime
-(see the `GRMHDEquations` docstring).
+Emit a one-time informational note when the GRMHD solver is set up with
+a non-Minkowski metric, stating the curved path's validation scope (see
+the `GRMHDEquations` docstring).
 """
-function _warn_grmhd_flat_space_only(law::GRMHDEquations)
+function _grmhd_curved_path_note(law::GRMHDEquations)
     law.metric isa MinkowskiMetric && return nothing
-    @warn "GRMHD solver constructed with a non-Minkowski metric " *
-        "($(typeof(law.metric))). The current implementation uses the " *
-        "flat-space SRMHD con2prim everywhere (the metric-aware " *
-        "grmhd_con2prim is never called by the solver) and the sqrt(gamma) " *
-        "densitization is dropped from the fluxes while applied to the " *
-        "sources. Results in curved spacetime are NOT physically correct; " *
-        "only Minkowski-metric runs are valid." maxlog = 1
+    @info "GRMHD curved-spacetime path selected for $(typeof(law.metric)): " *
+        "densitized Valencia state, metric-aware con2prim, HLL fluxes with " *
+        "coordinate-frame wave speeds (the problem's riemann_solver field " *
+        "is superseded), and stationary-spacetime geometric sources. " *
+        "Verified on a Kerr-Schild Schwarzschild static atmosphere; " *
+        "domain-boundary ghosts are zero-gradient in primitives, and " *
+        "magnetized curved runs are validated for stability/div(B) only." maxlog = 1
     return nothing
 end
 
@@ -377,15 +388,36 @@ for the metric derivatives.
     nx, ny = mesh.nx, mesh.ny
     dx, dy = mesh.dx, mesh.dy
 
-    W = lorentz_factor(vx, vy, vz)
+    # Local metric values (needed for the metric-aware kinematics below;
+    # in Minkowski these reduce exactly to the flat-space expressions).
+    alp = md.alpha[ix, iy]
+    bx_s = md.beta_x[ix, iy]
+    by_s = md.beta_y[ix, iy]
+    gxx = md.gamma_xx[ix, iy]
+    gxy = md.gamma_xy[ix, iy]
+    gyy = md.gamma_yy[ix, iy]
+    sg = md.sqrtg[ix, iy]
+
+    # Metric-aware kinematics: W from v^2 = gamma_ij v^i v^j, magnetic
+    # scalars and lowered components with the spatial metric.
+    v_sq = gxx * vx^2 + 2 * gxy * vx * vy + gyy * vy^2 + vz^2
+    v_sq = min(v_sq, 1 - 1.0e-10)
+    W = 1 / sqrt(1 - v_sq)
     eps_val = P / ((gamma_eos - 1) * rho)
     h = 1 + eps_val + P / rho
 
-    B_sq = Bx^2 + By^2 + Bz^2
-    vdotB = vx * Bx + vy * By + vz * Bz
-    b0, b_sq = srmhd_b_quantities(vx, vy, vz, Bx, By, Bz, W)
+    vdotB = gxx * vx * Bx + gxy * (vx * By + vy * Bx) + gyy * vy * By + vz * Bz
+    B_sq = gxx * Bx^2 + 2 * gxy * Bx * By + gyy * By^2 + Bz^2
+    b0 = W * vdotB
+    b_sq = B_sq / W^2 + vdotB^2
     rho_h_W2 = rho * h * W^2
     Ptot = P + 0.5 * b_sq
+
+    # Lowered velocity and magnetic field (covariant components)
+    vx_low = gxx * vx + gxy * vy
+    vy_low = gxy * vx + gyy * vy
+    Bx_low = gxx * Bx + gxy * By
+    By_low = gxy * Bx + gyy * By
 
     # Source term formulas from Del Zanna et al. (2007, ECHO code):
     #
@@ -401,15 +433,6 @@ for the metric derivatives.
     # (exact for Cartesian-like coordinates, accurate for Kerr-Schild).
     #
     # T^ij = (rho*h*W^2 + b^2) v^i v^j - b^i b^j + P_tot gamma^ij
-
-    # Local metric values
-    alp = md.alpha[ix, iy]
-    bx_s = md.beta_x[ix, iy]
-    by_s = md.beta_y[ix, iy]
-    gxx = md.gamma_xx[ix, iy]
-    gxy = md.gamma_xy[ix, iy]
-    gyy = md.gamma_yy[ix, iy]
-    sg = md.sqrtg[ix, iy]
 
     # Compute centered finite-difference derivatives of metric components
     # Use one-sided differences at boundaries
@@ -486,9 +509,9 @@ for the metric derivatives.
     D_und = rho * W
     # τ = ρhW² + B² − P_tot − D
     tau_und = rho_h_W2 + B_sq - Ptot - D_und
-    # S_j = (ρhW² + B²)v_j − (v·B)B_j
-    Sx_und = (rho_h_W2 + B_sq) * vx - vdotB * Bx
-    Sy_und = (rho_h_W2 + B_sq) * vy - vdotB * By
+    # S_j = (ρhW² + B²)v_j − (v·B)B_j with COVARIANT (lowered) v_j, B_j
+    Sx_und = (rho_h_W2 + B_sq) * vx_low - vdotB * Bx_low
+    Sy_und = (rho_h_W2 + B_sq) * vy_low - vdotB * By_low
 
     # ---- Momentum source: S_{S_j} = sqrt(gamma) * [-(tau+D) partial_j alpha
     #                                  + S_k partial_j beta^k
@@ -510,24 +533,37 @@ for the metric derivatives.
         Sx_und * dbetax_dy + Sy_und * dbetay_dy +
         alp * 0.5 * (Txx * dgxx_dy + 2 * Txy * dgxy_dy + Tyy * dgyy_dy)
 
-    # ---- Energy source: S_tau = sqrt(gamma) * [-S_j partial^j alpha + alpha T^kl K_kl] ----
-    # Approximate: K_ij ~ (partial_i beta_j_low + partial_j beta_i_low) / (2 alpha)
-    # T^kl K_kl ~ T^kl (partial_k beta_l_low + partial_l beta_k_low) / (2 alpha)
-    # = T^kl partial_k beta_l_low / alpha  (by symmetry)
-
-    # partial_x beta_x_low, partial_y beta_x_low, partial_x beta_y_low, partial_y beta_y_low
-    # already computed above as dbeta_x_low_dx, dbeta_x_low_dy, dbeta_y_low_dx, dbeta_y_low_dy
+    # ---- Energy source (exact for stationary spacetimes) ----
+    #   S_tau = sqrt(gamma) * [ alpha S^kl K_kl - S^j partial_j alpha ]
+    # with the extrinsic curvature of a stationary slicing
+    #   K_ij = (D_i beta_j + D_j beta_i) / (2 alpha)
+    #        = (partial_i beta_j_low + partial_j beta_i_low
+    #           - 2 beta^m Gamma_{m,ij}) / (2 alpha)
+    # so that
+    #   alpha S^kl K_kl = S^kl partial_k beta_l_low - S^kl beta^m Gamma_{m,kl}
+    # where Gamma_{m,ij} = (partial_i gamma_jm + partial_j gamma_im
+    #                       - partial_m gamma_ij) / 2 are 3-Christoffels of
+    # the first kind (computed from the finite-differenced metric).
 
     TKij = Txx * dbeta_x_low_dx + Txy * (dbeta_y_low_dx + dbeta_x_low_dy) + Tyy * dbeta_y_low_dy
 
+    # 3-Christoffel contraction C = S^kl beta^m Gamma_{m,kl}
+    Gxxx = 0.5 * dgxx_dx                    # Gamma_{x,xx}
+    Gyxx = dgxy_dx - 0.5 * dgxx_dy          # Gamma_{y,xx}
+    Gxxy = 0.5 * dgxx_dy                    # Gamma_{x,xy}
+    Gyxy = 0.5 * dgyy_dx                    # Gamma_{y,xy}
+    Gxyy = dgxy_dy - 0.5 * dgyy_dx          # Gamma_{x,yy}
+    Gyyy = 0.5 * dgyy_dy                    # Gamma_{y,yy}
+    C_christoffel = Txx * (bx_s * Gxxx + by_s * Gyxx) +
+        2 * Txy * (bx_s * Gxxy + by_s * Gyxy) +
+        Tyy * (bx_s * Gxyy + by_s * Gyyy)
+
     # Raise S_j to get S^j = gamma^jk S_k for the alpha gradient term
-    # -S_j partial^j alpha = -(S_x partial_x alpha + S_y partial_y alpha) in Cartesian
-    # But partial^j alpha = gamma^jk partial_k alpha
     dalpha_up_x = gixx * dalpha_dx + gixy * dalpha_dy
     dalpha_up_y = gixy * dalpha_dx + giyy * dalpha_dy
     S_dot_grad_alpha = Sx_und * dalpha_up_x + Sy_und * dalpha_up_y
 
-    tau_src = -S_dot_grad_alpha + TKij / alp
+    tau_src = -S_dot_grad_alpha + TKij - C_christoffel
 
     # Sz source (for z-momentum): generally zero in 2D equatorial plane
     # unless there's a z-component of the flow (which can happen in MHD).

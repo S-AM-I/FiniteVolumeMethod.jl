@@ -188,7 +188,8 @@ end
     )
 
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
-    W = to_primitive(law, U)
+    # Curved path: state is densitized -> metric-aware recovery
+    W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     # Should not crash and should have finite values
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -214,7 +215,7 @@ end
     )
 
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
-    W = to_primitive(law, U)
+    W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
@@ -265,7 +266,7 @@ end
     )
 
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
-    W = to_primitive(law, U)
+    W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
@@ -291,7 +292,7 @@ end
     )
 
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
-    W = to_primitive(law, U)
+    W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
@@ -351,7 +352,7 @@ end
     )
 
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
-    W = to_primitive(law, U)
+    W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     # Solution should remain physical
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -475,7 +476,7 @@ end
     )
 
     coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
-    W = to_primitive(law, U)
+    W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     # Material near the BH (left side) should develop negative vx (infall)
     # or at least the density near the BH should increase
@@ -486,4 +487,143 @@ end
     # This is a qualitative test — gravitational source terms cause infall
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
+end
+
+# ============================================================
+# Curved-path verification gates
+# ============================================================
+#
+# Exact stationary solution: a static polytropic atmosphere in
+# Kerr-Schild Schwarzschild coordinates. A coordinate-static fluid
+# (u^i = 0) has Valencia velocity v^i = beta^i/alpha and satisfies the
+# Tolman condition h(r) * sqrt(1 - 2M/r) = const for a polytrope
+# P = K rho^Gamma. Its transport velocity alpha v - beta vanishes
+# identically, so D and B fluxes are exactly zero, while the momentum
+# and energy equations balance pressure fluxes against the geometric
+# sources.
+
+const GRG_M = 1.0
+const GRG_GAM = 5.0 / 3.0
+const GRG_K = 0.1
+const GRG_R0 = 6.0
+const GRG_H0 = 1.0 + GRG_GAM / (GRG_GAM - 1.0) * GRG_K  # rho0 = 1 at r0
+
+grg_atmosphere(x, y) = begin
+    r = sqrt(x^2 + y^2)
+    h = GRG_H0 * sqrt((1 - 2 * GRG_M / GRG_R0) / (1 - 2 * GRG_M / r))
+    rho = ((h - 1) * (GRG_GAM - 1) / (GRG_GAM * GRG_K))^(1 / (GRG_GAM - 1))
+    P = GRG_K * rho^GRG_GAM
+    Hks = GRG_M / r
+    vmag = 2 * Hks / sqrt(1 + 2 * Hks)
+    SVector(rho, vmag * x / r, vmag * y / r, 0.0, P, 0.0, 0.0, 0.0)
+end
+
+const GRG_EOS = IdealGasEOS(gamma = GRG_GAM)
+const GRG_METRIC = SchwarzschildMetric(GRG_M; r_min = 1.5)
+const GRG_LAW = GRMHDEquations{2}(GRG_EOS, GRG_METRIC)
+
+function grg_make_prob(N, recon; tf = 0.0)
+    mesh = StructuredMesh2D(4.0, 8.0, -2.0, 2.0, N, N)
+    prob = HyperbolicProblem2D(
+        GRG_LAW, mesh, HLLSolver(), recon,
+        TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC(),
+        grg_atmosphere; final_time = tf, cfl = 0.3
+    )
+    return prob, mesh
+end
+
+@testset "Curved gate: Minkowski reduction of the curved machinery" begin
+    mink = MinkowskiMetric{2}()
+    law_m = GRMHDEquations{2}(GRG_EOS, mink)
+    w = SVector(1.3, 0.2, -0.1, 0.05, 2.1, 0.4, -0.3, 0.2)
+    gm = FiniteVolumeMethod.spatial_metric(mink, 0.0, 0.0)
+    gi = FiniteVolumeMethod.inv_spatial_metric(mink, 0.0, 0.0)
+    for dir in [1, 2]
+        Fv = FiniteVolumeMethod._grmhd_valencia_flux(GRG_EOS, w, dir, 1.0, SVector(0.0, 0.0), gm, 1.0)
+        Ff = physical_flux(law_m, w, dir)
+        @test maximum(abs.(Fv - Ff)) < 1.0e-14
+        lmf, lpf = FiniteVolumeMethod._grmhd_wave_speeds(law_m, w, dir)
+        lmc, lpc = FiniteVolumeMethod._grmhd_coord_wave_speeds(GRG_EOS, w, dir, 1.0, 0.0, gm, gi)
+        @test lmf ≈ lmc atol = 1.0e-14
+        @test lpf ≈ lpc atol = 1.0e-14
+    end
+end
+
+@testset "Curved gate: continuum flux/source balance on the atmosphere" begin
+    # At an arbitrary point, the analytic divergence of the densitized
+    # Valencia flux must equal the geometric source exactly (up to the
+    # finite-difference accuracy of the probes).
+    x0, y0 = 5.3, 0.7
+    fdel = 1.0e-6
+    flux_at(x, y, dir) = begin
+        w = grg_atmosphere(x, y)
+        alp = FiniteVolumeMethod.lapse(GRG_METRIC, x, y)
+        beta = FiniteVolumeMethod.shift(GRG_METRIC, x, y)
+        gm = FiniteVolumeMethod.spatial_metric(GRG_METRIC, x, y)
+        sg = FiniteVolumeMethod.sqrt_gamma(GRG_METRIC, x, y)
+        FiniteVolumeMethod._grmhd_valencia_flux(GRG_EOS, w, dir, alp, beta, gm, sg)
+    end
+    divF = (flux_at(x0 + fdel, y0, 1) - flux_at(x0 - fdel, y0, 1)) / (2 * fdel) +
+        (flux_at(x0, y0 + fdel, 2) - flux_at(x0, y0 - fdel, 2)) / (2 * fdel)
+
+    dm = 1.0e-5
+    mesh3 = StructuredMesh2D(x0 - 1.5 * dm, x0 + 1.5 * dm, y0 - 1.5 * dm, y0 + 1.5 * dm, 3, 3)
+    md3 = FiniteVolumeMethod.precompute_metric(GRG_METRIC, mesh3)
+    w0 = grg_atmosphere(x0, y0)
+    S = FiniteVolumeMethod.grmhd_source_terms(GRG_LAW, w0, w0, md3, mesh3, 2, 2)
+
+    for k in 1:8
+        @test abs(divF[k] - S[k]) < 1.0e-6
+    end
+    # Transport velocity vanishes for the static fluid: D flux divergence is 0
+    @test abs(divF[1]) < 1.0e-8
+end
+
+@testset "Curved gate: discrete RHS residual converges on the atmosphere" begin
+    residuals = Float64[]
+    for N in [16, 32]
+        prob, mesh = grg_make_prob(N, CellCenteredMUSCL(MinmodLimiter()))
+        ng = 2
+        U = FiniteVolumeMethod.initialize_2d(prob; nghost = ng)
+        FiniteVolumeMethod._grmhd_initialize_densitized_2d!(U, prob, ng)
+        W_pad = fill(zero(SVector{8, Float64}), size(U))
+        dU = fill(zero(SVector{8, Float64}), size(U))
+        Fx_all = fill(zero(SVector{8, Float64}), N + 1, N + 2)
+        Fy_all = fill(zero(SVector{8, Float64}), N + 2, N + 1)
+        md = FiniteVolumeMethod.precompute_metric(GRG_METRIC, mesh)
+        fd = FiniteVolumeMethod.precompute_metric_at_faces(GRG_METRIC, mesh)
+        FiniteVolumeMethod._grmhd_stage_rhs!(Fx_all, Fy_all, dU, U, W_pad, prob, 0.0, md, fd)
+        res = 0.0
+        cnt = 0
+        for iy in 3:(N - 2), ix in 3:(N - 2)
+            res += sum(abs.(dU[ix + ng, iy + ng]))
+            cnt += 1
+        end
+        push!(residuals, res / cnt)
+    end
+    # First-order-or-better convergence of the equilibrium residual
+    @test residuals[2] < residuals[1] / 1.8
+    @test residuals[1] < 0.01
+end
+
+@testset "Curved gate: atmosphere held for many steps with converging drift" begin
+    drifts = Float64[]
+    for N in [24, 48]
+        prob, mesh = grg_make_prob(N, CellCenteredMUSCL(MinmodLimiter()); tf = 1.0)
+        coords, U, t, ct = solve_hyperbolic(prob)
+        @test t ≈ 1.0 atol = 1.0e-10
+        W = FiniteVolumeMethod.grmhd_recover_primitive_field(GRG_LAW, U, mesh)
+        # Deep interior (25% margin) excludes the zero-gradient boundary
+        # contamination, which advects inward at finite speed.
+        m = max(2, N ÷ 4)
+        drift = maximum(
+            abs(W[ix, iy][1] - grg_atmosphere(coords[ix, iy]...)[1]) /
+                grg_atmosphere(coords[ix, iy]...)[1]
+                for iy in (m + 1):(N - m), ix in (m + 1):(N - m)
+        )
+        push!(drifts, drift)
+    end
+    @test drifts[1] < 5.0e-3       # N = 24 after ~50 SSP-RK3 steps
+    @test drifts[2] < 1.0e-3       # N = 48 after ~100 steps
+    @test drifts[2] < drifts[1] / 2  # resolution convergence
 end

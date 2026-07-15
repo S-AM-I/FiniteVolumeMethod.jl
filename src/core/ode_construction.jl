@@ -256,13 +256,16 @@ function SciMLBase.ODEProblem(
     u0 = initial_mhd_augmented_state(prob, cache; vector_potential = vector_potential)
     tspan = (prob.initial_time, prob.final_time)
 
+    # Scratch primitive array for the curved (non-Minkowski) path
+    W_pad = _grmhd_is_curved(prob.law) ?
+        fill(zero(eltype(cache.padded_U)), size(cache.padded_U)) : nothing
+
     function rhs!(du, u, p, t)
         unfold_mhd_augmented!(p, u)
-        _grmhd_compute_fluxes_2d!(
-            p.Fx_all, p.Fy_all, p.padded_dU, p.padded_U,
+        _grmhd_stage_rhs!(
+            p.Fx_all, p.Fy_all, p.padded_dU, p.padded_U, W_pad,
             p.prob, t, p.metric_data, p.face_data
         )
-        _grmhd_add_source_terms!(p.padded_dU, p.padded_U, p.prob.law, p.metric_data, p.prob.mesh, p.nx, p.ny)
         _compute_emf_from_extended!(p.emf_z, p.Fx_all, p.Fy_all, p.nx, p.ny)
         return fold_mhd_augmented!(du, p)
     end
@@ -338,23 +341,35 @@ end
 """
     SciMLBase.ODEProblem(prob::AMRProblem; kwargs...)
 
-Create an `ODEProblem` for an AMR problem.
+Create an `ODEProblem` for an AMR problem (2D grids only).
 
 All active block interiors are flattened into a single state vector.
 Uses finest-level CFL as the global dt (no subcycling).
-For subcycled AMR, use `solve_amr` or `solve_amr_subcycled` directly.
+
+The RHS performs real inter-block ghost exchange (same-level copy,
+piecewise-constant prolongation from coarser neighbors, conservative
+2x2 averaging from finer neighbors) and replaces coarse-side seam
+fluxes at single-level jumps with the area-averaged fine fluxes, so
+the semidiscretization is conservative at those interfaces. It is the
+same semidiscretization as the 2D `solve_amr` path.
 
 !!! warning
-    The AMR RHS fills each block's ghost cells by zero-gradient
-    extrapolation from that block's own interior (no inter-block ghost
-    exchange, no flux correction, and the problem's boundary conditions
-    are not applied), so multi-block grids throw an `ArgumentError` and
-    single-block grids emit a one-time warning. The RHS is also
-    first-order only: `prob.reconstruction` is not used, and a warning is
-    emitted when a higher-order scheme is requested.
+    Domain-boundary ghost cells use zero-gradient extrapolation; the
+    problem's `boundary_conditions` field is not applied. Seam fluxes
+    across level jumps >= 2 are not flux-corrected. The RHS is also
+    first-order only: `prob.reconstruction` is not used, and a warning
+    is emitted when a higher-order scheme is requested.
 """
 function SciMLBase.ODEProblem(prob::AMRProblem; callback = nothing, kwargs...)
-    _amr_ghost_exchange_guard(prob.grid, "ODEProblem(::AMRProblem)")
+    if _amr_dim(prob.grid) != 2
+        throw(
+            ArgumentError(
+                "ODEProblem(::AMRProblem) supports 2D AMR grids only; the AMR " *
+                    "cache and RHS are 2D. Use solve_amr for single-block 3D grids."
+            )
+        )
+    end
+    _amr_domain_bc_warn("ODEProblem(::AMRProblem)")
     if !(prob.reconstruction isa NoReconstruction)
         @warn "ODEProblem(::AMRProblem): the AMR RHS uses first-order " *
             "(piecewise-constant) reconstruction; the requested " *
@@ -380,6 +395,15 @@ function SciMLBase.ODEProblem(prob::AMRProblem; callback = nothing, kwargs...)
             _advance_block_rhs!(
                 p.per_block_dU[bid], p.per_block_padded[bid],
                 p.grid.blocks[bid], p.law_ref, p.riemann_solver_ref
+            )
+        end
+        # MOL flux correction at single-level coarse-fine seams
+        get_pad = bid -> p.per_block_padded[bid]
+        for bid in p.block_ids
+            _amr_seam_flux_fix_2d!(
+                p.per_block_dU[bid], p.per_block_padded[bid],
+                p.grid.blocks[bid], p.grid, get_pad,
+                p.law_ref, p.riemann_solver_ref
             )
         end
         return fold_amr!(du, p)

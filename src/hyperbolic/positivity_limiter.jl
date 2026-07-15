@@ -33,11 +33,13 @@ PositivityLimiter() = PositivityLimiter(1.0e-13)
 # ============================================================
 
 """
-    apply_positivity_limiter!(U, law, limiter::PositivityLimiter, nc)
+    apply_positivity_limiter!(U, law, limiter::PositivityLimiter, nc, ng = 2)
 
 Apply positivity enforcement to all interior cells of a 1D solution array.
 
-For each interior cell `i` (indices `3:nc+2` in the ghost-padded array):
+For each interior cell `i` (indices `ng+1:nc+ng` in the ghost-padded array,
+where `ng` is the number of ghost cells on each side — pass
+`nghost(reconstruction)` for wide-stencil schemes such as WENO5):
 1. If density `ρ < epsilon`, set density to `epsilon`.
 2. If pressure `P < epsilon`, scale the velocity to reduce kinetic energy
    and bring the pressure up to `epsilon`.
@@ -46,11 +48,11 @@ This modifies `U` in-place.
 """
 function apply_positivity_limiter!(
         U::AbstractVector, law::AbstractConservationLaw{1},
-        limiter::PositivityLimiter, nc::Int
+        limiter::PositivityLimiter, nc::Int, ng::Int = 2
     )
     eps = limiter.epsilon
     nvar = nvariables(law)
-    @inbounds for i in 3:(nc + 2)
+    @inbounds for i in (ng + 1):(nc + ng)
         u = U[i]
         rho = u[1]
 
@@ -108,11 +110,13 @@ end
 # ============================================================
 
 """
-    apply_positivity_limiter_2d!(U, law, limiter::PositivityLimiter, nx, ny)
+    apply_positivity_limiter_2d!(U, law, limiter::PositivityLimiter, nx, ny, ng = 2)
 
 Apply positivity enforcement to all interior cells of a 2D solution array.
 
-For each interior cell `(ix, iy)` at indices `(ix+2, iy+2)`:
+For each interior cell `(ix, iy)` at indices `(ix+ng, iy+ng)`, where `ng` is
+the number of ghost cells on each side (pass `nghost(reconstruction)` for
+wide-stencil schemes such as WENO5):
 1. If density `ρ < epsilon`, set density to `epsilon`.
 2. If pressure `P < epsilon`, scale the velocity to reduce kinetic energy
    and bring the pressure up to `epsilon`.
@@ -121,14 +125,14 @@ This modifies `U` in-place.
 """
 function apply_positivity_limiter_2d!(
         U::AbstractMatrix, law::AbstractConservationLaw{2},
-        limiter::PositivityLimiter, nx::Int, ny::Int
+        limiter::PositivityLimiter, nx::Int, ny::Int, ng::Int = 2
     )
     eps = limiter.epsilon
     nvar = nvariables(law)
     @inbounds for iy in 1:ny
-        jj = iy + 2
+        jj = iy + ng
         for ix in 1:nx
-            ii = ix + 2
+            ii = ix + ng
             u = U[ii, jj]
             rho = u[1]
 
