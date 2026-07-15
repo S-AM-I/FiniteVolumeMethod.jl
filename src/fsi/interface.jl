@@ -12,11 +12,10 @@
 #     fluid's interface traction onto the solid-side face traction array
 #     (the solid sees this as a Neumann stress BC).
 #
-# For matching meshes the interpolation reduces to a 1:1 copy keyed by
-# the paired face indices. For non-matching meshes, a simple
-# nearest-face weight vector is carried alongside each side so both
-# operators can be replaced with a weighted gather without changing the
-# signature.
+# Only matching meshes are supported: the interpolation is a 1:1 copy
+# keyed by the paired face indices (`FSIInterface` carries no weight
+# vectors). Non-matching-mesh transfer (e.g. nearest-face weighted
+# gather) is not implemented.
 
 using StaticArrays: SVector
 

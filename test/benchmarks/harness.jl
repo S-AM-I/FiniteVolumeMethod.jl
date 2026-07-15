@@ -44,6 +44,25 @@ using Test
 const BENCHMARK_CACHE_DIR = joinpath(@__DIR__, ".cache")
 const BENCHMARK_REPO_ROOT = abspath(joinpath(@__DIR__, "..", ".."))
 
+# Per-process benchmark status registry. Every `@benchmark_testset`
+# records exactly one terminal status per benchmark name:
+#
+#   "passed"   — the body ran and every physics assertion passed
+#   "failed"   — the body ran and at least one assertion failed/errored
+#   "deferred" — the body bailed out via `mark_deferred_compute`
+#                (recorded as `@test_broken`, never as a pass)
+#   "cached"   — source-hash cache hit; physics assertions NOT re-executed
+#   "skipped"  — FVM_RUN_BENCHMARKS unset
+#
+# `write_benchmark_summary` serialises this to a machine-readable TOML
+# file so CI can assert that the advertised number of benchmarks
+# actually executed their physics assertions (status == "passed").
+# Guarded so repeated `include("harness.jl")` from each benchmark file
+# does not reset the registry mid-suite.
+if !@isdefined(BENCHMARK_RESULTS)
+    const BENCHMARK_RESULTS = Dict{String, String}()
+end
+
 """
     benchmarks_enabled() -> Bool
 
@@ -261,29 +280,38 @@ macro benchmark_testset(name, args...)
         local _bench_name = $(esc(name))
         if !benchmarks_enabled()
             @info "benchmark skipped (FVM_RUN_BENCHMARKS unset)" name = _bench_name
+            BENCHMARK_RESULTS[_bench_name] = "skipped"
         else
             local _sources_tag = $(esc(sources_expr))
             local _paths = _resolve_sources(_sources_tag)
             local _hash = _hash_sources(_paths)
             if _cache_hit(_bench_name, _hash)
                 @info "benchmark cached pass" name = _bench_name hash = _hash[1:12]
+                BENCHMARK_RESULTS[_bench_name] = "cached"
                 @testset "$(_bench_name) [cached]" begin
                     @test true
                 end
             else
                 @info "benchmark running" name = _bench_name hash = _hash[1:12]
+                delete!(BENCHMARK_RESULTS, _bench_name)
                 local _body_fn = () -> $(esc(body))
                 local _ts = @testset "$(_bench_name)" begin
                     _body_fn()
                 end
-                # Refresh cache only if every assertion passed. A
-                # DefaultTestSet stores failures under .results; empty
-                # `fails` (errors + failures) means a clean run.
+                # Refresh cache only if every assertion passed AND the
+                # benchmark was not deferred. A deferred benchmark never
+                # executed its physics assertions, so it must not become
+                # a cached "pass" on the next invocation.
                 local _failed = _ts.anynonpass
-                if !_failed
+                local _deferred = get(BENCHMARK_RESULTS, _bench_name, "") == "deferred"
+                if _deferred
+                    @warn "benchmark deferred; cache not refreshed" name = _bench_name
+                elseif !_failed
+                    BENCHMARK_RESULTS[_bench_name] = "passed"
                     _cache_write(_bench_name, _hash)
                     @info "benchmark cache refreshed" name = _bench_name
                 else
+                    BENCHMARK_RESULTS[_bench_name] = "failed"
                     @warn "benchmark failed; cache not refreshed" name = _bench_name
                 end
             end
@@ -309,9 +337,11 @@ end
 
 Called from inside a `@benchmark_testset` body when the underlying
 solver can't reach the published tolerance on user compute within
-the per-benchmark wall-clock budget. Records a passing test with a
-descriptive label so the benchmark doesn't become an apparent
-failure — the capability matrix marks such features separately.
+the per-benchmark wall-clock budget. Records a **broken** test
+(`@test_broken false`) so the deferred benchmark is visible in the
+Test summary as broken — never as a pass — and marks the benchmark
+`"deferred"` in `BENCHMARK_RESULTS` so `write_benchmark_summary` /
+the CI gate can count it separately from executed benchmarks.
 
 Example:
     if !converged
@@ -321,11 +351,45 @@ Example:
     end
 """
 function mark_deferred_compute(name::AbstractString, reason::AbstractString)
-    @info "benchmark DEFERRED_COMPUTE" name = name reason = reason
-    @test true
+    @warn "benchmark DEFERRED_COMPUTE (recorded as broken, not passing)" name = name reason = reason
+    BENCHMARK_RESULTS[name] = "deferred"
+    @test_broken false
     return nothing
+end
+
+"""
+    write_benchmark_summary(path) -> NamedTuple
+
+Serialise `BENCHMARK_RESULTS` to `path` as a small TOML file with a
+`[counts]` table (`passed`, `failed`, `deferred`, `cached`, `skipped`)
+and a `[results]` table mapping benchmark name → status. Returns the
+counts as a NamedTuple so callers (the CI published-benchmarks job)
+can assert on them, e.g.
+
+    counts = write_benchmark_summary("benchmark_summary.toml")
+    counts.passed >= 5 || error("only \$(counts.passed) benchmarks executed physics assertions")
+"""
+function write_benchmark_summary(path::AbstractString)
+    statuses = ("passed", "failed", "deferred", "cached", "skipped")
+    counts = NamedTuple{Symbol.(Tuple(statuses))}(
+        Tuple(count(==(s), values(BENCHMARK_RESULTS)) for s in statuses)
+    )
+    open(path, "w") do io
+        println(io, "# Auto-generated by test/benchmarks/harness.jl")
+        println(io, "[counts]")
+        for s in statuses
+            println(io, "$(s) = $(getproperty(counts, Symbol(s)))")
+        end
+        println(io)
+        println(io, "[results]")
+        for name in sort!(collect(keys(BENCHMARK_RESULTS)))
+            println(io, "$(name) = \"$(BENCHMARK_RESULTS[name])\"")
+        end
+    end
+    return counts
 end
 
 export @benchmark_testset, @benchmark_assert,
     benchmarks_enabled, mark_deferred_compute,
+    write_benchmark_summary, BENCHMARK_RESULTS,
     sources_of

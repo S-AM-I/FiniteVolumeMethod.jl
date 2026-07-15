@@ -4,12 +4,16 @@
 			"affiliation": "Queensland University of Technology",
 			"name": "VandenHeuvel, Daniel John",
 			"orcid": "0000-0001-6462-0135"
+		},
+		{
+			"name": "Mashouk, Sami"
 		}
 	],
-	"description": "Solver for two-dimensional conservation equations using the finite volume method in Julia.",
+	"description": "Julia package for solving PDEs with finite volume methods: a cell-vertex parabolic/elliptic solver on unstructured triangular meshes, a cell-centered hyperbolic solver on structured meshes (Euler, MHD, GRMHD, AMR), and an experimental OpenFOAM-style collocated incompressible solver stack. Research-grade v3 development fork of DanielVandH/FiniteVolumeMethod.jl.",
 	"keywords": [
 		"partial-differential-equations",
-		"finite-volume-method"
+		"finite-volume-method",
+		"computational-fluid-dynamics"
 	],
 	"license": "MIT",
 	"title": "FiniteVolumeMethod.jl",

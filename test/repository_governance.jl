@@ -6,7 +6,8 @@ using .RepoValidationManifest
 
 const REPO_ROOT = dirname(@__DIR__)
 manifest = RepoValidationManifest.load_manifest(joinpath(REPO_ROOT, "validation", "manifest.toml"))
-const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "RELEASE_CHECKLIST.md")
+# NOTE: exact case matters on Linux CI — the file on disk is lowercase.
+const RELEASE_CHECKLIST = joinpath(REPO_ROOT, "validation", "release-checklist.md")
 const VALIDATION_REPORT_SCRIPT = joinpath(REPO_ROOT, "scripts", "verification_validation_report.jl")
 const REPRODUCTION_BUNDLE_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_reproduction_bundles.jl")
 const RELEASE_OUTPUT_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_release_outputs.jl")
@@ -134,15 +135,18 @@ const RELEASE_OUTPUT_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_release_outp
         @test !isempty(filter(entry -> entry.feature == feature, manifest.generated_pages))
     end
 
-    # Ladder coverage is the gate for stable-tier features only.
-    # Provisional / experimental features may declare aspirational
-    # required_ladder_stages without fully linked scientific_evidence
-    # entries — promotion to :stable in `validation/manifest.toml`
-    # requires those evidence entries to land first (see KNOWN_FAILURES.md).
+    # Ladder coverage is enforced for stable AND provisional features:
+    # any feature claiming provisional-or-better maturity with declared
+    # required_ladder_stages must have machine-linked scientific_evidence
+    # entries covering those stages. Only :experimental features may
+    # declare aspirational ladder stages without linked evidence.
+    # (Re-enabled for :provisional in v3.111 — the earlier restriction to
+    # :stable-only had neutered this gate for the collocated features,
+    # which were demoted to :experimental accordingly.)
     enforced_ladders = [
         RepoValidationManifest.feature_ladder_coverage(manifest, feature)
             for (feature, entry) in manifest.features
-            if entry.maturity == :stable && !isempty(entry.required_ladder_stages)
+            if entry.maturity in (:stable, :provisional) && !isempty(entry.required_ladder_stages)
     ]
     @test !isempty(enforced_ladders)
     for coverage in enforced_ladders

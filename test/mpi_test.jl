@@ -120,7 +120,12 @@ nranks = MPI.Comm_size(comm)
         dmesh = distribute_mesh(mesh, comm)
         @test dmesh.rank == rank
         @test dmesh.nranks == nranks
-        @test dmesh.n_owned + dmesh.n_ghost == nc
+        # DistributedFVMMesh has no n_ghost field; the ghost count is
+        # n_local - n_owned. Owned cells partition the global mesh.
+        n_ghost = dmesh.n_local - dmesh.n_owned
+        @test n_ghost >= 0
+        @test dmesh.n_local <= nc
+        @test MPI.Allreduce(dmesh.n_owned, +, comm) == nc
         @test dmesh.n_owned > 0
     end
 

@@ -1,12 +1,12 @@
 # adjoint/types.jl — Discrete adjoint algorithm types (Wave 4).
 #
-# v3.0 fast-path: only the steady (SIMPLE) discrete adjoint is implemented.
-# Transient PIMPLE adjoint requires checkpointing and is deferred to v3.1
-# — `TransientAdjoint` is shipped as a marker type whose `solve` path
-# emits a warn + error.
+# Scope: dense linear adjoint identities only. `SteadyAdjoint` solves the
+# transposed system for a given (A, b, u); `TransientAdjoint` dispatches
+# to the checkpointed linear-transient sweep (`solve_transient_adjoint_linear`,
+# v3.107). Neither is wired into the SIMPLE / PIMPLE outer loops, and no
+# SciMLSensitivity integration exists.
 #
-# Tier: experimental — math identity only (A^T λ = (∂J/∂u)^T); the adjoint
-# is not yet wired into the full SIMPLE outer loop (that remains a v3.1 task).
+# Tier: experimental — math identity only (A^T λ = (∂J/∂u)^T).
 
 """
     AbstractAdjointAlgorithm
@@ -30,11 +30,11 @@ A(p)^T · λ = (∂J/∂u)^T
 and evaluates the total derivative
 
 ```
-dJ/dp = ∂J/∂p + λ^T · ∂R/∂p
+dJ/dp = ∂J/∂p − λ^T · ∂R/∂p
 ```
 
 For the V&V identity `J(u) = c^T · u` with fixed `A(p) = A`, the partial
-`∂J/∂p` vanishes and `∂R/∂p = ∂b/∂p`, so `dJ/dp = λ^T · ∂b/∂p`.
+`∂J/∂p` vanishes and `∂R/∂p = −∂b/∂p`, so `dJ/dp = λ^T · ∂b/∂p`.
 
 # Fields
 - `linear_solver::Any` — backend for the adjoint linear solve. `nothing`
@@ -50,11 +50,12 @@ SteadyAdjoint(; linear_solver = nothing) = SteadyAdjoint{typeof(linear_solver)}(
 """
     TransientAdjoint
 
-Marker type for the transient PIMPLE adjoint. The implementation is
-deferred to v3.1 because it requires full-trajectory checkpointing and
-a time-reverse sweep over the nonlinear sub-iterations. Calling any
-`solve_*` routine on this type warns and throws.
+Algorithm marker for the checkpointed LINEAR transient adjoint
+(`solve_transient_adjoint_linear`, backward-Euler time discretisation,
+uniform checkpointing). This is a linear-system identity, not a PIMPLE
+adjoint: the nonlinear PIMPLE outer loop is not differentiated and no
+solver adapters exist yet.
 
-Tier: experimental (deferred).
+Tier: experimental (linear identity only).
 """
 struct TransientAdjoint <: AbstractAdjointAlgorithm end

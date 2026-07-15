@@ -283,7 +283,14 @@ end
 # `bbox_min`/`bbox_max` are AABB-only and cannot faithfully represent a
 # body-fitted 8-corner cell.  Storing the snapped vertex table outside
 # the octree preserves idempotency without extending `Octree` itself.
-const _SNAP_REGISTRY = IdDict{Any, Any}()
+# A `WeakKeyDict` (keys held by weak reference; `Octree` is mutable so
+# it is a valid weak key) lets snapped octrees be garbage-collected —
+# the previous `IdDict` leaked every snapped octree for the process
+# lifetime. Individual dict operations are lock-protected, but
+# concurrent `snap_to_surface!` calls on the SAME octree from multiple
+# threads still race on the stored `_SnapState`; snapping is not
+# thread-safe per octree.
+const _SNAP_REGISTRY = WeakKeyDict{Any, Any}()
 
 """
     snapped_vertex_table(octree::Octree) -> Union{Nothing, Vector{SVector{3, T}}}
@@ -323,10 +330,16 @@ or `max_iters` is hit.
 
 On the first call, a deduplicated corner table is built from the
 current octree leaves.  The snapped table is cached against the
-`octree` object (see [`snapped_vertex_table`](@ref)), so repeated
-calls reuse the already-snapped positions — a second invocation is
-a near-identity (fixed-point idempotency) even though the octree's
-`bbox_min`/`bbox_max` fields remain AABB-only.
+`octree` object in a module-level `WeakKeyDict` (see
+[`snapped_vertex_table`](@ref)), so repeated calls reuse the
+already-snapped positions — a second invocation is a near-identity
+(fixed-point idempotency) even though the octree's
+`bbox_min`/`bbox_max` fields remain AABB-only.  The weak-key cache is
+released when the octree is garbage-collected.
+
+!!! warning "Not thread-safe"
+    Concurrent `snap_to_surface!` calls on the same octree race on the
+    cached snap state; call from a single thread per octree.
 
 Returns the total Euclidean distance vertices moved across all
 iterations and the number of iterations executed.

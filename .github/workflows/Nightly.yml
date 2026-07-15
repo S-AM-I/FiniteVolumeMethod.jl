@@ -1,16 +1,18 @@
 name: Nightly V&V
 on:
-  # Nightly schedule cut 2026-05. Fire manually for full V&V sweeps.
+  # Weekly scheduled sweep (Mondays 03:00 UTC) plus manual dispatch.
+  schedule:
+    - cron: '0 3 * * 1'
   workflow_dispatch:
 concurrency:
   group: nightly-vv
   cancel-in-progress: true
-env:
-  JULIA_PKG_SERVER: ""
 # =====================================================================
-# Lane 3 — Nightly V&V
+# Lane 3 — Weekly V&V
 # Broader convergence sweeps, heavier MHD/AMR/GRMHD cases.
-# Runs all literate_verification scripts with run_locally=true.
+# Runs all literate_verification scripts, plus the FVM_RUN_VANDV-gated
+# collocated V&V cases (Ghia cavity, Poiseuille grid convergence) that
+# are excluded from the default Pkg.test() run for runtime reasons.
 # =====================================================================
 jobs:
   nightly-verification:
@@ -59,6 +61,12 @@ jobs:
                     safe_include(joinpath(dir, file); name = file)
                 end
             end'
+      - name: Run gated collocated V&V (FVM_RUN_VANDV)
+        env:
+          FVM_RUN_VANDV: "true"
+        run: |
+          julia --project=test test/v_and_v_poiseuille_convergence.jl
+          julia --project=test test/v_and_v_ghia_cavity.jl
       - name: Generate nightly validation report
         if: always()
         run: |

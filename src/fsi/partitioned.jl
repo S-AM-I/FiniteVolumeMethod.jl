@@ -2,12 +2,11 @@
 #
 # Outer coupling loop for partitioned fluid-structure interaction with
 # Aitken-Δ² under-relaxation on the interface displacement. The loop is
-# deliberately solver-agnostic: the fluid and solid solves are supplied
-# as Julia callbacks, which means the same driver is reused for
-#
-#   - a real PISO + linear-elasticity solve (production),
-#   - a mock 1-DOF spring-damper fixed-point iterate (V&V), and
-#   - any future ROM / surrogate.
+# a generic Aitken fixed-point accelerator: the fluid and solid solves
+# are supplied as Julia callbacks. No adapters wiring this driver to the
+# package's PISO / linear-elasticity solvers exist yet — the only
+# exercised path is the mock 1-DOF spring-damper fixed-point iterate in
+# V&V; coupling to real solvers is a follow-up.
 #
 # Algorithm (Küttler & Wall 2008, Comput. Mech. 43:61-72):
 #

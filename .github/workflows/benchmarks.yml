@@ -1,11 +1,9 @@
 name: benchmarks
 
-# Gating lane — fires on every push to main and on every PR.
-# Promoted from the manual-trigger / paths-filtered scaffold once the
-# baseline stabilized.
+# Manual-trigger allocation-budget regression lane. This workflow is
+# NOT a gating lane: it only runs when dispatched from the Actions tab
+# (auto-trigger was cut 2026-05 and has not been re-enabled).
 on:
-  # Auto-trigger cut 2026-05. Fire manually from the Actions tab
-  # when an allocation regression check is needed.
   workflow_dispatch:
 
 concurrency:

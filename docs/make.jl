@@ -273,9 +273,9 @@ makedocs(;
 # README §"Sub-URLs and multi-base deployments"). For single-base local
 # and production builds the only base is `""` and the output always lives
 # at `build/1/`. Move the contents up one level so `build/` behaves like
-# a normal Documenter output and the deploydocs below + the Cloudflare
-# deploy in bin/deploy-docs.sh + the GH workflow can all point at
-# `docs/build` directly. Guard skips when more than one base is present.
+# a normal Documenter output and the GitHub Pages deploy in
+# .github/workflows/CI.yml can point at `docs/build` directly. Guard
+# skips when more than one base is present.
 let build_root = joinpath(@__DIR__, "build")
     single_base = joinpath(build_root, "1")
     if isdir(single_base)
@@ -301,14 +301,8 @@ let build_root = joinpath(@__DIR__, "build")
     end
 end
 
-# Only run deploydocs for local/non-Actions deployment (e.g. TagBot).
-# GitHub Pages deployment is handled by actions/deploy-pages in CI.
-if !IS_CI
-    DocumenterVitepress.deploydocs(;
-        repo = "github.com/cx-xd/FiniteVolumeMethod.jl",
-        target = joinpath(@__DIR__, "build"),
-        devbranch = "main",
-        branch = "gh-pages",
-        push_preview = true
-    )
-end
+# Docs deployment is handled exclusively by actions/deploy-pages in
+# .github/workflows/CI.yml (docs job). The former !IS_CI deploydocs
+# branch was removed: outside Actions, deploydocs has no deploy keys /
+# DOCUMENTER_KEY and could never fire meaningfully, and the gh-pages
+# branch is not the deployment mechanism for this repo.

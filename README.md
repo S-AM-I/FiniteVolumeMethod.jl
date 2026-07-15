@@ -1,9 +1,15 @@
 # FiniteVolumeMethod
 
-[![DOI](https://zenodo.org/badge/561533716.svg)](https://zenodo.org/badge/latestdoi/561533716)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://cx-xd.github.io/FiniteVolumeMethod.jl/dev)
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://cx-xd.github.io/FiniteVolumeMethod.jl/stable)
+[![Docs](https://img.shields.io/badge/docs-online-blue.svg)](https://cx-xd.github.io/FiniteVolumeMethod.jl/)
 [![Coverage](https://codecov.io/gh/cx-xd/FiniteVolumeMethod.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/cx-xd/FiniteVolumeMethod.jl)
+
+> **Research fork.** This repository is a research-grade fork of
+> [DanielVandH/FiniteVolumeMethod.jl](https://github.com/DanielVandH/FiniteVolumeMethod.jl)
+> (the LICENSE retains Daniel VandenHeuvel's copyright). It is **not** the
+> registered `FiniteVolumeMethod` package: `Pkg.add("FiniteVolumeMethod")`
+> installs the upstream package, not this fork. Before any registration of
+> this fork in the General registry it must be renamed, since the
+> `FiniteVolumeMethod` name and UUID belong to the upstream package.
 
 FiniteVolumeMethod.jl is a Julia package for solving partial differential equations (PDEs) with two main solver families:
 
@@ -40,7 +46,7 @@ The repository now follows an explicit research-grade `v2` contract.
 
 - Start with the [capability matrix](docs/src/capability_matrix.md) and the [v2 migration guide](docs/src/v2_migration.md) before treating a feature as publication-grade.
 - CPU `Float64` runs remain the publication baseline. CUDA parity is currently audited only for the supported 2D hyperbolic extension path, so other GPU usage should be treated as experimental.
-- GitHub Actions CI is enabled with four lanes (environment-integrity, unit-interop, scientific-smoke, docs). For local iteration, use `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, or `make ci-release-audit`.
+- GitHub Actions CI is enabled with five lanes (environment-integrity, unit-interop, scientific-smoke, published-benchmarks, docs). For local iteration, use `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, `make ci-release-audit`, or `make ci-published-benchmarks`.
 
 If this package doesn't suit what you need, you may like to review some of the other PDE packages shown [here](https://github.com/JuliaPDE/SurveyofPDEPackages).
 
@@ -67,8 +73,6 @@ record(fig, "anim.gif", eachindex(sol)) do i
     u[] = sol.u[i]
 end
 ```
-
-![Animation of a solution](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/anim.gif)
 
 We could have equivalently used the `DiffusionEquation` template, so that `prob` could have also been defined by
 
@@ -111,8 +115,6 @@ record(fig, "sod_shock.gif", eachindex(sol); framerate = 20) do idx
     rho_obs[] = [sol.u[idx][(i - 1) * N + 1] for i in 1:200]
 end
 ```
-
-![Sod shock tube animation](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/sod_shock.gif)
 
 ### Riemann Solvers
 
@@ -170,8 +172,6 @@ dt0 = compute_initial_dt(ode.p, ode.u0)
 sol = solve(ode, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0, saveat = 0.01)
 ```
 
-![Orszag-Tang vortex animation](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/orszag_tang.gif)
-
 ## Navier-Stokes: Lid-Driven Cavity
 
 The compressible Navier-Stokes solver adds viscous fluxes to the Euler equations. Here a moving lid drives recirculating flow in a square cavity (low-Mach regime):
@@ -197,8 +197,6 @@ prob = HyperbolicProblem2D(
 dt0 = compute_initial_dt(sciml_problem(prob).p, sciml_problem(prob).u0)
 sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0, saveat = 0.5)
 ```
-
-![Lid-driven cavity animation](https://github.com/cx-xd/FiniteVolumeMethod.jl/blob/main/lid_driven_cavity.gif)
 
 ## Conservation Laws
 

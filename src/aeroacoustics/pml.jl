@@ -1,8 +1,10 @@
-# aeroacoustics/pml.jl — Perfectly Matched Layer sponge zone (Wave 3 Agent D)
+# aeroacoustics/pml.jl — absorbing sponge zone (Wave 3 Agent D)
 #
-# PML absorbs outgoing acoustic / convective waves at open boundaries by
-# adding a stretched-coordinate damping source to the governing
-# equations. In the sponge-zone formulation we keep track of a
+# NOTE: despite the `PML*` type names (kept for API stability), this is
+# a plain damping sponge zone, not a true Perfectly Matched Layer — no
+# coordinate stretching or split-field formulation is performed, so
+# reflections are reduced but not analytically eliminated. The zone
+# damps outgoing waves at open boundaries via a
 # coordinate-dependent damping coefficient σ(x) that grows polynomially
 # from 0 at the inner edge of the layer to σ_max at the outer edge, and
 # pull the conservative state φ toward a prescribed far-field reference

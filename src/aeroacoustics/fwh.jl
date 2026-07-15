@@ -11,9 +11,12 @@
 #
 # This module ships with
 #
-#   - the full FW-H porous-surface integration for a stationary observer
-#     with a subsonically-advected surface (Formulation 1A, reduced to
-#     Farassat's retarded-time static-observer form);
+#   - a simplified, instantaneous (single-snapshot) FW-H-style surface
+#     integration for a stationary observer: static thickness + loading
+#     surface sums with an optional Doppler factor. It does NOT evaluate
+#     retarded times or the time derivatives of the integrands, so it is
+#     not Farassat Formulation 1A — treat outputs as qualitative
+#     compact-source estimates only;
 #   - `CurleSurface` — hard-wall variant (U_n ≡ 0 → only the loading
 #     dipole survives);
 #   - `LighthillVolume` — stub volume integral of the Lighthill tensor

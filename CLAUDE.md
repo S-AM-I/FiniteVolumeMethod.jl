@@ -21,8 +21,9 @@ The capability matrix (`docs/src/capability_matrix.md`) and validation manifest 
 julia --project -e 'using Pkg; Pkg.test()'
 
 # Single test file (test env must have FiniteVolumeMethod dev'd)
-# Recommended fast-iteration loop — collocated test files ship their own
-# `build_cartesian_unstructured_mesh` helper so they run standalone.
+# Recommended fast-iteration loop — collocated test files pull
+# `build_cartesian_unstructured_mesh` from test/TestHelpers.jl
+# (centralized in v2.1.0) so they run standalone.
 julia --project=test test/<filename>.jl
 
 # Single test file via Docker
@@ -48,7 +49,7 @@ make ci-format-fix   # auto-fix
 Key Runic rules: spaces around `=` in kwargs (`atol = 0.01`), 4-space continuation indent (not aligned to `(`), spaces around `/` in arithmetic.
 
 ### Local CI (Docker-based)
-GitHub Actions CI is active (`.github/workflows/CI.yml`, `Docs.yml`) with four jobs: environment-integrity, unit-interop, scientific-smoke, and docs. Other workflows (FormatCheck, Nightly, Release, TagBot) are disabled (`.yml.disabled`) during the v2 overhaul — see `validation/CI_REENABLE_PLAN.md` for staged re-enable criteria. For local iteration, use the Makefile Docker lanes:
+GitHub Actions status (see `.github/workflows/README.md`): `CI.yml` is active on pushes/PRs with five jobs — environment-integrity, unit-interop, scientific-smoke, published-benchmarks (all 5 benchmarks must execute their physics assertions; deferrals count as broken and fail the job), and docs (build + GitHub Pages deploy). `FormatCheck.yml` runs on pushes/PRs. `Nightly.yml` runs weekly (Monday 03:00 UTC cron) with the `FVM_RUN_VANDV`-gated collocated V&V cases. `benchmarks.yml`, `Docs.yml`, `docs-quality.yml`, and `jet.yml` are manual-dispatch only. `Release.yml.disabled` and `TagBot.yml.disabled` are disabled (TagBot cannot fire — the fork is unregistered). For local iteration, use the Makefile Docker lanes:
 ```bash
 make ci-fast              # Fast API/interop lane
 make ci-smoke             # Scientific smoke tests
@@ -56,6 +57,7 @@ make ci-full-evidence     # Full scientific evidence
 make ci-performance       # Performance baselines
 make ci-release-audit     # Release audit lane
 make ci-format            # Format check only
+make ci-published-benchmarks  # 5-case published-benchmark suite (native, no Docker)
 make ci-all               # All lanes
 make ci-repl              # Interactive Julia REPL in container
 ```
@@ -141,12 +143,12 @@ Defined in `Project.toml` under `[extensions]`:
 - **Governance** — Aqua.jl quality, environment integrity, repository governance, reproducibility bundles, quality ledger
 - **MPI tests** — `test/mpi_test.jl` (NOT in runtests.jl — requires `mpiexec -n 2 julia --project=test test/mpi_test.jl`)
 
-Note: `keller_segel_chemotaxis.jl` is explicitly excluded from the tutorials testset. Each collocated solver test file includes its own `build_cartesian_unstructured_mesh` helper due to `safe_include` module isolation.
+Note: `keller_segel_chemotaxis.jl` is explicitly excluded from the tutorials testset. Collocated solver test files get `build_cartesian_unstructured_mesh` from `test/TestHelpers.jl` (each file `include`s it; centralized in v2.1.0).
 
-To add a new test file, create it in `test/` and add a `safe_include("filename.jl")` entry in `test/runtests.jl` under the appropriate testset. Orphaned test files (`test/parabolic_solver.jl`, `test/parabolic_mesh.jl`, `test/io.jl`, `test/engine.jl`) exist but are NOT included in `runtests.jl`.
+To add a new test file, create it in `test/` and add a `safe_include("filename.jl")` entry in `test/runtests.jl` under the appropriate testset. Test files NOT included in `runtests.jl` (run manually or by dedicated lanes): `test/cuda_hyperbolic_2d.jl` (requires CUDA), `test/mpi_test.jl` and `test/mpi_parity.jl` (require `mpiexec`), `test/test_jet.jl` (JET lane, `jet.yml`), `test/scientific_evidence.jl` (CI scientific-smoke lane), `test/performance_baselines.jl` and `test/release_audit.jl` (Makefile lanes), and the helpers `TestHelpers.jl`/`test_functions.jl`/`verification_utils.jl`. `test/parabolic_mesh.jl` and `test/io.jl` ARE included in `runtests.jl`.
 
 ### Validation Infrastructure
-- `validation/manifest.toml` — Machine-readable source of truth for feature maturity, V&V status, and CI inclusion. Features are `stable`, `experimental`, or `deprecated`.
+- `validation/manifest.toml` — Machine-readable source of truth for feature maturity, V&V status, and CI inclusion. Features are `stable`, `provisional`, or `experimental`.
 - `validation/manifest.jl` — Julia module (`RepoValidationManifest`) that parses the manifest; used by both tests and docs builds
 - `test/KNOWN_FAILURES.md` — Documents known broken/skipped/demoted tests
 
@@ -170,26 +172,36 @@ To add a new test file, create it in `test/` and add a `safe_include("filename.j
 
 ## Known Issues
 
-The repo is in a v2→v3 overhaul; the authoritative issue list is `test/KNOWN_FAILURES.md`. High-level summary as of v3.108:
+The repo is in a v2→v3 overhaul; the authoritative issue list is `test/KNOWN_FAILURES.md`. High-level summary as of v3.112 (current `Project.toml` version):
+
+### Fixed in v3.112 (solver-correctness wave)
+Hyperbolic/core: HLLD uses signed `Bn` in star states and has a real `dir=3` branch; HLLC extended to 3D Euler; generic `ReflectiveBC` via the `normal_velocity_index(law, dir)` interface; the CFL callback actually enforces dt under `adaptive=false` (dtcache/dtmax, `u_modified!(false)`); `remake(ode_prob; u0/tspan/p)` is honored or throws — never silently dropped; MHD energy goes through the EOS interface (non-ideal-EOS consistent); CT caches reject `nghost>2` reconstructions and derive ghost offsets from the padded array (also fixed pre-existing `NoReconstruction` BoundsErrors); 1D RHS computes each face flux once and CFL/flux differencing handle nonuniform meshes; `srmhd_con2prim` non-convergence errors instead of silently proceeding.
+
+Collocated: transient ddt assembles against a `state.U_old` time-level snapshot (PISO/PIMPLE are now consistent transient schemes); `SymmetryBC`/`SlipWallBC` project out the wall-normal velocity (no boundary mass leak); non-orthogonal explicit correction sign fixed and wired through momentum/pressure assembly; Rhie-Chow uses the same harmonic face `D_f` as the pressure operator; `H`/`A_P` extracted after the relaxed momentum solve with `∇p` removed from `H` (fixed a double pressure application that made reordered PISO blow up); kinematic-form consistency — solutions are density-invariant at fixed ν, buoyancy is per unit mass; the Durbin cap survives to the momentum-visible `ν_t`; `WallFunctionBC` is no-slip + Spalding wall `ν_t` (nonzero drag); time/space-varying velocity BCs are evaluated each step into the matrix (`ParabolicDirichletFunc`); MULES honors inflow alpha BCs; the pressure-reference fix is a symmetric elimination (matrix stays SPD for CG/AMG); the continuity residual is flux-normalized; turbulent SIMPLE/PISO/PIMPLE loops regained cyclic-BC handling; equations/sparsity are allocated once per solve with pattern-indexed writes in hot loops.
 
 ### Still-open correctness items
 - WENO5 has a ghost-cell bug in the 1D solver (`nghost=3` unsupported at small grid sizes)
 - Vertex-centered FVM on unstructured meshes converges at ~O(h^1.5) in L∞, not O(h^2)
-- Collocated SIMPLE: normalized Uy residual can still plateau on very coarse meshes (small `‖b‖` denominator); OpenFOAM-style scale-invariant normalization in `src/incompressible/residuals.jl` reduced the 80×80 floor from ~2e-2 to ~3e-3 but does not eliminate it
+- Collocated SIMPLE: normalized Uy residual can still plateau on very coarse meshes; the v3.112 Rhie-Chow/`D_f` consistency fix plausibly improves this but the 80×80 floor has not been re-measured
 - CyclicBC face matching converges slowly on coarse meshes (Stage 1a follow-up)
 - IDDES uses `V_c^(1/Dim)` as a surrogate for `h_max`; full real-edge-length variant is a v3.2 follow-up
-- v3.108 still has no end-to-end published-benchmark gate run in CI — the harness in `validation/published_benchmarks/` is gated by `FVM_RUN_BENCHMARKS=true` and runs at the user's terminal only
+- AMR blocks do not exchange ghost data — waves cannot cross block boundaries. Multi-block AMR problems now throw (single-block warns); flux-correction routines exist but are not called by any stepper
+- GRMHD is valid for flat spacetime only (metric-aware con2prim is not wired in; densitization inconsistent for curved metrics); non-Minkowski metrics warn loudly
+- VOF keeps a dynamic-force momentum convention (`ρg + F_σ` with `ρ_ref = 1`); its variable-density momentum form is a structural limitation
+- The published-benchmark harness lives in `test/benchmarks/` (NOT `validation/published_benchmarks/`, which does not exist). The CI `published-benchmarks` job in `.github/workflows/CI.yml` runs all 5 cases with `FVM_RUN_BENCHMARKS=true` and FAILS unless all 5 executed their physics assertions — `mark_deferred_compute` records `@test_broken`, so a deferral can never masquerade as a pass
 
-### v3 fast-path delivered features (production-ready, awaiting published-benchmark stable promotion)
-The v3.102→v3.108 waves moved the following items from "simplification" to production. None are yet promoted to `stable` because that requires ≥3 published-benchmark gates green in CI, but each is a real, tested implementation rather than a stub:
+### v3 fast-path modules: honest per-module status
+The v3.102→v3.108 waves landed a large amount of code under `src/`. The per-module reality (audited v3.111) is more modest than the wave logs claimed. None of these are `stable`; most are thin kernels or scaffolds:
 
-- **v3.102 (Wave 1)** — pressure-based compressible SIMPLE/PIMPLE (`src/pressure_based/compressible_*`); Durbin realizability ON BY DEFAULT in k-ε; full-tensor production via `_sym_self_magnitude_sq`; EquilibriumWMLES + SADDES (full implementations); per-face Patankar CHT (replaces scalar interface T); enthalpy energy equation selectable via `use_enthalpy=true`; MULES wired into alpha_transport (was primitive-only since v3.91); isoAdvector (`src/multiphase/iso_advector.jl`); static + Cox-Voinov contact angles; over-relaxed non-orthogonal correction is now the default; LSQ gradient
-- **v3.103 (Wave 2)** — Cantera weak-dep extension + multi-step combustion + variable Lewis + FGM (`src/combustion/{multi_step,variable_lewis,fgm}.jl`); fvDOM scattering, S6/S8/S12 quadratures, WSGGM (`src/radiation/wsggm.jl`); HardSphere/SoftSphere DEM + agglomeration (`src/lagrangian/{collisions,agglomeration}.jl`); primary breakup KH-ACT + LISA + cone/hollow/flat-fan/solid injectors (`src/lagrangian/{primary_breakup,injection}.jl`); 6-DOF + topoChanger + overset + AMI (`src/dynamic_mesh/{six_dof,topo_changer,overset,ami}.jl`); Kunz/Schnerr-Sauer/Merkle cavitation (`src/cavitation/`); Darcy-Forchheimer porous media (`src/porous/`)
-- **v3.104 (Wave 3)** — multi-zone MRF; linear elasticity + updated-Lagrangian finite strain (`src/solid_mechanics/`); Aitken FSI partitioned coupling (`src/fsi/`); FW-H aeroacoustics (Curle + Lighthill stub) + PML sponge zones (`src/aeroacoustics/`); QMoM + DQMoM + Class Method PBM (`src/population_balance/`)
-- **v3.105 (Wave 4)** — Gmsh weak-dep extension + snappy stub (`src/mesh_generation/`); collocated AMR + ZZ + residual indicators (`src/amr_collocated/`); steady-SIMPLE adjoint + transient adjoint stub (`src/adjoint/`); KernelAbstractions weak-dep extension; Enzyme weak-dep stub; CoolProp + PETSc weak-dep extensions; ExpressionBC (renamed StringExpressionBC in v3.108) + probe + Unitful hook
-- **v3.106 (Wave 5)** — `LocalFVMMesh` + Metis partitioner (`src/parallel/{local_mesh,rcb_partitioner,metis_stub}.jl`); distributed assembly via PartitionedArrays `PSparseMatrix`; Eulerian two-fluid types (experimental at this point)
-- **v3.107 (v3.1 wave)** — production Eulerian two-fluid solver via `BlockCollocatedEquation{T,2}` with off-diagonal drag linearization (`src/multiphase/two_fluid_solver.jl`); transient PIMPLE adjoint with uniform checkpointing (`solve_transient_adjoint_linear`, no longer a stub); snappyHexMesh native castellated + surface snap (layer addition deferred to v3.2); IDDES full Shur-2008 shielding (no longer a stub); primary-breakup FSI handshake (`couple_primary_breakup_fsi!`); published-benchmark harness scaffold gated by `FVM_RUN_BENCHMARKS=true`
-- **v3.108 (full-suite triage)** — `ExpressionBC` → `StringExpressionBC` rename (resolves collision with parabolic `ExpressionBC`); KA backend dispatch fixed (no method overwrite during precompile); stale stub-warn tests updated to verify production behaviour
+- **aeroacoustics** (`src/aeroacoustics/`) — instantaneous static surface sums (thickness + loading with optional Doppler factor); no retarded-time evaluation, NOT Farassat Formulation 1A. Lighthill quadrupole is a stub. "PML" is a plain damping sponge zone (no coordinate stretching / split fields)
+- **FSI** (`src/fsi/`) — generic Aitken-Δ² fixed-point accelerator over user-supplied callbacks; no adapters to the package's PISO or elasticity solvers exist; only exercised against a mock 1-DOF spring-damper. Interface transfer supports matching meshes only (1:1 copy)
+- **adjoint** (`src/adjoint/`) — dense linear adjoint identities only (transposed solve for given A, b; checkpointed linear-transient variant). Not wired into SIMPLE/PIMPLE; no SciMLSensitivity integration (it is not a dependency)
+- **solid_mechanics** (`src/solid_mechanics/`) — decoupled per-component Poisson solve by default (not full coupled elasticity); `traction_bcs` are unused by the solvers and now throw if supplied
+- **mesh_generation** (`src/mesh_generation/`) — octree castellated refinement + STL snap prototype; there is NO octree → `UnstructuredFVMMesh` extraction, so it cannot produce a solver-usable mesh; no layer addition
+- **MPI** (`src/parallel/`, `ext/FVMMPIExt/`) — per-rank local solves with halo exchange between outer iterations (additive-Schwarz-style); no distributed matrix is ever constructed (the `PSparseMatrix` claims were wrong — a PartitionedArrays row partition is carried as metadata only)
+- **pressure-based compressible SIMPLE** (`src/pressure_based/`) — incompressible-form continuity with EOS density post-update per outer iteration, not a true compressible pressure equation
+- **population_balance** (`src/population_balance/`) — 0-D moment/class kernel library (QMoM/DQMoM/Class Method); not coupled to transport
+- **cavitation / porous / MRF** (`src/cavitation/`, `src/porous/`, `src/mrf/`) — source-term libraries; not wired into the solver loops
 
 ### Structural items already addressed
 The following structural items previously listed here have been resolved during the v2→v3 overhaul. See `test/KNOWN_FAILURES.md` for fix-stage details and assertions:
@@ -197,10 +209,11 @@ The following structural items previously listed here have been resolved during 
 - Operator hot-loop allocations (Stage 1b — `Dict{Int,Int}` replaced with `Vector{Int}`; audit confirmed gradients/interpolation are zero-alloc on the hot path)
 - `BlockCollocatedEquation` for vector-valued / two-fluid systems (Stage 1c, in production use by v3.107 two-fluid solver)
 - `SciMLStructures.Tunable` named registry (Stage 1e — `register_tunable!` + `tunable_schema`, no longer hardcoded length-5)
-- MPI full-mesh-per-rank (Stage 2 + Wave 5 — `LocalFVMMesh`, RCB + Metis partitioners, distributed `PSparseMatrix` assembly via PartitionedArrays.jl)
+- MPI full-mesh-per-rank (Stage 2 + Wave 5 — `LocalFVMMesh`, RCB + Metis partitioners; solves remain per-rank local, see honest status above)
 - OpenFOAM binary polyMesh reader landed alongside Gmsh v4 reader
 
-### Validation status (v3.108)
-- All collocated solver features in `src/{incompressible,turbulence,thermal,multiphase,combustion,radiation,lagrangian,dynamic_mesh,solid_mechanics,fsi,aeroacoustics,population_balance,cavitation,porous,mrf,adjoint,mesh_generation,amr_collocated}/` are marked `provisional` (or `experimental` for `mpi_parallel`) in `validation/manifest.toml`. The 7-Evidence-entry harness per feature establishes algebraic + invariant coverage, but published-benchmark execution (≥3 per feature) is the explicit gate for `stable` promotion and is not yet wired into CI.
-- Outstanding deferrals to v3.2 / v3.3: layer addition in snappyHexMesh, Enzyme full-solver AD, IDDES `h_max` from real edge lengths, Sandia Flame D combustion benchmark, all `stable`-tier promotions.
-- v3 roadmap remains in `plans/i-m-not-sure-of-ticklish-squid.md`; `test/KNOWN_FAILURES.md` is the authoritative per-item status list.
+### Validation status (v3.112)
+- All collocated solver features in `validation/manifest.toml` are `experimental` (demoted from `provisional` in v3.112): their "Evidence #N" items are real `test/` files run by `Pkg.test()`, but none are machine-linked `[[scientific_evidence]]` entries, so the governance ladder gate — now enforced for `provisional` as well as `stable` in `test/repository_governance.jl` — is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by `validation/evidence_runner.jl`
+- Published-benchmark execution (≥3 per feature) remains the explicit gate for `stable` promotion; the 5-case suite now runs in CI (`published-benchmarks` job)
+- Outstanding deferrals to v3.2 / v3.3: layer addition + mesh extraction in the octree mesher, Enzyme full-solver AD, IDDES `h_max` from real edge lengths, Sandia Flame D combustion benchmark, all `stable`-tier promotions
+- The v3 roadmap lives under `plans/` (start at `plans/index.md`); `test/KNOWN_FAILURES.md` is the authoritative per-item status list

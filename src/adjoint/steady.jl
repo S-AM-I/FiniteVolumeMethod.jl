@@ -7,7 +7,7 @@
 #
 # and evaluates the total design-parameter derivative
 #
-#     dJ/dp = ∂J/∂p + λ^T · ∂R/∂p.
+#     dJ/dp = ∂J/∂p − λ^T · ∂R/∂p.
 #
 # This is the textbook reverse-mode derivative through a linear solve;
 # its cost is a single transposed solve irrespective of |p|.

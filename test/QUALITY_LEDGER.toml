@@ -1,9 +1,9 @@
 schema_version = 1
 
 [[allowlists]]
-id = "aqua-unbound-args-amr-val"
+id = "aqua-unbound-args-ntuple-bc"
 kind = "quality_exception"
 owner = "maintainers"
 scope = "Aqua.test_unbound_args"
-reason = "AMR constructors use Val{N} patterns that currently trigger a known false positive."
-expiry_review = "2026-06-30"
+reason = "FixedVelocityBC / FlowRateInletBC in src/incompressible/boundary_conditions.jl use NTuple{Dim,T} constructor signatures that Aqua flags as unbound type parameters (re-verified 2026-07-15; the previously cited AMR Val{N} pattern no longer triggers)."
+expiry_review = "2026-12-31"

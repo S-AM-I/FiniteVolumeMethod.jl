@@ -43,11 +43,24 @@ result = solve_solid_mechanics(problem, SmallStrainElasticity())
 large  = solve_solid_mechanics(problem, UpdatedLagrangian(); max_outer = 20)
 ```
 """
+function _check_no_traction_bcs(problem::SolidDisplacementProblem)
+    isempty(problem.traction_bcs) && return nothing
+    throw(
+        ArgumentError(
+            "solve_solid_mechanics: traction_bcs are not supported by the current " *
+                "solvers (patches $(collect(keys(problem.traction_bcs)))). They were " *
+                "previously ignored silently; only displacement_bcs and body_force " *
+                "are applied. Remove traction_bcs or impose the load differently.",
+        ),
+    )
+end
+
 function solve_solid_mechanics(
         problem::SolidDisplacementProblem{Dim, T},
         ::SmallStrainElasticity;
         kwargs...,
     ) where {Dim, T}
+    _check_no_traction_bcs(problem)
     return solve_linear_elasticity(
         problem.mesh, problem.material,
         problem.displacement_bcs, problem.body_force;
@@ -60,6 +73,7 @@ function solve_solid_mechanics(
         ::UpdatedLagrangian;
         kwargs...,
     ) where {Dim, T}
+    _check_no_traction_bcs(problem)
     return solve_finite_strain(
         problem.mesh, problem.material,
         problem.displacement_bcs, problem.body_force;

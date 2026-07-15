@@ -8,18 +8,20 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
-env:
-  JULIA_PKG_SERVER: ""
 # =====================================================================
 # Research CI Lane Structure
 # =====================================================================
-# Lane 1 — environment-integrity: direct dependency declarations and
-#                                 project hygiene for test/docs
-# Lane 2 — unit-interop:         package tests, Aqua, explicit imports,
-#                                 SciML interoperability smoke coverage
-# Lane 3 — scientific-smoke:     fast representative scientific evidence
-#                                 plus validation report artifact
-# Lane 4 — nightly/release:      broader evidence in dedicated workflows
+# Lane 1 — environment-integrity:  direct dependency declarations and
+#                                  project hygiene for test/docs
+# Lane 2 — unit-interop:           package tests, Aqua, explicit imports,
+#                                  SciML interoperability smoke coverage
+# Lane 3 — scientific-smoke:       fast representative scientific evidence
+#                                  plus validation report artifact
+# Lane 4 — published-benchmarks:   the 5-case published-benchmark suite;
+#                                  fails unless all 5 execute their
+#                                  physics assertions (deferrals are
+#                                  broken, not passing)
+# Lane 5 — weekly (Nightly.yml):   broader verification sweeps
 # =====================================================================
 jobs:
   environment-integrity:
@@ -88,8 +90,6 @@ jobs:
         uses: julia-actions/julia-buildpkg@v1
       - name: Run the tests
         uses: julia-actions/julia-runtest@v1
-        env:
-          JULIA_REFERENCETESTS_UPDATE: true
       - name: Process the coverage
         if: matrix.version == '1' && always()
         uses: julia-actions/julia-processcoverage@v1
@@ -176,7 +176,29 @@ jobs:
             include("test/benchmarks/martin_moyce_dam_break.jl")
             include("test/benchmarks/ghia_re400.jl")
             include("test/benchmarks/rayleigh_benard_1e4.jl")
+            # Gate: all 5 advertised benchmarks must have EXECUTED their
+            # physics assertions ("passed"). Deferred benchmarks are
+            # recorded as @test_broken and counted separately — a
+            # deferral is not a pass and fails this job.
+            counts = write_benchmark_summary("benchmark_summary.toml")
+            @info "published-benchmark summary" counts
+            expected = 5
+            if counts.passed < expected
+                error(
+                    "published-benchmarks gate: only $(counts.passed)/$(expected) " *
+                    "benchmarks executed their physics assertions " *
+                    "(deferred=$(counts.deferred), failed=$(counts.failed), " *
+                    "cached=$(counts.cached), skipped=$(counts.skipped))",
+                )
+            end
           '
+      - name: Upload benchmark summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summary
+          path: benchmark_summary.toml
+          if-no-files-found: ignore
 
   docs:
     name: Documentation

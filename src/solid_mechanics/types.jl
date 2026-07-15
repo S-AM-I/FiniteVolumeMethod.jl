@@ -115,6 +115,9 @@ Displacement-formulation solid-mechanics problem.
 - `body_force::SVector{Dim, T}` — per-cell body force density (e.g. gravity).
 - `displacement_bcs::Dict{Symbol, SVector{Dim, T}}` — patch → Dirichlet displacement.
 - `traction_bcs::Dict{Symbol, SVector{Dim, T}}` — patch → prescribed surface traction.
+  NOT yet supported: the current solvers apply only `displacement_bcs` and
+  `body_force`, and `solve_solid_mechanics` throws if `traction_bcs` is
+  non-empty (they were previously ignored silently).
 """
 struct SolidDisplacementProblem{Dim, T, Mesh, Mat}
     mesh::Mesh

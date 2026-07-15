@@ -32,7 +32,7 @@ services:
     profiles: [build]
     command: julia --project -e 'println("Base image ready.")'
 
-  # Full test suite — mirrors the disabled GitHub CI template in .github/workflows/CI.yml.disabled
+  # Full test suite — mirrors the unit-interop job in .github/workflows/CI.yml
   test:
     <<: *common
     environment:
@@ -74,7 +74,7 @@ services:
     command: >-
       bash -c 'julia --project=test scripts/calibrate_performance_baselines.jl --repetitions="$$FVM_PERFORMANCE_CALIBRATION_REPETITIONS"'
 
-  # Runic format check — mirrors the disabled GitHub format template in .github/workflows/FormatCheck.yml.disabled
+  # Runic format check — mirrors .github/workflows/FormatCheck.yml
   format:
     <<: *common
     mem_limit: 2g

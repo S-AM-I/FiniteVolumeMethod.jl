@@ -13,13 +13,12 @@
 #     bandwidth of) the triangulated surface `stl`.
 #   - `snap_to_surface!(octree, stl, ...)`: pull boundary-cell vertices
 #     onto the STL surface.
-#   - `extract_unstructured_mesh(octree)`: harvest the octree leaves as
-#     an `UnstructuredFVMMesh{3, Float64}` for downstream CFD.
 #
-# This is infrastructure only — the MVP guarantees correct-by-construction
-# output on simple geometries (box in box, sphere) and is intended to be
-# tested / benchmarked against Gmsh and OpenFOAM for parity in Stage 8
-# follow-ups. A full-featured mesher needs layer addition, orientation
+# There is currently NO octree → `UnstructuredFVMMesh` extraction: the
+# refined/snapped octree cannot be handed to the CFD solvers. This is
+# infrastructure only — the MVP guarantees correct-by-construction
+# refinement on simple geometries (box in box, sphere). A full-featured
+# mesher needs mesh extraction, layer addition, orientation
 # diagnostics, non-manifold healing, parallelism.
 
 using StaticArrays: SVector

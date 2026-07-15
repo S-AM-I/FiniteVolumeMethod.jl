@@ -1304,7 +1304,7 @@ reason = "This tutorial remains excluded from automated CI and is not part of th
 
 [[features]]
 feature = "collocated_operators"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1314,6 +1314,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Collocated cell-centered FVM operators on unstructured polyhedral meshes: Laplacian, divergence, gradient, Rhie-Chow interpolation, temporal schemes. Machine-checked via MMS and analytical invariants across five independent benchmarks."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Promoted from experimental → provisional in v3.7.0 on the strength of five independent benchmark files landed across v3.4–v3.9 — the only 'provisional' feature shipping with ≥ 3 benchmarks (stable-promotion eligible by the 3-benchmark floor).",
   "Benchmark #1: `test/v_and_v_laplacian_mms.jl` (v3.4) — Laplacian MMS on uniform Cartesian mesh showing textbook O(h²) spatial rate with Dirichlet, Neumann, and Robin BCs.",
   "Benchmark #2: `test/v_and_v_operator_mms.jl` (v3.5) — gradient MMS with observed order ≈ 1.9 on Cartesian + divergence machine-exact on div-free inputs.",
@@ -1330,7 +1331,7 @@ limitations = [
 
 [[features]]
 feature = "incompressible_ns"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1340,6 +1341,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Incompressible Navier-Stokes with SIMPLE, PISO, and PIMPLE pressure-velocity coupling on unstructured meshes. Steady-flow verification against three independent benchmarks: Poiseuille parabolic, Ghia 1982 lid-driven cavity, and Couette shear-driven linear."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Promoted from experimental → provisional in v3.11.0 after Poiseuille grid-convergence study (test/v_and_v_poiseuille_convergence.jl) showed O(h²) spatial order on 3 successive refinements (observed rate ≈ 1.95) and Ghia Re=100 cavity (test/v_and_v_ghia_cavity.jl) matched 10 reference points to ≤8% interior / ≤5% near-lid.",
   "Third benchmark added in v3.22.0: plane Couette flow (test/v_and_v_couette.jl) — linear u(y) = U_top·y/H profile, slope and intercept matched to < 5% (least-squares fit), residual from linear fit < 0.02, no streamwise pressure drop.",
   "Fourth benchmark added in v3.41.0: transient PISO stability (test/v_and_v_piso_decay.jl) — addresses the prior stable-promotion blocker on transient coverage. Three testsets, 437 gates: (1) PISO solve iterates without error in closed box; (2) maximum-principle on moving-lid at Re = 1 — U_max ≤ U_lid + 0.05 discretization tolerance, near-wall velocities < 0.5·U_lid; (3) 20-step integration has no NaN/Inf in U or p; velocities bounded at 1.0 (high-ν regime).",
@@ -1347,7 +1349,7 @@ limitations = [
   "Sixth benchmark added in v3.64.0: SciMLBase.remake parameter-update contract (test/v_and_v_incompressible_remake.jl) — supports sensitivity + optimization workflows. Seven testsets, 17 gates: (1) remake(; nu) updates nu only; (2) remake(; density) updates density only; (3) both nu + density together; (4) original problem immutable under remake; (5) algorithm swap; (6) chained remakes compose; (7) type preserved across remake.",
   "Seventh benchmark added in v3.100.0: continuity-residual + Courant-number primitives (test/v_and_v_continuity.jl). Nine testsets, 12 gates: (1) phi ≡ 0 ⇒ continuity_residual = 0 exactly; (2) phi ≡ 0 ⇒ continuity_residual_interior = 0 exactly; (3) L¹ norm ≥ 0 on non-trivial flux + interior ≤ full residual; (4) flux-linear scaling (doubling phi doubles residual rtol 1e-14); (5) single internal-face flux identity — imbalance on owner and neighbour equals |phi_f| each ⇒ total residual = 2·|phi_f| (here 1.0 rtol 1e-14); (6) wider interior band shrinks the interior residual (monotone in boundary_band); (7) compute_max_courant(phi ≡ 0) = 0 exactly; (8) Co_max ∝ dt (halving dt halves Co_max rtol 1e-14); (9) sign-symmetric — flipping phi sign does not change max|phi|·dt/V.",
   "Evidence #8 (v3.102.0): pressure-based compressible SIMPLE/PIMPLE landed in `src/pressure_based/compressible_{simple,pimple}.jl` with EOS coupling, ideal-gas + real-gas (Peng-Robinson, Redlich-Kwong) + tabulated CoolProp dispatch, and non-Newtonian rheology (`src/pressure_based/rheology.jl`: power-law, Bird-Carreau, Herschel-Bulkley, Casson). Smoke-tested only — published benchmarks against rhoSimpleFoam analytical cases (Sod-tube, isentropic compressor) are a v3.2 follow-up before stable promotion.",
-  "Evidence #9 (v3.105.0 + v3.107.0): adjoint integration. Steady-SIMPLE adjoint via SciMLSensitivity (`src/adjoint/`) lands in v3.105; transient PIMPLE adjoint with uniform checkpointing (`solve_transient_adjoint_linear`) production in v3.107. Smoke + invariant tests; full-solver Enzyme AD remains a v3.2 deferral.",
+  "Evidence #9 (v3.105.0 + v3.107.0): adjoint building blocks. `src/adjoint/` provides dense linear adjoint identities only — a transposed solve A^T lambda = (dJ/du)^T for steady linear systems (v3.105) and a checkpointed linear-transient variant `solve_transient_adjoint_linear` (v3.107). Neither is wired into the SIMPLE/PIMPLE outer loops, and SciMLSensitivity is not a dependency of this package. Smoke + invariant tests only; full-solver AD remains a v3.2 deferral.",
   "Steady SIMPLE has the strongest V&V; transient PISO/PIMPLE covered by Evidence #4; pressure-based compressible (#8) is smoke-only.",
   "Higher Reynolds numbers (Re ≥ 400) on coarse meshes still destabilise without deferred-correction convection schemes — Stage 2a follow-up.",
   "Kovasznay flow and other steady NS analytical benchmarks beyond Poiseuille are outside the current reliable envelope (solver diverges at Re≥10 for this problem; v3.12+ follow-up).",
@@ -1358,7 +1360,7 @@ limitations = [
 
 [[features]]
 feature = "turbulence_rans"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1368,6 +1370,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "RANS turbulence models (k-epsilon, k-omega, k-omega SST, Spalart-Allmaras) for incompressible collocated solver. Standard k-ε source terms verified against analytical decaying-homogeneous-turbulence ODE solution (v3.18)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — only `StandardKEpsilon` is convergence-verified, and only the source-term ODE (k-ε decay) is matched. Shear production, wall functions, and full channel-flow profiles are smoke-tested only.",
   "`KOmega`, `KOmegaSST`, `SpalartAllmaras` models carry only smoke tests; their transport terms have not been independently verified.",
   "Wall functions are simplified (Neumann/Dirichlet); dynamic wall function update not yet implemented.",
@@ -1387,7 +1390,7 @@ limitations = [
 
 [[features]]
 feature = "conjugate_heat_transfer"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1397,6 +1400,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Fluid energy equation, Boussinesq buoyancy, solid conduction, and Dirichlet-Neumann conjugate heat transfer coupling. Solid conduction verified against two independent analytical benchmarks (steady Laplace series + unsteady decay)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Promoted from experimental → provisional in v3.12.0 after solid-conduction grid-convergence study (test/v_and_v_heat_conduction.jl) against Laplace series solution on unit square. Observed spatial rates 1.96 and 1.99 across N ∈ {20, 40, 80}; center-cell matches analytical 0.25 to < 3% on 80×80.",
   "Second benchmark in v3.21.0 (test/v_and_v_unsteady_heat.jl): transient `solve_solid_conduction` verified against T(x, t) = sin(πx/L)·exp(-π²αt/L²). Spatial O(h²) rate at fine dt, endpoint L² < 5e-3 at 40×8, first-order Δt temporal convergence.",
   "Third benchmark in v3.32.0 (test/v_and_v_boussinesq.jl): Boussinesq buoyancy coupling source F = -ρ·β·(T-T_ref)·g verified via five algebraic invariants — β=0 disables (returns nothing), T=T_ref ⇒ F ≡ 0, algebraic identity matches to rtol 1e-12, ΔT linearity, β and g scaling. 1218 gates.",
@@ -1414,7 +1418,7 @@ limitations = [
 
 [[features]]
 feature = "polyhedral_mesh_io"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
@@ -1424,11 +1428,12 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "OpenFOAM polyMesh reader, UnstructuredMesh3D converter, correct polyhedral volumes, and mesh quality metrics. Cartesian mesh-builder geometric invariants verified (v3.43)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Promoted from experimental → provisional in v3.43.0. Evidence: `test/v_and_v_mesh_geometry.jl` — 976 gates across five testsets: (1) total volume = Lx·Ly across three mesh configurations rtol 1e-14; (2) uniform cell volumes V_c = Lx·Ly/(Nx·Ny) at 456 cells; (3) closed-cell face-area identity Σ_f ε(c,f)·S_f = 0 per cell at N ∈ {8, 16, 32}; (4) every face area matches either Lx/Nx or Ly/Ny; (5) 512 cell centers lie strictly inside the domain.",
   "Evidence #2 (v3.98.0): `test/v_and_v_mesh_quality.jl` — `check_mesh_quality` OpenFOAM-style mesh-quality report (non-orthogonality, skewness, aspect ratio). Seven testsets, 3986 gates: (1) Cartesian mesh ⇒ max + avg non-orthogonality < 1e-10 across N ∈ {4, 8, 16} (axis-aligned faces); (2) Cartesian mesh ⇒ max + avg skewness < 1e-12 (face centers exactly on owner-neighbour line); (3) output shape — non_orthogonality + skewness arrays of length n_internal, aspect_ratio of length n_cells; (4) aspect_ratio > 0 + finite on every cell across N ∈ {4, 8, 16, 32}; (5) summary max/avg fields match array maxima/means rtol 1e-14; (6) anisotropic 10:1 Cartesian domain has larger max aspect_ratio than isotropic 1:1; (7) refinement N ∈ {4, 8, 16, 32, 64} preserves zero non-orthogonality.",
   "Evidence #3 (v3.101.0): `test/v_and_v_polyhedral_volumes.jl` — polyhedral volume primitives (tet, hex, prism, pyramid). Thirteen testsets, 25 gates: (1) volume_tet unit tetrahedron = 1/6 rtol 1e-14; (2) degenerate coplanar tet ⇒ volume = 0; (3) tet volume α³-scales under uniform scaling at α ∈ {0.5, 2, 3}; (4) translation invariance; (5) vertex-swap (flipped signed volume) preserves magnitude; (6) volume_hex unit hex = 1 rtol 1e-14; (7) Lx·Ly·Lz closed form at three aspect ratios; (8) hex α³ scaling; (9) wrong node count errors; (10) volume_pyramid unit pyramid = 1/3 rtol 1e-14 (correct 1/3·base·height law); (11) pyramid h-linear scaling at four heights; (12) pyramid + prism wrong node count errors; (13) volume_prism unit triangular prism = 0.5·h at three heights rtol 1e-14.",
   "Evidence #4 (v3.0 cycle + v3.105.0): binary OpenFOAM polyMesh reader landed alongside the ASCII path; OpenFOAM writer landed; Gmsh v4 `.msh` reader via `ext/FVMGmshExt/` weak-dep extension. Gmsh + OpenFOAM round-trip smoke-tested.",
-  "Evidence #5 (v3.107.0): native snappyHexMesh-equivalent castellated refinement + STL surface snap landed in `src/mesh_generation/`. Layer addition (with collapse and feature-edge handling) deferred to v3.2.",
+  "Evidence #5 (v3.107.0): octree castellated-refinement + STL surface-snap prototype in `src/mesh_generation/` (in the spirit of snappyHexMesh). It cannot yet produce a solver-usable mesh — there is no octree -> UnstructuredFVMMesh extraction — and layer addition is absent; both deferred to v3.2.",
   "Gzip-compressed OpenFOAM files must still be decompressed first.",
   "Mesh quality aspect ratio uses approximate formula (max_face_area / V^(2/3)).",
 ]
@@ -1437,7 +1442,7 @@ limitations = [
 
 [[features]]
 feature = "postprocessing"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
@@ -1447,6 +1452,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "Derived field operations (vorticity, Q-criterion), wall quantities (shear stress, y+, heat flux, Nusselt), force coefficients, and line sampling. Vorticity + Q-criterion + enstrophy verified against analytical values on canonical flows (v3.20)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — `compute_vorticity`, `compute_q_criterion`, and `compute_enstrophy` are verified against analytical values on uniform, simple-shear, and solid-body-rotation flows. Wall-quantity routines (shear stress, y+, Nusselt), force coefficients, and line sampling remain smoke-tested.",
   "Wall quantities use linear near-wall approximation; wall functions not integrated.",
   "Force coefficients assume rho = 1 for viscous contribution.",
@@ -1464,7 +1470,7 @@ limitations = [
 
 [[features]]
 feature = "linear_solver_infra"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
@@ -1474,6 +1480,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "Configurable iterative linear solvers with AMG and ILU preconditioners via package extensions for the incompressible collocated solver. Poisson MMS verified across LU, CG, and GMRES backends (v3.42)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Evidence #1 (v3.42.0): `test/v_and_v_linear_solvers.jl` — four testsets, 6 gates. (1) LUFactorization gives L² < 5e-3 on Poisson MMS at N = 32; (2) CG matches LU within 1e-6; (3) GMRES matches LU within 1e-6; (4) O(h²) grid convergence across N ∈ {16, 32, 64}.",
   "Evidence #2 (v3.52.0): `test/v_and_v_solver_config.jl` — six testsets, 21 gates: (1) default pressure routing to :cg + :amg with rtol 1e-6; (2) default fallback to :bicgstab + :ilu with rtol 1e-5; (3) custom FieldSolverConfig overrides; (4) :direct resolves to nothing (backslash path); (5) unknown solver symbol errors; (6) non-Symbol arguments pass through unchanged. Second convergence-verified benchmark for the solver-infrastructure layer.",
   "Evidence #3 (v3.97.0): `test/v_and_v_linear_operator.jl` — AbstractLinearOperator wrapper + Stage 1h matrix-free interface. Nine testsets, 21 gates: (1) SparseMatrixLinearOperator forwards size + eltype; (2) mul! matches A·x; (3) underlying_matrix round-trips the wrapped sparse matrix by identity; (4) as_linear_operator(::SparseMatrixCSC) wraps; (5) as_linear_operator(::AbstractLinearOperator) passthrough (===); (6) MatrixFreeError fallback for custom matrix-free subtype without overridden underlying_matrix; (7) non-square (2×3) size + mul! correct; (8) eltype propagates T parameter for Float32/Float64 wrappers; (9) mul! linearity via superposition (op·(x+z) = op·x + op·z, op·(α·x) = α·op·x) rtol 1e-14.",
@@ -1487,7 +1494,7 @@ limitations = [
 
 [[features]]
 feature = "turbulence_les"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1497,6 +1504,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "LES (Smagorinsky, WALE, dynamic Smagorinsky) and hybrid (DDES) turbulence models for incompressible collocated solver. Smagorinsky ν_t formula verified against analytical values on prescribed velocity fields (v3.19)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — only `Smagorinsky` eddy-viscosity algebra ν_t = (C_s·Δ)²·|S| is convergence-verified against its analytical values under prescribed velocity fields. `WALE`, `DynamicSmagorinsky`, and `DDES` models remain smoke-tested.",
   "Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form.",
   "DDES only wraps Spalart-Allmaras; SST-based DDES deferred.",
@@ -1515,7 +1523,7 @@ limitations = [
 
 [[features]]
 feature = "multiphase_vof"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1525,6 +1533,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Volume of Fluid two-phase flow with alpha transport, interface compression, CSF surface tension, and mixture property blending. Alpha transport verified against analytical mass-conservation and center-of-mass translation invariants (v3.16)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — only pure-kinematic alpha transport under a prescribed divergence-free velocity field is convergence-verified. Two-phase PISO/PIMPLE with variable density, interface compression (C_α > 0), CSF surface tension, and contact-angle coupling remain smoke-tested only.",
   "Boundedness now uses MULES face-flux limiter from v3.102 (was clip+redistribute through v3.91); MULES primitives Evidence #7, MULES-in-solver wiring is the v3.102 deliverable.",
   "Static contact angle and Cox-Voinov dynamic model land in v3.102.0 (Wave 1) on the CSF surface-tension path; smoke-tested only.",
@@ -1544,7 +1553,7 @@ limitations = [
 
 [[features]]
 feature = "radiation"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1554,6 +1563,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "P1 and fvDOM radiation models with absorption/emission, Marshak BCs, and coupled thermal+radiation solver. P1 model verified against 1D slab analytical solution (v3.15)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — only the P1 model with Dirichlet boundaries on a cold medium is convergence-verified. Marshak walls, non-zero emission, and fvDOM are smoke-tested only.",
   "WSGGM (Weighted Sum of Grey Gases Model) lands in v3.103.0 (`src/radiation/wsggm.jl`); banded emissivity couples through the Marshak BC. Smoke-tested only.",
   "S6/S8/S12 quadrature extensions land in v3.103.0; fvDOM in-scattering integral wired into the ordinate sweep in the same wave (was absent through v3.92).",
@@ -1571,7 +1581,7 @@ limitations = [
 
 [[features]]
 feature = "combustion"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1581,6 +1591,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Multi-species transport with EDM and EDC turbulence-chemistry interaction and heat release coupling. Species transport kernel verified against analytical 1D advection-diffusion solution (v3.17)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — only the species transport kernel (`assemble_species!`: convection + diffusion) is convergence-verified against its 1D steady analytical solution. EDM/EDC/Arrhenius reaction models, heat-release coupling, and turbulent-chemistry interaction are smoke-tested only.",
   "Multi-step mechanisms land in v3.103.0 (`src/combustion/multi_step.jl`); FGM (Flamelet-Generated Manifold) lands in `src/combustion/fgm.jl`; Cantera interop via the `FVMCanteraExt` weak-dep extension. All three smoke-tested only — Sandia Flame D against published Raman/Rayleigh data is the v3.2 published-benchmark gate.",
   "Variable Lewis number (per-species) lands in v3.103.0 (`src/combustion/variable_lewis.jl`) and folds into `assemble_species!` diffusion term; Lewis-unity remains the default.",
@@ -1599,7 +1610,7 @@ limitations = [
 
 [[features]]
 feature = "lagrangian_dpm"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1609,6 +1620,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "Lagrangian particle tracking with drag models (Stokes, Schiller-Naumann), Ranz-Marshall heat transfer, two-way momentum/energy coupling, and TAB/KHRT spray breakup. Verified against analytical Stokes terminal-velocity solution (v3.13)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — verified only in the Stokes regime (Re_p ≪ 1). Schiller-Naumann and spray-breakup models still carry `smoke_tested` status.",
   "Forward-Euler particle integration is first-order in Δt; RK2/RK4 variants exist but are not yet convergence-verified.",
   "No buoyancy correction is applied automatically — users must pass effective gravity g·(1 - ρ_f/ρ_p) if needed.",
@@ -1628,7 +1640,7 @@ limitations = [
 
 [[features]]
 feature = "dynamic_mesh"
-maturity = "provisional"
+maturity = "experimental"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1638,6 +1650,7 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "ALE mesh motion with solid-body and Laplacian displacement solvers, mesh geometry update, face sweep flux, and ALE-corrected transport for incompressible NS. Geometric Conservation Law verified to round-off under three analytical motion patterns (v3.14)."
 limitations = [
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
   "Provisional — GCL exactness verified for zero motion, rigid translation, and isotropic linear scaling; large-deformation and rotational motion remain smoke-tested.",
   "Laplacian motion solver is smoke-tested only; its GCL behaviour for a full fluid-coupled ALE run is not yet convergence-verified.",
   "`_approximate_volumes!` uses a first-order divergence-of-displacement approximation; exact for linear displacement fields, O(α²) for nonlinear fields.",
@@ -1664,11 +1677,11 @@ precision_policy = "float64_cpu_reference"
 random_seed_policy = "deterministic"
 backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
-summary = "Distributed-memory parallelism via MPI.jl package extension with mesh partitioning, true per-rank submesh storage (`LocalFVMMesh`), and parallel SIMPLE/PIMPLE solver. v3.106 (Wave 5) replaced the full-mesh-per-rank skeleton with `LocalFVMMesh` + Metis graph partitioner + distributed `PSparseMatrix` assembly via PartitionedArrays.jl."
+summary = "Distributed-memory parallelism via MPI.jl package extension with mesh partitioning, true per-rank submesh storage (`LocalFVMMesh`), and a parallel SIMPLE loop. v3.106 (Wave 5) replaced the full-mesh-per-rank skeleton with `LocalFVMMesh` + RCB/Metis partitioning; each rank assembles and solves its LOCAL system with halo exchange between outer iterations (additive-Schwarz-style) — no distributed matrix (`PSparseMatrix`) is ever constructed."
 limitations = [
   "Evidence #1 (Stage 2): `test/mpi_partition.jl` — 980 serial gates on dep-free RCB partitioner + extracted local mesh + halo pattern in local indices.",
   "Evidence #2 (Stage 2): `test/mpi_parity.jl` — manual `mpiexec -n N` parity test against single-rank reference; not in `runtests.jl`.",
-  "Evidence #3 (v3.106.0, Wave 5): `LocalFVMMesh` + Metis graph partitioner (`src/parallel/{local_mesh,metis_stub,rcb_partitioner}.jl`) + distributed `PSparseMatrix` assembly via PartitionedArrays.jl (`ext/FVMMPIExt`). Halo exchange is functional, not decorative.",
+  "Evidence #3 (v3.106.0, Wave 5): `LocalFVMMesh` + Metis graph partitioner (`src/parallel/{local_mesh,metis_stub,rcb_partitioner}.jl`). Halo exchange is functional, not decorative. Solves remain per-rank local (additive-Schwarz-style) — PartitionedArrays.jl is a dependency of the extension but no distributed `PSparseMatrix` is assembled; that remains a follow-up.",
   "Parallel SIMPLE production; PISO/PIMPLE distributed variants smoke-tested.",
   "Requires `mpiexec` for the full parity test; not included in the standard CI test suite. Published-benchmark gate (weak + strong scaling on Poiseuille / Ghia at 10⁶ cells) is a v3.2 follow-up before stable promotion.",
 ]

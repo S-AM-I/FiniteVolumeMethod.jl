@@ -8,7 +8,7 @@
 .PHONY: help ci-build ci-test ci-test-file ci-evidence ci-format ci-format-fix \
         ci-docs ci-docs-ci ci-report ci-bundles ci-release-outputs ci-repl ci-all \
         ci-fast ci-smoke ci-full-evidence ci-performance ci-performance-calibrate \
-        ci-release-audit ci-clean ci-depot-clean
+        ci-release-audit ci-published-benchmarks ci-clean ci-depot-clean
 
 COMPOSE := docker-compose
 
@@ -23,7 +23,7 @@ help: ## Show this help
 ci-build: ## Build base image (run after Project.toml changes)
 	$(COMPOSE) build base
 
-ci-test: ## Run full test suite (mirrors .github/workflows/CI.yml.disabled)
+ci-test: ## Run full test suite (mirrors the unit-interop job in .github/workflows/CI.yml)
 	$(COMPOSE) run --rm test
 
 ci-test-file: ## Run single test file (TEST_FILE=test/geometry.jl make ci-test-file)
@@ -47,10 +47,23 @@ ci-performance-calibrate: ## Re-run performance baselines repeatedly and write a
 ci-release-audit: ## Run the release-audit lane with stable release outputs
 	CI_LANE=release-audit $(COMPOSE) run --rm lane
 
+ci-published-benchmarks: ## Run the 5-case published-benchmark suite natively (mirrors the CI published-benchmarks job; no Docker)
+	FVM_RUN_BENCHMARKS=true julia --project=test -e ' \
+		include("test/benchmarks/harness.jl"); \
+		include("test/benchmarks/sod_shock_tube.jl"); \
+		include("test/benchmarks/moser_re180.jl"); \
+		include("test/benchmarks/martin_moyce_dam_break.jl"); \
+		include("test/benchmarks/ghia_re400.jl"); \
+		include("test/benchmarks/rayleigh_benard_1e4.jl"); \
+		counts = write_benchmark_summary("benchmark_summary.toml"); \
+		@info "published-benchmark summary" counts; \
+		total_executed = counts.passed + counts.cached; \
+		total_executed >= 5 || error("only $$(counts.passed) passed + $$(counts.cached) cached of 5 benchmarks")'
+
 ci-evidence: ## Run curated scientific-evidence suite (mirrors CI scientific-evidence lane)
 	$(COMPOSE) run --rm evidence
 
-ci-format: ## Check Runic formatting (mirrors .github/workflows/FormatCheck.yml.disabled)
+ci-format: ## Check Runic formatting (mirrors .github/workflows/FormatCheck.yml)
 	$(COMPOSE) run --rm format
 
 ci-format-fix: ## Auto-fix Runic formatting

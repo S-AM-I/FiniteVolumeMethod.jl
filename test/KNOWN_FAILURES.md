@@ -8,7 +8,9 @@ is `validation/manifest.toml`; this document is a human-readable companion.
 
 | Test | Status | Notes |
 |------|--------|-------|
-| `Aqua.test_unbound_args` | Broken (`broken = true`) | `Val{N}` pattern in AMR constructors is a known false positive. Tracked in `test/QUALITY_LEDGER.toml`. |
+| `Aqua.test_unbound_args` | Disabled | Re-checked 2026-07-15: still fails on the `NTuple{Dim,T}`-parametrised constructors `FixedVelocityBC` / `FlowRateInletBC` in `src/incompressible/boundary_conditions.jl`. Tracked in `test/QUALITY_LEDGER.toml`. |
+| `Aqua.test_ambiguities` | Enabled, FAILING locally (2026-07-15) | 2 method ambiguities between `SciMLBase.ODEProblem(f::AbstractODEFunction, u0, tspan, ...)` and `ODEProblem(model, mesh::AbstractParabolicMesh, bcs...)` in `src/parabolic/sciml_bridge.jl:129` (plus its kwcall twin). Needs a disambiguating method from the parabolic solver owners; the gate is intentionally left on. |
+| `ReferenceTests` image baselines | At risk on Linux CI | `JULIA_REFERENCETESTS_UPDATE=true` removed from CI in v3.112; committed baselines in `test/test_figures/` were rendered on macOS. See "Validation Level Notes". |
 | `keller_segel_chemotaxis.jl` | Skipped | Excluded from tutorial test loop (marked `manual_review` in manifest). |
 
 ## Demoted From V&V Claims
@@ -25,12 +27,16 @@ is `validation/manifest.toml`; this document is a human-readable companion.
 
 ## Validation Level Notes
 
-- Scripts marked `run_in_ci = false` in `validation/manifest.toml` are excluded from CI due to memory or runtime constraints. They are exercised in the Nightly and Release workflows.
-- All numerical acceptance criteria use fixed `@test` assertions. Image regression tests use `JULIA_REFERENCETESTS_UPDATE=true` and are not part of the scientific contract.
+- Scripts marked `run_in_ci = false` in `validation/manifest.toml` are excluded from CI due to memory or runtime constraints. They are exercised by the weekly `Nightly.yml` workflow (Monday 03:00 UTC cron + manual dispatch), which runs the full `docs/src/literate_verification` suite; the Release workflow is currently disabled. The `FVM_RUN_VANDV`-gated cases (`test/v_and_v_ghia_cavity.jl`, `test/v_and_v_poiseuille_convergence.jl`) also run in that weekly workflow.
+- All numerical acceptance criteria use fixed `@test` assertions. Image regression tests (ReferenceTests baselines in `test/test_figures/`) now genuinely compare in CI — the `JULIA_REFERENCETESTS_UPDATE=true` env var was removed from `CI.yml` in v3.112 (with it set, every reference test silently rewrote its baseline and could never fail). Baselines are committed; they were generated on macOS, so the first honest ubuntu CI run may flag cross-platform rendering differences — if so, regenerate baselines on CI-matching hardware and commit them; do NOT re-add the auto-update env var.
 
-## Published-Benchmark Suite Status (2026-04-27, v3.120)
+## Published-Benchmark Suite Status
 
-Run via `./scripts/run_benchmarks.sh` with `FVM_RUN_BENCHMARKS=true`. The 5-case harness lands as follows on M3 / Julia 1.12.4:
+The harness lives in `test/benchmarks/` and runs locally via `./scripts/run_benchmarks.sh` or `make ci-published-benchmarks`, and in CI via the `published-benchmarks` job in `.github/workflows/CI.yml` (with `FVM_RUN_BENCHMARKS=true`).
+
+**Deferred-benchmark semantics (changed in v3.112):** `mark_deferred_compute` previously recorded `@test true`, so a benchmark that never executed its physics assertions appeared as a PASS. It now records `@test_broken false` — deferred benchmarks show up as broken, never as passing — and the harness writes a machine-readable summary (`write_benchmark_summary`) with passed/failed/deferred/cached/skipped counts. The CI job fails unless all 5 benchmarks report `passed`.
+
+Status of the 5-case harness at the last local run (2026-04-27, on M3 / Julia 1.12.4):
 
 | Benchmark | Status | Notes |
 |-----------|--------|-------|
@@ -40,18 +46,32 @@ Run via `./scripts/run_benchmarks.sh` with `FVM_RUN_BENCHMARKS=true`. The 5-case
 | `ghia_re400` | ✓ RESOLVED | Grid bumped from N=64 to N=128 (matches Ghia 1982's 129×129), iterations reduced to 4000 with αU=0.5, αP=0.2. All 28 assertions now pass. |
 | `rayleigh_benard_1e4` | CONFIGURATION UPDATED | Grid bumped from N=40 to N=80 with increased iterations. Needs a verification run to confirm all 9 assertions pass. Previously failing: De Vahl Davis Nu=2.243 ±10% and ±25% velocity tolerances. |
 
-Promotion of `incompressible`, `thermal`, `multiphase`, `hyperbolic`, or `turbulence` from `provisional` to `stable` in `validation/manifest.toml` requires the corresponding benchmarks to pass.
+Promotion of the collocated features (now `experimental` — see the v3.112 demotion note below) or `hyperbolic` toward `stable` in `validation/manifest.toml` requires the corresponding benchmarks to pass in CI.
 
-**Pkg.test() baseline (v3.120):** 1,428,433 passed / 0 failed / 0 errored. The full failure-sweep wave is documented in `plans/open-work.md` §E.
+## v3.112 Governance Changes
+
+- **Ladder gate re-enabled for `provisional`** (`test/repository_governance.jl`): features at `provisional` or `stable` maturity with declared `required_ladder_stages` must have machine-linked `[[scientific_evidence]]` entries covering those stages. The earlier restriction to `:stable`-only (commit b3977fb) had neutered this gate.
+- **13 collocated features demoted `provisional` → `experimental`** in `validation/manifest.toml`: collocated_operators, incompressible_ns, turbulence_rans, conjugate_heat_transfer, polyhedral_mesh_io, postprocessing, linear_solver_infra, turbulence_les, multiphase_vof, radiation, combustion, lagrangian_dpm, dynamic_mesh. Their "Evidence #N" items are real `test/` files run by `Pkg.test()`, but none are `[[scientific_evidence]]` entries executed by `validation/evidence_runner.jl`, so provisional maturity was not honestly supportable. Re-promotion requires linked evidence entries (paths under `docs/src/literate_verification/`).
+- **Fabricated claims corrected** in `validation/manifest.toml` and module docstrings: no SciMLSensitivity integration exists (the adjoint is a dense linear identity library); no distributed `PSparseMatrix` is ever assembled (MPI solves are per-rank local, additive-Schwarz-style); the octree mesher cannot emit a solver-usable mesh (`extract_unstructured_mesh` does not exist).
+
+## v3.112 Solver-Correctness Fixes
+
+The v3.112 wave fixed verified numerical-method bugs in both solver families; the full list lives in CLAUDE.md ("Fixed in v3.112"). Test-visible consequences:
+
+- New regression testsets were added to existing files (incompressible, mhd, mhd_3d, hyperbolic, hyperbolic_3d, srmhd, semidiscrete, semidiscrete_mhd, semidiscrete_amr, amr, test_remake, turbulence_rans, thermal, multiphase_vof, v_and_v_over_relaxed, v_and_v_rhie_chow) — assertion counts change vs. the old baseline.
+- `test/v_and_v_continuity.jl` and `test/v_and_v_boussinesq.jl` expectations were updated: the continuity residual is now flux-normalized (raw available via `normalize = false`) and buoyancy is per unit mass (kinematic momentum form; solutions are density-invariant at fixed ν).
+- AMR multi-block problems now throw (no inter-block ghost exchange exists); GRMHD warns for non-Minkowski metrics; `srmhd_con2prim` non-convergence throws; `PorousJumpBC` pressure expansion throws (was silently treated as an absolute Dirichlet); non-empty `traction_bcs` in solid mechanics throw (they were silently ignored).
+- Pre-existing failures fixed at HEAD: `test/mhd_2d.jl` / `test/mhd_3d.jl` BoundsErrors with `NoReconstruction` (CT loops assumed 2 ghosts), and stale 2-ghost assumptions in `test/semidiscrete.jl`, `test/hyperbolic_2d.jl`, `test/coupling.jl`.
+
+**Pkg.test() baseline (recorded pre-v3.112 as "v3.120" during the inconsistent-tag period):** 1,428,433 passed / 0 failed / 0 errored. The v3.112 wave adds tests and changes behavior, so this count is stale — regenerate on the next full `Pkg.test()` run. The full failure-sweep wave is documented in `plans/open-work.md` §E.
 
 ## Simplifications in the Collocated / OpenFOAM-Style Solver Stack
 
 Every item below is a known simplification or incorrect implementation; each
-is scheduled for a specific stage of the v3 roadmap
-(`plans/i-m-not-sure-of-ticklish-squid.md`). Promotion of a feature from
-`experimental` to `stable` in `validation/manifest.toml` requires the
-corresponding entry to be fixed *and* a 3+ published-benchmark suite to be
-green in CI.
+is scheduled for a specific stage of the v3 roadmap (see `plans/index.md`).
+Promotion of a feature from `experimental` to `stable` in
+`validation/manifest.toml` requires the corresponding entry to be fixed
+*and* a 3+ published-benchmark suite to be green in CI.
 
 ### Numerical correctness
 
@@ -121,7 +141,7 @@ Each slated for the stage noted in the roadmap:
 | ~~Gmsh automation pipeline~~ | Landed v3.105.0 (Wave 4): `ext/FVMGmshExt/` weak-dep extension covers `.msh` v4 read + Gmsh API run-from-Julia. | 8b done |
 | ~~AMR on collocated side~~ | Landed v3.105.0 (Wave 4): `src/amr_collocated/` adds tree-augmented refinement, gradient + residual + ZZ markers, conservative regrid. | 8c done |
 | ~~Error indicators~~ | Landed v2.9.0 + v3.105.0 (Wave 4): gradient, ZZ, and residual-based indicators all in `src/amr_collocated/`. | 8d done |
-| ~~Full adjoint (SciMLSensitivity integration)~~ | Landed v3.105.0 + v3.107.0 (v3.1 wave): steady-SIMPLE adjoint in v3.105; transient PIMPLE adjoint with uniform checkpointing (`solve_transient_adjoint_linear`) in v3.107. Enzyme full-solver AD remains a v3.2 follow-up. | 9a–c done (steady + linear-transient) |
+| Full adjoint | Partial: dense linear adjoint identities only — steady transposed solve (v3.105) + checkpointed linear-transient `solve_transient_adjoint_linear` (v3.107). NOT wired into SIMPLE/PIMPLE and no SciMLSensitivity integration (not a dependency). Enzyme full-solver AD remains a v3.2 follow-up. | 9a–c partial |
 | ~~GPU backends for collocated~~ | Landed v3.105.0 (Wave 4): `ext/FVMKAExt/` (KernelAbstractions weak dep) provides operator dispatch on CPU/CUDA/AMD/Metal backends. v3.108 fixes precompile-time method-overwrite bug on backend dispatch. | 9d partial |
 | ~~Matrix-free linear operators~~ | Landed v2.10.0 (Stage 9e): `MatrixFreeLinearOperator{T, F, Ft, D}`. | 9e done |
 | ~~Unitful integration~~ | Landed v2.10.0 (Stage 9f) + v3.105.0 (Wave 4 hook). | 9f done |
@@ -134,7 +154,7 @@ The following items are explicitly out of scope for the v3.102→v3.108 producti
 | Item | Owner | Notes |
 |------|-------|-------|
 | snappyHexMesh layer addition | `src/mesh_generation/` | Castellated refinement + surface snap landed in v3.107; near-wall layer addition (with collapse and feature-edge handling) remains. |
-| Enzyme full-solver AD | `ext/FVMEnzymeExt/` | Stub landed in v3.105; differentiation through full SIMPLE / PIMPLE outer iteration (mutating fixed-point) requires Enzyme rules for `_dispatch_solve` and per-iteration cache aliasing. Steady + linear-transient adjoint via SciMLSensitivity already production. |
+| Enzyme full-solver AD | `ext/FVMEnzymeExt/` | Stub landed in v3.105; differentiation through full SIMPLE / PIMPLE outer iteration (mutating fixed-point) requires Enzyme rules for `_dispatch_solve` and per-iteration cache aliasing. The existing steady + linear-transient adjoint helpers are standalone linear identities (no SciMLSensitivity, not wired into the solvers). |
 | IDDES `h_max` from real edge lengths | `src/turbulence/iddes.jl` | Shur-2008 shielding production in v3.107 but the wall-normal length scale uses `V_c^(1/Dim)` as a surrogate for `h_max = max edge length`. Requires per-cell edge-length cache plumbed through `UnstructuredFVMMesh`. |
 | Sandia Flame D published-benchmark | `validation/published_benchmarks/` | Combustion bench harness exists; running EDC + variable-Lewis + radiation-coupled vs. published Sandia Flame D Raman/Rayleigh data is a v3.2 deliverable for `combustion` stable promotion. |
 | Published-benchmark execution + stable-tier promotions | `validation/manifest.toml` | Harness scaffold (gated by `FVM_RUN_BENCHMARKS=true`) lands in v3.107. The full ≥3-published-benchmark suite per feature is the gate for `provisional` → `stable`; expected to run quarterly at the user's terminal until the wallclock budget is reduced. |

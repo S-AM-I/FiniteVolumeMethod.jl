@@ -59,7 +59,9 @@ for bench in "${SELECTED[@]}"; do
     if FVM_RUN_BENCHMARKS=true julia --project=test "test/benchmarks/${bench}.jl" \
         > "$log_file" 2>&1; then
         elapsed=$(( $(date +%s) - start ))
-        if grep -q "deferred_compute" "$log_file"; then
+        # mark_deferred_compute logs "benchmark DEFERRED_COMPUTE" and records
+        # @test_broken (exit code stays 0), so detect deferral from the log.
+        if grep -qi "deferred_compute" "$log_file"; then
             DEFER=$((DEFER + 1))
             echo "  ⊘ deferred (${elapsed}s) — see $log_file"
         else

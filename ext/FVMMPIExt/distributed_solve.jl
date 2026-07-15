@@ -123,9 +123,11 @@ end
 # `LocalFVMMesh` view (typically from `partition_mesh_metis` +
 # `build_local_mesh`), assemble each rank's momentum / pressure
 # equations over its owned-plus-halo subset rather than the full global
-# mesh. The resulting per-rank blocks are assembled into a
-# `PartitionedArrays.PSparseMatrix` so downstream Krylov solves can
-# run distributed.
+# mesh. Each rank's block is solved LOCALLY (additive-Schwarz-style)
+# with halo exchange between outer iterations; no distributed
+# `PSparseMatrix` is constructed. A `PartitionedArrays` row partition is
+# built and carried as metadata only, so a future true distributed
+# Krylov solve can slot in without changing the solver loop.
 #
 # Backwards-compatible: the existing `DistributedFVMMesh` path above is
 # untouched; callers that don't hand in a `LocalFVMMesh` continue to
@@ -149,11 +151,11 @@ global mesh. Each rank:
 2. Assembles + solves the SIMPLE sub-problems on the submesh.
 3. Reduces the continuity residual across ranks with `MPI.Allreduce`.
 
-The `PartitionedArrays` glue constructs per-rank `SparseMatrixCSC`
-blocks which are wrapped in a `PSparseMatrix` on the provided
-partition. When `PartitionedArrays` is not available (which shouldn't
-happen since it's a hard dep of this extension) we fall through to
-per-rank `LinearProblem` solves with only the residual reduced.
+Each rank assembles a per-rank `SparseMatrixCSC` block and solves it
+locally via `LinearProblem` — only the continuity residual is reduced
+globally. No `PSparseMatrix` is constructed; the `PartitionedArrays`
+row partition built here is metadata for a future distributed-solve
+upgrade.
 """
 function FiniteVolumeMethod.solve_simple_distributed(
         prob::FiniteVolumeMethod.IncompressibleProblem{Dim, T},
@@ -226,8 +228,7 @@ function FiniteVolumeMethod.solve_simple_distributed(
             U_old_d = FiniteVolumeMethod._extract_component(state.U, d)
             FiniteVolumeMethod.under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
             label = d == 1 ? :Ux : (d == 2 ? :Uy : :Uz)
-            # Wrap the local block in a PSparseMatrix if PartitionedArrays
-            # is loaded; otherwise fall back to a plain LinearProblem solve.
+            # Per-rank local block solve (no distributed matrix).
             sol = _dispatch_partitioned_solve(
                 eqs[d], row_partition, linear_solver, solver_config, label,
             )
@@ -305,13 +306,12 @@ end
 """
     _dispatch_partitioned_solve(eq, row_partition, linear_solver, solver_config, label) -> Vector
 
-Assemble the per-rank sparse matrix / RHS from `eq`, optionally wrap
-into a `PSparseMatrix` on `row_partition`, and dispatch to the linear
-solver. For the initial wire-up we solve the diagonal block locally and
-return the owned-cell solution — this matches what the
-DistributedFVMMesh path did (residual is the only globally-coupled
-quantity) while letting downstream agents swap in a true distributed
-Krylov solve without touching the solver loop.
+Assemble the per-rank sparse matrix / RHS from `eq` and solve the
+diagonal block locally, returning the local solution. `row_partition`
+is currently unused metadata — no `PSparseMatrix` is constructed. This
+matches what the DistributedFVMMesh path did (residual is the only
+globally-coupled quantity) while letting a future upgrade swap in a
+true distributed Krylov solve without touching the solver loop.
 """
 function _dispatch_partitioned_solve(
         eq::FiniteVolumeMethod.CollocatedEquation{T}, row_partition,

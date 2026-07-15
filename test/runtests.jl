@@ -811,13 +811,16 @@ end
     @testset verbose = true "Aqua" begin
         # piracy disabled: Aqua 0.7 traverses Core.TypeName.mt which was
         # removed in Julia 1.12 (FieldError). Re-enable once Aqua >= 0.8.
+        # project_extras re-enabled 2026-07-15 after JET moved out of the
+        # root [deps] and the dead [extras]/[targets] block was removed
+        # (test/Project.toml governs the test env on Julia >= 1.2).
         Aqua.test_all(
             FiniteVolumeMethod;
-            ambiguities = false, project_extras = false, unbound_args = false,
+            ambiguities = false, unbound_args = false,
             piracy = false,
         )
-        # Aqua.test_unbound_args is *disabled* in test_all above because of
-        # the AMR Val{N} false positive plus the NTuple{Dim,T}-parametrised
+        # Aqua.test_unbound_args remains *disabled* (re-checked 2026-07-15,
+        # still fails) because of the NTuple{Dim,T}-parametrised
         # constructors in src/incompressible/boundary_conditions.jl
         # (FixedVelocityBC, FlowRateInletBC). Tracked in
         # test/QUALITY_LEDGER.toml.
