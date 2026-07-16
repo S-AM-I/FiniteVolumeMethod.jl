@@ -1,7 +1,7 @@
 # v3.0 Migration Guide
 
 v3.0.0 is the consolidation release for the Stage 0–9 v3 industrial-grade
-overhaul (see `plans/i-m-not-sure-of-ticklish-squid.md`). This guide
+overhaul. This guide
 summarises behavioural and API changes since v2.0.0 and tells existing
 users what to touch.
 

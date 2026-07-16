@@ -20,7 +20,7 @@ jobs:
             --no-progress
             --exclude-path docs/build
             --exclude-path docs/src/assets
-            'docs/**/*.md' 'theory/**/*.qmd' '*.md'
+            'docs/**/*.md' '*.md'
           fail: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -34,7 +34,6 @@ jobs:
           config: .cspell.json
           files: |
             docs/**/*.md
-            theory/**/*.qmd
             *.md
           incremental_files_only: false
           strict: true

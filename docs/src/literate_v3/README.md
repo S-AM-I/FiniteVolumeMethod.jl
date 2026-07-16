@@ -72,7 +72,7 @@ underlying feature is deliberately simplified:
   non-orthogonal correction.
 
 Each of these matches a line item in the root `CLAUDE.md` "Known
-Issues" section or the v3 roadmap in `plans/`.
+Issues" section or `test/KNOWN_FAILURES.md`.
 
 ## Relationship to the test / V&V suites
 

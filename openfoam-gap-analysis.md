@@ -65,7 +65,7 @@ covered by the v3.105 runtime expression BC extension.
 ### 3. snappyHexMesh feature parity
 
 v3.107 ships castellated + snap stages. Layer addition is deferred to
-v3.2 (`KNOWN_FAILURES.md` and `plans/open-work.md` C-table).
+v3.2 (`KNOWN_FAILURES.md`).
 
 ### 4. Two-fluid cross-coupling completeness
 

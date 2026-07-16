@@ -75,12 +75,12 @@ The v3.112 wave fixed verified numerical-method bugs in both solver families; th
 - AMR multi-block problems now throw (no inter-block ghost exchange exists); GRMHD warns for non-Minkowski metrics; `srmhd_con2prim` non-convergence throws; `PorousJumpBC` pressure expansion throws (was silently treated as an absolute Dirichlet); non-empty `traction_bcs` in solid mechanics throw (they were silently ignored).
 - Pre-existing failures fixed at HEAD: `test/mhd_2d.jl` / `test/mhd_3d.jl` BoundsErrors with `NoReconstruction` (CT loops assumed 2 ghosts), and stale 2-ghost assumptions in `test/semidiscrete.jl`, `test/hyperbolic_2d.jl`, `test/coupling.jl`.
 
-**Pkg.test() baseline (v3.114, 2026-07-16, M3 / Julia 1.12.4):** 1,430,180 passed / 0 failed / 0 errored (36-37 min wall clock). The previous 1,428,433 figure was recorded pre-v3.112 (labeled "v3.120" during the inconsistent-tag period). The full failure-sweep wave is documented in `plans/open-work.md` §E.
+**Pkg.test() baseline (v3.114, 2026-07-16, M3 / Julia 1.12.4):** 1,430,180 passed / 0 failed / 0 errored (36-37 min wall clock). The previous 1,428,433 figure was recorded pre-v3.112 (labeled "v3.120" during the inconsistent-tag period). The full failure-sweep wave is documented in git history (`plans/open-work.md` §E, removed from the tree in v3.114).
 
 ## Simplifications in the Collocated / OpenFOAM-Style Solver Stack
 
 Every item below is a known simplification or incorrect implementation; each
-is scheduled for a specific stage of the v3 roadmap (see `plans/index.md`).
+is tracked in this file and in CLAUDE.md "Known Issues" (the standalone `plans/` roadmap was removed in v3.114).
 Promotion of a feature from `experimental` to `stable` in
 `validation/manifest.toml` requires the corresponding entry to be fixed
 *and* a 3+ published-benchmark suite to be green in CI.
