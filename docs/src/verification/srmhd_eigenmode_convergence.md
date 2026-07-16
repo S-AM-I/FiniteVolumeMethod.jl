@@ -29,6 +29,7 @@ the corresponding eigenvector direction.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -101,7 +102,13 @@ function run_mode(law, mode, N, t_final)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), mode.ic;
         final_time = t_final, cfl = 0.3,
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     w = [conserved_to_primitive(law, U[i])[mode.var_idx] for i in eachindex(x)]
     return x, w, t_end
 end
@@ -194,6 +201,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -250,7 +258,13 @@ function run_mode(law, mode, N, t_final)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), mode.ic;
         final_time = t_final, cfl = 0.3,
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     w = [conserved_to_primitive(law, U[i])[mode.var_idx] for i in eachindex(x)]
     return x, w, t_end
 end

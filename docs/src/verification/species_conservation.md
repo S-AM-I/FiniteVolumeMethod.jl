@@ -27,6 +27,7 @@ and total species mass $\sum_k \int \rho Y_k\,dx$ are conserved.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -71,7 +72,13 @@ mass0_fuel = sum(U0[i + 2][4] * dx for i in 1:nc)
 mass0_ox = sum(U0[i + 2][5] * dx for i in 1:nc)
 mass0_prod = sum(U0[i + 2][6] * dx for i in 1:nc)
 
-x, U_nr, t_nr = solve_hyperbolic(prob_noreact)
+ode_nr = sciml_problem(prob_noreact)
+dt0_nr = compute_initial_dt(ode_nr.p, ode_nr.u0)
+sol_nr = solve(prob_noreact, SSPRK33(); adaptive = false, dt = dt0_nr)
+acc_nr = solution_accessor(prob_noreact)
+x = get_coordinates(acc_nr)
+U_nr = get_conserved(acc_nr, sol_nr, length(sol_nr.t))
+t_nr = sol_nr.t[end]
 
 mass_total_nr = sum(U_nr[i][1] * dx for i in 1:nc)
 mass_fuel_nr = sum(U_nr[i][4] * dx for i in 1:nc)
@@ -162,6 +169,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -198,7 +206,13 @@ mass0_fuel = sum(U0[i + 2][4] * dx for i in 1:nc)
 mass0_ox = sum(U0[i + 2][5] * dx for i in 1:nc)
 mass0_prod = sum(U0[i + 2][6] * dx for i in 1:nc)
 
-x, U_nr, t_nr = solve_hyperbolic(prob_noreact)
+ode_nr = sciml_problem(prob_noreact)
+dt0_nr = compute_initial_dt(ode_nr.p, ode_nr.u0)
+sol_nr = solve(prob_noreact, SSPRK33(); adaptive = false, dt = dt0_nr)
+acc_nr = solution_accessor(prob_noreact)
+x = get_coordinates(acc_nr)
+U_nr = get_conserved(acc_nr, sol_nr, length(sol_nr.t))
+t_nr = sol_nr.t[end]
 
 mass_total_nr = sum(U_nr[i][1] * dx for i in 1:nc)
 mass_fuel_nr = sum(U_nr[i][4] * dx for i in 1:nc)

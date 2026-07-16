@@ -774,6 +774,10 @@ grids emit a one-time warning (see `_amr_ghost_exchange_guard`).
     problem's `boundary_conditions` field is not applied. Seam fluxes
     across level jumps >= 2 are not flux-corrected.
 
+This is the maintained non-SciML driver for dynamically-regridding AMR
+(`regrid_interval`) and subcycling; the SciML path (`sciml_problem(::AMRProblem)`)
+covers fixed-hierarchy, non-regridding runs only.
+
 # Returns
 - `grid`: The final AMR grid with solution data.
 - `t_final`: The final time reached.
@@ -783,7 +787,6 @@ function solve_amr(
         method::Symbol = :subcycling,
         callback::Union{Nothing, Function} = nothing,
     )
-    _v2_api_depwarn(:solve_amr, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     grid = prob.grid
     is_2d = _amr_dim(grid) == 2
     if is_2d

@@ -19,6 +19,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 
 # We begin by loading the package and defining the problem.
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -43,12 +44,22 @@ ic(x) = x < 0.5 ? wL : wR
 # ## Solving with HLLC + MUSCL
 # We use the HLLC Riemann solver (which resolves the contact discontinuity)
 # with MUSCL reconstruction using the minmod limiter for second-order accuracy.
+# The problem is converted to a SciML `ODEProblem` with `sciml_problem` and
+# integrated with `SSPRK33`; a built-in callback keeps the time step at the
+# problem's CFL limit. The solution accessor extracts the conserved state and
+# cell-centre coordinates from the ODE solution.
 prob_hllc = HyperbolicProblem(
     law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     bc_left, bc_right, ic;
     final_time = 0.2, cfl = 0.5
 )
-x_hllc, U_hllc, t_hllc = solve_hyperbolic(prob_hllc)
+ode_hllc = sciml_problem(prob_hllc)
+dt_hllc = compute_initial_dt(ode_hllc.p, ode_hllc.u0)
+sol_hllc = solve(ode_hllc, SSPRK33(); adaptive = false, dt = dt_hllc)
+acc_hllc = solution_accessor(prob_hllc)
+U_hllc = get_conserved(acc_hllc, sol_hllc, length(sol_hllc.t))
+x_hllc = get_coordinates(acc_hllc)
+t_hllc = sol_hllc.t[end]
 x_hllc |> tc #hide
 
 # ## Solving with HLL + MUSCL
@@ -59,7 +70,13 @@ prob_hll = HyperbolicProblem(
     bc_left, bc_right, ic;
     final_time = 0.2, cfl = 0.5
 )
-x_hll, U_hll, t_hll = solve_hyperbolic(prob_hll)
+ode_hll = sciml_problem(prob_hll)
+dt_hll = compute_initial_dt(ode_hll.p, ode_hll.u0)
+sol_hll = solve(ode_hll, SSPRK33(); adaptive = false, dt = dt_hll)
+acc_hll = solution_accessor(prob_hll)
+U_hll = get_conserved(acc_hll, sol_hll, length(sol_hll.t))
+x_hll = get_coordinates(acc_hll)
+t_hll = sol_hll.t[end]
 
 # ## Exact Solution
 # The exact Riemann solution for the Sod problem consists of five constant
@@ -145,7 +162,11 @@ function compute_l1_error(N)
         law, m, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
         bc_left, bc_right, ic; final_time = 0.2, cfl = 0.5
     )
-    xx, UU, _ = solve_hyperbolic(p)
+    ode = sciml_problem(p)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode.p, ode.u0))
+    acc = solution_accessor(p)
+    UU = get_conserved(acc, sol, length(sol.t))
+    xx = get_coordinates(acc)
     err = 0.0
     for i in eachindex(xx)
         rho_num = conserved_to_primitive(law, UU[i])[1]

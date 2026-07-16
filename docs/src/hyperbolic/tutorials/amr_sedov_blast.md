@@ -16,10 +16,12 @@ resolution, saving computational cost.
 
 ## Problem Setup
 We solve the 2D Euler equations with a point-like energy release,
-using the AMR infrastructure: `AMRGrid`, `AMRProblem`, and `solve_amr`.
+using the AMR infrastructure: `AMRGrid`, `AMRProblem`, and the
+semidiscrete SciML `ODEProblem` path.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -91,8 +93,10 @@ max_lev = max_active_level(grid)
 
 ## Solving with AMR
 The `AMRProblem` packages the grid, solver, and time integration
-parameters. The `solve_amr` function uses Berger-Oliger subcycling:
-finer levels take smaller time steps (half the coarse step).
+parameters. `sciml_problem` flattens all active block interiors into a
+single ODE state and evolves them on the fixed (initially refined)
+hierarchy with a global time step set by the finest-level CFL limit;
+the solution accessor decodes the flat state back into per-block arrays.
 
 ````julia
 bcs = (TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC())
@@ -100,7 +104,13 @@ prob = AMRProblem(
     grid, HLLCSolver(), NoReconstruction(), bcs;
     final_time = 0.05, cfl = 0.3, regrid_interval = 4
 )
-final_grid, t_final = solve_amr(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, save_everystep = false)
+acc = solution_accessor(prob)
+states = get_conserved(acc, sol, length(sol.t))
+t_final = sol.t[end]
+final_grid = grid
 final_grid |> tc #hide
 ````
 
@@ -113,6 +123,7 @@ max_lev_final = max_active_level(final_grid)
 
 ## Visualisation
 We collect cell centres and densities from all active blocks
+(decoded into the `states` dictionary, keyed by block id)
 to create a scatter plot showing the AMR structure.
 
 ````julia
@@ -129,7 +140,7 @@ for block in active_blocks(final_grid)
         xc, yc = block_cell_center(block, i, j)
         push!(xs, xc)
         push!(ys, yc)
-        w = conserved_to_primitive(law, block.U[i, j])
+        w = conserved_to_primitive(law, states[block.id][i, j])
         push!(rhos, w[1])
         push!(levels, block.level)
     end
@@ -169,6 +180,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -213,7 +225,13 @@ prob = AMRProblem(
     grid, HLLCSolver(), NoReconstruction(), bcs;
     final_time = 0.05, cfl = 0.3, regrid_interval = 4
 )
-final_grid, t_final = solve_amr(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, save_everystep = false)
+acc = solution_accessor(prob)
+states = get_conserved(acc, sol, length(sol.t))
+t_final = sol.t[end]
+final_grid = grid
 
 n_blocks_final = length(active_blocks(final_grid))
 max_lev_final = max_active_level(final_grid)
@@ -231,7 +249,7 @@ for block in active_blocks(final_grid)
         xc, yc = block_cell_center(block, i, j)
         push!(xs, xc)
         push!(ys, yc)
-        w = conserved_to_primitive(law, block.U[i, j])
+        w = conserved_to_primitive(law, states[block.id][i, j])
         push!(rhos, w[1])
         push!(levels, block.level)
     end

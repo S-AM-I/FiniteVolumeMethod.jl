@@ -28,6 +28,7 @@ with constant $B_x = 0.5$ and $B_y = B_z = 0$.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -60,7 +61,14 @@ function compute_grmhd_error(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         grmhd_ic; final_time = t_final, cfl = 0.25,
     )
-    coords, U, t_end, _ = solve_hyperbolic(prob; vector_potential = nothing)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(ode_prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    coords = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     nx = N
     err = 0.0
     for ix in 1:nx
@@ -126,6 +134,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -154,7 +163,14 @@ function compute_grmhd_error(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         grmhd_ic; final_time = t_final, cfl = 0.25,
     )
-    coords, U, t_end, _ = solve_hyperbolic(prob; vector_potential = nothing)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(ode_prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    coords = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     nx = N
     err = 0.0
     for ix in 1:nx

@@ -14,6 +14,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # ```
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -43,7 +44,12 @@ function compute_error(N, recon)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), advection_ic;
         final_time = t_final, cfl = 0.4
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode = sciml_problem(prob)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode.p, ode.u0))
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    x = get_coordinates(acc)
+    t_end = sol.t[end]
     err = 0.0
     for i in eachindex(x)
         x_shifted = mod(x[i] - v0 * t_end, 1.0)
@@ -119,14 +125,22 @@ prob_muscl = HyperbolicProblem(
     DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), sod_ic;
     final_time = 0.2, cfl = 0.4
 )
-x_m, U_m, _ = solve_hyperbolic(prob_muscl)
+ode_m = sciml_problem(prob_muscl)
+sol_m = solve(ode_m, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_m.p, ode_m.u0))
+acc_m = solution_accessor(prob_muscl)
+U_m = get_conserved(acc_m, sol_m, length(sol_m.t))
+x_m = get_coordinates(acc_m)
 
 prob_weno = HyperbolicProblem(
     law, mesh_sod, HLLCSolver(), WENO3(),
     DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), sod_ic;
     final_time = 0.2, cfl = 0.4
 )
-x_w, U_w, _ = solve_hyperbolic(prob_weno)
+ode_w = sciml_problem(prob_weno)
+sol_w = solve(ode_w, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_w.p, ode_w.u0))
+acc_w = solution_accessor(prob_weno)
+U_w = get_conserved(acc_w, sol_w, length(sol_w.t))
+x_w = get_coordinates(acc_w)
 x_w |> tc #hide
 
 rho_muscl = [conserved_to_primitive(law, U_m[i])[1] for i in eachindex(U_m)]

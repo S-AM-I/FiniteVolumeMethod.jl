@@ -21,6 +21,7 @@ with $\gamma = 2$ and a constant normal magnetic field $B_x = 0.75$.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 2.0
@@ -56,7 +57,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), bw_ic;
     final_time = 0.1, cfl = 0.8
 )
-x, U, t_final = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t_final = sol.t[end]
 x |> tc #hide
 ````
 
@@ -103,6 +110,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 2.0
@@ -122,7 +130,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), bw_ic;
     final_time = 0.1, cfl = 0.8
 )
-x, U, t_final = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t_final = sol.t[end]
 
 using CairoMakie
 

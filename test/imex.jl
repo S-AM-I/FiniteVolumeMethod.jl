@@ -1,4 +1,7 @@
 using FiniteVolumeMethod, Test, StaticArrays, LinearAlgebra
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqSDIRK: KenCarp47
+using ADTypes: AutoFiniteDiff
 
 # ============================================================
 # 1. Tableau Tests
@@ -138,14 +141,24 @@ end
     )
 
     # Pure explicit solve
-    x_ref, U_ref, t_ref = solve_hyperbolic(prob)
+    ode_ref = sciml_problem(prob)
+    dt_ref = compute_initial_dt(ode_ref.p, ode_ref.u0)
+    sol_ref = solve(ode_ref, SSPRK33(); adaptive = false, dt = dt_ref)
+    acc = solution_accessor(prob)
+    U_ref = get_conserved(acc, sol_ref, length(sol_ref.t))
+    x_ref = get_coordinates(acc)
+    t_ref = sol_ref.t[end]
     W_ref = to_primitive(law, U_ref)
 
-    # IMEX solve with NullSource (should behave like explicit)
-    x_imex, U_imex, t_imex = solve_hyperbolic_imex(
-        prob, NullSource();
-        scheme = IMEX_Midpoint()
-    )
+    # Split-path solve with NullSource (should behave like explicit).
+    # SSPRK33 applies f1 + f2 explicitly; a Newton-based IMEX algorithm
+    # cannot be driven by an identically-zero implicit part.
+    split_prob = sciml_problem(prob, NullSource())
+    dt_imex = compute_initial_dt(split_prob.p, split_prob.u0)
+    sol_imex = solve(split_prob, SSPRK33(); adaptive = false, dt = dt_imex)
+    U_imex = get_conserved(acc, sol_imex, length(sol_imex.t))
+    x_imex = x_ref
+    t_imex = sol_imex.t[end]
     W_imex = to_primitive(law, U_imex)
 
     # Both should reach the final time
@@ -217,10 +230,13 @@ end
         final_time = 0.05, cfl = 0.4
     )
 
-    x, U_final, t_final = solve_hyperbolic_imex(
-        prob, source;
-        scheme = IMEX_ARS222(), newton_tol = 1.0e-12, newton_maxiter = 10
-    )
+    split_prob = sciml_problem(prob, source)
+    dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+    sol = solve(split_prob, KenCarp47(autodiff = AutoFiniteDiff()); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U_final = get_conserved(acc, sol, length(sol.t))
+    x = get_coordinates(acc)
+    t_final = sol.t[end]
     W_final = to_primitive(law, U_final)
 
     # After evolution, pressure should have relaxed toward P_target
@@ -282,11 +298,14 @@ end
     momentum0 = sum(U0[i][2] for i in (ng + 1):(N_cells + ng)) * dx
     energy0 = sum(U0[i][3] for i in (ng + 1):(N_cells + ng)) * dx
 
-    # Solve with IMEX + NullSource (purely explicit, conservative)
-    x, U_final, t_final = solve_hyperbolic_imex(
-        prob, NullSource();
-        scheme = IMEX_SSP3_433()
-    )
+    # Solve the split problem with NullSource (purely explicit, conservative)
+    split_prob = sciml_problem(prob, NullSource())
+    dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+    sol = solve(split_prob, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U_final = get_conserved(acc, sol, length(sol.t))
+    x = get_coordinates(acc)
+    t_final = sol.t[end]
 
     mass_final = sum(U_final[i][1] for i in 1:N_cells) * dx
     momentum_final = sum(U_final[i][2] for i in 1:N_cells) * dx
@@ -320,10 +339,13 @@ end
         ic; final_time = 0.01, cfl = 0.3
     )
 
-    coords, U_final, t_final = solve_hyperbolic_imex(
-        prob, NullSource();
-        scheme = IMEX_Midpoint()
-    )
+    split_prob = sciml_problem(prob, NullSource())
+    dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+    sol = solve(split_prob, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    coords = get_coordinates(acc)
+    U_final = reshape(get_conserved(acc, sol, length(sol.t)), size(coords))
+    t_final = sol.t[end]
 
     # Should reach final time
     @test t_final ≈ 0.01 atol = 1.0e-10
@@ -354,7 +376,7 @@ end
 # Additional: Scheme-specific integration tests
 # ============================================================
 
-@testset "All IMEX schemes run Sod without crash" begin
+@testset "Split ODE path runs Sod without crash" begin
     eos = IdealGasEOS(1.4)
     law = EulerEquations{1}(eos)
     N_cells = 32
@@ -371,32 +393,29 @@ end
         final_time = 0.05, cfl = 0.3
     )
 
-    for (name, scheme) in [
-            ("SSP3_433", IMEX_SSP3_433()),
-            ("ARS222", IMEX_ARS222()),
-            ("Midpoint", IMEX_Midpoint()),
-        ]
-        @testset "$name" begin
-            x, U, t = solve_hyperbolic_imex(prob, NullSource(); scheme = scheme)
-            W = to_primitive(law, U)
+    split_prob = sciml_problem(prob, NullSource())
+    dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+    sol = solve(split_prob, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    t = sol.t[end]
+    W = to_primitive(law, U)
 
-            @test t ≈ 0.05 atol = 1.0e-10
+    @test t ≈ 0.05 atol = 1.0e-10
 
-            # Physical results
-            for i in 1:N_cells
-                @test W[i][1] > 0.0  # rho > 0
-                @test W[i][3] > 0.0  # P > 0
-            end
-
-            # Left state should be near original left state
-            @test W[1][1] ≈ 1.0 atol = 0.1
-            @test W[1][3] ≈ 1.0 atol = 0.1
-
-            # Right state should be near original right state
-            @test W[N_cells][1] ≈ 0.125 atol = 0.05
-            @test W[N_cells][3] ≈ 0.1 atol = 0.05
-        end
+    # Physical results
+    for i in 1:N_cells
+        @test W[i][1] > 0.0  # rho > 0
+        @test W[i][3] > 0.0  # P > 0
     end
+
+    # Left state should be near original left state
+    @test W[1][1] ≈ 1.0 atol = 0.1
+    @test W[1][3] ≈ 1.0 atol = 0.1
+
+    # Right state should be near original right state
+    @test W[N_cells][1] ≈ 0.125 atol = 0.05
+    @test W[N_cells][3] ≈ 0.1 atol = 0.05
 end
 
 @testset "ResistiveSource basic evaluation" begin

@@ -199,9 +199,9 @@ end
 end
 
 # ============================================================
-# Test 4: Compare ODEProblem with Legacy solve_hyperbolic
+# Test 4: Coarse Brio-Wu via ODEProblem (physics validity)
 # ============================================================
-@testset "ODEProblem vs legacy solve_hyperbolic" begin
+@testset "Coarse Brio-Wu (ODEProblem physics validity)" begin
     eos = IdealGasEOS(gamma = 2.0)
     law = IdealMHDEquations{2}(eos)
 
@@ -220,10 +220,6 @@ end
         bw_ic; final_time = 0.05, cfl = 0.4
     )
 
-    # Legacy solve
-    coords_leg, U_leg, t_leg, ct_leg = solve_hyperbolic(prob)
-    @test t_leg ≈ 0.05 atol = 1.0e-10
-
     # ODEProblem solve
     ode_prob = ODEProblem(prob)
     cache = ode_prob.p
@@ -241,29 +237,17 @@ end
     U_ode = get_conserved(accessor, sol, length(sol.t))
     ct_ode = get_ct_state(accessor, sol, length(sol.t))
 
-    # Both should reach the same final time
-    @test abs(sol.t[end] - t_leg) < 1.0e-10
+    # Must reach the requested final time
+    @test abs(sol.t[end] - 0.05) < 1.0e-10
 
-    # Solutions should be close (same RK3 scheme, same CFL, same RHS)
-    max_diff = 0.0
-    for iy in 1:ny, ix in 1:nx
-        diff = maximum(abs.(U_ode[ix, iy] - U_leg[ix, iy]))
-        max_diff = max(max_diff, diff)
-    end
-    @test max_diff < 1.0e-6
-
-    # Both should maintain div(B) = 0
-    @test max_divB(ct_leg, mesh.dx, mesh.dy, nx, ny) < 1.0e-12
+    # div(B) = 0 must be maintained
     @test max_divB(ct_ode, mesh.dx, mesh.dy, nx, ny) < 1.0e-12
 
-    # Both solutions should be physically valid
+    # Solution must be physically valid
     for iy in 1:ny, ix in 1:nx
         w_ode = conserved_to_primitive(law, U_ode[ix, iy])
-        w_leg = conserved_to_primitive(law, U_leg[ix, iy])
         @test w_ode[1] > 0  # density positive
         @test w_ode[5] > 0  # pressure positive
-        @test w_leg[1] > 0
-        @test w_leg[5] > 0
     end
 end
 

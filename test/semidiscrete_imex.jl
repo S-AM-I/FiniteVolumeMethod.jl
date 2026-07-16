@@ -1,6 +1,8 @@
 using FiniteVolumeMethod
 using OrdinaryDiffEq
 using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqSDIRK: KenCarp47
+using ADTypes: AutoFiniteDiff
 using SciMLBase: SplitFunction
 using StaticArrays
 using Test
@@ -110,9 +112,12 @@ end
     )
     @test sol_explicit.retcode == ReturnCode.Success
 
-    # --- SplitODEProblem solve via SSPRK33 (applies f1+f2 explicitly) ---
-    # (KenCarp4 requires a nontrivial implicit part; NullSource is zero
-    #  so Newton fails. SSPRK33 on SplitODEProblem is a valid test path.)
+    # --- SplitODEProblem solve via SSPRK33 ---
+    # SSPRK33 is not an IMEX method: it integrates the SplitFunction as a
+    # single combined RHS (f1 + f2, both explicit). With NullSource this
+    # cannot distinguish a dropped f2 from a zero f2 — the genuine
+    # source-delivery gate is the dropped-f2 regression testset below,
+    # which uses a Newton-based IMEX algorithm and a nonzero source.
     split_prob = SplitODEProblem(prob, NullSource())
     cache_imex = split_prob.p
     dt0_imex = compute_initial_dt(cache_imex, split_prob.u0)
@@ -170,4 +175,72 @@ end
     # dt should be less than the domain size / wave speed (sanity bound)
     dx = 1.0 / 50
     @test dt0 < dx
+end
+
+# ============================================================
+# Test 5: the stiff source genuinely fires on the split path
+# ============================================================
+#
+# Regression for the dropped-f2 defect: `solve` used to rebuild the
+# SplitODEProblem into a plain ODEProblem inside get_concrete_problem
+# and silently integrate only the hyperbolic part f1. A counting
+# source proves f2 is evaluated at all, and the relaxation physics
+# proves its contribution actually reaches the state.
+
+struct SDCountingSource{S} <: FiniteVolumeMethod.AbstractStiffSource
+    inner::S
+    calls::Base.RefValue{Int}
+end
+function FiniteVolumeMethod.evaluate_stiff_source(src::SDCountingSource, law, w, u)
+    src.calls[] += 1
+    return evaluate_stiff_source(src.inner, law, w, u)
+end
+function FiniteVolumeMethod.stiff_source_jacobian(src::SDCountingSource, law, w, u)
+    return stiff_source_jacobian(src.inner, law, w, u)
+end
+
+@testset "Stiff source fires on the split path (dropped-f2 regression)" begin
+    eos = IdealGasEOS(1.4)
+    law = EulerEquations{1}(eos)
+    ncells = 32
+    mesh = StructuredMesh1D(0.0, 1.0, ncells)
+
+    # Uniform static state: the hyperbolic RHS is exactly zero, so the
+    # state evolves by the cooling source alone. With T = P/rho
+    # (mu_mol = 1, rho = 1, v = 0) and Lambda(T) = lambda * (T - P_target):
+    #   dP/dt = -(gamma - 1) * lambda * (P - P_target)
+    # so P(t) = P_target + (P0 - P_target) * exp(-(gamma - 1) * lambda * t).
+    lambda = 50.0
+    P_target = 1.0
+    P0 = 3.0
+    source = SDCountingSource(
+        CoolingSource(T -> lambda * (T - P_target); mu_mol = 1.0), Ref(0)
+    )
+
+    prob = HyperbolicProblem(
+        law, mesh, HLLSolver(), NoReconstruction(),
+        TransmissiveBC(), TransmissiveBC(), x -> SVector(1.0, 0.0, P0);
+        final_time = 0.05, cfl = 0.4
+    )
+    split_prob = SplitODEProblem(prob, source)
+    dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+    sol = solve(
+        split_prob, KenCarp47(autodiff = AutoFiniteDiff());
+        adaptive = false, dt = dt0
+    )
+    @test sol.retcode == ReturnCode.Success
+
+    # The source must actually have been evaluated (a dropped f2 never
+    # calls it)
+    @test source.calls[] > 0
+
+    # And its contribution must reach the state: compare against the
+    # exact relaxation ODE. A dropped f2 leaves P at P0 = 3.0, which is
+    # ~73% away from the exact value — far outside the 5% gate.
+    P_exact = P_target + (P0 - P_target) * exp(-(eos.gamma - 1) * lambda * sol.t[end])
+    u_final = reinterpret(SVector{3, Float64}, copy(sol.u[end]))
+    for i in 1:ncells
+        w = conserved_to_primitive(law, u_final[i])
+        @test abs(w[3] - P_exact) / P_exact < 0.05
+    end
 end

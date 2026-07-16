@@ -29,6 +29,7 @@ We begin by loading the package and defining the conservation law.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 eos = IdealGasEOS(5.0 / 3.0)
@@ -62,7 +63,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.2, cfl = 0.3,
 )
-x, U, t = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t = sol.t[end]
 x |> tc #hide
 ````
 
@@ -106,6 +113,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 eos = IdealGasEOS(5.0 / 3.0)
@@ -124,7 +132,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.2, cfl = 0.3,
 )
-x, U, t = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t = sol.t[end]
 
 using CairoMakie
 

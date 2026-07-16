@@ -30,6 +30,7 @@ The Balsara 1 initial data are:
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 5.0 / 3.0
@@ -58,7 +59,15 @@ prob_sr = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.4, cfl = 0.4
 )
-x_sr, U_sr, t_sr = solve_hyperbolic(prob_sr)
+ode_sr = sciml_problem(prob_sr)
+sol_sr = solve(
+    ode_sr, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_sr.p, ode_sr.u0)
+)
+acc_sr = solution_accessor(prob_sr)
+U_sr = get_conserved(acc_sr, sol_sr, length(sol_sr.t))
+x_sr = get_coordinates(acc_sr)
+t_sr = sol_sr.t[end]
 x_sr |> tc #hide
 ````
 
@@ -70,7 +79,15 @@ prob_gr = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.4, cfl = 0.4
 )
-x_gr, U_gr, t_gr = solve_hyperbolic(prob_gr)
+ode_gr = sciml_problem(prob_gr)
+sol_gr = solve(
+    ode_gr, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_gr.p, ode_gr.u0)
+)
+acc_gr = solution_accessor(prob_gr)
+U_gr = get_conserved(acc_gr, sol_gr, length(sol_gr.t))
+x_gr = get_coordinates(acc_gr)
+t_gr = sol_gr.t[end]
 ````
 
 ## Comparing Results
@@ -131,6 +148,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 5.0 / 3.0
@@ -151,14 +169,30 @@ prob_sr = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.4, cfl = 0.4
 )
-x_sr, U_sr, t_sr = solve_hyperbolic(prob_sr)
+ode_sr = sciml_problem(prob_sr)
+sol_sr = solve(
+    ode_sr, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_sr.p, ode_sr.u0)
+)
+acc_sr = solution_accessor(prob_sr)
+U_sr = get_conserved(acc_sr, sol_sr, length(sol_sr.t))
+x_sr = get_coordinates(acc_sr)
+t_sr = sol_sr.t[end]
 
 prob_gr = HyperbolicProblem(
     law_gr, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.4, cfl = 0.4
 )
-x_gr, U_gr, t_gr = solve_hyperbolic(prob_gr)
+ode_gr = sciml_problem(prob_gr)
+sol_gr = solve(
+    ode_gr, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_gr.p, ode_gr.u0)
+)
+acc_gr = solution_accessor(prob_gr)
+U_gr = get_conserved(acc_gr, sol_gr, length(sol_gr.t))
+x_gr = get_coordinates(acc_gr)
+t_gr = sol_gr.t[end]
 
 rho_sr = [conserved_to_primitive(law_sr, U_sr[i])[1] for i in eachindex(U_sr)]
 vx_sr = [conserved_to_primitive(law_sr, U_sr[i])[2] for i in eachindex(U_sr)]

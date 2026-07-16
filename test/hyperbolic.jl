@@ -1,6 +1,18 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays
 using Test
+
+# Canonical SciML solve returning the legacy (x, U, t) triple.
+function solve_canonical_1d(prob; alg = SSPRK33())
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, alg; adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end]
+end
 
 # ============================================================
 # Exact Riemann solver for Sod shock tube (used for verification)
@@ -196,7 +208,7 @@ end
             final_time = 0.2, cfl = 0.5
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10
@@ -233,7 +245,7 @@ end
                 x -> x < 0.5 ? wL : wR;
                 final_time = 0.2, cfl = 0.5
             )
-            x, U, t = solve_hyperbolic(prob)
+            x, U, t = solve_canonical_1d(prob)
             W = to_primitive(law, U)
             dx = 1.0 / N
             err = sum(abs(W[i][1] - sod_exact(x[i], 0.2)[1]) * dx for i in 1:N)
@@ -265,7 +277,7 @@ end
         final_time = 0.15, cfl = 0.4
     )
 
-    x, U, t = solve_hyperbolic(prob)
+    x, U, t = solve_canonical_1d(prob)
     W = to_primitive(law, U)
 
     # Physical checks: density and pressure should remain positive
@@ -308,7 +320,7 @@ end
     momentum0 = sum(U0[i][2] for i in 3:102) * dx
     energy0 = sum(U0[i][3] for i in 3:102) * dx
 
-    x, U_final, t = solve_hyperbolic(prob)
+    x, U_final, t = solve_canonical_1d(prob)
 
     mass_final = sum(U_final[i][1] for i in 1:100) * dx
     momentum_final = sum(U_final[i][2] for i in 1:100) * dx
@@ -381,7 +393,7 @@ end
                 final_time = 0.2, cfl = 0.4
             )
 
-            x, U, t = solve_hyperbolic(prob)
+            x, U, t = solve_canonical_1d(prob)
             W = to_primitive(law, U)
 
             # Solution should be physically valid
@@ -416,7 +428,7 @@ end
         final_time = 0.2, cfl = 0.5
     )
 
-    x, U, t = solve_hyperbolic(prob; method = :euler)
+    x, U, t = solve_canonical_1d(prob; alg = Euler())
     W = to_primitive(law, U)
 
     # Should complete and give valid results (more diffusive than MUSCL)

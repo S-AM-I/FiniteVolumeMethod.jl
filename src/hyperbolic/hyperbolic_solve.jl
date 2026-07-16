@@ -207,13 +207,16 @@ Solve the 1D hyperbolic problem using explicit time integration.
 - `U_final::Vector{SVector{N}}`: Final conserved variable vectors at cell centers.
 - `t_final::Real`: Final time reached.
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic(
         prob::HyperbolicProblem;
         method::Symbol = :ssprk3,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
-    _v2_api_depwarn(:solve_hyperbolic, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem)", backend)
     mesh = prob.mesh
     nc = ncells(mesh)

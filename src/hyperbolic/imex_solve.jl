@@ -38,6 +38,10 @@ Runge-Kutta time integration.
 - `U_final::Vector{SVector{N}}`: Final conserved variable vectors at cell centers.
 - `t_final::Real`: Final time reached.
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic_imex(
         prob::HyperbolicProblem, stiff_source::AbstractStiffSource;
         scheme::AbstractIMEXScheme = IMEX_SSP3_433(),
@@ -45,10 +49,6 @@ function solve_hyperbolic_imex(
         newton_maxiter::Int = 5,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
-    )
-    _v2_api_depwarn(
-        :solve_hyperbolic_imex,
-        "`sciml_problem(prob, stiff_source)` with a SciML IMEX algorithm",
     )
     _cpu_backend_only("solve_hyperbolic_imex(::HyperbolicProblem, ...)", backend)
     mesh = prob.mesh
@@ -240,6 +240,10 @@ Runge-Kutta time integration.
 - `U_final::Matrix{SVector{N}}`: Final conserved variable matrix (nx x ny).
 - `t_final::Real`: Final time reached.
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic_imex(
         prob::HyperbolicProblem2D, stiff_source::AbstractStiffSource;
         scheme::AbstractIMEXScheme = IMEX_SSP3_433(),
@@ -248,10 +252,6 @@ function solve_hyperbolic_imex(
         parallel::Bool = false,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
-    )
-    _v2_api_depwarn(
-        :solve_hyperbolic_imex,
-        "`sciml_problem(prob, stiff_source)` with a SciML IMEX algorithm",
     )
     _cpu_backend_only("solve_hyperbolic_imex(::HyperbolicProblem2D, ...)", backend)
     mesh = prob.mesh

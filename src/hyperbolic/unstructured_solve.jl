@@ -304,13 +304,16 @@ Solve the hyperbolic conservation law on an unstructured mesh.
 - `U_final::Vector{SVector{N,FT}}`: Final conserved variable vector per cell.
 - `t_final::Real`: Final time reached.
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic(
         prob::UnstructuredHyperbolicProblem;
         method::Symbol = :ssprk3,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
-    _v2_api_depwarn(:solve_hyperbolic, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     _cpu_backend_only("solve_hyperbolic(::UnstructuredHyperbolicProblem)", backend)
     mesh = prob.mesh
     ntri = mesh.ntri

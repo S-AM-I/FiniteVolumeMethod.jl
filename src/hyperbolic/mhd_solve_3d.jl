@@ -170,6 +170,10 @@ Solve the 3D MHD problem using constrained transport for div(B) = 0.
 - `t_final`: Final time reached.
 - `ct`: Final `CTData3D` (for inspecting div(B), face-centered B, etc.).
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic(
         prob::HyperbolicProblem3D{<:IdealMHDEquations{3}};
         method::Symbol = :ssprk3,
@@ -178,10 +182,6 @@ function solve_hyperbolic(
         vector_potential_z = nothing,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
-    )
-    _v2_api_depwarn(
-        :solve_hyperbolic,
-        "`sciml_problem(prob; vector_potential_x = ..., vector_potential_y = ..., vector_potential_z = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem3D{<:IdealMHDEquations{3}})", backend)
     _validate_ct_reconstruction(prob.reconstruction)

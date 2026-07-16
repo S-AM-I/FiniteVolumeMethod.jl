@@ -15,6 +15,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # The initial primitive states $(\rho, v_x, v_y, v_z, P, B_x, B_y, B_z)$ are:
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -37,7 +38,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.4, cfl = 0.4
 )
-x, U, t_final = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t_final = sol.t[end]
 x |> tc #hide
 
 # ## Extracting Primitive Variables

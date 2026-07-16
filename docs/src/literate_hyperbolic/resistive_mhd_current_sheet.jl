@@ -6,7 +6,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # field reverses direction. In fully resistive MHD this configuration
 # would undergo reconnection on a diffusive time scale $\tau \sim L^2/\eta$.
 #
-# The `solve_hyperbolic` solver evolves only the ideal (hyperbolic) MHD
+# The hyperbolic solver evolves only the ideal (hyperbolic) MHD
 # part. The resistive terms (`resistive_flux_x`, `ohmic_heating`) are
 # provided as standalone utility functions for operator-split or IMEX
 # integration. Here we demonstrate both the ideal evolution and the
@@ -18,6 +18,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # (a guide field).
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -44,7 +45,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), current_sheet_ic;
     final_time = 0.1, cfl = 0.4,
 )
-x, U, t = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t = sol.t[end]
 x |> tc #hide
 
 # ## Computing Current Density and Resistive Heating

@@ -1,7 +1,19 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays
 using LinearAlgebra
+
+# Canonical SciML solve of an AMRProblem with forward Euler (the same
+# scheme as the legacy 2D solve_amr global step); returns the per-block
+# conserved states (Dict{block_id => Matrix{SVector}}) and the final time.
+function solve_amr_canonical(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, Euler(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    return get_conserved(acc, sol, length(sol.t)), sol.t[end]
+end
 
 # ============================================================
 # Helper: create a standard 2D Euler law for AMR tests
@@ -833,18 +845,40 @@ function _amr_density_extrema(grid)
     return lo, hi
 end
 
-@testset "solve_amr single-block still warns and solves" begin
+# Variants operating on per-block states extracted from a SciML solution
+# (the grid provides the geometry; regridding is disabled in these tests).
+function _amr_total_mass(grid, states)
+    return sum(
+        sum(u[1] for u in states[bid]) * grid.blocks[bid].dx[1] * grid.blocks[bid].dx[2]
+            for bid in keys(states)
+    )
+end
+
+function _amr_density_extrema_states(states)
+    lo, hi = Inf, -Inf
+    for U_b in values(states)
+        for u in U_b
+            lo = min(lo, u[1])
+            hi = max(hi, u[1])
+        end
+    end
+    return lo, hi
+end
+
+@testset "AMR ODEProblem single-block still warns and solves" begin
     grid = AMRGrid(AMR_LAW, AMR_GX_CRIT, (8, 8), 2, (0.0, 0.0), (1.0, 1.0), Val(AMR_NVAR))
     _amr_fill_ic!(grid, (x, y) -> SVector(1.0, 0.0, 0.0, 1.0))
     prob = AMRProblem(
         grid, HLLCSolver(), NoReconstruction(), AMR_GX_BCS;
         final_time = 1.0e-4, cfl = 0.4, regrid_interval = 0
     )
-    grid_out, t_final = @test_logs (:warn,) match_mode = :any solve_amr(prob)
-    @test t_final > 0.0
+    ode = @test_logs (:warn,) match_mode = :any sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, Euler(); adaptive = false, dt = dt0)
+    @test sol.t[end] > 0.0
 end
 
-@testset "same-level multi-block matches single-block reference (legacy path)" begin
+@testset "same-level multi-block matches single-block reference (ODEProblem path)" begin
     # Pulse advecting in +x across the vertical block seam at x = 0.5.
     ic = (x, y) -> SVector(1.0 + 0.5 * exp(-200.0 * ((x - 0.35)^2 + (y - 0.5)^2)), 1.0, 0.0, 1.0)
 
@@ -866,29 +900,30 @@ end
         grid1, HLLCSolver(), NoReconstruction(), AMR_GX_BCS;
         final_time = 0.05, cfl = 0.4, regrid_interval = 0
     )
-    g4, t4 = solve_amr(prob4)
-    g1, t1 = solve_amr(prob1)
+    U4, t4 = solve_amr_canonical(prob4)
+    U1, t1 = solve_amr_canonical(prob1)
     @test t4 ≈ 0.05 atol = 1.0e-12
     @test t1 ≈ 0.05 atol = 1.0e-12
 
     # Cell-by-cell match against the single-block reference (same physical grid)
-    ref = g1.blocks[1]
+    ref = grid1.blocks[1]
+    U_ref = U1[1]
     maxdiff = 0.0
-    for b in values(g4.blocks)
-        b.active || continue
+    for (bid, U_b) in U4
+        b = grid4.blocks[bid]
         for j in 1:b.dims[2], i in 1:b.dims[1]
             x, y = block_cell_center(b, i, j)
             ri = Int(floor((x - ref.origin[1]) / ref.dx[1])) + 1
             rj = Int(floor((y - ref.origin[2]) / ref.dx[2])) + 1
-            maxdiff = max(maxdiff, maximum(abs.(b.U[i, j] - ref.U[ri, rj])))
+            maxdiff = max(maxdiff, maximum(abs.(U_b[i, j] - U_ref[ri, rj])))
         end
     end
     @test maxdiff < 1.0e-13
 
     # Global conservation while the pulse is away from the boundary
     # (background in/out fluxes cancel; roundoff-level drift only)
-    @test abs(_amr_total_mass(g4) - mass4_0) < 1.0e-10
-    @test abs(_amr_total_mass(g1) - mass1_0) < 1.0e-10
+    @test abs(_amr_total_mass(grid4, U4) - mass4_0) < 1.0e-10
+    @test abs(_amr_total_mass(grid1, U1) - mass1_0) < 1.0e-10
 end
 
 @testset "coarse-fine interface: uniform state exactly preserved" begin
@@ -903,19 +938,18 @@ end
         grid, HLLCSolver(), NoReconstruction(), AMR_GX_BCS;
         final_time = 0.02, cfl = 0.4, regrid_interval = 0
     )
-    g, t = solve_amr(prob)
+    U_blocks, t = solve_amr_canonical(prob)
     @test t ≈ 0.02 atol = 1.0e-12
     maxdev = 0.0
-    for b in values(g.blocks)
-        b.active || continue
-        for j in 1:b.dims[2], i in 1:b.dims[1]
-            maxdev = max(maxdev, maximum(abs.(b.U[i, j] - u0)))
+    for U_b in values(U_blocks)
+        for u in U_b
+            maxdev = max(maxdev, maximum(abs.(u - u0)))
         end
     end
     @test maxdev == 0.0
 end
 
-@testset "coarse-fine interface: conservation and no reflection (legacy path)" begin
+@testset "coarse-fine interface: conservation and no reflection (ODEProblem path)" begin
     # Refined patch on [0, 0.5]^2; density pulse inside the fine region
     # advects in +x across the level-2 -> level-1 seam at x = 0.5.
     grid = AMRGrid(AMR_LAW, AMR_GX_CRIT, (8, 8), 3, (0.0, 0.0), (1.0, 1.0), Val(AMR_NVAR))
@@ -939,31 +973,28 @@ end
         grid, HLLCSolver(), NoReconstruction(), AMR_GX_BCS;
         final_time = 0.25, cfl = 0.4, regrid_interval = 0
     )
-    g, t = solve_amr(prob)
+    U_blocks, t = solve_amr_canonical(prob)
     @test t ≈ 0.25 atol = 1.0e-12
 
     # Mass conservation: the coarse-fine seam is flux-corrected, so the
     # only drift comes from the pulse's numerically diffused tail reaching
     # the outflow boundary (small but nonzero; the surgical seam
     # conservation gate is the one-step test below).
-    @test abs(_amr_total_mass(g) - mass0) < 1.0e-4
+    @test abs(_amr_total_mass(grid, U_blocks) - mass0) < 1.0e-4
 
     # By t = 0.25 the pulse center has crossed x = 0.5 into the coarse
     # region: verify the coarse side actually received it ...
-    right_block = first(
-        b for b in values(g.blocks)
-            if b.active && b.level == 1 && b.origin == (0.5, 0.0)
+    right_bid = first(
+        bid for bid in keys(U_blocks)
+            if grid.blocks[bid].level == 1 && grid.blocks[bid].origin == (0.5, 0.0)
     )
-    rho_max_right = maximum(
-        right_block.U[i, j][1]
-            for j in 1:right_block.dims[2], i in 1:right_block.dims[1]
-    )
+    rho_max_right = maximum(u[1] for u in U_blocks[right_bid])
     @test rho_max_right > 1.05
 
     # ... and no spurious reflection: the first-order monotone scheme with a
     # conservative seam must not create new extrema (no undershoot behind the
     # interface, no overshoot ahead of it).
-    rho_lo1, rho_hi1 = _amr_density_extrema(g)
+    rho_lo1, rho_hi1 = _amr_density_extrema_states(U_blocks)
     @test rho_lo1 >= rho_lo0 - 1.0e-10
     @test rho_hi1 <= rho_hi0 + 1.0e-10
 end
@@ -992,15 +1023,19 @@ end
     )
     tot0 = ntuple(k -> total(grid, k), 4)
 
-    dt_step = 1.0e-5  # below the CFL limit -> solve_amr takes exactly one step
+    dt_step = 1.0e-5  # below the CFL limit -> the solve takes exactly one step
     prob = AMRProblem(
         grid, HLLCSolver(), NoReconstruction(), AMR_GX_BCS;
         final_time = dt_step, cfl = 0.4, regrid_interval = 0
     )
-    g, t = solve_amr(prob)
+    U_blocks, t = solve_amr_canonical(prob)
     @test t ≈ dt_step atol = 1.0e-18
 
-    tot1 = ntuple(k -> total(g, k), 4)
+    total_states(states, k) = sum(
+        sum(u[k] for u in states[bid]) * grid.blocks[bid].dx[1] * grid.blocks[bid].dx[2]
+            for bid in keys(states)
+    )
+    tot1 = ntuple(k -> total_states(U_blocks, k), 4)
     # Mass and energy: boundary fluxes cancel exactly (background left/right),
     # so any violation is a seam leak.
     @test abs(tot1[1] - tot0[1]) < 1.0e-13
@@ -1009,7 +1044,7 @@ end
     @test abs(tot1[3] - tot0[3]) < 1.0e-13
 end
 
-@testset "3D multi-block still throws (no 3D ghost exchange)" begin
+@testset "3D multi-block still throws (no 3D SciML AMR path)" begin
     law3 = EulerEquations{3}(AMR_EOS)
     crit = GradientRefinement(; refine_threshold = 1.0e9, coarsen_threshold = 0.0)
     grid3 = AMRGrid(law3, crit, (4, 4, 4), 2, (0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
@@ -1026,5 +1061,5 @@ end
         grid3, HLLCSolver(), NoReconstruction(), bcs3;
         final_time = 1.0e-4, cfl = 0.4, regrid_interval = 0
     )
-    @test_throws ArgumentError solve_amr(prob3)
+    @test_throws ArgumentError sciml_problem(prob3)
 end

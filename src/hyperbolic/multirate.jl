@@ -509,10 +509,6 @@ function solve_amr_subcycled(
         method::Symbol = :ssprk3,
         callback::Union{Nothing, Function} = nothing,
     )
-    _v2_api_depwarn(
-        :solve_amr_subcycled,
-        "`solve(prob, alg; ...)` or `sciml_problem(prob)` for the canonical non-subcycled AMR path",
-    )
     grid = prob.grid
     t = prob.initial_time
     step = 0

@@ -18,6 +18,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   Small Eddies from Large Ones. Proc. R. Soc. A, 158, 499-521.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -74,7 +75,13 @@ for N in resolutions
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         tgv_ic; final_time = t_final, cfl = 0.3,
     )
-    coords, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    coords = get_coordinates(accessor)
+    U = reshape(get_conserved(accessor, sol, length(sol.t)), N, N)
+    t_end = sol.t[end]
     ke_num = compute_ke(ns, coords, U, N)
     ke_exact = KE_analytical_0 * exp(-decay_rate * t_end)
     push!(ke_errors, abs(ke_num - ke_exact) / ke_exact)
@@ -110,7 +117,12 @@ let current_U = nothing, coords_f = nothing
                 PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
                 tgv_ic; initial_time = t_start, final_time = t_end_snap, cfl = 0.3,
             )
-            coords_f, U_f, t_f = solve_hyperbolic(prob_f)
+            ode_f = sciml_problem(prob_f)
+            sol_f = solve(prob_f, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_f.p, ode_f.u0))
+            acc_f = solution_accessor(prob_f)
+            coords_f = get_coordinates(acc_f)
+            U_f = reshape(get_conserved(acc_f, sol_f, length(sol_f.t)), N_fine, N_fine)
+            t_f = sol_f.t[end]
         else
             prev_U = current_U
             mesh_f = StructuredMesh2D(0.0, L, 0.0, L, N_fine, N_fine)
@@ -127,7 +139,12 @@ let current_U = nothing, coords_f = nothing
                 PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
                 restart_ic; initial_time = t_start, final_time = t_end_snap, cfl = 0.3,
             )
-            coords_f, U_f, t_f = solve_hyperbolic(prob_f)
+            ode_f = sciml_problem(prob_f)
+            sol_f = solve(prob_f, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_f.p, ode_f.u0))
+            acc_f = solution_accessor(prob_f)
+            coords_f = get_coordinates(acc_f)
+            U_f = reshape(get_conserved(acc_f, sol_f, length(sol_f.t)), N_fine, N_fine)
+            t_f = sol_f.t[end]
         end
         current_U = U_f
         push!(t_history, t_f)

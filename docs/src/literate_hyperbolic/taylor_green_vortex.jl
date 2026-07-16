@@ -15,6 +15,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # where $k = 2\pi/L$, $\nu = \mu/\rho_0$ is the kinematic viscosity.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -51,7 +52,13 @@ prob = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     ic_tgv; final_time = t_final, cfl = 0.3
 )
-coords, U, t_end = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, save_everystep = false)
+acc = solution_accessor(prob)
+U = reshape(get_conserved(acc, sol, length(sol.t)), N, N)
+coords = get_coordinates(acc)
+t_end = sol.t[end]
 coords |> tc #hide
 
 # ## Comparison with Exact Solution

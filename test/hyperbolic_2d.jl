@@ -1,6 +1,19 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test
+
+# Canonical SciML solve returning the legacy (coords, U, t) triple.
+function solve_canonical(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    coords = get_coordinates(acc)
+    # Plain-law accessors return a flat vector; match the legacy shape.
+    return coords, reshape(U, size(coords)), sol.t[end]
+end
 
 # Reuse the exact Sod solution from Phase 1 tests
 function sod_exact(x, t; x0 = 0.5, γ = 1.4)
@@ -70,7 +83,7 @@ end
                 x -> x < 0.5 ? wL : wR; final_time = 0.2, cfl = 0.5
             )
 
-            x, U, t = solve_hyperbolic(prob)
+            x, U, t = solve_canonical(prob)
             W = to_primitive(law, U)
 
             @test t ≈ 0.2 atol = 1.0e-10
@@ -92,7 +105,7 @@ end
                     DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR),
                     x -> x < 0.5 ? wL : wR; final_time = 0.2, cfl = 0.5
                 )
-                x, U, t = solve_hyperbolic(prob)
+                x, U, t = solve_canonical(prob)
                 W = to_primitive(law, U)
                 dx = 1.0 / N
                 return sum(abs(W[i][1] - sod_exact(x[i], 0.2)[1]) * dx for i in 1:N)
@@ -115,7 +128,7 @@ end
                 x -> x < 0.5 ? wL : wR; final_time = 0.15, cfl = 0.4
             )
 
-            x, U, t = solve_hyperbolic(prob)
+            x, U, t = solve_canonical(prob)
             W = to_primitive(law, U)
 
             # Positivity: ρ > 0 and P > 0
@@ -180,7 +193,7 @@ end
             final_time = 0.2, cfl = 0.4
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10
@@ -216,7 +229,7 @@ end
             final_time = 0.2, cfl = 0.4
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10
@@ -262,7 +275,7 @@ end
         mom_y0 = sum(U0[ix + 2, iy + 2][3] for ix in 1:50, iy in 1:50) * dx * dy
         energy0 = sum(U0[ix + 2, iy + 2][4] for ix in 1:50, iy in 1:50) * dx * dy
 
-        coords, U_final, t = solve_hyperbolic(prob)
+        coords, U_final, t = solve_canonical(prob)
         mass_f = sum(U_final[ix, iy][1] for ix in 1:50, iy in 1:50) * dx * dy
         mom_xf = sum(U_final[ix, iy][2] for ix in 1:50, iy in 1:50) * dx * dy
         mom_yf = sum(U_final[ix, iy][3] for ix in 1:50, iy in 1:50) * dx * dy
@@ -298,7 +311,7 @@ end
             ic; final_time = 0.1, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         # All values should be physical
@@ -343,7 +356,7 @@ end
             final_time = 0.01, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         # Uniform state with zero velocity + reflective walls should stay uniform
@@ -396,7 +409,7 @@ end
                     final_time = 0.2, cfl = 0.3
                 )
 
-                coords, U, t = solve_hyperbolic(prob)
+                coords, U, t = solve_canonical(prob)
                 W = to_primitive(law, U)
 
                 @test t ≈ 0.2 atol = 1.0e-10
@@ -422,7 +435,7 @@ end
                 (x, y) -> x < 0.5 ? wL : wR;
                 final_time = 0.2, cfl = 0.3
             )
-            coords, U, t = solve_hyperbolic(prob)
+            coords, U, t = solve_canonical(prob)
             W = to_primitive(law, U)
             dx = 1.0 / N
             jmid = 2

@@ -1,6 +1,17 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays
+
+# Canonical SciML solve returning the legacy (x, U, t) triple.
+function solve_canonical_1d(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end]
+end
 
 # ============================================================
 # IdealMHDEquations Type Tests
@@ -320,7 +331,7 @@ end
             final_time = 0.1, cfl = 0.8
         )
 
-        x, U, t_final = solve_hyperbolic(prob)
+        x, U, t_final = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test t_final ≈ 0.1 atol = 1.0e-10
@@ -362,7 +373,7 @@ end
             final_time = 0.1, cfl = 0.8
         )
 
-        x, U, t_final = solve_hyperbolic(prob)
+        x, U, t_final = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         ρ = [w[1] for w in W]
@@ -388,8 +399,8 @@ end
             final_time = 0.1, cfl = 0.8
         )
 
-        _, U_hlld, _ = solve_hyperbolic(prob_hlld)
-        _, U_hll, _ = solve_hyperbolic(prob_hll)
+        _, U_hlld, _ = solve_canonical_1d(prob_hlld)
+        _, U_hll, _ = solve_canonical_1d(prob_hll)
 
         W_hlld = to_primitive(law, U_hlld)
         W_hll = to_primitive(law, U_hll)
@@ -417,7 +428,7 @@ end
             final_time = 0.1, cfl = 0.5
         )
 
-        x, U, t_final = solve_hyperbolic(prob)
+        x, U, t_final = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         ρ = [w[1] for w in W]
@@ -457,15 +468,14 @@ end
             final_time = 0.05, cfl = 0.5
         )
 
-        x, U0, _ = solve_hyperbolic(
-            HyperbolicProblem(
-                law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
-                PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), smooth_ic;
-                final_time = 0.0, cfl = 0.5
-            )
-        )
-
-        x, U_final, t_final = solve_hyperbolic(prob)
+        ode = sciml_problem(prob)
+        dt0 = compute_initial_dt(ode.p, ode.u0)
+        sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+        acc = solution_accessor(prob)
+        x = get_coordinates(acc)
+        U0 = get_conserved(acc, sol, 1)
+        U_final = get_conserved(acc, sol, length(sol.t))
+        t_final = sol.t[end]
 
         dx = 1.0 / 200
 
@@ -516,7 +526,7 @@ end
                 final_time = 0.05, cfl = 0.6
             )
 
-            x, U, t_final = solve_hyperbolic(prob)
+            x, U, t_final = solve_canonical_1d(prob)
             W = to_primitive(law, U)
 
             ρ = [w[1] for w in W]
@@ -633,7 +643,7 @@ end
             TransmissiveBC(), TransmissiveBC(), bw_ic;
             final_time = 0.05, cfl = 0.8
         )
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)  # density positive
         @test all(w -> w[5] > 0, W)  # pressure positive
@@ -646,7 +656,7 @@ end
             TransmissiveBC(), TransmissiveBC(), bw_ic;
             final_time = 0.05, cfl = 0.3
         )
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)
         @test all(w -> w[5] > 0, W)
@@ -672,7 +682,7 @@ end
         final_time = 0.1, cfl = 0.5
     )
 
-    x, U, t_final = solve_hyperbolic(prob)
+    x, U, t_final = solve_canonical_1d(prob)
     W = to_primitive(law, U)
 
     ρ = [w[1] for w in W]
@@ -717,7 +727,7 @@ end
         final_time = 0.5, cfl = 0.5
     )
 
-    x, U, t_final = solve_hyperbolic(prob)
+    x, U, t_final = solve_canonical_1d(prob)
     W = to_primitive(law, U)
 
     # The wave should propagate without changing shape (linear regime)
@@ -752,7 +762,7 @@ end
         final_time = 0.1, cfl = 0.8
     )
 
-    x, U, t_final = solve_hyperbolic(prob)
+    x, U, t_final = solve_canonical_1d(prob)
     W = to_primitive(law, U)
 
     ρ = [w[1] for w in W]

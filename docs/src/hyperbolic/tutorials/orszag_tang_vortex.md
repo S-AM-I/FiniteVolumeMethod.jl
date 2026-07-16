@@ -26,6 +26,7 @@ B_x = -\frac{\sin(2\pi y)}{\sqrt{4\pi}}, \quad B_y = \frac{\sin(4\pi x)}{\sqrt{4
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 5.0 / 3.0
@@ -73,11 +74,23 @@ prob = HyperbolicProblem2D(
 )
 ````
 
-The `vector_potential` keyword tells `solve_hyperbolic` to initialise
-the face-centred magnetic field from $A_z$ via Stokes' theorem:
+The `vector_potential` keyword tells `sciml_problem` to initialise
+the face-centred magnetic field from $A_z$ via Stokes' theorem. The
+`mhd_stage_limiter` keeps the cell-centred $B$ consistent with the
+face-centred field after every Runge-Kutta stage:
 
 ````julia
-coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_ot)
+ode = sciml_problem(prob; vector_potential = Az_ot)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(
+    ode, SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p));
+    adaptive = false, dt = dt0, save_everystep = false
+)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+ct = get_ct_state(acc, sol, length(sol.t))
+coords = get_coordinates(acc)
+t_final = sol.t[end]
 coords |> tc #hide
 ````
 
@@ -131,6 +144,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 5.0 / 3.0
@@ -164,7 +178,17 @@ prob = HyperbolicProblem2D(
     ot_ic; final_time = 0.5, cfl = 0.4
 )
 
-coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_ot)
+ode = sciml_problem(prob; vector_potential = Az_ot)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(
+    ode, SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p));
+    adaptive = false, dt = dt0, save_everystep = false
+)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+ct = get_ct_state(acc, sol, length(sol.t))
+coords = get_coordinates(acc)
+t_final = sol.t[end]
 
 divB_max = max_divB(ct, mesh)
 

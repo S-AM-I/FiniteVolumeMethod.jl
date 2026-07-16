@@ -15,6 +15,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # and $P = 0.01$ outside.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -49,7 +50,17 @@ prob = HyperbolicProblem2D(
     blast_ic; final_time = 0.4, cfl = 0.25
 )
 
-coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_blast)
+ode = sciml_problem(prob; vector_potential = Az_blast)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(
+    ode, SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p));
+    adaptive = false, dt = dt0, save_everystep = false
+)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+ct = get_ct_state(acc, sol, length(sol.t))
+coords = get_coordinates(acc)
+t_final = sol.t[end]
 coords |> tc #hide
 
 # ## Divergence Check

@@ -1,7 +1,41 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays
 using LinearAlgebra
+
+# Canonical SciML solve returning the legacy (coords, U, t, ct) 4-tuple.
+function solve_canonical_ct(
+        prob; alg = nothing,
+        vector_potential_x = nothing, vector_potential_y = nothing,
+        vector_potential_z = nothing,
+    )
+    ode = sciml_problem(
+        prob; vector_potential_x = vector_potential_x,
+        vector_potential_y = vector_potential_y,
+        vector_potential_z = vector_potential_z,
+    )
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    solver = alg === nothing ? SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p)) : alg
+    sol = solve(ode, solver; adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    ct = get_ct_state(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end], ct
+end
+
+# Canonical SciML solve returning the legacy (coords, U, t) triple (non-CT laws).
+function solve_canonical(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    coords = get_coordinates(acc)
+    # Plain-law accessors return a flat vector; match the legacy shape.
+    return coords, reshape(U, size(coords)), sol.t[end]
+end
 
 # ============================================================
 # 1. Type and Physical Flux Tests
@@ -212,7 +246,7 @@ end
         bw_ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     @test t_final ≈ 0.05 atol = 1.0e-10
@@ -262,7 +296,7 @@ end
         bw_y_ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     @test t_final ≈ 0.05 atol = 1.0e-10
@@ -307,7 +341,7 @@ end
         bw_z_ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     @test t_final ≈ 0.05 atol = 1.0e-10
@@ -360,7 +394,7 @@ end
             bw_ic; final_time = 0.05, cfl = 0.3
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(prob)
+        coords, U_final, t_final, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U_final)
 
         # Positivity
@@ -430,7 +464,7 @@ end
             smooth_ic; final_time = 0.02, cfl = 0.3
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(
+        coords, U_final, t_final, ct = solve_canonical_ct(
             prob;
             vector_potential_x = Ax_func,
             vector_potential_y = Ay_func,
@@ -455,7 +489,7 @@ end
             ic; final_time = 0.01, cfl = 0.3
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(prob)
+        coords, U_final, t_final, ct = solve_canonical_ct(prob)
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
         @test divB < 1.0e-12
     end
@@ -473,7 +507,7 @@ end
             ic; final_time = 0.01, cfl = 0.2
         )
 
-        _, _, _, ct = solve_hyperbolic(prob; method = :euler)
+        _, _, _, ct = solve_canonical_ct(prob; alg = Euler())
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
         @test divB < 1.0e-12
     end
@@ -494,7 +528,7 @@ end
             ic; final_time = 0.01, cfl = 0.3
         )
 
-        _, _, _, ct = solve_hyperbolic(prob)
+        _, _, _, ct = solve_canonical_ct(prob)
         divB = max_divB_3d(ct, mesh.dx, mesh.dy, mesh.dz, nx, ny, nz)
         @test divB < 1.0e-12
     end
@@ -544,7 +578,7 @@ end
             loop_ic_3d; final_time = 0.02, cfl = 0.3
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(
+        coords, U_final, t_final, ct = solve_canonical_ct(
             prob;
             vector_potential_x = Ax_loop,
             vector_potential_y = Ay_loop,
@@ -567,7 +601,7 @@ end
             loop_ic_3d; final_time = 0.02, cfl = 0.3
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(
+        coords, U_final, t_final, ct = solve_canonical_ct(
             prob;
             vector_potential_x = Ax_loop,
             vector_potential_y = Ay_loop,
@@ -609,17 +643,6 @@ end
     mesh = StructuredMesh3D(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, nx, ny, nz)
     dV = mesh.dx * mesh.dy * mesh.dz
 
-    # Initial state (zero final_time to get IC)
-    prob0 = HyperbolicProblem3D(
-        law, mesh, HLLSolver(), NoReconstruction(),
-        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-        smooth_ic_3d; final_time = 0.0, cfl = 0.3
-    )
-    _, U0, _, _ = solve_hyperbolic(prob0)
-
-    # Evolved state
     prob = HyperbolicProblem3D(
         law, mesh, HLLSolver(), NoReconstruction(),
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
@@ -627,7 +650,18 @@ end
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         smooth_ic_3d; final_time = 0.02, cfl = 0.3
     )
-    _, U_final, t_final, ct = solve_hyperbolic(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(
+        ode, SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p));
+        adaptive = false, dt = dt0
+    )
+    acc = solution_accessor(prob)
+    # Initial state (index 1) and evolved state from the same solution
+    U0 = get_conserved(acc, sol, 1)
+    U_final = get_conserved(acc, sol, length(sol.t))
+    ct = get_ct_state(acc, sol, length(sol.t))
+    t_final = sol.t[end]
 
     @test t_final ≈ 0.02 atol = 1.0e-10
 
@@ -670,15 +704,6 @@ end
     mesh = StructuredMesh3D(0.0, 1.0, 0.0, 1.0, 0.0, 1.0, nx, ny, nz)
     dV = mesh.dx * mesh.dy * mesh.dz
 
-    prob0 = HyperbolicProblem3D(
-        law, mesh, HLLSolver(), CellCenteredMUSCL(VanLeerLimiter()),
-        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-        PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-        ic; final_time = 0.0, cfl = 0.2
-    )
-    _, U0, _, _ = solve_hyperbolic(prob0)
-
     prob = HyperbolicProblem3D(
         law, mesh, HLLSolver(), CellCenteredMUSCL(VanLeerLimiter()),
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
@@ -686,7 +711,14 @@ end
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         ic; final_time = 0.01, cfl = 0.2
     )
-    _, U_final, _, ct = solve_hyperbolic(prob; method = :euler)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, Euler(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    # Initial state (index 1) and evolved state from the same solution
+    U0 = get_conserved(acc, sol, 1)
+    U_final = get_conserved(acc, sol, length(sol.t))
+    ct = get_ct_state(acc, sol, length(sol.t))
 
     mass_0 = sum(u[1] for u in U0) * dV
     mass_f = sum(u[1] for u in U_final) * dV
@@ -777,7 +809,7 @@ end
                 ic; final_time = 0.01, cfl = 0.2
             )
 
-            _, U, t, ct = solve_hyperbolic(prob)
+            _, U, t, ct = solve_canonical_ct(prob)
             W = to_primitive(law, U)
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
@@ -807,7 +839,7 @@ end
         ic; final_time = 0.02, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     u_ref = primitive_to_conserved(law, w_const)
 
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
@@ -837,7 +869,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
     u_ref = primitive_to_conserved(law, w_uniform)
 
@@ -873,7 +905,7 @@ end
         ic; final_time = 0.02, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     # Positivity
@@ -914,7 +946,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     # Positivity
@@ -963,7 +995,7 @@ end
         bw_ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     # Positivity
@@ -1011,8 +1043,8 @@ end
         bw_ic; final_time = 0.1, cfl = 0.3
     )
 
-    _, U_hlld, _, _ = solve_hyperbolic(prob_hlld)
-    _, U_hll, _, _ = solve_hyperbolic(prob_hll)
+    _, U_hlld, _, _ = solve_canonical_ct(prob_hlld)
+    _, U_hll, _, _ = solve_canonical_ct(prob_hll)
     W_hlld = to_primitive(law, U_hlld)
     W_hll = to_primitive(law, U_hll)
 
@@ -1045,7 +1077,7 @@ end
         ic; final_time = 0.02, cfl = 0.3
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     for iz in 1:nz, iy in 1:ny, ix in 1:nx
@@ -1080,7 +1112,7 @@ end
         bw_ic; final_time = 0.05, cfl = 0.2
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob; method = :euler)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob; alg = Euler())
 
     @test t_final ≈ 0.05 atol = 1.0e-10
 
@@ -1121,7 +1153,7 @@ end
         ic; final_time = 0.01, cfl = 0.2
     )
 
-    coords, U_final, t_final, ct = solve_hyperbolic(prob)
+    coords, U_final, t_final, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U_final)
 
     # Positivity
@@ -1167,8 +1199,8 @@ end
         final_time = 0.1, cfl = 0.3
     )
 
-    _, U_mhd, _, _ = solve_hyperbolic(prob_mhd)
-    _, U_euler, _ = solve_hyperbolic(prob_euler)
+    _, U_mhd, _, _ = solve_canonical_ct(prob_mhd)
+    _, U_euler, _ = solve_canonical(prob_euler)
 
     W_mhd = to_primitive(law_mhd, U_mhd)
     W_euler = to_primitive(law_euler, U_euler)

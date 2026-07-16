@@ -1,8 +1,20 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays
 using DelaunayTriangulation
 using LinearAlgebra
+
+# Canonical SciML solve returning the legacy (centroids, U, t) triple.
+function solve_canonical(prob; alg = SSPRK33())
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, alg; adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end]
+end
 
 # ============================================================
 # Helper: Create a refined square mesh
@@ -201,7 +213,7 @@ end
         TransmissiveBC(), ic;
         final_time = 0.1, cfl = 0.3
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
 
     for i in eachindex(U)
         w = conserved_to_primitive(law, U[i])
@@ -229,7 +241,7 @@ end
         TransmissiveBC(), ic;
         final_time = 0.2, cfl = 0.3
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
     @test t ≈ 0.2
 
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
@@ -264,7 +276,7 @@ end
         TransmissiveBC(), ic;
         final_time = 0.01, cfl = 0.3
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
 
     # Initial mass
     mass_0 = sum(
@@ -297,8 +309,8 @@ end
         final_time = 0.05, cfl = 0.3
     )
 
-    _, U_euler, t_euler = solve_hyperbolic(prob; method = :euler)
-    _, U_rk3, t_rk3 = solve_hyperbolic(prob; method = :ssprk3)
+    _, U_euler, t_euler = solve_canonical(prob; alg = Euler())
+    _, U_rk3, t_rk3 = solve_canonical(prob; alg = SSPRK33())
 
     @test t_euler ≈ 0.05
     @test t_rk3 ≈ 0.05
@@ -328,7 +340,7 @@ end
             TransmissiveBC(), ic;
             final_time = 0.05, cfl = 0.3
         )
-        centroids, U, t = solve_hyperbolic(prob)
+        centroids, U, t = solve_canonical(prob)
         rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
         @test all(rho .> 0)
         @test all(isfinite, rho)
@@ -354,7 +366,7 @@ end
         ReflectiveBC(), sedov_ic;
         final_time = 0.05, cfl = 0.25
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
 
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
     P = [conserved_to_primitive(law, U[i])[4] for i in eachindex(U)]
@@ -380,7 +392,7 @@ end
         DirichletHyperbolicBC(SVector(0.5, 0.0, 0.0, 0.5)), ic;
         final_time = 0.05, cfl = 0.3
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
 
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
     @test all(rho .> 0)
@@ -404,7 +416,7 @@ end
         TransmissiveBC(), ic;
         final_time = 0.1, cfl = 0.3
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
 
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
     @test all(rho .> 0)
@@ -429,7 +441,7 @@ end
         TransmissiveBC(), ic;
         final_time = 0.05, cfl = 0.25
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
 
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
     P = [conserved_to_primitive(law, U[i])[5] for i in eachindex(U)]
@@ -463,7 +475,7 @@ end
             TransmissiveBC(), ic;
             final_time = 0.01, cfl = 0.3
         )
-        centroids, U, t = solve_hyperbolic(prob)
+        centroids, U, t = solve_canonical(prob)
 
         # Compute L1 error in density vs IC (short time, wave barely moves)
         err = 0.0
@@ -505,7 +517,7 @@ end
         bcs, TransmissiveBC(), ic;
         final_time = 0.01, cfl = 0.3
     )
-    centroids, U, t = solve_hyperbolic(prob)
+    centroids, U, t = solve_canonical(prob)
 
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
     @test all(rho .> 0)

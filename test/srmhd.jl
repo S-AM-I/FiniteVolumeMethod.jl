@@ -1,6 +1,17 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays
+
+# Canonical SciML solve returning the legacy (x, U, t) triple.
+function solve_canonical_1d(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end]
+end
 
 # ============================================================
 # SRMHDEquations Type Tests
@@ -263,7 +274,7 @@ end
             final_time = 0.4, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         # Basic sanity: solution should not have NaN or Inf
@@ -294,7 +305,7 @@ end
             final_time = 0.4, cfl = 0.3
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test all(isfinite.(w[1]) for w in W)
@@ -317,7 +328,7 @@ end
             final_time = 0.4, cfl = 0.2
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test all(isfinite.(w[1]) for w in W)
@@ -349,7 +360,7 @@ end
         final_time = 0.1, cfl = 0.4
     )
 
-    x, U, t = solve_hyperbolic(prob)
+    x, U, t = solve_canonical_1d(prob)
     dx = mesh.dx
 
     # Total conserved quantities
@@ -395,7 +406,7 @@ end
             final_time = 0.1, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         # Check density stays approximately constant (Alfvén wave is incompressible to leading order)
@@ -422,7 +433,7 @@ end
         final_time = 0.1, cfl = 0.8
     )
 
-    x, U, t = solve_hyperbolic(prob)
+    x, U, t = solve_canonical_1d(prob)
     W = to_primitive(law, U)
 
     @test t ≈ 0.1 atol = 1.0e-10
@@ -454,7 +465,7 @@ end
             final_time = 0.1, cfl = 0.3
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test all(isfinite.(w[1]) for w in W)
@@ -488,8 +499,8 @@ end
         final_time = 0.1, cfl = 0.3
     )
 
-    x_sr, U_sr, t_sr = solve_hyperbolic(prob_sr)
-    x_mhd, U_mhd, t_mhd = solve_hyperbolic(prob_mhd)
+    x_sr, U_sr, t_sr = solve_canonical_1d(prob_sr)
+    x_mhd, U_mhd, t_mhd = solve_canonical_1d(prob_mhd)
 
     W_sr = to_primitive(law_sr, U_sr)
     W_mhd = to_primitive(law_mhd, U_mhd)

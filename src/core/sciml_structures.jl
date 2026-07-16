@@ -19,8 +19,11 @@ _rebuild_eos(::IdealGasEOS, vals) = IdealGasEOS(vals[1])
 _rebuild_eos(::StiffenedGasEOS, vals) = StiffenedGasEOS(vals[1], vals[2])
 _rebuild_eos(eos, _) = eos
 
-_eos_from_law(law) = law.eos
+# Laws without an `.eos` field (shallow water, two-fluid, ...) simply expose
+# no EOS tunables; the `::Any` fallbacks above handle `nothing`.
+_eos_from_law(law) = hasfield(typeof(law), :eos) ? law.eos : nothing
 _eos_from_law(law::NavierStokesEquations) = law.euler.eos
+_eos_from_law(law::ReactiveEulerEquations) = law.euler.eos
 _n_eos_tunables(eos::IdealGasEOS) = 1
 _n_eos_tunables(eos::StiffenedGasEOS) = 2
 _n_eos_tunables(::Any) = 0

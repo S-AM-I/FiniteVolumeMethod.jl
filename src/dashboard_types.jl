@@ -343,8 +343,9 @@ end
 """
     hyperbolic_monitor(; interval=1, session_data, law, mesh)
 
-Create a callback function for injection into `solve_hyperbolic` and related
-cell-centered solvers. Requires JSON3 to be loaded (provided by FVMDashboardExt).
+Create a per-step callback for the internal fixed-step solver loops
+(`FiniteVolumeMethod.solve_hyperbolic` and related). For the canonical SciML
+path use `FVMMonitorCallback`, which returns a `DiscreteCallback`. Requires JSON3 to be loaded (provided by FVMDashboardExt).
 """
 function hyperbolic_monitor end
 

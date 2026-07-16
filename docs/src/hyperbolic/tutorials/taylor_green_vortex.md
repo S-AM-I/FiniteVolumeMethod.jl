@@ -24,6 +24,7 @@ where $k = 2\pi/L$, $\nu = \mu/\rho_0$ is the kinematic viscosity.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -64,7 +65,13 @@ prob = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     ic_tgv; final_time = t_final, cfl = 0.3
 )
-coords, U, t_end = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, save_everystep = false)
+acc = solution_accessor(prob)
+U = reshape(get_conserved(acc, sol, length(sol.t)), N, N)
+coords = get_coordinates(acc)
+t_end = sol.t[end]
 coords |> tc #hide
 ````
 
@@ -129,6 +136,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -161,7 +169,13 @@ prob = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     ic_tgv; final_time = t_final, cfl = 0.3
 )
-coords, U, t_end = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, save_everystep = false)
+acc = solution_accessor(prob)
+U = reshape(get_conserved(acc, sol, length(sol.t)), N, N)
+coords = get_coordinates(acc)
+t_end = sol.t[end]
 
 decay = exp(-2 * nu * k^2 * t_end)
 nx, ny = N, N

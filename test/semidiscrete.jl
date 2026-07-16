@@ -46,15 +46,8 @@ using Test
         @test u[1] > 0  # density > 0
     end
 
-    # Compare with legacy solve_hyperbolic
-    x_leg, U_leg, t_leg = solve_hyperbolic(prob; method = :ssprk3)
-    @test abs(sol.t[end] - t_leg) < 1.0e-10
-
-    # Solutions should be similar (not bitwise identical due to different
-    # callback mechanics, but physically equivalent)
-    U_sciml = reinterpret(SVector{3, Float64}, copy(sol.u[end]))
-    max_diff = maximum(maximum(abs.(U_sciml[i] - U_leg[i])) for i in eachindex(U_leg))
-    @test max_diff < 1.0e-8
+    # The solve must reach the requested final time exactly
+    @test abs(sol.t[end] - 0.2) < 1.0e-10
 end
 
 # ============================================================

@@ -22,6 +22,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # - **Final time**: $t_f = 1.0$
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -67,7 +68,15 @@ function solve_divb_state(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         loop_ic; final_time = 1.0, cfl = 0.4
     )
-    coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_loop)
+    ode_prob = sciml_problem(prob; vector_potential = Az_loop)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(ode_prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    coords = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    ct = get_ct_state(accessor, sol, length(sol.t))
+    t_final = sol.t[end]
     W = [conserved_to_primitive(law, U[i, j]) for i in axes(U, 1), j in axes(U, 2)]
     return coords, W, t_final, ct, mesh
 end
@@ -145,7 +154,7 @@ if isdefined(@__MODULE__, :record_evidence_result)
         ),
         artifacts = ["mhd_divb_solution.png", "mhd_divb_convergence.png"],
         notes = [
-            "Maintained constrained-transport execution path via solve_hyperbolic(prob; vector_potential = ...).",
+            "Canonical constrained-transport SciML execution path via sciml_problem(prob; vector_potential = ...), mhd_stage_limiter, and solve(ode_prob, SSPRK33()).",
             "This evidence entry is the mhd_ct invariant-stage constrained-transport div(B) case.",
         ],
         summary = Dict(

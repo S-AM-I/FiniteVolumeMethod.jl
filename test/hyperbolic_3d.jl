@@ -1,7 +1,21 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays
 using LinearAlgebra
+
+# Canonical SciML solve returning the legacy (coords, U, t) triple.
+function solve_canonical(prob; alg = SSPRK33())
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, alg; adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    coords = get_coordinates(acc)
+    # Plain-law accessors return a flat vector; match the legacy shape.
+    return coords, reshape(U, size(coords)), sol.t[end]
+end
 
 # ============================================================
 # Type Tests: 3D Euler Equations
@@ -210,7 +224,7 @@ end
             final_time = 0.05, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.05 atol = 1.0e-10
@@ -254,7 +268,7 @@ end
             final_time = 0.05, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.05 atol = 1.0e-10
@@ -298,7 +312,7 @@ end
             final_time = 0.05, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.05 atol = 1.0e-10
@@ -357,7 +371,7 @@ end
             final_time = 0.05, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.05 atol = 1.0e-10
@@ -409,7 +423,7 @@ end
             final_time = 0.05, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.05 atol = 1.0e-10
@@ -455,8 +469,8 @@ end
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    _, U_hll, _ = solve_hyperbolic(prob_hll)
-    _, U_lf, _ = solve_hyperbolic(prob_lf)
+    _, U_hll, _ = solve_canonical(prob_hll)
+    _, U_lf, _ = solve_canonical(prob_lf)
     W_hll = to_primitive(law, U_hll)
     W_lf = to_primitive(law, U_lf)
 
@@ -488,7 +502,7 @@ end
         final_time = 0.05, cfl = 0.2
     )
 
-    coords, U, t = solve_hyperbolic(prob; method = :euler)
+    coords, U, t = solve_canonical(prob; alg = Euler())
     W = to_primitive(law, U)
 
     @test t ≈ 0.05 atol = 1.0e-10
@@ -525,7 +539,7 @@ end
         final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     @test t ≈ 0.05 atol = 1.0e-10
@@ -563,7 +577,7 @@ end
         final_time = 0.1, cfl = 0.4
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Every cell should remain exactly the uniform state
@@ -616,7 +630,7 @@ end
     mom_z0 = sum(U0[ix + 2, iy + 2, iz + 2][4] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
     energy0 = sum(U0[ix + 2, iy + 2, iz + 2][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
 
-    coords, U_final, t = solve_hyperbolic(prob)
+    coords, U_final, t = solve_canonical(prob)
 
     mass_f = sum(U_final[ix, iy, iz][1] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
     mom_xf = sum(U_final[ix, iy, iz][2] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
@@ -662,7 +676,7 @@ end
     mass0 = sum(U0[ix + 2, iy + 2, iz + 2][1] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
     energy0 = sum(U0[ix + 2, iy + 2, iz + 2][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
 
-    _, U_final, _ = solve_hyperbolic(prob; method = :euler)
+    _, U_final, _ = solve_canonical(prob; alg = Euler())
 
     mass_f = sum(U_final[ix, iy, iz][1] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
     energy_f = sum(U_final[ix, iy, iz][5] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
@@ -702,7 +716,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     @testset "Positivity" begin
@@ -787,7 +801,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     @test t ≈ 0.05 atol = 1.0e-10
@@ -828,7 +842,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Density should be symmetric: W[ix,...] ≈ W[N+1-ix,...] etc.
@@ -875,7 +889,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Positivity
@@ -923,7 +937,7 @@ end
         final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Positivity — this is the key challenge for Einfeldt
@@ -962,7 +976,7 @@ end
         final_time = 0.01, cfl = 0.2
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Positivity
@@ -998,7 +1012,7 @@ end
         final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Positivity
@@ -1034,7 +1048,7 @@ end
         final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Uniform supersonic flow should remain uniform
@@ -1071,7 +1085,7 @@ end
             ic; final_time = 0.05, cfl = cfl
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         # All should reach the same final time
@@ -1127,7 +1141,7 @@ end
             ic; final_time = 1.0 / c0, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         # After one sound crossing time, the wave should return
@@ -1175,8 +1189,8 @@ end
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    _, U_lf, _ = solve_hyperbolic(prob_lf)
-    _, U_hll, _ = solve_hyperbolic(prob_hll)
+    _, U_lf, _ = solve_canonical(prob_lf)
+    _, U_hll, _ = solve_canonical(prob_hll)
     W_lf = to_primitive(law, U_lf)
     W_hll = to_primitive(law, U_hll)
 
@@ -1213,7 +1227,7 @@ end
         final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     # Transverse velocities should remain constant everywhere
@@ -1250,7 +1264,7 @@ end
         final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     @test t ≈ 0.1 atol = 1.0e-10
@@ -1300,7 +1314,7 @@ end
             for v in 1:5
     ]
 
-    _, U_final, _ = solve_hyperbolic(prob)
+    _, U_final, _ = solve_canonical(prob)
 
     totals_f = [
         sum(U_final[ix, iy, iz][v] for ix in 1:N, iy in 1:N, iz in 1:N) * vol
@@ -1339,7 +1353,7 @@ end
         final_time = 0.1, cfl = 0.4
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(law, U)
 
     for iz in 1:N, iy in 1:N, ix in 1:N
@@ -1374,7 +1388,7 @@ end
         final_time = 0.05, cfl = 0.2
     )
 
-    coords, U, t = solve_hyperbolic(prob; method = :euler)
+    coords, U, t = solve_canonical(prob; alg = Euler())
     W = to_primitive(law, U)
 
     @test t ≈ 0.05 atol = 1.0e-10

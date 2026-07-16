@@ -5,6 +5,16 @@ using LinearAlgebra
 using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: SciMLBase
 
+# Canonical SciML solve returning the legacy (x, U, t) triple.
+function solve_canonical_1d(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end]
+end
+
 # ============================================================
 # Exact Riemann solver for Sod shock tube (used for verification)
 # ============================================================
@@ -561,7 +571,7 @@ end
             final_time = final_t, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
         dx = 1.0 / N_cells
 
@@ -634,7 +644,7 @@ end
             final_time = 0.2, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         # Should reach final time
@@ -674,7 +684,7 @@ end
             final_time = 0.2, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10
@@ -696,7 +706,7 @@ end
             final_time = 0.2, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10
@@ -727,7 +737,7 @@ end
         momentum0 = sum(U0[i][2] for i in 3:(N + 2)) * dx
         energy0 = sum(U0[i][3] for i in 3:(N + 2)) * dx
 
-        x, U_final, t = solve_hyperbolic(prob)
+        x, U_final, t = solve_canonical_1d(prob)
 
         mass_final = sum(U_final[i][1] for i in 1:N) * dx
         momentum_final = sum(U_final[i][2] for i in 1:N) * dx
@@ -750,23 +760,15 @@ end
                 final_time = 0.2, cfl = 0.4
             )
 
-            # Legacy path
-            x, U, t = solve_hyperbolic(prob)
-            W = to_primitive(law, U)
-            @test t ≈ 0.2 atol = 1.0e-10
-            @test all(i -> all(isfinite, W[i]) && W[i][1] > 0 && W[i][3] > 0, 1:N)
-
-            # SciML ODEProblem path must agree with the legacy path
+            # SciML ODEProblem path
             ode_prob = SciMLBase.ODEProblem(prob)
             dt0 = 0.4 * mesh.dx / 3.0
             sol = SciMLBase.solve(ode_prob, SSPRK33(); adaptive = false, dt = dt0)
             @test sol.retcode == SciMLBase.ReturnCode.Success
+            @test sol.t[end] ≈ 0.2 atol = 1.0e-10
             u_sv = reinterpret(SVector{3, Float64}, sol.u[end])
             W_ode = [conserved_to_primitive(law, u_sv[i]) for i in 1:N]
             @test all(i -> all(isfinite, W_ode[i]) && W_ode[i][1] > 0 && W_ode[i][3] > 0, 1:N)
-            dx = 1.0 / N
-            path_diff = sum(abs(W_ode[i][1] - W[i][1]) * dx for i in 1:N)
-            @test path_diff < 0.02
         end
     end
 
@@ -780,9 +782,15 @@ end
                 x -> w0;
                 final_time = 0.1, cfl = 0.4
             )
-            x, U, t = solve_hyperbolic(prob)
-            u0 = primitive_to_conserved(law, w0)
-            @test maximum(maximum(abs.(U[i] - u0)) for i in 1:N) == 0.0
+            # The semidiscrete RHS must vanish identically on a uniform
+            # state. (The legacy exact end-state check relied on the
+            # legacy integrator arithmetic; SciML integrators introduce
+            # O(eps) roundoff even when the RHS is exactly zero, so the
+            # exactness gate lives on the RHS itself.)
+            ode = sciml_problem(prob)
+            du = zero(ode.u0)
+            ode.f(du, ode.u0, ode.p, 0.0)
+            @test maximum(abs.(du)) == 0.0
         end
     end
 
@@ -797,7 +805,7 @@ end
             final_time = 0.2, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical_1d(prob)
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10

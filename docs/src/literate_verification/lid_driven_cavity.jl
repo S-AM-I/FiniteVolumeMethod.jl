@@ -18,6 +18,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   Method. J. Comput. Phys., 48, 387-411.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using CairoMakie
@@ -64,7 +65,13 @@ prob = HyperbolicProblem2D(
     NoSlipBC(), NoSlipBC(),
     cavity_ic_with_lid; final_time = t_final, cfl = 0.3,
 )
-coords, U, t_end = solve_hyperbolic(prob)
+ode_prob = sciml_problem(prob)
+dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+accessor = solution_accessor(prob)
+coords = get_coordinates(accessor)
+U = reshape(get_conserved(accessor, sol, length(sol.t)), N, N)
+t_end = sol.t[end]
 W = to_primitive(ns, U)
 
 # ## Extract Centerline Profiles

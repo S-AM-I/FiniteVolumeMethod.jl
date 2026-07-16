@@ -64,16 +64,16 @@ end
 Solve the 2D SRMHD problem using constrained transport for ∇·B = 0.
 Same structure as the IdealMHDEquations{2} solver.
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic(
         prob::HyperbolicProblem2D{<:SRMHDEquations{2}};
         method::Symbol = :ssprk3,
         vector_potential = nothing,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
-    )
-    _v2_api_depwarn(
-        :solve_hyperbolic,
-        "`sciml_problem(prob; vector_potential = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem2D{<:SRMHDEquations{2}})", backend)
     _validate_ct_reconstruction(prob.reconstruction)

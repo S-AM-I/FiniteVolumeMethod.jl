@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays
 using LinearAlgebra: norm
@@ -179,7 +180,13 @@ end
         final_time = 0.1, cfl = 0.4
     )
 
-    x, U, t = solve_hyperbolic(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    x = get_coordinates(acc)
+    t = sol.t[end]
 
     # Mass fractions should stay in [0, 1] (approximately)
     for u in U
@@ -370,7 +377,13 @@ end
     mass0_prod = sum(U0[i + 2][5] * dx for i in 1:nc)
     mass0_total = sum(U0[i + 2][1] * dx for i in 1:nc)
 
-    x, U, t = solve_hyperbolic(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    x = get_coordinates(acc)
+    t = sol.t[end]
 
     # Final totals
     mass_fuel = sum(U[i][4] * dx for i in 1:nc)

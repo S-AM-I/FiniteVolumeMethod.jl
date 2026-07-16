@@ -1,6 +1,20 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays
+
+# Canonical SciML solve returning the legacy (coords, U, t, ct) 4-tuple.
+function solve_canonical_ct(prob; vector_potential = nothing, alg = nothing)
+    ode = sciml_problem(prob; vector_potential = vector_potential)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    solver = alg === nothing ? SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p)) : alg
+    sol = solve(ode, solver; adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    ct = get_ct_state(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end], ct
+end
 
 # ============================================================
 # 2D MHD Solver Basic Tests
@@ -20,7 +34,7 @@ using StaticArrays
             ic; final_time = 0.05, cfl = 0.3
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(prob)
+        coords, U_final, t_final, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U_final)
 
         u_ref = primitive_to_conserved(law, w_const)
@@ -40,7 +54,7 @@ using StaticArrays
             ic; final_time = 0.01, cfl = 0.3
         )
 
-        result = solve_hyperbolic(prob)
+        result = solve_canonical_ct(prob)
         @test length(result) == 4  # (coords, U, t, ct)
         coords, U, t, ct = result
         @test size(U) == (10, 10)
@@ -67,7 +81,7 @@ end
             ic; final_time = 0.05, cfl = 0.4
         )
 
-        _, _, _, ct = solve_hyperbolic(prob)
+        _, _, _, ct = solve_canonical_ct(prob)
         @test max_divB(ct, mesh.dx, mesh.dy, 30, 30) < 1.0e-12
     end
 
@@ -93,7 +107,7 @@ end
             nonuniform_ic; final_time = 0.05, cfl = 0.4
         )
 
-        _, _, _, ct = solve_hyperbolic(prob)
+        _, _, _, ct = solve_canonical_ct(prob)
         divB_max = max_divB(ct, mesh.dx, mesh.dy, 30, 30)
         @test divB_max < 1.0e-12
     end
@@ -108,7 +122,7 @@ end
             ic; final_time = 0.02, cfl = 0.3
         )
 
-        _, _, _, ct = solve_hyperbolic(prob; method = :euler)
+        _, _, _, ct = solve_canonical_ct(prob; alg = Euler())
         @test max_divB(ct, mesh.dx, mesh.dy, 20, 20) < 1.0e-12
     end
 end
@@ -142,7 +156,7 @@ end
             ot_ic; final_time = 0.1, cfl = 0.4
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(prob)
+        coords, U_final, t_final, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U_final)
 
         ρ = [w[1] for w in W]
@@ -167,7 +181,7 @@ end
             ot_ic; final_time = 0.1, cfl = 0.4
         )
 
-        coords, U_final, t_final, ct = solve_hyperbolic(prob)
+        coords, U_final, t_final, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U_final)
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
@@ -194,8 +208,8 @@ end
             ot_ic; final_time = 0.05, cfl = 0.4
         )
 
-        _, U_hlld, _, _ = solve_hyperbolic(prob_hlld)
-        _, U_hll, _, _ = solve_hyperbolic(prob_hll)
+        _, U_hlld, _, _ = solve_canonical_ct(prob_hlld)
+        _, U_hll, _, _ = solve_canonical_ct(prob_hll)
 
         # Both should be valid
         W_hlld = to_primitive(law, U_hlld)
@@ -257,7 +271,7 @@ end
             loop_ic; final_time = 0.1, cfl = 0.4
         )
 
-        _, _, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_loop)
+        _, _, t_final, ct = solve_canonical_ct(prob; vector_potential = Az_loop)
         @test t_final ≈ 0.1 atol = 1.0e-10
         @test max_divB(ct, mesh.dx, mesh.dy, 50, 50) < 1.0e-12
     end
@@ -271,7 +285,7 @@ end
             loop_ic; final_time = 0.1, cfl = 0.4
         )
 
-        _, U_final, _, _ = solve_hyperbolic(prob)
+        _, U_final, _, _ = solve_canonical_ct(prob)
         W = to_primitive(law, U_final)
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
@@ -290,7 +304,7 @@ end
             loop_ic; final_time = 0.1, cfl = 0.4
         )
 
-        _, U_final, _, _ = solve_hyperbolic(prob)
+        _, U_final, _, _ = solve_canonical_ct(prob)
         W = to_primitive(law, U_final)
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]
@@ -324,23 +338,22 @@ end
         mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 30, 30)
         dx, dy = mesh.dx, mesh.dy
 
-        # Initial state
-        prob0 = HyperbolicProblem2D(
-            law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
-            PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-            PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
-            smooth_ic; final_time = 0.0, cfl = 0.4
-        )
-        _, U0, _, _ = solve_hyperbolic(prob0)
-
-        # Final state
         prob = HyperbolicProblem2D(
             law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
             PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
             PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
             smooth_ic; final_time = 0.05, cfl = 0.4
         )
-        _, U_final, _, _ = solve_hyperbolic(prob)
+        ode = sciml_problem(prob)
+        dt0 = compute_initial_dt(ode.p, ode.u0)
+        sol = solve(
+            ode, SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p));
+            adaptive = false, dt = dt0
+        )
+        acc = solution_accessor(prob)
+        # Initial state (index 1) and final state from the same solution
+        U0 = get_conserved(acc, sol, 1)
+        U_final = get_conserved(acc, sol, length(sol.t))
 
         dA = dx * dy
         mass_0 = sum(u[1] for u in U0) * dA
@@ -376,7 +389,7 @@ end
             ic; final_time = 0.02, cfl = 0.3
         )
 
-        _, U, t, ct = solve_hyperbolic(prob)
+        _, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)
         @test all(w -> w[5] > 0, W)
@@ -397,7 +410,7 @@ end
             reflect_ic; final_time = 0.02, cfl = 0.3
         )
 
-        _, U, t, ct = solve_hyperbolic(prob)
+        _, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)
         @test all(w -> w[5] > 0, W)
@@ -418,7 +431,7 @@ end
             periodic_ic; final_time = 0.03, cfl = 0.4
         )
 
-        _, U, t, ct = solve_hyperbolic(prob)
+        _, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
         @test all(w -> w[1] > 0, W)
         @test all(w -> w[5] > 0, W)
@@ -457,7 +470,7 @@ end
                 ot_ic; final_time = 0.05, cfl = cfl
             )
 
-            _, U, t, ct = solve_hyperbolic(prob)
+            _, U, t, ct = solve_canonical_ct(prob)
             W = to_primitive(law, U)
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
@@ -490,7 +503,7 @@ end
                 ic; final_time = 0.02, cfl = 0.3
             )
 
-            _, U, t, ct = solve_hyperbolic(prob)
+            _, U, t, ct = solve_canonical_ct(prob)
             W = to_primitive(law, U)
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
@@ -520,7 +533,7 @@ end
             ic; final_time = 0.1, cfl = 0.4
         )
 
-        _, U, t, ct = solve_hyperbolic(prob)
+        _, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
 
         ρ = [W[ix, 1][1] for ix in 1:200]
@@ -566,7 +579,7 @@ end
                 ic; final_time = 0.02, cfl = 0.3
             )
 
-            _, U, t, ct = solve_hyperbolic(prob)
+            _, U, t, ct = solve_canonical_ct(prob)
             W = to_primitive(law, U)
             @test all(w -> w[1] > 0, W)
             @test all(w -> w[5] > 0, W)
@@ -616,7 +629,7 @@ end
             rotor_ic; final_time = 0.02, cfl = 0.3
         )
 
-        _, U, t, ct = solve_hyperbolic(prob)
+        _, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
         ρ = [w[1] for w in W]
         P = [w[5] for w in W]

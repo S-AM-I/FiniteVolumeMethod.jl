@@ -292,13 +292,16 @@ Solve the 3D hyperbolic problem using explicit time integration.
 - `U_final::Array{SVector{N},3}`: Final conserved variable array (nx x ny x nz, interior only).
 - `t_final::Real`: Final time reached.
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic(
         prob::HyperbolicProblem3D;
         method::Symbol = :ssprk3,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
     )
-    _v2_api_depwarn(:solve_hyperbolic, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem3D)", backend)
     mesh = prob.mesh
     nx, ny, nz = mesh.nx, mesh.ny, mesh.nz

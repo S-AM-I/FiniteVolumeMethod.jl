@@ -20,7 +20,7 @@ The typical workflow is:
 6. Construct a `HyperbolicProblem` (1D), `HyperbolicProblem2D`, or `HyperbolicProblem3D`.
 7. Solve with `solve(prob, alg; ...)` or build `sciml_problem(prob)` explicitly.
 
-The legacy `solve_hyperbolic`, `solve_hyperbolic_imex`, and `solve_amr` helpers remain available during the v2 transition, but they are now compatibility wrappers rather than the canonical interface.
+The fixed-step `solve_hyperbolic` and `solve_hyperbolic_imex` loops are internal as of v4.0; `solve_amr` remains public as the dynamic-regridding/subcycling AMR driver (see "Non-SciML Drivers" below).
 
 ## Meshes
 
@@ -196,11 +196,15 @@ apply_flux_correction_2d!
 apply_flux_correction_3d!
 ```
 
-## Legacy Convenience Wrappers
+## Non-SciML Drivers
+
+The fixed-step convenience loops `solve_hyperbolic` and `solve_hyperbolic_imex`
+are internal as of v4.0 (kept, unexported, for threaded execution, the GPU
+backend dispatch, and the CPU-vs-CUDA parity baseline); the public execution
+path is `sciml_problem(prob)` + `solve`. Dynamically-regridding and subcycled
+AMR have no SciML equivalent yet, so their driver remains public:
 
 ```@docs
-solve_hyperbolic
-solve_hyperbolic_imex
 solve_amr
 ```
 

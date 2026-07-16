@@ -1,9 +1,23 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays
 
 # Helper
 _mean(itr) = sum(itr) / length(collect(itr))
+
+# Canonical SciML solve returning the legacy (coords, U, t, ct) 4-tuple.
+function solve_canonical_ct(prob; vector_potential = nothing, alg = nothing)
+    ode = sciml_problem(prob; vector_potential = vector_potential)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    solver = alg === nothing ? SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p)) : alg
+    sol = solve(ode, solver; adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    ct = get_ct_state(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end], ct
+end
 
 # ============================================================
 # 2D GRMHD Solver Tests
@@ -30,7 +44,7 @@ _mean(itr) = sum(itr) / length(collect(itr))
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
 
     dV = mesh.dx * mesh.dy
     D_total = sum(U[ix, iy][1] for ix in 1:nx, iy in 1:ny) * dV
@@ -62,7 +76,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     dV = mesh.dx * mesh.dy
 
     U0 = [FiniteVolumeMethod.primitive_to_conserved(law, ic(coords[ix, iy]...)) for ix in 1:nx, iy in 1:ny]
@@ -97,7 +111,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
+    coords, U, t, ct = solve_canonical_ct(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
     @test divB_max < 1.0e-13
@@ -126,8 +140,8 @@ end
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    _, U_gr, t_gr, _ = solve_hyperbolic(prob_gr)
-    _, U_sr, t_sr, _ = solve_hyperbolic(prob_sr)
+    _, U_gr, t_gr, _ = solve_canonical_ct(prob_gr)
+    _, U_sr, t_sr, _ = solve_canonical_ct(prob_sr)
 
     W_gr = to_primitive(law_gr, U_gr)
     W_sr = to_primitive(law_sr, U_sr)
@@ -161,8 +175,8 @@ end
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    _, U_gr, _, _ = solve_hyperbolic(prob_gr)
-    _, U_sr, _, _ = solve_hyperbolic(prob_sr)
+    _, U_gr, _, _ = solve_canonical_ct(prob_gr)
+    _, U_sr, _, _ = solve_canonical_ct(prob_sr)
 
     W_gr = to_primitive(law_gr, U_gr)
     W_sr = to_primitive(law_sr, U_sr)
@@ -187,7 +201,7 @@ end
         ic; final_time = 0.5, cfl = 0.2
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     # Curved path: state is densitized -> metric-aware recovery
     W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
@@ -214,7 +228,7 @@ end
         ic; final_time = 0.3, cfl = 0.2
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -241,7 +255,7 @@ end
         ic; final_time = 0.2, cfl = 0.15
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
+    coords, U, t, ct = solve_canonical_ct(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
     @test divB_max < 1.0e-12
@@ -265,7 +279,7 @@ end
         ic; final_time = 0.3, cfl = 0.15
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -291,7 +305,7 @@ end
         ic; final_time = 0.2, cfl = 0.1
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -320,7 +334,7 @@ end
         ic; final_time = 0.05, cfl = 0.2
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
@@ -351,7 +365,7 @@ end
         ic; final_time = 0.5, cfl = 0.15
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     # Solution should remain physical
@@ -386,7 +400,7 @@ end
         ic; final_time = 0.02, cfl = 0.2
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; method = :euler, vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob; alg = Euler())
     W = to_primitive(law, U)
 
     @test t ≈ 0.02 atol = 1.0e-10
@@ -416,7 +430,7 @@ end
             ic; final_time = 0.1, cfl = 0.25
         )
 
-        coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+        coords, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
 
         @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -448,7 +462,7 @@ end
             ic; final_time = 0.05, cfl = 0.25
         )
 
-        coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+        coords, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
 
         @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -475,7 +489,7 @@ end
         ic; final_time = 1.0, cfl = 0.15
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = FiniteVolumeMethod.grmhd_recover_primitive_field(law, U, mesh)
 
     # Material near the BH (left side) should develop negative vx (infall)
@@ -610,7 +624,7 @@ end
     drifts = Float64[]
     for N in [24, 48]
         prob, mesh = grg_make_prob(N, CellCenteredMUSCL(MinmodLimiter()); tf = 1.0)
-        coords, U, t, ct = solve_hyperbolic(prob)
+        coords, U, t, ct = solve_canonical_ct(prob)
         @test t ≈ 1.0 atol = 1.0e-10
         W = FiniteVolumeMethod.grmhd_recover_primitive_field(GRG_LAW, U, mesh)
         # Deep interior (25% margin) excludes the zero-gradient boundary

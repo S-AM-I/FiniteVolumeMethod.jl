@@ -6,8 +6,22 @@
 # and multi-rate (subcycling) time stepping.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays
 using Test
+
+# Canonical SciML solve returning the legacy (coords, U, t) triple.
+function solve_canonical(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    coords = get_coordinates(acc)
+    # Plain-law accessors return a flat vector; match the legacy shape.
+    return coords, reshape(U, size(coords)), sol.t[end]
+end
 
 # ============================================================
 # PPM Reconstruction Tests
@@ -86,7 +100,7 @@ using Test
             TransmissiveBC(), TransmissiveBC(), ic;
             cfl = 0.4, final_time = 0.2
         )
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical(prob)
         @test t ≈ 0.2 atol = 0.01
         @test all(u -> u[1] > 0, U)  # density positive
         # Check Sod shock tube basic structure
@@ -107,7 +121,7 @@ using Test
             bc, bc, bc, bc, ic;
             cfl = 0.3, final_time = 0.05
         )
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         @test t ≈ 0.05 atol = 0.01
         @test all(u -> u[1] > 0, U)
     end
@@ -134,8 +148,8 @@ using Test
                 TransmissiveBC(), TransmissiveBC(), ic;
                 cfl = 0.3, final_time = 0.01
             )
-            _, U_ppm, _ = solve_hyperbolic(prob_ppm)
-            _, U_muscl, _ = solve_hyperbolic(prob_muscl)
+            _, U_ppm, _ = solve_canonical(prob_ppm)
+            _, U_muscl, _ = solve_canonical(prob_muscl)
 
             # Both should produce all-positive density
             @test all(u -> u[1] > 0, U_ppm)
@@ -344,19 +358,22 @@ end
             initial_time = 0.0, final_time = 0.01, cfl = 0.4, regrid_interval = 0
         )
 
-        grid_out, t_final = solve_amr_subcycled(prob; method = :euler)
+        ode = sciml_problem(prob)
+        dt0 = compute_initial_dt(ode.p, ode.u0)
+        sol = solve(ode, Euler(); adaptive = false, dt = dt0)
+        acc = solution_accessor(prob)
+        U_blocks = get_conserved(acc, sol, length(sol.t))
+        t_final = sol.t[end]
         @test t_final ≈ 0.01 atol = 0.005
         # Solution should have positive density everywhere
-        for block_out in values(grid_out.blocks)
-            if block_out.active
-                for j in 1:(block_out.dims[2]), i in 1:(block_out.dims[1])
-                    @test block_out.U[i, j][1] > 0
-                end
+        for U_b in values(U_blocks)
+            for u in U_b
+                @test u[1] > 0
             end
         end
     end
 
-    @testset "Subcycled SSP-RK3 vs Euler" begin
+    @testset "AMR SSP-RK3 vs Euler (SciML path)" begin
         eos = IdealGasEOS(1.4)
         law = EulerEquations{2}(eos)
         nx, ny = 8, 8
@@ -386,23 +403,25 @@ end
             final_time = 0.005, cfl = 0.3, regrid_interval = 0
         )
 
-        _, t1 = solve_amr_subcycled(prob1; method = :euler)
-        _, t2 = solve_amr_subcycled(prob2; method = :ssprk3)
+        ode1 = sciml_problem(prob1)
+        dt1 = compute_initial_dt(ode1.p, ode1.u0)
+        sol1 = solve(ode1, Euler(); adaptive = false, dt = dt1)
+        ode2 = sciml_problem(prob2)
+        dt2 = compute_initial_dt(ode2.p, ode2.u0)
+        sol2 = solve(ode2, SSPRK33(); adaptive = false, dt = dt2)
+        t1 = sol1.t[end]
+        t2 = sol2.t[end]
 
         @test t1 ≈ t2 atol = 0.005
         # Both should produce valid results (no NaN)
-        for b in values(grid1.blocks)
-            if b.active
-                for idx in eachindex(b.U)
-                    @test all(isfinite, b.U[idx])
-                end
+        for U_b in values(get_conserved(solution_accessor(prob1), sol1, length(sol1.t)))
+            for u in U_b
+                @test all(isfinite, u)
             end
         end
-        for b in values(grid2.blocks)
-            if b.active
-                for idx in eachindex(b.U)
-                    @test all(isfinite, b.U[idx])
-                end
+        for U_b in values(get_conserved(solution_accessor(prob2), sol2, length(sol2.t)))
+            for u in U_b
+                @test all(isfinite, u)
             end
         end
     end

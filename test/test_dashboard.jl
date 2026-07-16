@@ -3,6 +3,7 @@ using Test
 using StaticArrays
 using DelaunayTriangulation
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using JSON3
 using HTTP  # triggers FVMDashboardExt alongside JSON3
 
@@ -147,7 +148,24 @@ end
         mesh = mesh,
     )
 
-    _, _, t_final = solve_hyperbolic(prob; method = :ssprk3, callback = cb)
+    # Drive the legacy-signature monitor `(U, t, step, dt)` from a SciML
+    # DiscreteCallback: unfold the flat state into the cache's padded array
+    # after each accepted step.
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    step_counter = Ref(0)
+    monitor = DiscreteCallback(
+        (u, t, integrator) -> true,
+        integrator -> begin
+            step_counter[] += 1
+            unfold_to_padded!(integrator.p, integrator.u)
+            cb(integrator.p.padded_U, integrator.t, step_counter[], integrator.dt)
+            return nothing
+        end;
+        save_positions = (false, false)
+    )
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, callback = monitor)
+    t_final = sol.t[end]
     @test t_final ≈ 0.05
 
     # Should have recorded snapshots every 5 steps
@@ -187,7 +205,21 @@ end
         mesh = mesh,
     )
 
-    _, _, t_final = solve_hyperbolic(prob; method = :ssprk3, callback = cb)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    step_counter = Ref(0)
+    monitor = DiscreteCallback(
+        (u, t, integrator) -> true,
+        integrator -> begin
+            step_counter[] += 1
+            unfold_to_padded!(integrator.p, integrator.u)
+            cb(integrator.p.padded_U, integrator.t, step_counter[], integrator.dt)
+            return nothing
+        end;
+        save_positions = (false, false)
+    )
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, callback = monitor)
+    t_final = sol.t[end]
     @test t_final ≈ 0.01
     @test length(session.snapshots) > 0
 

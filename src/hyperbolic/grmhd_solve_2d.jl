@@ -803,16 +803,16 @@ Solve the 2D GRMHD problem using the Valencia formulation with:
 - `t_final`: Final time reached.
 - `ct`: Final `CTData2D` for inspecting div(B) and face-centered B.
 """
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic(
         prob::HyperbolicProblem2D{<:GRMHDEquations{2}};
         method::Symbol = :ssprk3,
         vector_potential = nothing,
         callback::Union{Nothing, Function} = nothing,
         backend::AbstractBackend = CPUBackend(),
-    )
-    _v2_api_depwarn(
-        :solve_hyperbolic,
-        "`sciml_problem(prob; vector_potential = ...)`, `solve(prob, alg; ...)`, and `mhd_stage_limiter`",
     )
     _cpu_backend_only("solve_hyperbolic(::HyperbolicProblem2D{<:GRMHDEquations{2}})", backend)
     _validate_ct_reconstruction(prob.reconstruction)

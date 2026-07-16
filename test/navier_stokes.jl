@@ -1,6 +1,19 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test
+
+# Canonical SciML solve returning the legacy (coords, U, t) triple.
+function solve_canonical(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    coords = get_coordinates(acc)
+    # Plain-law accessors return a flat vector; match the legacy shape.
+    return coords, reshape(U, size(coords)), sol.t[end]
+end
 
 # ============================================================
 # Exact Riemann solver for Sod shock tube (used for verification)
@@ -119,7 +132,7 @@ end
             ic; final_time = 0.2, cfl = 0.5
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical(prob)
         W = to_primitive(law, U)
 
         # Verify density profile is reasonable (L1 error check)
@@ -277,8 +290,8 @@ end
             ic; final_time = 0.2, cfl = 0.5
         )
 
-        x_e, U_e, t_e = solve_hyperbolic(prob_euler)
-        x_ns, U_ns, t_ns = solve_hyperbolic(prob_ns)
+        x_e, U_e, t_e = solve_canonical(prob_euler)
+        x_ns, U_ns, t_ns = solve_canonical(prob_ns)
 
         @test t_e ≈ t_ns
         for i in eachindex(U_e)
@@ -316,7 +329,7 @@ end
         ic; final_time = 0.5, cfl = 0.3
     )
 
-    x, U, t = solve_hyperbolic(prob)
+    x, U, t = solve_canonical(prob)
     W = to_primitive(ns, U)
 
     # Expected decay
@@ -371,7 +384,7 @@ end
         ic_couette; final_time = 0.5, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(ns, U)
 
     # Check that vx profile is approximately linear
@@ -423,7 +436,7 @@ end
         ic_tgv; final_time = 0.5, cfl = 0.3
     )
 
-    coords, U, t = solve_hyperbolic(prob)
+    coords, U, t = solve_canonical(prob)
     W = to_primitive(ns, U)
 
     # Expected decay
@@ -484,7 +497,7 @@ end
             ic_tgv_conv; final_time = t_final, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
         W = to_primitive(ns, U)
         decay = exp(-2 * ν * k^2 * t)
 
@@ -533,7 +546,7 @@ end
             ic; final_time = 0.2, cfl = 0.3
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        x, U, t = solve_canonical(prob)
 
         # Initial conserved quantities
         ic_vec = [primitive_to_conserved(ns, ic(xi)) for xi in x]
@@ -576,7 +589,7 @@ end
             ic_cons; final_time = 0.1, cfl = 0.3
         )
 
-        coords, U, t = solve_hyperbolic(prob)
+        coords, U, t = solve_canonical(prob)
 
         # Initial mass
         mass_0 = 0.0

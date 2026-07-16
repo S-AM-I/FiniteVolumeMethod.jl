@@ -363,6 +363,10 @@ function _solve_hyperbolic(
     return _unsupported_backend("solve_hyperbolic(::HyperbolicProblem2D)", backend)
 end
 
+# Internal reference implementation (unexported since v4.0): fixed-step loops
+# kept for threaded (`parallel = true`) execution, GPU backend dispatch, and
+# the CPU-vs-CUDA parity baseline. The public execution path is
+# `sciml_problem(prob)` + `solve`.
 function solve_hyperbolic(
         prob::HyperbolicProblem2D;
         method::Symbol = :ssprk3,
@@ -371,7 +375,6 @@ function solve_hyperbolic(
         backend::AbstractBackend = CPUBackend(),
         return_device_state::Bool = false,
     )
-    _v2_api_depwarn(:solve_hyperbolic, "`solve(prob, alg; ...)` or `sciml_problem(prob)`")
     return _solve_hyperbolic(
         prob, backend;
         method,

@@ -27,6 +27,8 @@ would require impractically small time steps.
 
 ````julia
 using FiniteVolumeMethod
+using ADTypes: AutoFiniteDiff
+using OrdinaryDiffEqSDIRK: KenCarp3, KenCarp47
 using StaticArrays
 
 gamma = 1.4
@@ -55,7 +57,10 @@ w_init = SVector(rho_init, v_init, P_init)
 ````
 
 ## Solving with Different IMEX Schemes
-We compare three IMEX Runge-Kutta schemes:
+The stiff source enters through a `SplitODEProblem` (explicit hyperbolic
+fluxes plus implicit source), built by `sciml_problem(prob, source)` and
+integrated with additive Runge-Kutta (IMEX) schemes. We compare two such
+schemes:
 
 ````julia
 N = 32
@@ -68,25 +73,35 @@ prob = HyperbolicProblem(
     x -> w_init;
     final_time = t_final, cfl = 0.4
 )
+
+split_prob = sciml_problem(prob, source)
+dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+acc = solution_accessor(prob)
 ````
 
-**SSP3(4,3,3)** — 4-stage, 3rd-order SSP scheme:
+**KenCarp47** — 7-stage, 4th-order ARK scheme:
 
 ````julia
-x_ssp, U_ssp, t_ssp = solve_hyperbolic_imex(
-    prob, source; scheme = IMEX_SSP3_433(),
-    newton_tol = 1.0e-12, newton_maxiter = 10
+sol_kc47 = solve(
+    split_prob, KenCarp47(autodiff = AutoFiniteDiff());
+    adaptive = false, dt = dt0
 )
+U_kc47 = get_conserved(acc, sol_kc47, length(sol_kc47.t))
+x_kc47 = get_coordinates(acc)
+t_kc47 = sol_kc47.t[end]
 ````
 
-**ARS(2,2,2)** — 3-stage, 2nd-order L-stable scheme:
+**KenCarp3** — 4-stage, 3rd-order L-stable ARK scheme:
 
 ````julia
-x_ars, U_ars, t_ars = solve_hyperbolic_imex(
-    prob, source; scheme = IMEX_ARS222(),
-    newton_tol = 1.0e-12, newton_maxiter = 10
+sol_kc3 = solve(
+    split_prob, KenCarp3(autodiff = AutoFiniteDiff());
+    adaptive = false, dt = dt0
 )
-x_ars |> tc #hide
+U_kc3 = get_conserved(acc, sol_kc3, length(sol_kc3.t))
+x_kc3 = get_coordinates(acc)
+t_kc3 = sol_kc3.t[end]
+x_kc3 |> tc #hide
 ````
 
 ## Checking Relaxation
@@ -94,14 +109,14 @@ The pressure should relax toward $P_{\mathrm{target}} = 1.0$ from
 the initial $P_{\mathrm{init}} = 3.0$:
 
 ````julia
-P_ssp = [conserved_to_primitive(law, U_ssp[i])[3] for i in eachindex(U_ssp)]
-P_ars = [conserved_to_primitive(law, U_ars[i])[3] for i in eachindex(U_ars)]
+P_kc47 = [conserved_to_primitive(law, U_kc47[i])[3] for i in eachindex(U_kc47)]
+P_kc3 = [conserved_to_primitive(law, U_kc3[i])[3] for i in eachindex(U_kc3)]
 
 # The pressure should be closer to P_target than P_init
-P_avg_ssp = sum(P_ssp) / length(P_ssp)
-P_avg_ars = sum(P_ars) / length(P_ars)
-abs(P_avg_ssp - P_target) < abs(P_init - P_target) || @warn("SSP3 pressure did not relax toward target") #hide
-abs(P_avg_ars - P_target) < abs(P_init - P_target) || @warn("ARS222 pressure did not relax toward target") #hide
+P_avg_kc47 = sum(P_kc47) / length(P_kc47)
+P_avg_kc3 = sum(P_kc3) / length(P_kc3)
+abs(P_avg_kc47 - P_target) < abs(P_init - P_target) || @warn("KenCarp47 pressure did not relax toward target") #hide
+abs(P_avg_kc3 - P_target) < abs(P_init - P_target) || @warn("KenCarp3 pressure did not relax toward target") #hide
 ````
 
 ## Visualisation
@@ -114,19 +129,19 @@ ax1 = Axis(
     fig[1, 1], xlabel = "x", ylabel = "P",
     title = "Pressure relaxation"
 )
-scatter!(ax1, x_ssp, P_ssp, color = :blue, markersize = 6, label = "SSP3(4,3,3)")
-scatter!(ax1, x_ars, P_ars, color = :red, markersize = 6, label = "ARS(2,2,2)")
+scatter!(ax1, x_kc47, P_kc47, color = :blue, markersize = 6, label = "KenCarp47")
+scatter!(ax1, x_kc3, P_kc3, color = :red, markersize = 6, label = "KenCarp3")
 hlines!(ax1, [P_target], color = :black, linestyle = :dash, label = L"P_{\mathrm{target}}")
 hlines!(ax1, [P_init], color = :gray, linestyle = :dot, label = L"P_{\mathrm{init}}")
 axislegend(ax1, position = :rt)
 
 # Also check that density is preserved
-rho_ssp = [conserved_to_primitive(law, U_ssp[i])[1] for i in eachindex(U_ssp)]
+rho_kc47 = [conserved_to_primitive(law, U_kc47[i])[1] for i in eachindex(U_kc47)]
 ax2 = Axis(
     fig[1, 2], xlabel = "x", ylabel = L"\rho",
     title = "Density (should be constant)"
 )
-scatter!(ax2, x_ssp, rho_ssp, color = :blue, markersize = 6)
+scatter!(ax2, x_kc47, rho_kc47, color = :blue, markersize = 6)
 hlines!(ax2, [rho_init], color = :black, linestyle = :dash)
 
 resize_to_layout!(fig)
@@ -140,7 +155,7 @@ allowing stable time steps determined by the CFL condition rather
 than the fast cooling time scale.
 
 ````julia
-rho_variation = maximum(rho_ssp) - minimum(rho_ssp) #hide
+rho_variation = maximum(rho_kc47) - minimum(rho_kc47) #hide
 rho_variation < 0.05 * rho_init || @warn("Density variation exceeds tolerance: $rho_variation") #hide
 ````
 
@@ -150,6 +165,8 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using ADTypes: AutoFiniteDiff
+using OrdinaryDiffEqSDIRK: KenCarp3, KenCarp47
 using StaticArrays
 
 gamma = 1.4
@@ -181,22 +198,32 @@ prob = HyperbolicProblem(
     final_time = t_final, cfl = 0.4
 )
 
-x_ssp, U_ssp, t_ssp = solve_hyperbolic_imex(
-    prob, source; scheme = IMEX_SSP3_433(),
-    newton_tol = 1.0e-12, newton_maxiter = 10
-)
+split_prob = sciml_problem(prob, source)
+dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+acc = solution_accessor(prob)
 
-x_ars, U_ars, t_ars = solve_hyperbolic_imex(
-    prob, source; scheme = IMEX_ARS222(),
-    newton_tol = 1.0e-12, newton_maxiter = 10
+sol_kc47 = solve(
+    split_prob, KenCarp47(autodiff = AutoFiniteDiff());
+    adaptive = false, dt = dt0
 )
+U_kc47 = get_conserved(acc, sol_kc47, length(sol_kc47.t))
+x_kc47 = get_coordinates(acc)
+t_kc47 = sol_kc47.t[end]
 
-P_ssp = [conserved_to_primitive(law, U_ssp[i])[3] for i in eachindex(U_ssp)]
-P_ars = [conserved_to_primitive(law, U_ars[i])[3] for i in eachindex(U_ars)]
+sol_kc3 = solve(
+    split_prob, KenCarp3(autodiff = AutoFiniteDiff());
+    adaptive = false, dt = dt0
+)
+U_kc3 = get_conserved(acc, sol_kc3, length(sol_kc3.t))
+x_kc3 = get_coordinates(acc)
+t_kc3 = sol_kc3.t[end]
+
+P_kc47 = [conserved_to_primitive(law, U_kc47[i])[3] for i in eachindex(U_kc47)]
+P_kc3 = [conserved_to_primitive(law, U_kc3[i])[3] for i in eachindex(U_kc3)]
 
 # The pressure should be closer to P_target than P_init
-P_avg_ssp = sum(P_ssp) / length(P_ssp)
-P_avg_ars = sum(P_ars) / length(P_ars)
+P_avg_kc47 = sum(P_kc47) / length(P_kc47)
+P_avg_kc3 = sum(P_kc3) / length(P_kc3)
 
 using CairoMakie
 
@@ -205,19 +232,19 @@ ax1 = Axis(
     fig[1, 1], xlabel = "x", ylabel = "P",
     title = "Pressure relaxation"
 )
-scatter!(ax1, x_ssp, P_ssp, color = :blue, markersize = 6, label = "SSP3(4,3,3)")
-scatter!(ax1, x_ars, P_ars, color = :red, markersize = 6, label = "ARS(2,2,2)")
+scatter!(ax1, x_kc47, P_kc47, color = :blue, markersize = 6, label = "KenCarp47")
+scatter!(ax1, x_kc3, P_kc3, color = :red, markersize = 6, label = "KenCarp3")
 hlines!(ax1, [P_target], color = :black, linestyle = :dash, label = L"P_{\mathrm{target}}")
 hlines!(ax1, [P_init], color = :gray, linestyle = :dot, label = L"P_{\mathrm{init}}")
 axislegend(ax1, position = :rt)
 
 # Also check that density is preserved
-rho_ssp = [conserved_to_primitive(law, U_ssp[i])[1] for i in eachindex(U_ssp)]
+rho_kc47 = [conserved_to_primitive(law, U_kc47[i])[1] for i in eachindex(U_kc47)]
 ax2 = Axis(
     fig[1, 2], xlabel = "x", ylabel = L"\rho",
     title = "Density (should be constant)"
 )
-scatter!(ax2, x_ssp, rho_ssp, color = :blue, markersize = 6)
+scatter!(ax2, x_kc47, rho_kc47, color = :blue, markersize = 6)
 hlines!(ax2, [rho_init], color = :black, linestyle = :dash)
 
 resize_to_layout!(fig)

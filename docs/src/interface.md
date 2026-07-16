@@ -161,7 +161,7 @@ User-supplied SciML callbacks are merged with the package's internal callbacks o
 sciml_problem
 ```
 
-Legacy convenience wrappers such as `solve_hyperbolic`, `solve_hyperbolic_imex`, and `solve_amr` remain available during the v2 transition, but they are no longer the preferred research-grade interface.
+The fixed-step loops `solve_hyperbolic` and `solve_hyperbolic_imex` are internal as of v4.0 (unexported; kept for threaded execution, GPU backend dispatch, and the CPU-vs-CUDA parity baseline). `solve_amr` remains public as the driver for dynamically-regridding and subcycled AMR, which have no SciML equivalent yet.
 
 # Solution accessors
 

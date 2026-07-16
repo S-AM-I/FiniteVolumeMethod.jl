@@ -24,6 +24,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   Multidimensional MHD. ApJ, 530, 508-524.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -60,7 +61,15 @@ function solve_ot(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         ot_ic; final_time = t_final, cfl = 0.4,
     )
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az_ot)
+    ode_prob = sciml_problem(prob; vector_potential = Az_ot)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    limiter = mhd_stage_limiter(ode_prob.p)
+    sol = solve(ode_prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    coords = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    ct = get_ct_state(accessor, sol, length(sol.t))
+    t = sol.t[end]
     return coords, U, t, ct, mesh
 end
 

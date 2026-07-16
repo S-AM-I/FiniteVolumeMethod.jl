@@ -10,6 +10,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   Dynamics, 3rd ed., Springer. Chapter 4, Table 4.1.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -60,7 +61,13 @@ results = map(toro_tests) do tt
         DirichletHyperbolicBC(wL), DirichletHyperbolicBC(wR), ic;
         final_time = tt.t, cfl = 0.4,
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     W = [conserved_to_primitive(law, U[i]) for i in eachindex(U)]
     (x = x, W = W, t = t_end, ref = tt)
 end

@@ -19,6 +19,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   General Relativity. Living Rev. Relativity, 11, 7.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using CairoMakie
@@ -64,7 +65,14 @@ prob_atm = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     static_atm_ic; final_time = t_final_atm, cfl = 0.2,
 )
-coords_atm, U_atm, t_atm, _ = solve_hyperbolic(prob_atm; vector_potential = nothing)
+ode_atm = sciml_problem(prob_atm)
+dt0_atm = compute_initial_dt(ode_atm.p, ode_atm.u0)
+limiter_atm = mhd_stage_limiter(ode_atm.p)
+sol_atm = solve(ode_atm, SSPRK33(; stage_limiter! = limiter_atm); adaptive = false, dt = dt0_atm)
+acc_atm = solution_accessor(prob_atm)
+coords_atm = get_coordinates(acc_atm)
+U_atm = get_conserved(acc_atm, sol_atm, length(sol_atm.t))
+t_atm = sol_atm.t[end]
 
 ## Compute maximum density drift.
 ## On the curved (non-Minkowski) path the returned state is the

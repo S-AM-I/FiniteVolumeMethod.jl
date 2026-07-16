@@ -1,6 +1,20 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays
+
+# Canonical SciML solve returning the legacy (coords, U, t, ct) 4-tuple.
+function solve_canonical_ct(prob; vector_potential = nothing, alg = nothing)
+    ode = sciml_problem(prob; vector_potential = vector_potential)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    solver = alg === nothing ? SSPRK33(; stage_limiter! = mhd_stage_limiter(ode.p)) : alg
+    sol = solve(ode, solver; adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    ct = get_ct_state(acc, sol, length(sol.t))
+    return get_coordinates(acc), U, sol.t[end], ct
+end
 
 # ============================================================
 # 2D SRMHD Solver Tests
@@ -22,7 +36,7 @@ using StaticArrays
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     # Solution should be uniform in y
@@ -54,7 +68,7 @@ end
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     # Solution should be uniform in x
@@ -89,7 +103,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
+    coords, U, t, ct = solve_canonical_ct(prob; vector_potential = Az)
 
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)
     @test divB_max < 1.0e-13
@@ -118,7 +132,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
 
     dV = mesh.dx * mesh.dy
 
@@ -154,7 +168,7 @@ end
         ic; final_time = 0.05, cfl = 0.2
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(W[ix, iy][1] > 0 for ix in 1:nx, iy in 1:ny)
@@ -181,7 +195,7 @@ end
         ic; final_time = 0.4, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -210,7 +224,7 @@ end
         ic; final_time = 0.4, cfl = 0.25
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -238,7 +252,7 @@ end
         ic; final_time = 0.1, cfl = 0.25
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -269,7 +283,7 @@ end
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     # Uniform flow should remain uniform with periodic BCs
@@ -307,7 +321,7 @@ end
             ic; final_time = 0.1, cfl = 0.25
         )
 
-        coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+        coords, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
 
         @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -336,7 +350,7 @@ end
             ic; final_time = 0.1, cfl = 0.25
         )
 
-        coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+        coords, U, t, ct = solve_canonical_ct(prob)
         W = to_primitive(law, U)
 
         @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -373,8 +387,8 @@ end
         ic; final_time = 0.1, cfl = 0.25
     )
 
-    _, U_sr, _, _ = solve_hyperbolic(prob_sr; vector_potential = nothing)
-    _, U_mhd, _, _ = solve_hyperbolic(prob_mhd; vector_potential = nothing)
+    _, U_sr, _, _ = solve_canonical_ct(prob_sr)
+    _, U_mhd, _, _ = solve_canonical_ct(prob_mhd)
 
     W_sr = to_primitive(law_sr, U_sr)
     W_mhd = to_primitive(law_mhd, U_mhd)
@@ -407,7 +421,7 @@ end
         ic; final_time = 0.05, cfl = 0.2
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -441,7 +455,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; method = :euler, vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob; alg = Euler())
     W = to_primitive(law, U)
 
     @test t ≈ 0.05 atol = 1.0e-10
@@ -469,7 +483,7 @@ end
         ic; final_time = 0.1, cfl = 0.4
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -498,7 +512,7 @@ end
         ic; final_time = 0.1, cfl = 0.2
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -529,7 +543,7 @@ end
         ic; final_time = 0.05, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     dV = mesh.dx * mesh.dy
 
     U0 = [FiniteVolumeMethod.primitive_to_conserved(law, ic(coords[ix, iy]...)) for ix in 1:nx, iy in 1:ny]
@@ -561,7 +575,7 @@ end
         ic; final_time = 0.1, cfl = 0.25
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = nothing)
+    coords, U, t, ct = solve_canonical_ct(prob)
     W = to_primitive(law, U)
 
     @test all(isfinite(W[ix, iy][1]) for ix in 1:nx, iy in 1:ny)
@@ -594,7 +608,7 @@ end
         ic; final_time = 0.1, cfl = 0.3
     )
 
-    coords, U, t, ct = solve_hyperbolic(prob; vector_potential = Az)
+    coords, U, t, ct = solve_canonical_ct(prob; vector_potential = Az)
 
     # div(B) should be preserved to machine precision
     divB_max = max_divB(ct, mesh.dx, mesh.dy, nx, ny)

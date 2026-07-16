@@ -24,6 +24,7 @@ The initial primitive states $(\rho, v_x, v_y, v_z, P, B_x, B_y, B_z)$ are:
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 5.0 / 3.0
@@ -47,7 +48,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.4, cfl = 0.4
 )
-x, U, t_final = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t_final = sol.t[end]
 x |> tc #hide
 ````
 
@@ -99,6 +106,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 5.0 / 3.0
@@ -117,7 +125,13 @@ prob = HyperbolicProblem(
     TransmissiveBC(), TransmissiveBC(), ic;
     final_time = 0.4, cfl = 0.4
 )
-x, U, t_final = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+acc = solution_accessor(prob)
+U = get_conserved(acc, sol, length(sol.t))
+x = get_coordinates(acc)
+t_final = sol.t[end]
 
 rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
 vx = [conserved_to_primitive(law, U[i])[2] for i in eachindex(U)]

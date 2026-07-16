@@ -24,6 +24,7 @@ We use the standard 1D Sod shock tube with $N = 200$ cells:
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -60,7 +61,11 @@ results = map(limiters) do (name, lim)
         bc_left, bc_right, ic;
         final_time = 0.2, cfl = 0.5
     )
-    x, U, t = solve_hyperbolic(prob)
+    ode = sciml_problem(prob)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode.p, ode.u0))
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    x = get_coordinates(acc)
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
     (name = name, x = x, rho = rho)
 end
@@ -74,7 +79,14 @@ prob_first = HyperbolicProblem(
     bc_left, bc_right, ic;
     final_time = 0.2, cfl = 0.5
 )
-x_first, U_first, _ = solve_hyperbolic(prob_first)
+ode_first = sciml_problem(prob_first)
+sol_first = solve(
+    ode_first, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_first.p, ode_first.u0)
+)
+acc_first = solution_accessor(prob_first)
+U_first = get_conserved(acc_first, sol_first, length(sol_first.t))
+x_first = get_coordinates(acc_first)
 rho_first = [conserved_to_primitive(law, U_first[i])[1] for i in eachindex(U_first)]
 ````
 
@@ -167,6 +179,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -196,7 +209,11 @@ results = map(limiters) do (name, lim)
         bc_left, bc_right, ic;
         final_time = 0.2, cfl = 0.5
     )
-    x, U, t = solve_hyperbolic(prob)
+    ode = sciml_problem(prob)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode.p, ode.u0))
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    x = get_coordinates(acc)
     rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
     (name = name, x = x, rho = rho)
 end
@@ -206,7 +223,14 @@ prob_first = HyperbolicProblem(
     bc_left, bc_right, ic;
     final_time = 0.2, cfl = 0.5
 )
-x_first, U_first, _ = solve_hyperbolic(prob_first)
+ode_first = sciml_problem(prob_first)
+sol_first = solve(
+    ode_first, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_first.p, ode_first.u0)
+)
+acc_first = solution_accessor(prob_first)
+U_first = get_conserved(acc_first, sol_first, length(sol_first.t))
+x_first = get_coordinates(acc_first)
 rho_first = [conserved_to_primitive(law, U_first[i])[1] for i in eachindex(U_first)]
 
 function sod_exact(x, t; x0 = 0.5, gamma = 1.4)

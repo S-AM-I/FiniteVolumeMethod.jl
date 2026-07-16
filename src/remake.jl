@@ -352,6 +352,46 @@ function _apply_ode_overrides(new_ode, u0, tspan)
     )
 end
 
+# Fast path for pure structural overrides (u0/tspan only, cache unchanged, no
+# physics kwargs, callback unchanged): preserve `f` verbatim instead of
+# regenerating the RHS. SciML's `solve` calls `remake(prob; u0, p)` internally
+# on every solve, and the regeneration path returns a plain `ODEProblem` RHS —
+# which would silently drop the stiff half of a `SplitFunction` (the canonical
+# IMEX path).
+function _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    isempty(kwargs) || return nothing
+    (_ode_override_unset(p) || p === ode_prob.p) || return nothing
+    callback === _callback_kwarg(ode_prob.kwargs) || return nothing
+    _remake_check_f(ode_prob, f)
+    new_u0 = _ode_override_unset(u0) ? ode_prob.u0 : u0
+    if new_u0 !== ode_prob.u0
+        length(new_u0) == length(ode_prob.u0) || throw(
+            ArgumentError(
+                "remake: `u0` has length $(length(new_u0)) but the semidiscrete " *
+                    "state has length $(length(ode_prob.u0)) (flat interior-cell " *
+                    "vector). Provide a flat state of matching length."
+            )
+        )
+    end
+    new_tspan = _ode_override_unset(tspan) ? ode_prob.tspan : tspan
+    return SciMLBase.ODEProblem{SciMLBase.isinplace(ode_prob)}(
+        ode_prob.f, new_u0, new_tspan, ode_prob.p; ode_prob.kwargs...
+    )
+end
+
+# The RHS regeneration below produces a plain ODEProblem; rebuilding a split
+# semidiscrete problem that way would silently discard the stiff source.
+function _split_rebuild_guard(ode_prob)
+    ode_prob.f isa SciMLBase.SplitFunction || return nothing
+    throw(
+        ArgumentError(
+            "remake: cannot rebuild a split semidiscrete ODEProblem with physics " *
+                "or callback overrides — remake the physics problem and rebuild " *
+                "via `SplitODEProblem(physics_prob, source)` instead."
+        )
+    )
+end
+
 """
     SciMLBase.remake(ode_prob::ODEProblem{<:Any, <:Any, <:Any, <:HyperbolicCache1D}; kwargs...)
 
@@ -369,6 +409,9 @@ function SciMLBase.remake(
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    fast = _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    fast === nothing || return fast
+    _split_rebuild_guard(ode_prob)
     _remake_check_f(ode_prob, f)
     base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
@@ -392,6 +435,9 @@ function SciMLBase.remake(
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    fast = _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    fast === nothing || return fast
+    _split_rebuild_guard(ode_prob)
     _remake_check_f(ode_prob, f)
     base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
@@ -415,6 +461,9 @@ function SciMLBase.remake(
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    fast = _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    fast === nothing || return fast
+    _split_rebuild_guard(ode_prob)
     _remake_check_f(ode_prob, f)
     base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
@@ -438,6 +487,9 @@ function SciMLBase.remake(
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    fast = _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    fast === nothing || return fast
+    _split_rebuild_guard(ode_prob)
     _remake_check_f(ode_prob, f)
     base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
@@ -462,6 +514,9 @@ function SciMLBase.remake(
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    fast = _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    fast === nothing || return fast
+    _split_rebuild_guard(ode_prob)
     _remake_check_f(ode_prob, f)
     base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
@@ -486,6 +541,9 @@ function SciMLBase.remake(
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    fast = _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    fast === nothing || return fast
+    _split_rebuild_guard(ode_prob)
     _remake_check_f(ode_prob, f)
     base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)
@@ -513,6 +571,9 @@ function SciMLBase.remake(
         callback = _callback_kwarg(ode_prob.kwargs),
         kwargs...
     )
+    fast = _remake_structural_fast_path(ode_prob, f, u0, p, tspan, callback, kwargs)
+    fast === nothing || return fast
+    _split_rebuild_guard(ode_prob)
     _remake_check_f(ode_prob, f)
     base_prob = _remake_base_physics_prob(ode_prob, p)
     physics_kwargs = _filter_physics_kwargs(; kwargs...)

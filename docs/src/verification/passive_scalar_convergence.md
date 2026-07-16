@@ -25,6 +25,7 @@ translation: $Y(x,t) = Y_0(x - v t)$.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -55,7 +56,13 @@ function compute_scalar_error(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), scalar_ic;
         final_time = t_final, cfl = 0.4
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     err_L1 = 0.0
     err_L2 = 0.0
     dx = 1.0 / N
@@ -138,6 +145,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -164,7 +172,13 @@ function compute_scalar_error(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), scalar_ic;
         final_time = t_final, cfl = 0.4
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     err_L1 = 0.0
     err_L2 = 0.0
     dx = 1.0 / N

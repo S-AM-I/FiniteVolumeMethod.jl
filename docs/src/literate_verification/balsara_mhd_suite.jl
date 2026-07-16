@@ -13,6 +13,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   Equations of Ideal Magnetohydrodynamics. J. Comput. Phys., 75, 400-422.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -74,7 +75,13 @@ function solve_balsara(test; N = 400)
         TransmissiveBC(), TransmissiveBC(), ic;
         final_time = test.t_final, cfl = 0.5,
     )
-    x, U, t = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t = sol.t[end]
     W = [conserved_to_primitive(law, U[i]) for i in eachindex(U)]
     return x, W, t
 end

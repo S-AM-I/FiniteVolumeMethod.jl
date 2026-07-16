@@ -19,6 +19,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   Small Eddies from Large Ones. Proc. R. Soc. A, 158, 499-521.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -54,7 +55,13 @@ function compute_ns_error(N)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
         tgv_ic; final_time = t_final, cfl = 0.3,
     )
-    coords, U, t = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    coords = get_coordinates(accessor)
+    U = reshape(get_conserved(accessor, sol, length(sol.t)), N, N)
+    t = sol.t[end]
     W = to_primitive(ns, U)
     decay = exp(-2 * nu * k^2 * t)
 
@@ -88,7 +95,12 @@ prob_fine = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     tgv_ic; final_time = t_final, cfl = 0.3,
 )
-coords_fine, U_fine, t_fine = solve_hyperbolic(prob_fine)
+ode_fine = sciml_problem(prob_fine)
+sol_fine = solve(prob_fine, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_fine.p, ode_fine.u0))
+acc_fine = solution_accessor(prob_fine)
+coords_fine = get_coordinates(acc_fine)
+U_fine = reshape(get_conserved(acc_fine, sol_fine, length(sol_fine.t)), 64, 64)
+t_fine = sol_fine.t[end]
 W_fine = to_primitive(ns_fine, U_fine)
 decay_fine = exp(-2 * nu * k^2 * t_fine)
 

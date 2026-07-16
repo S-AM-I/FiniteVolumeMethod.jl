@@ -4,8 +4,16 @@
 #
 # Verifies that threaded implementations produce identical results
 # to serial implementations across all 2D solver modes.
+#
+# NOTE: the end-to-end threaded-vs-serial testsets below still use the
+# deprecated `solve_hyperbolic`/`solve_hyperbolic_imex` because the
+# threaded execution path (`parallel = true`) has no equivalent on the
+# canonical SciML `ODEProblem` path (its RHS is serial-only). Migrate
+# once a threaded canonical path exists; the kernel-level comparisons
+# (`_hyperbolic_rhs_2d_threaded!` etc.) are integrator-independent.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays
 using Test
 
@@ -85,8 +93,8 @@ end
 @testset "Threaded vs Serial: 2D solve_hyperbolic (Euler)" begin
     prob = make_2d_euler_problem(; final_time = 0.005)
 
-    coords_s, U_s, t_s = solve_hyperbolic(prob; method = :euler, parallel = false)
-    coords_t, U_t, t_t = solve_hyperbolic(prob; method = :euler, parallel = true)
+    coords_s, U_s, t_s = FiniteVolumeMethod.solve_hyperbolic(prob; method = :euler, parallel = false)
+    coords_t, U_t, t_t = FiniteVolumeMethod.solve_hyperbolic(prob; method = :euler, parallel = true)
 
     @test t_s ≈ t_t atol = 1.0e-14
     nx, ny = prob.mesh.nx, prob.mesh.ny
@@ -98,8 +106,8 @@ end
 @testset "Threaded vs Serial: 2D solve_hyperbolic SSP-RK3" begin
     prob = make_2d_euler_problem(; final_time = 0.005)
 
-    coords_s, U_s, t_s = solve_hyperbolic(prob; method = :ssprk3, parallel = false)
-    coords_t, U_t, t_t = solve_hyperbolic(prob; method = :ssprk3, parallel = true)
+    coords_s, U_s, t_s = FiniteVolumeMethod.solve_hyperbolic(prob; method = :ssprk3, parallel = false)
+    coords_t, U_t, t_t = FiniteVolumeMethod.solve_hyperbolic(prob; method = :ssprk3, parallel = true)
 
     @test t_s ≈ t_t atol = 1.0e-14
     nx, ny = prob.mesh.nx, prob.mesh.ny
@@ -122,8 +130,8 @@ end
     )
     source = NullSource()
 
-    coords_s, U_s, t_s = solve_hyperbolic_imex(prob, source; parallel = false)
-    coords_t, U_t, t_t = solve_hyperbolic_imex(prob, source; parallel = true)
+    coords_s, U_s, t_s = FiniteVolumeMethod.solve_hyperbolic_imex(prob, source; parallel = false)
+    coords_t, U_t, t_t = FiniteVolumeMethod.solve_hyperbolic_imex(prob, source; parallel = true)
 
     @test t_s ≈ t_t atol = 1.0e-14
     nx, ny = mesh.nx, mesh.ny
@@ -171,7 +179,7 @@ end
 
 @testset "Threaded: Conservation check" begin
     prob = make_2d_euler_problem(; final_time = 0.01)
-    _, U_t, _ = solve_hyperbolic(prob; parallel = true)
+    _, U_t, _ = FiniteVolumeMethod.solve_hyperbolic(prob; parallel = true)
 
     # Total mass should be conserved (transmissive BCs, short time)
     nx, ny = prob.mesh.nx, prob.mesh.ny
@@ -194,8 +202,8 @@ end
         bc, bc, bc, bc,
         sod_x; cfl = 0.4, final_time = 0.005
     )
-    _, U_s, t_s = solve_hyperbolic(prob; parallel = false)
-    _, U_t, t_t = solve_hyperbolic(prob; parallel = true)
+    _, U_s, t_s = FiniteVolumeMethod.solve_hyperbolic(prob; parallel = false)
+    _, U_t, t_t = FiniteVolumeMethod.solve_hyperbolic(prob; parallel = true)
 
     @test t_s ≈ t_t
     for iy in 1:(mesh.ny), ix in 1:(mesh.nx)
@@ -215,8 +223,8 @@ end
             bc, bc, bc, bc,
             sod_y; cfl = 0.3, final_time = 0.003
         )
-        _, U_s, _ = solve_hyperbolic(prob; parallel = false)
-        _, U_t, _ = solve_hyperbolic(prob; parallel = true)
+        _, U_s, _ = FiniteVolumeMethod.solve_hyperbolic(prob; parallel = false)
+        _, U_t, _ = FiniteVolumeMethod.solve_hyperbolic(prob; parallel = true)
 
         for iy in 1:(mesh.ny), ix in 1:(mesh.nx)
             @test U_s[ix, iy] ≈ U_t[ix, iy] atol = 1.0e-13
@@ -224,11 +232,24 @@ end
     end
 end
 
-@testset "CPU backend API: 2D solve_hyperbolic" begin
+@testset "CPU backend API: 2D canonical SciML solve" begin
     prob = make_2d_euler_problem(; final_time = 0.003)
 
-    coords_default, U_default, t_default = solve_hyperbolic(prob; method = :euler)
-    coords_cpu, U_cpu, t_cpu = solve_hyperbolic(prob; method = :euler, backend = CPUBackend())
+    ode_default = sciml_problem(prob)
+    ode_cpu = sciml_problem(prob; backend = CPUBackend())
+    dt0 = compute_initial_dt(ode_default.p, ode_default.u0)
+    sol_default = solve(ode_default, Euler(); adaptive = false, dt = dt0)
+    sol_cpu = solve(ode_cpu, Euler(); adaptive = false, dt = dt0)
+
+    acc = solution_accessor(prob)
+    coords_default = get_coordinates(acc)
+    coords_cpu = get_coordinates(acc)
+    U_default = reshape(
+        get_conserved(acc, sol_default, length(sol_default.t)), size(coords_default)
+    )
+    U_cpu = reshape(get_conserved(acc, sol_cpu, length(sol_cpu.t)), size(coords_cpu))
+    t_default = sol_default.t[end]
+    t_cpu = sol_cpu.t[end]
 
     @test coords_default == coords_cpu
     @test t_default ≈ t_cpu atol = 1.0e-14

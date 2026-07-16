@@ -24,6 +24,7 @@ moves at velocity $U_w = 0.01$.
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -66,7 +67,13 @@ prob = HyperbolicProblem2D(
     NoSlipBC(), DirichletHyperbolicBC(w_top),
     ic_couette; final_time = 0.5, cfl = 0.3
 )
-coords, U, t_final = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, save_everystep = false)
+acc = solution_accessor(prob)
+U = reshape(get_conserved(acc, sol, length(sol.t)), nx, ny)
+coords = get_coordinates(acc)
+t_final = sol.t[end]
 coords |> tc #hide
 ````
 
@@ -110,6 +117,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 gamma = 1.4
@@ -140,7 +148,13 @@ prob = HyperbolicProblem2D(
     NoSlipBC(), DirichletHyperbolicBC(w_top),
     ic_couette; final_time = 0.5, cfl = 0.3
 )
-coords, U, t_final = solve_hyperbolic(prob)
+ode = sciml_problem(prob)
+dt0 = compute_initial_dt(ode.p, ode.u0)
+sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0, save_everystep = false)
+acc = solution_accessor(prob)
+U = reshape(get_conserved(acc, sol, length(sol.t)), nx, ny)
+coords = get_coordinates(acc)
+t_final = sol.t[end]
 
 yc = [coords[1, j][2] for j in 1:ny]
 # Take a slice at the middle x-cell

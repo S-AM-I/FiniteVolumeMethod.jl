@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays
 
@@ -184,7 +185,13 @@ using StaticArrays
             final_time = 0.15, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        ode = sciml_problem(prob)
+        dt0 = compute_initial_dt(ode.p, ode.u0)
+        sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+        acc = solution_accessor(prob)
+        U = get_conserved(acc, sol, length(sol.t))
+        x = get_coordinates(acc)
+        t = sol.t[end]
         W = to_primitive(law, U)
 
         @test t ≈ 0.15 atol = 1.0e-10
@@ -445,7 +452,13 @@ end
             final_time = 0.2, cfl = 0.3
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        ode = sciml_problem(prob)
+        dt0 = compute_initial_dt(ode.p, ode.u0)
+        sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+        acc = solution_accessor(prob)
+        U = get_conserved(acc, sol, length(sol.t))
+        x = get_coordinates(acc)
+        t = sol.t[end]
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10
@@ -1149,7 +1162,13 @@ end
             final_time = 0.2, cfl = 0.4
         )
 
-        x, U, t = solve_hyperbolic(prob)
+        ode = sciml_problem(prob)
+        dt0 = compute_initial_dt(ode.p, ode.u0)
+        sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+        acc = solution_accessor(prob)
+        U = get_conserved(acc, sol, length(sol.t))
+        x = get_coordinates(acc)
+        t = sol.t[end]
         W = to_primitive(law, U)
 
         @test t ≈ 0.2 atol = 1.0e-10

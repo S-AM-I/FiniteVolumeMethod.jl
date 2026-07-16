@@ -122,7 +122,7 @@ which is the exact linear profile for viscous flow between parallel plates. We d
 \pdv{\vb U}{t} + \pdv{\vb F}{x} = \vb S_{\mathrm{stiff}}(\vb U),
 ```
 
-where the source term drives the gas toward an equilibrium temperature on a time scale much shorter than the CFL time step. We use `CoolingSource`, `solve_hyperbolic_imex`, and the `IMEX_SSP3_433` scheme to demonstrate stable time integration without resolving the stiff time scale.
+where the source term drives the gas toward an equilibrium temperature on a time scale much shorter than the CFL time step. We use `CoolingSource` with the split SciML path (`sciml_problem(prob, source)` solved by `KenCarp47`) to demonstrate stable time integration without resolving the stiff time scale.
 
 # AMR Sedov Blast
 

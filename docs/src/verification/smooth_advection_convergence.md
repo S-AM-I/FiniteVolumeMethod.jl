@@ -31,6 +31,7 @@ The exact solution at time $t$ is:
 
 ````julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -58,7 +59,13 @@ function compute_error(N, recon)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), advection_ic;
         final_time = t_final, cfl = 0.4
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     err = 0.0
     for i in eachindex(x)
         x_shifted = mod(x[i] - v0 * t_end, 1.0)
@@ -110,8 +117,18 @@ prob_hi = HyperbolicProblem(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), advection_ic;
     final_time = t_final, cfl = 0.4
 )
-x_lo, U_lo, t_lo = solve_hyperbolic(prob_lo)
-x_hi, U_hi, t_hi = solve_hyperbolic(prob_hi)
+ode_lo = sciml_problem(prob_lo)
+sol_lo = solve(prob_lo, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_lo.p, ode_lo.u0))
+acc_lo = solution_accessor(prob_lo)
+x_lo = get_coordinates(acc_lo)
+U_lo = get_conserved(acc_lo, sol_lo, length(sol_lo.t))
+t_lo = sol_lo.t[end]
+ode_hi = sciml_problem(prob_hi)
+sol_hi = solve(prob_hi, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_hi.p, ode_hi.u0))
+acc_hi = solution_accessor(prob_hi)
+x_hi = get_coordinates(acc_hi)
+U_hi = get_conserved(acc_hi, sol_hi, length(sol_hi.t))
+t_hi = sol_hi.t[end]
 rho_lo = [conserved_to_primitive(law, U_lo[i])[1] for i in eachindex(U_lo)]
 rho_hi = [conserved_to_primitive(law, U_hi[i])[1] for i in eachindex(U_hi)]
 
@@ -188,6 +205,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using CairoMakie
 
@@ -210,7 +228,13 @@ function compute_error(N, recon)
         PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), advection_ic;
         final_time = t_final, cfl = 0.4
     )
-    x, U, t_end = solve_hyperbolic(prob)
+    ode_prob = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+    sol = solve(prob, SSPRK33(); adaptive = false, dt = dt0)
+    accessor = solution_accessor(prob)
+    x = get_coordinates(accessor)
+    U = get_conserved(accessor, sol, length(sol.t))
+    t_end = sol.t[end]
     err = 0.0
     for i in eachindex(x)
         x_shifted = mod(x[i] - v0 * t_end, 1.0)
@@ -254,8 +278,18 @@ prob_hi = HyperbolicProblem(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), advection_ic;
     final_time = t_final, cfl = 0.4
 )
-x_lo, U_lo, t_lo = solve_hyperbolic(prob_lo)
-x_hi, U_hi, t_hi = solve_hyperbolic(prob_hi)
+ode_lo = sciml_problem(prob_lo)
+sol_lo = solve(prob_lo, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_lo.p, ode_lo.u0))
+acc_lo = solution_accessor(prob_lo)
+x_lo = get_coordinates(acc_lo)
+U_lo = get_conserved(acc_lo, sol_lo, length(sol_lo.t))
+t_lo = sol_lo.t[end]
+ode_hi = sciml_problem(prob_hi)
+sol_hi = solve(prob_hi, SSPRK33(); adaptive = false, dt = compute_initial_dt(ode_hi.p, ode_hi.u0))
+acc_hi = solution_accessor(prob_hi)
+x_hi = get_coordinates(acc_hi)
+U_hi = get_conserved(acc_hi, sol_hi, length(sol_hi.t))
+t_hi = sol_hi.t[end]
 rho_lo = [conserved_to_primitive(law, U_lo[i])[1] for i in eachindex(U_lo)]
 rho_hi = [conserved_to_primitive(law, U_hi[i])[1] for i in eachindex(U_hi)]
 

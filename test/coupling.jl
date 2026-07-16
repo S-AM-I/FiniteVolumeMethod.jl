@@ -1,8 +1,23 @@
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
+using OrdinaryDiffEqSDIRK: KenCarp47
+using ADTypes: AutoFiniteDiff
 using Test
 using StaticArrays
 using DelaunayTriangulation
 using LinearAlgebra: norm
+
+# Canonical SciML solve returning the legacy (coords, U, t) triple.
+function solve_canonical(prob)
+    ode = sciml_problem(prob)
+    dt0 = compute_initial_dt(ode.p, ode.u0)
+    sol = solve(ode, SSPRK33(); adaptive = false, dt = dt0)
+    acc = solution_accessor(prob)
+    U = get_conserved(acc, sol, length(sol.t))
+    coords = get_coordinates(acc)
+    # Plain-law accessors return a flat vector; match the legacy shape.
+    return coords, reshape(U, size(coords)), sol.t[end]
+end
 
 # ============================================================
 # Helper: Sod shock tube IC
@@ -98,8 +113,8 @@ end
         final_time = 0.2, cfl = 0.5
     )
 
-    # Reference: pure hyperbolic
-    x_ref, U_ref, t_ref = solve_hyperbolic(prob)
+    # Reference: pure hyperbolic (canonical SciML path)
+    x_ref, U_ref, t_ref = solve_canonical(prob)
 
     # Coupled with NullSource + Lie-Trotter
     x_split, U_split, t_split = solve_coupled(
@@ -146,7 +161,7 @@ end
     end
 
     # Compare with pure hyperbolic — not exact but close
-    _, U_ref, _ = solve_hyperbolic(prob)
+    _, U_ref, _ = solve_canonical(prob)
     max_diff = maximum(norm(U_strang[i] - U_ref[i]) for i in eachindex(U_ref))
     # Two half-steps vs one full step: difference should be small
     @test max_diff < 0.1
@@ -289,7 +304,7 @@ end
     )
 
     # Lie-Trotter with NullSource should match pure MUSCL solve
-    _, U_ref, t_ref = solve_hyperbolic(prob)
+    _, U_ref, t_ref = solve_canonical(prob)
     _, U_split, t_split = solve_coupled(
         prob, NullSource();
         splitting = LieTrotterSplitting()
@@ -345,8 +360,8 @@ end
         final_time = 0.1, cfl = 0.4
     )
 
-    # Reference
-    _, U_ref, t_ref = solve_hyperbolic(prob)
+    # Reference (canonical SciML path)
+    _, U_ref, t_ref = solve_canonical(prob)
 
     # Coupled with NullSource
     _, U_split, t_split = solve_coupled(
@@ -481,7 +496,7 @@ end
     @test t ≈ 0.1 atol = 1.0e-10
 
     # Compare with pure hyperbolic
-    _, U_ref, _ = solve_hyperbolic(prob)
+    _, U_ref, _ = solve_canonical(prob)
     for i in eachindex(U_ref)
         @test U_ref[i] ≈ U[i] atol = 1.0e-12
     end
@@ -626,8 +641,15 @@ end
 
     cooling = CoolingSource(T -> 0.05; mu_mol = 1.0)
 
-    # IMEX solution
-    _, U_imex, t_imex = solve_hyperbolic_imex(prob, cooling)
+    # IMEX solution via the canonical split ODE path
+    split_prob = sciml_problem(prob, cooling)
+    dt0 = compute_initial_dt(split_prob.p, split_prob.u0)
+    sol_imex = solve(
+        split_prob, KenCarp47(autodiff = AutoFiniteDiff());
+        adaptive = false, dt = dt0
+    )
+    U_imex = get_conserved(solution_accessor(prob), sol_imex, length(sol_imex.t))
+    t_imex = sol_imex.t[end]
 
     # Strang splitting solution
     _, U_strang, t_strang = solve_coupled(

@@ -24,6 +24,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 #   of Nonspherical Black Hole Accretion. ApJ, 277, 296-311.
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using CairoMakie
@@ -64,7 +65,14 @@ prob = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     bondi_ic; final_time = t_final_bondi, cfl = 0.15,
 )
-coords, U, t_end, _ = solve_hyperbolic(prob; vector_potential = nothing)
+ode_prob = sciml_problem(prob)
+dt0 = compute_initial_dt(ode_prob.p, ode_prob.u0)
+limiter = mhd_stage_limiter(ode_prob.p)
+sol = solve(ode_prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
+accessor = solution_accessor(prob)
+coords = get_coordinates(accessor)
+U = get_conserved(accessor, sol, length(sol.t))
+t_end = sol.t[end]
 
 # ## Density Drift
 max_drift = 0.0

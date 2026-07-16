@@ -12,6 +12,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # velocity perturbation to seed the instability:
 
 using FiniteVolumeMethod
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test #src
 using ReferenceTests #src
@@ -64,7 +65,15 @@ prob_low = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     kh_ic; final_time = t_final, cfl = 0.4
 )
-coords_low, U_low, _ = solve_hyperbolic(prob_low)
+ode_low = sciml_problem(prob_low)
+sol_low = solve(
+    ode_low, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_low.p, ode_low.u0),
+    save_everystep = false
+)
+acc_low = solution_accessor(prob_low)
+U_low = reshape(get_conserved(acc_low, sol_low, length(sol_low.t)), N_low, N_low)
+coords_low = get_coordinates(acc_low)
 
 N_high = 128
 mesh_high = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N_high, N_high)
@@ -74,7 +83,16 @@ prob_high = HyperbolicProblem2D(
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
     kh_ic; final_time = t_final, cfl = 0.4
 )
-coords_high, U_high, t_end = solve_hyperbolic(prob_high)
+ode_high = sciml_problem(prob_high)
+sol_high = solve(
+    ode_high, SSPRK33();
+    adaptive = false, dt = compute_initial_dt(ode_high.p, ode_high.u0),
+    save_everystep = false
+)
+acc_high = solution_accessor(prob_high)
+U_high = reshape(get_conserved(acc_high, sol_high, length(sol_high.t)), N_high, N_high)
+coords_high = get_coordinates(acc_high)
+t_end = sol_high.t[end]
 coords_high |> tc #hide
 
 # ## Visualisation

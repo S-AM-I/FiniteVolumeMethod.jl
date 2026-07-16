@@ -59,7 +59,11 @@ function SciMLBase.SplitODEProblem(
 
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
-    return SplitODEProblem{true}(f1!, f2!, u0, tspan, cache; callback = cb, kwargs...)
+    # Pre-set the combined-eval cache with a copy: SciMLBase's default is
+    # `DiffCache(u0)`, which aliases the problem state and corrupts `u0` when
+    # the combined SplitFunction functor is evaluated directly with `u === u0`.
+    split_f = SciMLBase.SplitFunction{true}(f1!, f2!; _func_cache = DiffCache(copy(u0)))
+    return SplitODEProblem{true}(split_f, u0, tspan, cache; callback = cb, kwargs...)
 end
 
 """
@@ -102,5 +106,9 @@ function SciMLBase.SplitODEProblem(
 
     cfl_cb = cfl_stepsize_callback(cache)
     cb = _merge_problem_callbacks(cfl_cb, callback)
-    return SplitODEProblem{true}(f1!, f2!, u0, tspan, cache; callback = cb, kwargs...)
+    # Pre-set the combined-eval cache with a copy: SciMLBase's default is
+    # `DiffCache(u0)`, which aliases the problem state and corrupts `u0` when
+    # the combined SplitFunction functor is evaluated directly with `u === u0`.
+    split_f = SciMLBase.SplitFunction{true}(f1!, f2!; _func_cache = DiffCache(copy(u0)))
+    return SplitODEProblem{true}(split_f, u0, tspan, cache; callback = cb, kwargs...)
 end
