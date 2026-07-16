@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/amr_convergence.jl"
 ```
 
-````@example amr_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -28,7 +28,7 @@ where $A = 0.35$, $\sigma = 0.08$, and $(x_c, y_c) = (0.35, 0.40)$.
 - Berger, M.J. & Colella, P. (1989). Local Adaptive Mesh Refinement for
   Shock Hydrodynamics. *Journal of Computational Physics*, 82, 64-84.
 
-````@example amr_convergence
+````julia
 using CairoMakie
 
 amr_common_path = joinpath(@__DIR__, "amr_common.jl")
@@ -67,7 +67,7 @@ fig
 The fixed-hierarchy AMR solve should complete successfully, the error should
 decrease monotonically, and the observed rates should be comfortably positive.
 
-````@example amr_convergence
+````julia
 @assert all(result -> result.retcode == ReturnCode.Success, results) #hide
 @assert all(result -> isapprox(result.final_time, AMR_VERIFICATION_FINAL_TIME; atol = 1.0e-12), results) #hide
 @assert all(diff(errors) .< 0.0) #hide

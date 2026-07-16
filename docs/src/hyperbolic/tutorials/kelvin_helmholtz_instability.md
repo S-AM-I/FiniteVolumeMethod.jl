@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/kelvin_helmholtz_instability.jl"
 ```
 
-````@example kelvin_helmholtz_instability
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -19,7 +19,7 @@ We solve the 2D Euler equations on $[0, 1]^2$ with periodic boundary
 conditions. The initial condition has two shear layers with a small
 velocity perturbation to seed the instability:
 
-````@example kelvin_helmholtz_instability
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -63,7 +63,7 @@ end
 We compare $N=64$ and $N=128$ to show how resolution affects
 the development of the instability.
 
-````@example kelvin_helmholtz_instability
+````julia
 t_final = 1.0
 
 N_low = 64
@@ -90,7 +90,7 @@ coords_high |> tc #hide
 
 ## Visualisation
 
-````@example kelvin_helmholtz_instability
+````julia
 using CairoMakie
 
 fig = Figure(fontsize = 24, size = (1100, 500))
@@ -123,7 +123,7 @@ and secondary instabilities become visible. The KHI is an excellent
 test for the interplay between numerical dissipation and physical
 instability growth.
 
-````@example kelvin_helmholtz_instability
+````julia
 all(rho_high .> 0) || @warn("Negative densities detected in KH instability") #hide
 ````
 

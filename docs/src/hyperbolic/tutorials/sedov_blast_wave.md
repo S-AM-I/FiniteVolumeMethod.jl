@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/sedov_blast_wave.jl"
 ```
 
-````@example sedov_blast_wave
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -19,7 +19,7 @@ We solve the 2D Euler equations on $[-1, 1]^2$ with transmissive
 boundary conditions. The initial condition is a uniform density field
 with a small, high-pressure region near the origin.
 
-````@example sedov_blast_wave
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -33,7 +33,7 @@ mesh = StructuredMesh2D(-1.0, 1.0, -1.0, 1.0, N, N)
 
 The background pressure is very low, with a strong blast in the central cells:
 
-````@example sedov_blast_wave
+````julia
 P_bg = 1.0e-5
 P_blast = 1.0
 r_blast = 3.0 * mesh.dx
@@ -47,7 +47,7 @@ end
 
 We use transmissive boundary conditions on all four sides:
 
-````@example sedov_blast_wave
+````julia
 prob = HyperbolicProblem2D(
     law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(),
@@ -61,7 +61,7 @@ coords |> tc #hide
 ## Visualisation
 We extract the density field and plot it as a 2D heatmap.
 
-````@example sedov_blast_wave
+````julia
 using CairoMakie
 
 nx, ny = N, N
@@ -80,7 +80,7 @@ Colorbar(fig[1, 2], hm)
 
 We also plot the radial density profile to check cylindrical symmetry:
 
-````@example sedov_blast_wave
+````julia
 ax2 = Axis(fig[1, 3], xlabel = "r", ylabel = L"\rho", title = "Radial profile")
 r_vals = Float64[]
 rho_vals = Float64[]
@@ -99,7 +99,7 @@ The density profile shows a clear cylindrical shock front with a thin
 shell of compressed gas. The radial profile confirms the approximate
 cylindrical symmetry of the solution.
 
-````@example sedov_blast_wave
+````julia
 all(rho .> 0) || @warn("Negative densities detected in Sedov blast") #hide
 ````
 

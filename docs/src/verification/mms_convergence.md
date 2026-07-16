@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/mms_convergence.jl"
 ```
 
-````@example mms_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -35,7 +35,7 @@ S(x,y,t) = (2\pi^2 - 1)\sin(\pi x)\sin(\pi y)\,e^{-t}.
 - **Final time**: $t_f = 1.0$
 - **Time integrator**: `Tsit5()`
 
-````@example mms_convergence
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation
 using OrdinaryDiffEq
 using CairoMakie
@@ -43,7 +43,7 @@ using CairoMakie
 
 Define the exact solution, source, and PDE coefficients:
 
-````@example mms_convergence
+````julia
 u_exact(x, y, t) = sin(pi * x) * sin(pi * y) * exp(-t)
 
 function source_mms(x, y, t, u, p)
@@ -59,7 +59,7 @@ bc_mms(x, y, t, u, p) = zero(u)
 For each mesh size we build a triangulation, solve the PDE, and compute
 the $L^\infty$ and $L^2$ errors at $t = 1$.
 
-````@example mms_convergence
+````julia
 mesh_sizes = [10, 20, 40, 80]
 t_final = 1.0
 errors_Linf = Float64[]
@@ -106,7 +106,7 @@ end
 ## Convergence Rates
 We compute the rate as $p = \log_2(e_N / e_{2N})$:
 
-````@example mms_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -118,7 +118,7 @@ rates_L2 = convergence_rates(errors_L2)
 ## Visualisation — Solution Comparison
 Three panels at the finest mesh: numerical, exact, and error.
 
-````@example mms_convergence
+````julia
 tri_fine = last_tri
 sol_fine = last_sol
 
@@ -139,7 +139,7 @@ fig1
 
 ## Visualisation — Convergence Plot
 
-````@example mms_convergence
+````julia
 h_vals = 1.0 ./ mesh_sizes
 fig2 = Figure(fontsize = 24, size = (600, 500))
 ax = Axis(
@@ -172,7 +172,7 @@ fig2
 
 ## Test Assertions
 
-````@example mms_convergence
+````julia
 @assert minimum(rates_Linf) > 1.0 #hide
 @assert minimum(rates_L2) > 1.5 #hide
 ````

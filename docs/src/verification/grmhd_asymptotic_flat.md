@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/grmhd_asymptotic_flat.jl"
 ```
 
-````@example grmhd_asymptotic_flat
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -27,7 +27,7 @@ GRMHD -> SRMHD asymptotic limit (tier-1 reduction in the V&V hierarchy).
 - Rezzolla, L. & Zanotti, O. (2013). Relativistic Hydrodynamics. Oxford
   University Press.
 
-````@example grmhd_asymptotic_flat
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -43,7 +43,7 @@ srmhd = SRMHDEquations{1}(eos)
 We test across a wide range of physical regimes: low/high velocity,
 low/high magnetic field, and combinations thereof.
 
-````@example grmhd_asymptotic_flat
+````julia
 test_states = [
     # (label, [rho, vx, vy, vz, P, Bx, By, Bz])
     ("rest", SVector(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)),
@@ -62,7 +62,7 @@ test_states = [
 ## Check 1 --- Flux Consistency
 The GRMHD physical_flux with Minkowski metric must match SRMHD flux.
 
-````@example grmhd_asymptotic_flat
+````julia
 max_flux_diff = 0.0
 for (label, w) in test_states
     for dir in 1:2
@@ -76,7 +76,7 @@ end
 
 ## Check 2 --- Con2Prim Round-Trip Consistency
 
-````@example grmhd_asymptotic_flat
+````julia
 max_roundtrip_diff = 0.0
 for (label, w) in test_states
     # GRMHD round-trip
@@ -97,7 +97,7 @@ end
 
 ## Visualisation --- Error Summary
 
-````@example grmhd_asymptotic_flat
+````julia
 labels = [s[1] for s in test_states]
 flux_diffs = Float64[]
 for (label, w) in test_states
@@ -125,7 +125,7 @@ fig
 
 ## Test Assertions
 
-````@example grmhd_asymptotic_flat
+````julia
 @assert max_flux_diff < 1.0e-12 #hide
 @assert max_roundtrip_diff < 1.0e-10 #hide
 

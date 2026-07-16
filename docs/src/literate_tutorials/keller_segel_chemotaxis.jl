@@ -84,7 +84,7 @@ prob |> tc #hide
 # heatmap!(axv, x, y, v, colorrange = (0.0, 10.0), colormap = :turbo)
 # resize_to_layout!(fig)
 # record(
-#     fig, joinpath(@__DIR__, "../figures", "keller_segel_chemotaxis.mp4"), eachindex(sol);
+#     fig, joinpath(@__DIR__, "../figures", "keller_segel_chemotaxis.mp4"), eachindex(sol.u);
 #     framerate = 60) do _i
 #     i[] = _i
 # end

@@ -1,5 +1,6 @@
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test
 
@@ -365,7 +366,7 @@ using SciMLBase: SciMLBase
         (u, t, integrator) -> true,
         integrator -> begin
             push!(dts, integrator.dt)
-            u_modified!(integrator, false)
+            SciMLBase.derivative_discontinuity!(integrator, false)
         end;
         save_positions = (false, false)
     )

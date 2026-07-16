@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_on_an_annulus.jl"
 ```
 
-````@example diffusion_equation_on_an_annulus
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -30,7 +30,7 @@ u_0(x) = 10\mathrm{e}^{-25\left[\left(x+\frac12\right)^2+\left(y+\frac12\right)^
 ```
 For the mesh, we use two `CircularArc`s to define the annulus.
 
-````@example diffusion_equation_on_an_annulus
+````julia
 using DelaunayTriangulation, FiniteVolumeMethod, CairoMakie
 R₁, R₂ = 0.2, 1.0
 inner = CircularArc((R₁, 0.0), (R₁, 0.0), (0.0, 0.0), positive = false)
@@ -43,7 +43,7 @@ refine!(tri; max_area = 1.0e-4A)
 triplot(tri)
 ````
 
-````@example diffusion_equation_on_an_annulus
+````julia
 mesh = FVMGeometry(tri)
 ````
 
@@ -54,7 +54,7 @@ came first, and then came the inner boundary. We can verify
 that this is the order of the boundary indices as
 follows:
 
-````@example diffusion_equation_on_an_annulus
+````julia
 fig = Figure()
 ax = Axis(fig[1, 1])
 outer = [get_point(tri, i) for i in get_neighbours(tri, -1)]
@@ -67,7 +67,7 @@ fig
 
 So, the boundary conditions are:
 
-````@example diffusion_equation_on_an_annulus
+````julia
 outer_bc = (x, y, t, u, p) -> zero(u)
 inner_bc = (x, y, t, u, p) -> oftype(u, 50(1 - exp(-t / 2)))
 types = (Neumann, Dirichlet)
@@ -76,7 +76,7 @@ BCs = BoundaryConditions(mesh, (outer_bc, inner_bc), types)
 
 Finally, let's define the problem and solve it.
 
-````@example diffusion_equation_on_an_annulus
+````julia
 initial_condition_f = (
     x,
     y,
@@ -99,13 +99,14 @@ prob = FVMProblem(
 )
 ````
 
-````@example diffusion_equation_on_an_annulus
+````julia
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 0.2)
 sol |> tc #hide
 ````
 
-````@example diffusion_equation_on_an_annulus
+````julia
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     local ax
@@ -133,7 +134,7 @@ is `sol.t[6]`. For this, we need to put the ghost
 triangles back into `tri` so that we can safely
 apply `jump_and_march`. This is done with `add_ghost_triangles!`.
 
-````@example diffusion_equation_on_an_annulus
+````julia
 add_ghost_triangles!(tri)
 ````
 
@@ -142,7 +143,7 @@ but we are just showing how you would add them back in if needed.)
 
 Now let's interpolate.
 
-````@example diffusion_equation_on_an_annulus
+````julia
 x = LinRange(-R₂, R₂, 400)
 y = LinRange(-R₂, R₂, 400)
 interp_vals = zeros(length(x), length(y))
@@ -166,7 +167,7 @@ fig
 Let's now consider applying NaturalNeighbours.jl. We apply it naively first to
 highlight some complications.
 
-````@example diffusion_equation_on_an_annulus
+````julia
 using NaturalNeighbours
 _x = vec([x for x in x, y in y]) # NaturalNeighbours.jl needs vector data
 _y = vec([y for x in x, y in y])
@@ -174,12 +175,12 @@ itp = interpolate(tri, u, derivatives = true)
 itp |> tc #hide
 ````
 
-````@example diffusion_equation_on_an_annulus
+````julia
 itp_vals = itp(_x, _y; method = Farin())
 itp_vals |> tc #hide
 ````
 
-````@example diffusion_equation_on_an_annulus
+````julia
 fig, ax,
     sc = contourf(
     x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
@@ -190,12 +191,12 @@ fig
 The issue here is that the interpolant is trying to extrapolate inside the hole and
 outside of the annulus. To avoid this, you need to pass `project=false`.
 
-````@example diffusion_equation_on_an_annulus
+````julia
 itp_vals = itp(_x, _y; method = Farin(), project = false)
 itp_vals |> tc #hide
 ````
 
-````@example diffusion_equation_on_an_annulus
+````julia
 fig, ax,
     sc = contourf(
     x, y, reshape(itp_vals, length(x), length(y)), colormap = :matter, levels = -10:2:40
@@ -257,6 +258,7 @@ prob = FVMProblem(
 )
 
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 0.2)
 
 fig = Figure(fontsize = 38)

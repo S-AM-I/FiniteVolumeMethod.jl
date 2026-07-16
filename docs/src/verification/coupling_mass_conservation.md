@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/coupling_mass_conservation.jl"
 ```
 
-````@example coupling_mass_conservation
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -19,7 +19,7 @@ The initial state is the same smooth periodic profile used in the coupling
 benchmark. The source term is `CoolingSource(T -> 0.05*T)`, so energy changes
 but mass and momentum should not.
 
-````@example coupling_mass_conservation
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -105,7 +105,7 @@ end
 
 ## Test Assertions
 
-````@example coupling_mass_conservation
+````julia
 @assert all(result -> isapprox(result.t, t_final; atol = 1.0e-12), results) #hide
 @assert all(err -> err < 1.0e-12, mass_errors) #hide
 @assert all(err -> err < 1.0e-12, momentum_errors) #hide

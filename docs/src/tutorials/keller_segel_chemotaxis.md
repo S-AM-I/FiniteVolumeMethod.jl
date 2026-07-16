@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/keller_segel_chemotaxis.jl"
 ```
 
-````@example keller_segel_chemotaxis
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -25,7 +25,7 @@ it remains part of the published tutorial set, but because of its runtime and
 memory cost it is not executed in pull-request CI. The validation manifest
 records that policy explicitly so the page still has source ownership.
 
-````@example keller_segel_chemotaxis
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation
 
 tri = triangulate_rectangle(0, 100, 0, 100, 250, 250, single_boundary = true)
@@ -94,7 +94,7 @@ heatmap!(axu, x, y, u, colorrange = (0.0, 2.5), colormap = :turbo)
 heatmap!(axv, x, y, v, colorrange = (0.0, 10.0), colormap = :turbo)
 resize_to_layout!(fig)
 record(
-    fig, joinpath(@__DIR__, "../figures", "keller_segel_chemotaxis.mp4"), eachindex(sol);
+    fig, joinpath(@__DIR__, "../figures", "keller_segel_chemotaxis.mp4"), eachindex(sol.u);
     framerate = 60) do _i
     i[] = _i
 end

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/flux_balance_verification.jl"
 ```
 
-````@example flux_balance_verification
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -31,7 +31,7 @@ For the assembled discrete system `A*u = b`, every row corresponds to a
 control-volume balance. The invariant we check is the infinity-norm residual
 of that discrete balance.
 
-````@example flux_balance_verification
+````julia
 using FiniteVolumeMethod
 using DelaunayTriangulation
 using LinearAlgebra

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/smooth_advection_convergence.jl"
 ```
 
-````@example smooth_advection_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -29,7 +29,7 @@ The exact solution at time $t$ is:
 - **Riemann solver**: `HLLCSolver`
 - **Final time**: $t_f = 0.05$
 
-````@example smooth_advection_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -50,7 +50,7 @@ advection_ic(x) = SVector(rho0 + amp * sin(2 * pi * x), v0, P0)
 ## Convergence Measurement
 The $L^1$ density error at each resolution and reconstruction scheme:
 
-````@example smooth_advection_convergence
+````julia
 function compute_error(N, recon)
     mesh = StructuredMesh1D(0.0, 1.0, N)
     prob = HyperbolicProblem(
@@ -89,7 +89,7 @@ end
 
 ## Convergence Rates
 
-````@example smooth_advection_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -97,7 +97,7 @@ end
 
 ## Visualisation — Solutions at Low and High Resolution
 
-````@example smooth_advection_convergence
+````julia
 mesh_lo = StructuredMesh1D(0.0, 1.0, 32)
 mesh_hi = StructuredMesh1D(0.0, 1.0, 256)
 prob_lo = HyperbolicProblem(
@@ -133,7 +133,7 @@ fig1
 
 ## Visualisation — Convergence Plot
 
-````@example smooth_advection_convergence
+````julia
 fig2 = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error}",
@@ -170,7 +170,7 @@ fig2
 
 ## Test Assertions
 
-````@example smooth_advection_convergence
+````julia
 rates_norecon = convergence_rates(all_errors["NoReconstruction"])
 rates_muscl_mm = convergence_rates(all_errors["MUSCL (Minmod)"])
 rates_muscl_vl = convergence_rates(all_errors["MUSCL (VanLeer)"])

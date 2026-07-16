@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/mhd_convergence.jl"
 ```
 
-````@example mhd_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -31,9 +31,10 @@ P = 0.1, \quad B_x = 1, \quad B_y = 0.1\sin(2\pi x), \quad B_z = 0.1\cos(2\pi x)
 - Stone et al. (2008). Athena: A New Code for Astrophysical MHD.
   ApJS, 178, 137-177. DOI: 10.1086/588755
 
-````@example mhd_convergence
+````julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie
@@ -62,7 +63,7 @@ end
 ## Convergence Measurement
 The L1 error in $B_y$ at each resolution:
 
-````@example mhd_convergence
+````julia
 function solve_mhd_state(N)
     mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, 4)
     prob = HyperbolicProblem2D(
@@ -98,7 +99,7 @@ errors = [compute_mhd_error(N) for N in resolutions]
 
 ## Convergence Rates
 
-````@example mhd_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -108,7 +109,7 @@ rates = convergence_rates(errors)
 
 ## Visualisation — Convergence Plot
 
-````@example mhd_convergence
+````julia
 fig = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error } (B_y)",
@@ -139,7 +140,7 @@ end
 ## Test Assertions
 MUSCL with HLLD should achieve at least 1.5th-order convergence on smooth data.
 
-````@example mhd_convergence
+````julia
 @assert all(r -> r > 0.8, rates) #hide
 
 if isdefined(@__MODULE__, :record_evidence_result)
@@ -171,6 +172,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 ```julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie

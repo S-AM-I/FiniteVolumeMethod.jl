@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/toro_riemann_tests.jl"
 ```
 
-````@example toro_riemann_tests
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -17,7 +17,7 @@ rarefactions, contacts, shocks, near-vacuum, and strong discontinuities.
 - Toro, E.F. (2009). Riemann Solvers and Numerical Methods for Fluid
   Dynamics, 3rd ed., Springer. Chapter 4, Table 4.1.
 
-````@example toro_riemann_tests
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -30,7 +30,7 @@ N = 400
 
 ## Exact Riemann Solver (star-state values from Toro Table 4.1)
 
-````@example toro_riemann_tests
+````julia
 toro_tests = [
     (
         name = "Sod", rhoL = 1.0, uL = 0.0, pL = 1.0,
@@ -62,7 +62,7 @@ toro_tests = [
 
 ## Run All Five Tests
 
-````@example toro_riemann_tests
+````julia
 results = map(toro_tests) do tt
     wL = SVector(tt.rhoL, tt.uL, tt.pL)
     wR = SVector(tt.rhoR, tt.uR, tt.pR)
@@ -81,7 +81,7 @@ end
 
 ## Visualisation — All Five Tests
 
-````@example toro_riemann_tests
+````julia
 fig = Figure(fontsize = 18, size = (1500, 900))
 for (idx, r) in enumerate(results)
     row = (idx - 1) ÷ 3 + 1
@@ -103,7 +103,7 @@ For each test, find the numerical pressure in the star region
 The contact travels at speed `u_star` from the initial discontinuity `x0`,
 so we sample near `x0 + u_star * t`.
 
-````@example toro_riemann_tests
+````julia
 function measure_star_pressure(W, x, x_contact)
     # Sample cells near the contact location
     i_centre = argmin(abs.(x .- x_contact))
@@ -125,7 +125,7 @@ Star-region pressure should match published values within tolerance.
 Test 2 (near-vacuum, p_star ≈ 0.002) uses absolute tolerance since
 the relative error is dominated by numerics at near-zero pressure.
 
-````@example toro_riemann_tests
+````julia
 for i in eachindex(results)
 end
 for i in eachindex(results) #hide

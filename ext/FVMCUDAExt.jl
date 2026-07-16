@@ -1,6 +1,6 @@
 module FVMCUDAExt
 
-using CUDA: CUDA, CuArray, @cuda
+using CUDA: CUDA, CuArray, @cuda, blockDim, blockIdx, threadIdx
 using StaticArrays: SVector
 
 using FiniteVolumeMethod
@@ -8,7 +8,9 @@ using FiniteVolumeMethod
 const FVM = FiniteVolumeMethod
 
 FVM.to_backend(x::AbstractArray, backend::FVM.CUDASolverBackend) = CuArray(x)
-FVM.to_host(x::CUDA.AbstractGPUArray) = Array(x)
+# CUDA 6 no longer re-exports GPUArraysCore.AbstractGPUArray; dispatch on the
+# concrete CuArray (consistent with the fold/unfold methods below).
+FVM.to_host(x::CUDA.CuArray) = Array(x)
 
 function FVM.supports_backend(prob::FVM.HyperbolicProblem2D, ::FVM.CUDASolverBackend)
     return prob.law isa FVM.EulerEquations{2} &&

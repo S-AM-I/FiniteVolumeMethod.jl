@@ -1,6 +1,7 @@
 using DelaunayTriangulation
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: DiscreteCallback, ODEProblem, ReturnCode, SteadyStateProblem, remake
 using StaticArrays
 using Test

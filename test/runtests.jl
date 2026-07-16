@@ -814,10 +814,12 @@ end
         # project_extras re-enabled 2026-07-15 after JET moved out of the
         # root [deps] and the dead [extras]/[targets] block was removed
         # (test/Project.toml governs the test env on Julia >= 1.2).
+        # Aqua 0.8 renamed `piracy` → `piracies`; kept disabled for now, the
+        # Stage-7 test-suite tightening pass re-evaluates enabling it.
         Aqua.test_all(
             FiniteVolumeMethod;
             ambiguities = false, unbound_args = false,
-            piracy = false,
+            piracies = false,
         )
         # Aqua.test_unbound_args remains *disabled* (re-checked 2026-07-15,
         # still fails) because of the NTuple{Dim,T}-parametrised

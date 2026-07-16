@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/solving_mazes_with_laplaces_equation.jl"
 ```
 
-````@example solving_mazes_with_laplaces_equation
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -32,7 +32,7 @@ the associated streamlines.
  Here is what the maze
 looks like, where the start is in blue and the end is in red.
 
-````@example solving_mazes_with_laplaces_equation
+````julia
 using DelaunayTriangulation, CairoMakie, DelimitedFiles
 A = readdlm(joinpath(@__DIR__, "../tutorials/maze.txt"))
 A = unique(A, dims = 1)
@@ -68,7 +68,7 @@ fig
 
 Now we can solve the problem.
 
-````@example solving_mazes_with_laplaces_equation
+````julia
 using FiniteVolumeMethod, StableRNGs
 mesh = FVMGeometry(tri)
 start_bc = (x, y, t, u, p) -> zero(u)
@@ -90,15 +90,17 @@ prob = FVMProblem(
 steady_prob = SteadyFVMProblem(prob)
 ````
 
-````@example solving_mazes_with_laplaces_equation
+````julia
 using SteadyStateDiffEq, LinearSolve, OrdinaryDiffEq
-sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization(), autodiff = false)))
+using ADTypes: AutoFiniteDiff
+using OrdinaryDiffEqSDIRK: TRBDF2
+sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization(), autodiff = AutoFiniteDiff())))
 sol |> tc #hide
 ````
 
 We now have our solution.
 
-````@example solving_mazes_with_laplaces_equation
+````julia
 tricontourf(tri, sol.u, colormap = :matter)
 ````
 
@@ -106,7 +108,7 @@ This is not what we use to compute the solution to the maze,
 instead we need $\grad\phi$. We compute the gradient at each point using
 NaturalNeighbours.jl.
 
-````@example solving_mazes_with_laplaces_equation
+````julia
 using NaturalNeighbours, LinearAlgebra
 itp = interpolate(tri, sol.u; derivatives = true)
 ∇ = NaturalNeighbours.get_gradient(itp)
@@ -120,7 +122,7 @@ An alternative way to look at this solution is to
 consider the transient problem, where we do not solve the
 steady state problem and instead view the solution over time.
 
-````@example solving_mazes_with_laplaces_equation
+````julia
 using Accessors
 prob = @set prob.final_time = 1.0e8
 LogRange(a, b, n) = exp10.(LinRange(log10(a), log10(b), n))
@@ -145,7 +147,7 @@ fig, ax,
 hidedecorations!(ax)
 tightlimits!(ax)
 record(
-    fig, joinpath(@__DIR__, "../figures", "maze_solution_1.mp4"), eachindex(sol);
+    fig, joinpath(@__DIR__, "../figures", "maze_solution_1.mp4"), eachindex(sol.u);
     framerate = 24
 ) do _i
     i[] = _i
@@ -213,7 +215,9 @@ prob = FVMProblem(
 steady_prob = SteadyFVMProblem(prob)
 
 using SteadyStateDiffEq, LinearSolve, OrdinaryDiffEq
-sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization(), autodiff = false)))
+using ADTypes: AutoFiniteDiff
+using OrdinaryDiffEqSDIRK: TRBDF2
+sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization(), autodiff = AutoFiniteDiff())))
 
 tricontourf(tri, sol.u, colormap = :matter)
 
@@ -247,7 +251,7 @@ fig, ax,
 hidedecorations!(ax)
 tightlimits!(ax)
 record(
-    fig, joinpath(@__DIR__, "../figures", "maze_solution_1.mp4"), eachindex(sol);
+    fig, joinpath(@__DIR__, "../figures", "maze_solution_1.mp4"), eachindex(sol.u);
     framerate = 24
 ) do _i
     i[] = _i

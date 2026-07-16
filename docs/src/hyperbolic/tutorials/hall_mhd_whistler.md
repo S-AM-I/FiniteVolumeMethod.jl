@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/hall_mhd_whistler.jl"
 ```
 
-````@example hall_mhd_whistler
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -26,7 +26,7 @@ background with density $\rho = 1$, pressure $P = 1$, and guide
 field $B_x = 1$. The transverse components $B_y$ and $B_z$ are
 initialised as a sinusoidal perturbation.
 
-````@example hall_mhd_whistler
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -36,7 +36,7 @@ law = HallMHDEquations{1}(eos; di = 0.1)
 
 Initial condition: circularly polarized Alfvén wave.
 
-````@example hall_mhd_whistler
+````julia
 function alfven_wave_ic(x)
     rho = 1.0
     P = 1.0
@@ -70,7 +70,7 @@ The whistler speed $c_w = d_i |B| / (\sqrt{\rho} \, \Delta x)$
 is computed at each cell to illustrate the resolution-dependent
 wave speed introduced by the Hall term.
 
-````@example hall_mhd_whistler
+````julia
 W = to_primitive(law, U)
 dx = 1.0 / N
 
@@ -92,7 +92,7 @@ flux_demo = hall_flux_x(law, U[i_mid], U[i_mid + 1], dx)
 
 ## Visualisation
 
-````@example hall_mhd_whistler
+````julia
 using CairoMakie
 
 fig = Figure(fontsize = 24, size = (1200, 400))

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/amr_sedov_blast.jl"
 ```
 
-````@example amr_sedov_blast
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -18,7 +18,7 @@ resolution, saving computational cost.
 We solve the 2D Euler equations with a point-like energy release,
 using the AMR infrastructure: `AMRGrid`, `AMRProblem`, and `solve_amr`.
 
-````@example amr_sedov_blast
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -33,7 +33,7 @@ Each block has a fixed number of cells (here $8 \times 8$), and blocks
 can be refined up to `max_level` levels, with each refinement halving
 the grid spacing.
 
-````@example amr_sedov_blast
+````julia
 block_size = (8, 8)
 max_level = 2
 domain_lo = (-1.0, -1.0)
@@ -43,7 +43,7 @@ domain_hi = (1.0, 1.0)
 The `GradientRefinement` criterion refines blocks where the density
 gradient exceeds a threshold:
 
-````@example amr_sedov_blast
+````julia
 criterion = GradientRefinement(
     variable_index = 1,              ## monitor density (index 1)
     refine_threshold = 0.1,
@@ -57,7 +57,7 @@ grid = AMRGrid(law, criterion, block_size, max_level, domain_lo, domain_hi, Val(
 We fill the root block with the Sedov blast wave initial condition:
 uniform density with a high-pressure region near the origin.
 
-````@example amr_sedov_blast
+````julia
 root_block = grid.blocks[1]
 dx_root = root_block.dx[1]
 P_bg = 1.0e-5
@@ -78,13 +78,13 @@ end
 Before solving, we refine the grid around the blast to capture
 the initial discontinuity:
 
-````@example amr_sedov_blast
+````julia
 regrid!(grid)
 ````
 
 We can inspect the AMR hierarchy:
 
-````@example amr_sedov_blast
+````julia
 n_active = length(active_blocks(grid))
 max_lev = max_active_level(grid)
 ````
@@ -94,7 +94,7 @@ The `AMRProblem` packages the grid, solver, and time integration
 parameters. The `solve_amr` function uses Berger-Oliger subcycling:
 finer levels take smaller time steps (half the coarse step).
 
-````@example amr_sedov_blast
+````julia
 bcs = (TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC())
 prob = AMRProblem(
     grid, HLLCSolver(), NoReconstruction(), bcs;
@@ -106,7 +106,7 @@ final_grid |> tc #hide
 
 ## Inspecting the Result
 
-````@example amr_sedov_blast
+````julia
 n_blocks_final = length(active_blocks(final_grid))
 max_lev_final = max_active_level(final_grid)
 ````
@@ -115,7 +115,7 @@ max_lev_final = max_active_level(final_grid)
 We collect cell centres and densities from all active blocks
 to create a scatter plot showing the AMR structure.
 
-````@example amr_sedov_blast
+````julia
 using CairoMakie
 
 xs = Float64[]
@@ -159,7 +159,7 @@ the right panel shows the AMR refinement levels. The grid is
 refined around the shock front where density gradients are large,
 while the smooth interior remains at the coarsest level.
 
-````@example amr_sedov_blast
+````julia
 all(rhos .> 0) || @warn("Negative densities detected in AMR Sedov blast") #hide
 ````
 

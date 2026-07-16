@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation.jl"
 ```
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -34,7 +34,7 @@ with \eqref{eq:advdiffeq}. For the mesh, we could use
 `triangulate_rectangle`, but we want to put most of the triangles
 near the origin, so we need to use `refine!` on an initial mesh.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 using DelaunayTriangulation, FiniteVolumeMethod, LinearAlgebra, CairoMakie
 L = 30
 tri = triangulate_rectangle(-L, L, -L, L, 2, 2, single_boundary = true)
@@ -53,13 +53,13 @@ refine!(tri; min_angle = 33.0, custom_constraint = area_constraint)
 triplot(tri)
 ````
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 mesh = FVMGeometry(tri)
 ````
 
 The boundary conditions are homogeneous `Dirichlet` conditions.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> zero(u), Dirichlet)
 ````
 
@@ -90,7 +90,7 @@ taking $\varepsilon=1/10$. We can now define the problem. Remember that the flux
 takes argument $(\alpha, \beta, \gamma)$ rather than $u$, replacing $u$ with $u(x, y) = \alpha x + \beta y + \gamma$,
 and it returns a `Tuple` representing the vector. We let $D = 0.02$ and $\nu = 0.05$.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 ε = 1 / 10
 f = (x, y) -> 1 / (ε^2 * π) * exp(-(x^2 + y^2) / ε^2)
 initial_condition = [f(x, y) for (x, y) in DelaunayTriangulation.each_point(tri)]
@@ -115,17 +115,18 @@ prob = FVMProblem(
 
 Now we can solve and visualise the solution.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 times = [0, 10, 25, 50, 100, 200, 250]
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = times)
 sol |> tc #hide
 ````
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 using CairoMakie
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax = Axis(
         fig[1, i], width = 400, height = 400,
         xlabel = "x", ylabel = "y",
@@ -161,7 +162,7 @@ We consider the times $t = 10, 25, 50, 100, 200, 250$. You could also of course
 amend the procedure so that you evaluate the interpolant at each time for a given point first,
 allowing you to avoid storing the triangle since you only consider each point a single time.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 x = LinRange(-L, L, 250)
 y = LinRange(-L, L, 250)
 triangles = Matrix{NTuple{3, Int}}(undef, length(x), length(y))
@@ -170,8 +171,8 @@ for j in eachindex(y)
         triangles[i, j] = jump_and_march(tri, (x[i], y[j]))
     end
 end
-interpolated_vals = zeros(length(x), length(y), length(sol))
-for k in eachindex(sol)
+interpolated_vals = zeros(length(x), length(y), length(sol.u))
+for k in eachindex(sol.u)
     for j in eachindex(y)
         for i in eachindex(x)
             interpolated_vals[i, j, k] = pl_interpolate(
@@ -185,10 +186,10 @@ end
 Let's visualise these results to check their accuracy. We compute the triangulation of
 our grid to make the `tricontourf` call faster.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 _tri = triangulate([[x for x in x, _ in y] |> vec [y for _ in x, y in y] |> vec]')
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax = Axis(
         fig[1, i], width = 400, height = 400,
         xlabel = "x", ylabel = "y",
@@ -216,7 +217,7 @@ NaturalNeighbours.jl also provides the same piecewise linear interpolant above v
 The way to construct a natural neighbour interpolant is as follows, where we provide
 the interpolant with the solution at $t = 50$.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 using NaturalNeighbours
 itp = interpolate(tri, sol.u[4], derivatives = true) # sol.t[4] == 50
 sol |> tc #hide
@@ -231,7 +232,7 @@ way to call it is by providing it with a vector of points, rather than broadcast
 over points, since multithreading can be used in this case. Let us
 interpolate at the grid from before, which requires us to collect it into a vector:
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 _x = [x for x in x, _ in y] |> vec
 _y = [y for _ in x, y in y] |> vec;
 nothing #hide
@@ -241,7 +242,7 @@ We will look at all the interpolants provided by NaturalNeighbours.jl.[^1]
 
 [^1]: This list is available from `?NaturalNeighbours.AbstractInterpolator`. Look at the help page (`?`) for the respective interpolators or NaturalNeighbours.jl's documentation for more information.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 sibson_vals = itp(_x, _y; method = Sibson())
 triangle_vals = itp(_x, _y; method = Triangle()) # this is the same as pl_interpolate
 laplace_vals = itp(_x, _y; method = Laplace())
@@ -255,7 +256,7 @@ nothing #hide
 
 We visualise these results as follows.
 
-````@example piecewise_linear_and_natural_neighbour_interpolation_for_an_advection_diffusion_equation
+````julia
 fig = Figure(fontsize = 38)
 all_vals = (
     sibson_vals, triangle_vals, laplace_vals, sibson_1_vals,
@@ -366,12 +367,13 @@ prob = FVMProblem(
 )
 
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 times = [0, 10, 25, 50, 100, 200, 250]
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = times)
 
 using CairoMakie
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax = Axis(
         fig[1, i], width = 400, height = 400,
         xlabel = "x", ylabel = "y",
@@ -396,8 +398,8 @@ for j in eachindex(y)
         triangles[i, j] = jump_and_march(tri, (x[i], y[j]))
     end
 end
-interpolated_vals = zeros(length(x), length(y), length(sol))
-for k in eachindex(sol)
+interpolated_vals = zeros(length(x), length(y), length(sol.u))
+for k in eachindex(sol.u)
     for j in eachindex(y)
         for i in eachindex(x)
             interpolated_vals[i, j, k] = pl_interpolate(
@@ -409,7 +411,7 @@ end
 
 _tri = triangulate([[x for x in x, _ in y] |> vec [y for _ in x, y in y] |> vec]')
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax = Axis(
         fig[1, i], width = 400, height = 400,
         xlabel = "x", ylabel = "y",

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/srmhd_eigenmode_convergence.jl"
 ```
 
-````@example srmhd_eigenmode_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -27,7 +27,7 @@ the corresponding eigenvector direction.
 - Balsara, D.S. (2001). Total Variation Diminishing Scheme for
   Adiabatic and Isothermal MHD. J. Comput. Phys., 174, 614-648.
 
-````@example srmhd_eigenmode_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -40,7 +40,7 @@ law = SRMHDEquations{1}(eos)
 ## Background State
 Uniform background with moderate magnetic field.
 
-````@example srmhd_eigenmode_convergence
+````julia
 rho0 = 1.0
 P0 = 1.0
 Bx0 = 1.0
@@ -50,7 +50,7 @@ amp = 1.0e-4  # small perturbation amplitude
 ## Eigenmode Definitions
 Each mode perturbs different variables to excite the corresponding wave family.
 
-````@example srmhd_eigenmode_convergence
+````julia
 eigenmodes = [
     (
         name = "Fast magnetosonic",
@@ -83,7 +83,7 @@ eigenmodes = [
 We use self-convergence: run at resolutions N and 2N, then compare the
 solutions on the coarse grid. The difference decreases under refinement.
 
-````@example srmhd_eigenmode_convergence
+````julia
 t_final = 0.5
 resolutions = [32, 64, 128]
 
@@ -125,7 +125,7 @@ end
 
 ## Visualisation — Convergence Comparison
 
-````@example srmhd_eigenmode_convergence
+````julia
 fig = Figure(fontsize = 22, size = (800, 600))
 ax = Axis(
     fig[1, 1], xlabel = "N", ylabel = L"L^1 \text{ self-convergence error}",
@@ -160,7 +160,7 @@ end
 ## Test Assertions
 Each eigenmode should show self-convergence at rate > 0.5 with MUSCL+HLL.
 
-````@example srmhd_eigenmode_convergence
+````julia
 for mode in eigenmodes
     rates = all_rates[mode.name]
 end

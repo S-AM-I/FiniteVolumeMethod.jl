@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/brio_wu_verification.jl"
 ```
 
-````@example brio_wu_verification
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -30,9 +30,10 @@ The sign change in $B_y$ produces compound MHD waves.
 - Balsara, D.S. (2001). Total Variation Diminishing Scheme for Adiabatic
   and Isothermal MHD. J. Comput. Phys., 174, 614-648.
 
-````@example brio_wu_verification
+````julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie
@@ -52,7 +53,7 @@ t_final = 0.1
 We use a very fine grid (N=1600) as the reference solution and compute
 L1 errors of coarser grids against it.
 
-````@example brio_wu_verification
+````julia
 function solve_bw(N)
     mesh = StructuredMesh1D(0.0, 1.0, N)
     prob = HyperbolicProblem(
@@ -73,13 +74,13 @@ end
 
 Reference solution at N=1600
 
-````@example brio_wu_verification
+````julia
 x_ref, _, rho_ref, _ = solve_bw(1600)
 ````
 
 Interpolate reference to coarse grid via nearest-neighbour
 
-````@example brio_wu_verification
+````julia
 function interp_nearest(x_coarse, x_fine, vals_fine)
     return [vals_fine[argmin(abs.(x_fine .- xc))] for xc in x_coarse]
 end
@@ -96,7 +97,7 @@ end
 
 ## Convergence Rates
 
-````@example brio_wu_verification
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -105,7 +106,7 @@ rates = convergence_rates(errors_rho)
 
 ## Visualisation — Solutions at Multiple Resolutions
 
-````@example brio_wu_verification
+````julia
 fig1 = Figure(fontsize = 20, size = (1400, 450))
 for (panel, N_idx) in enumerate([1, 2, 4])
     local Nv = grid_sizes[N_idx]
@@ -127,7 +128,7 @@ end
 
 ## Visualisation — Convergence Plot
 
-````@example brio_wu_verification
+````julia
 fig2 = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error } (\rho)",
@@ -155,7 +156,7 @@ end
 ## Structural Verification
 Check that the high-resolution solution has expected physical properties.
 
-````@example brio_wu_verification
+````julia
 _, W_hr, rho_hr, _ = solve_bw(800)
 Bx_vals = [W_hr[i][6] for i in eachindex(W_hr)]
 By_vals = [W_hr[i][7] for i in eachindex(W_hr)]
@@ -167,7 +168,7 @@ By_vals = [W_hr[i][7] for i in eachindex(W_hr)]
 3. By changes sign across the contact (key Brio-Wu feature)
 4. Density stays positive
 
-````@example brio_wu_verification
+````julia
 @assert all(errors_rho[i] > errors_rho[i + 1] for i in 1:(length(errors_rho) - 1)) #hide
 @assert all(b -> abs(b - Bx) < 1.0e-10, Bx_vals) #hide
 @assert minimum(By_vals) < -0.5 #hide
@@ -210,6 +211,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 ```julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie

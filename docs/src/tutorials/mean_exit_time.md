@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/mean_exit_time.jl"
 ```
 
-````@example mean_exit_time
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -124,7 +124,7 @@ The mesh is defined as follows. To help the accuracy of the solution,
 we add more triangles around the interior circle by putting some constrained
 edges there.
 
-````@example mean_exit_time
+````julia
 using DelaunayTriangulation, FiniteVolumeMethod, CairoMakie
 R₁, R₂ = 2.0, 3.0
 circle = CircularArc((0.0, R₂), (0.0, R₂), (0.0, 0.0))
@@ -145,19 +145,19 @@ refine!(tri; max_area = 1.0e-3get_area(tri))
 triplot(tri)
 ````
 
-````@example mean_exit_time
+````julia
 mesh = FVMGeometry(tri)
 ````
 
 The boundary conditions are simple absorbing conditions.
 
-````@example mean_exit_time
+````julia
 BCs = BoundaryConditions(mesh, ((x, y, t, u, p) -> zero(u),), (Dirichlet,))
 ````
 
 For the problem, let us first define the diffusivity.
 
-````@example mean_exit_time
+````julia
 D₁, D₂ = 6.25e-4, 6.25e-5
 diffusion_function = (x, y, t, u, p) -> let r = sqrt(x^2 + y^2)
     return ifelse(r < p.R₁, p.D₁, p.D₂)
@@ -171,7 +171,7 @@ exact solution for the mean exit time problem on a
 disk with a uniform diffusivity, which is given by
 $(R_2^2 - r^2)/(4D_2)$.
 
-````@example mean_exit_time
+````julia
 f = (x, y) -> let r = sqrt(x^2 + y^2)
     return (R₂^2 - r^2) / (4D₂)
 end
@@ -181,7 +181,7 @@ initial_condition |> tc #hide
 
 We now define the problem.
 
-````@example mean_exit_time
+````julia
 source_function = (x, y, t, u, p) -> one(u)
 prob = FVMProblem(
     mesh, BCs;
@@ -191,19 +191,19 @@ prob = FVMProblem(
 )
 ````
 
-````@example mean_exit_time
+````julia
 steady_prob = SteadyFVMProblem(prob)
 ````
 
 We now solve this problem as we've done for any previous problem.
 
-````@example mean_exit_time
+````julia
 using SteadyStateDiffEq, LinearSolve, OrdinaryDiffEq
 sol = solve(steady_prob, DynamicSS(Rosenbrock23()))
 sol |> tc #hide
 ````
 
-````@example mean_exit_time
+````julia
 fig = Figure(fontsize = 33)
 ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
 tricontourf!(ax, tri, sol.u, levels = 0:500:20000, extendhigh = :auto)
@@ -214,7 +214,7 @@ fig
 Let us now solve the problem with a perturbed interface.
 The mesh is defined as follows.
 
-````@example mean_exit_time
+````julia
 g = θ -> sin(3θ) + cos(5θ)
 ε = 0.05
 R1_f = θ -> R₁ * (1 + ε * g(θ))
@@ -235,13 +235,13 @@ refine!(tri; max_area = 1.0e-3get_area(tri))
 triplot(tri)
 ````
 
-````@example mean_exit_time
+````julia
 mesh = FVMGeometry(tri)
 ````
 
 The boundary conditions are simple absorbing conditions.
 
-````@example mean_exit_time
+````julia
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> zero(u), Dirichlet)
 ````
 
@@ -249,7 +249,7 @@ Now we define the problem. For the initial condition that we use,
 we will use the exact solution for the problem with an unperturbed
 interface.
 
-````@example mean_exit_time
+````julia
 function T_exact(x, y)
     r = sqrt(x^2 + y^2)
     if r < R₁
@@ -274,12 +274,12 @@ prob = FVMProblem(
 steady_prob = SteadyFVMProblem(prob)
 ````
 
-````@example mean_exit_time
+````julia
 sol = solve(steady_prob, DynamicSS(Rosenbrock23()))
 sol |> tc #hide
 ````
 
-````@example mean_exit_time
+````julia
 fig = Figure(fontsize = 33)
 ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
 tricontourf!(ax, tri, sol.u, levels = 0:500:20000, extendhigh = :auto)
@@ -298,7 +298,7 @@ which we accomplish by adding a point at the origin and then
 using `InternalConditions`. This point will be used to absorb
 any nearby particles, i.e. $T(0,0)=0$.
 
-````@example mean_exit_time
+````julia
 add_point!(tri, 0.0, 0.0)
 mesh = FVMGeometry(tri)
 ICs = InternalConditions(
@@ -328,7 +328,7 @@ we only allow particles to exit through a small part of the boundary,
 reflecting off all other parts. For the reflecting boundary condition,
 this is enforced by using Neumann boundary conditions.
 
-````@example mean_exit_time
+````julia
 ϵr = 0.25
 dirichlet_circle = CircularArc(
     (R₂ * cos(ϵr), R₂ * sin(ϵr)), (
@@ -359,7 +359,7 @@ refine!(tri; max_area = 1.0e-3get_area(tri))
 triplot(tri)
 ````
 
-````@example mean_exit_time
+````julia
 mesh = FVMGeometry(tri)
 zero_f = (x, y, t, u, p) -> zero(u)
 BCs = BoundaryConditions(mesh, (zero_f, zero_f), (Neumann, Dirichlet))
@@ -384,7 +384,7 @@ Now, as a last constraint, let's add a hole. We'll put hole at the origin,  and 
 move the point hole to $(-2, 0)$ rather than at the origin, and we'll also put a hole at
 $(0, 2.95)$.
 
-````@example mean_exit_time
+````julia
 hole = CircularArc((0.0, 1.0), (0.0, 1.0), (0.0, 0.0), positive = false)
 boundary_nodes = [[[dirichlet_circle], [neumann_circle]], [[hole]]]
 points = NTuple{2, Float64}[]
@@ -411,7 +411,7 @@ triplot(tri)
 The boundary condition we'll use at the new interior hole
 will be an absorbing boundary condition.
 
-````@example mean_exit_time
+````julia
 mesh = FVMGeometry(tri)
 zero_f = (x, y, t, u, p) -> zero(u)
 BCs = BoundaryConditions(mesh, (zero_f, zero_f, zero_f), (Neumann, Dirichlet, Dirichlet))

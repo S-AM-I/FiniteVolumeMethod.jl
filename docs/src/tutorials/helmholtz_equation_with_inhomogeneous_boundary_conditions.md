@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/helmholtz_equation_with_inhomogeneous_boundary_conditions.jl"
 ```
 
-````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,7 +22,7 @@ We can define this problem in the same way we have defined previous problems,
 except that the final `FVMProblem` must be wrapped in a `SteadyFVMProblem`.
 Let us start by defining the mesh and the boundary conditions.
 
-````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
+````julia
 using DelaunayTriangulation, FiniteVolumeMethod
 tri = triangulate_rectangle(-1, 1, -1, 1, 125, 125, single_boundary = true)
 mesh = FVMGeometry(tri)
@@ -35,7 +35,7 @@ For the boundary condition,
 which is the same as $\grad u \vdot \vu n = 1$, this needs to be expressed in terms of $\vb q$.
 Since $\vb q = -\grad u$ for this problem, the boundary condition is $\vb q \vdot \vu n = -1$.
 
-````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
+````julia
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> -one(u), Neumann)
 ````
 
@@ -55,7 +55,7 @@ while steady state problems take the form
 ```
 So, for this problem, $D = 1$ and $S = u$.
 
-````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
+````julia
 diffusion_function = (x, y, t, u, p) -> one(u)
 source_function = (x, y, t, u, p) -> u
 initial_condition = zeros(DelaunayTriangulation.num_solid_vertices(tri))
@@ -69,7 +69,7 @@ prob = FVMProblem(
 )
 ````
 
-````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
+````julia
 steady_prob = SteadyFVMProblem(prob)
 ````
 
@@ -80,11 +80,12 @@ a simple solver, like `NewtonRaphson()`, and then use that solution
 as the initial guess in a finer algorithm like the `DynamicSS`
 algorithm above.
 
-````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
+````julia
 using NonlinearSolve
 sol = solve(steady_prob, NewtonRaphson())
 copyto!(prob.initial_condition, sol.u) # this also changes steady_prob's initial condition
 using SteadyStateDiffEq, LinearSolve, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 sol |> tc #hide
 ````
@@ -92,7 +93,7 @@ sol |> tc #hide
 For this problem, this correction by `DynamicSS` doesn't seem to actually be needed.
 Now let's visualise.
 
-````@example helmholtz_equation_with_inhomogeneous_boundary_conditions
+````julia
 using CairoMakie
 fig, ax, sc = tricontourf(tri, sol.u, levels = -2.5:0.15:-1.0, colormap = :matter)
 fig
@@ -127,6 +128,7 @@ using NonlinearSolve
 sol = solve(steady_prob, NewtonRaphson())
 copyto!(prob.initial_condition, sol.u) # this also changes steady_prob's initial condition
 using SteadyStateDiffEq, LinearSolve, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 
 using CairoMakie

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/linear_reaction_diffusion_equations.jl"
 ```
 
-````@example linear_reaction_diffusion_equations
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -31,8 +31,9 @@ as in the previous sections, but we will need an extra function to add $f(\vb x)
 We can also reuse `apply_dirichlet_conditions!`, `apply_dudt_conditions`, and
 `boundary_edge_contributions!` from the diffusion equation example. Here is our implementation.
 
-````@example linear_reaction_diffusion_equations
+````julia
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
+using SciMLBase: MatrixOperator
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(
         A, mesh, conditions, source_function, source_parameters
@@ -90,7 +91,7 @@ Let's now test this function. We consider the problem
 ```
 with $\grad T \vdot\vu n = 1$ on the boundary.
 
-````@example linear_reaction_diffusion_equations
+````julia
 using DelaunayTriangulation
 tri = triangulate_rectangle(0, 1, 0, 1, 150, 150, single_boundary = true)
 mesh = FVMGeometry(tri)
@@ -108,15 +109,15 @@ prob = linear_reaction_diffusion_equation(
 prob |> tc #hide
 ````
 
-````@example linear_reaction_diffusion_equations
+````julia
 sol = solve(prob, Tsit5(); saveat = 2)
 sol |> tc #hide
 ````
 
-````@example linear_reaction_diffusion_equations
+````julia
 using CairoMakie
 fig = Figure(fontsize = 38)
-for j in eachindex(sol)
+for j in eachindex(sol.u)
     ax = Axis(
         fig[1, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
@@ -137,7 +138,7 @@ boundary conditions are expressed as $\grad T\vdot\vu n = 1$ above, but for `FVM
 we need them in the form $\vb q\vdot\vu n = \ldots$. For this problem, $\vb q=-D\grad T$,
 which gives $\vb q\vdot\vu n = -D$.
 
-````@example linear_reaction_diffusion_equations
+````julia
 _BCs = BoundaryConditions(
     mesh, (x, y, t, u, p) -> -p.D(x, y, p.Dp), Neumann;
     parameters = (D = diffusion_function, Dp = diffusion_parameters)
@@ -158,7 +159,7 @@ fvm_prob = FVMProblem(
 fvm_sol = solve(fvm_prob, Tsit5(), saveat = 2.0)
 fvm_sol |> tc #hide
 
-for j in eachindex(fvm_sol)
+for j in eachindex(fvm_sol.u)
     ax = Axis(
         fig[2, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
@@ -177,7 +178,7 @@ fig
 ## Using the Provided Template
 The above code is implemented in `LinearReactionDiffusionEquation` in FiniteVolumeMethod.jl.
 
-````@example linear_reaction_diffusion_equations
+````julia
 prob = LinearReactionDiffusionEquation(
     mesh, BCs;
     diffusion_function, diffusion_parameters,
@@ -212,6 +213,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
+using SciMLBase: MatrixOperator
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(
         A, mesh, conditions, source_function, source_parameters
@@ -276,7 +278,7 @@ sol = solve(prob, Tsit5(); saveat = 2)
 
 using CairoMakie
 fig = Figure(fontsize = 38)
-for j in eachindex(sol)
+for j in eachindex(sol.u)
     ax = Axis(
         fig[1, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
@@ -310,7 +312,7 @@ fvm_prob = FVMProblem(
 )
 fvm_sol = solve(fvm_prob, Tsit5(), saveat = 2.0)
 
-for j in eachindex(fvm_sol)
+for j in eachindex(fvm_sol.u)
     ax = Axis(
         fig[2, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",

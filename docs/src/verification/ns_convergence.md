@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/ns_convergence.jl"
 ```
 
-````@example ns_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -26,7 +26,7 @@ where $\nu = \mu/\rho_0$ and $k = 2\pi/L$.
 - Taylor, G.I. & Green, A.E. (1937). Mechanism of the Production of
   Small Eddies from Large Ones. Proc. R. Soc. A, 158, 499-521.
 
-````@example ns_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -54,7 +54,7 @@ end
 ## Convergence Measurement
 We compute the $L^\infty$ velocity error at each resolution.
 
-````@example ns_convergence
+````julia
 function compute_ns_error(N)
     ns = NavierStokesEquations{2}(eos, mu = mu, Pr = 0.72)
     mesh = StructuredMesh2D(0.0, L, 0.0, L, N, N)
@@ -85,7 +85,7 @@ errors = [compute_ns_error(N) for N in resolutions]
 
 ## Convergence Rates
 
-````@example ns_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -95,7 +95,7 @@ rates = convergence_rates(errors)
 
 ## Visualisation — Solution at N=64
 
-````@example ns_convergence
+````julia
 ns_fine = NavierStokesEquations{2}(eos, mu = mu, Pr = 0.72)
 mesh_fine = StructuredMesh2D(0.0, L, 0.0, L, 64, 64)
 prob_fine = HyperbolicProblem2D(
@@ -131,7 +131,7 @@ fig1
 
 ## Visualisation — Convergence Plot
 
-````@example ns_convergence
+````julia
 fig2 = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^\infty \text{ velocity error}",
@@ -158,7 +158,7 @@ fig2
 
 ## Test Assertions
 
-````@example ns_convergence
+````julia
 @assert all(r -> r > 0.8, rates) #hide
 ````
 

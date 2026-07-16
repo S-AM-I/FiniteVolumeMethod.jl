@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/field_loop_advection.jl"
 ```
 
-````@example field_loop_advection
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -20,7 +20,7 @@ A circular magnetic field loop of radius $R_0 = 0.3$ and amplitude
 $A_0 = 10^{-3}$ is advected at velocity $(v_x, v_y) = (1, 0.5)$
 across $[0, 1]^2$ with periodic boundary conditions.
 
-````@example field_loop_advection
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -37,7 +37,7 @@ rho_bg, P_bg = 1.0, 1.0
 The initial condition sets the field loop using point evaluation
 (for the cell-centred values):
 
-````@example field_loop_advection
+````julia
 function loop_ic(x, y)
     r = sqrt((x - 0.5)^2 + (y - 0.5)^2)
     if r < R0
@@ -59,7 +59,7 @@ A_z(x,y) = \begin{cases}A_0(R_0 - r) & r < R_0,\\0 & r \geq R_0,\end{cases}
 ```
 where $r = \sqrt{(x-0.5)^2 + (y-0.5)^2}$.
 
-````@example field_loop_advection
+````julia
 function Az_loop(x, y)
     r = sqrt((x - 0.5)^2 + (y - 0.5)^2)
     return r < R0 ? A0 * (R0 - r) : 0.0
@@ -68,7 +68,7 @@ end
 
 ## Solving
 
-````@example field_loop_advection
+````julia
 N = 50
 mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, N)
 
@@ -83,7 +83,7 @@ prob = HyperbolicProblem2D(
 The `vector_potential` keyword triggers `initialize_ct_from_potential!`,
 which uses Stokes' theorem to compute face-centred $B$ values:
 
-````@example field_loop_advection
+````julia
 coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_loop)
 coords |> tc #hide
 ````
@@ -92,14 +92,14 @@ coords |> tc #hide
 With CT + vector potential initialisation, the discrete divergence
 remains at machine precision:
 
-````@example field_loop_advection
+````julia
 divB_max = max_divB(ct, mesh)
 divB_max < 1.0e-10 || @warn("divB exceeds tolerance: $divB_max") #hide
 ````
 
 ## Visualisation
 
-````@example field_loop_advection
+````julia
 using CairoMakie
 
 nx, ny = N, N
@@ -138,7 +138,7 @@ The maximum $|\nabla\cdot\vb B| = $ $(round(divB_max, sigdigits=2))
 confirms that CT preserves the divergence-free constraint throughout
 the simulation.
 
-````@example field_loop_advection
+````julia
 rho_variation = maximum(rho) - minimum(rho) #hide
 rho_variation < 0.01 || @warn("Density variation exceeds tolerance: $rho_variation") #hide
 ````

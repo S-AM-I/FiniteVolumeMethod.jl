@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/balsara_srmhd_shock_tube.jl"
 ```
 
-````@example balsara_srmhd_shock_tube
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,7 +22,7 @@ is the Lorentz factor, and $\tau$ is the energy density minus rest mass.
 
 The initial primitive states $(\rho, v_x, v_y, v_z, P, B_x, B_y, B_z)$ are:
 
-````@example balsara_srmhd_shock_tube
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -41,7 +41,7 @@ ic(x) = x < 0.5 ? wL : wR
 ## Solving
 We use the HLL solver with MUSCL reconstruction.
 
-````@example balsara_srmhd_shock_tube
+````julia
 prob = HyperbolicProblem(
     law, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), ic;
@@ -56,7 +56,7 @@ The SRMHD conserved-to-primitive conversion is iterative because the
 Lorentz factor $W$ depends on velocity, which depends on the conserved
 variables in a nonlinear way.
 
-````@example balsara_srmhd_shock_tube
+````julia
 rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
 vx = [conserved_to_primitive(law, U[i])[2] for i in eachindex(U)]
 P = [conserved_to_primitive(law, U[i])[5] for i in eachindex(U)]
@@ -65,7 +65,7 @@ By = [conserved_to_primitive(law, U[i])[7] for i in eachindex(U)]
 
 ## Visualisation
 
-````@example balsara_srmhd_shock_tube
+````julia
 using CairoMakie
 
 fig = Figure(fontsize = 20, size = (1200, 400))
@@ -87,7 +87,7 @@ waves similar to the Brio-Wu test, but modified by relativistic effects.
 All velocities remain subluminal ($|v| < 1$) as required by special
 relativity.
 
-````@example balsara_srmhd_shock_tube
+````julia
 all(rho .> 0) || @warn("Negative densities detected") #hide
 all(isfinite, rho) || @warn("Non-finite densities detected") #hide
 all(P .> 0) || @warn("Negative pressures detected") #hide

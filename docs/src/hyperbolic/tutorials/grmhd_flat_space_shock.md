@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/grmhd_flat_space_shock.jl"
 ```
 
-````@example grmhd_flat_space_shock
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -28,7 +28,7 @@ The Balsara 1 initial data are:
 \end{cases}
 ```
 
-````@example grmhd_flat_space_shock
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -38,7 +38,7 @@ eos = IdealGasEOS(gamma)
 
 Create both the SRMHD and GRMHD conservation laws:
 
-````@example grmhd_flat_space_shock
+````julia
 law_sr = SRMHDEquations{1}(eos)
 law_gr = GRMHDEquations{1}(eos, MinkowskiMetric{1}())
 
@@ -52,7 +52,7 @@ ic(x) = x < 0.5 ? wL : wR
 
 ## Solving with SRMHD
 
-````@example grmhd_flat_space_shock
+````julia
 prob_sr = HyperbolicProblem(
     law_sr, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), ic;
@@ -64,7 +64,7 @@ x_sr |> tc #hide
 
 ## Solving with GRMHD (Minkowski)
 
-````@example grmhd_flat_space_shock
+````julia
 prob_gr = HyperbolicProblem(
     law_gr, mesh, HLLSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), ic;
@@ -75,7 +75,7 @@ x_gr, U_gr, t_gr = solve_hyperbolic(prob_gr)
 
 ## Comparing Results
 
-````@example grmhd_flat_space_shock
+````julia
 rho_sr = [conserved_to_primitive(law_sr, U_sr[i])[1] for i in eachindex(U_sr)]
 vx_sr = [conserved_to_primitive(law_sr, U_sr[i])[2] for i in eachindex(U_sr)]
 By_sr = [conserved_to_primitive(law_sr, U_sr[i])[7] for i in eachindex(U_sr)]
@@ -87,14 +87,14 @@ By_gr = [conserved_to_primitive(law_gr, U_gr[i])[7] for i in eachindex(U_gr)]
 
 The two solutions should match to high accuracy:
 
-````@example grmhd_flat_space_shock
+````julia
 max_rho_diff = maximum(abs.(rho_sr .- rho_gr))
 max_rho_diff < 1.0e-10 || @warn("SRMHD/GRMHD density mismatch: $max_rho_diff") #hide
 ````
 
 ## Visualisation
 
-````@example grmhd_flat_space_shock
+````julia
 using CairoMakie
 
 fig = Figure(fontsize = 20, size = (1200, 400))
@@ -120,7 +120,7 @@ perfectly, confirming that the GRMHD solver correctly reduces to
 SRMHD in flat spacetime. The maximum density difference is
 $(round(max_rho_diff, sigdigits = 2)).
 
-````@example grmhd_flat_space_shock
+````julia
 all(rho_sr .> 0) || @warn("Negative SRMHD densities detected") #hide
 all(rho_gr .> 0) || @warn("Negative GRMHD densities detected") #hide
 ````

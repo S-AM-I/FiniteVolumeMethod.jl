@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/taylor_green_vortex.jl"
 ```
 
-````@example taylor_green_vortex
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,7 +22,7 @@ v_y = U_0\sin(kx)\cos(ky)\,\mathrm{e}^{-2\nu k^2 t},
 ```
 where $k = 2\pi/L$, $\nu = \mu/\rho_0$ is the kinematic viscosity.
 
-````@example taylor_green_vortex
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -35,7 +35,7 @@ ns = NavierStokesEquations{2}(eos, mu = mu, Pr = Pr)
 
 Physical parameters (low Mach number: $U_0 \ll c_s$):
 
-````@example taylor_green_vortex
+````julia
 rho0 = 1.0
 P0 = 100.0   ## high pressure ensures low Mach
 U0 = 0.01
@@ -53,7 +53,7 @@ end
 
 ## Solving
 
-````@example taylor_green_vortex
+````julia
 N = 32
 mesh = StructuredMesh2D(0.0, L, 0.0, L, N, N)
 t_final = 0.5
@@ -71,7 +71,7 @@ coords |> tc #hide
 ## Comparison with Exact Solution
 The exact solution decays exponentially:
 
-````@example taylor_green_vortex
+````julia
 decay = exp(-2 * nu * k^2 * t_end)
 nx, ny = N, N
 
@@ -92,7 +92,7 @@ max_err_vy < 0.5 * U0 || @warn("vy error exceeds tolerance: $max_err_vy") #hide
 
 ## Visualisation
 
-````@example taylor_green_vortex
+````julia
 using CairoMakie
 
 xc = [coords[i, 1][1] for i in 1:nx]

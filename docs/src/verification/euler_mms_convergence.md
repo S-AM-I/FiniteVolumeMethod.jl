@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/euler_mms_convergence.jl"
 ```
 
-````@example euler_mms_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -31,9 +31,10 @@ and compute the ASME V&V 20-2009 Grid Convergence Index (GCI).
 - ASME V&V 20-2009 Standard for Verification and Validation in
   Computational Fluid Dynamics and Heat Transfer.
 
-````@example euler_mms_convergence
+````julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie
@@ -71,7 +72,7 @@ end
 ## Convergence Measurement
 After one full period the exact solution equals the IC.
 
-````@example euler_mms_convergence
+````julia
 function compute_euler_mms_error(N)
     x, W, t_end = solve_euler_mms_state(N)
     err_rho = 0.0
@@ -93,7 +94,7 @@ errors_P = [r[2] for r in results]
 
 ## Convergence Rates
 
-````@example euler_mms_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -105,7 +106,7 @@ rates_P = convergence_rates(errors_P)
 ## Grid Convergence Index
 Using the three finest grids (N = 64, 128, 256) with refinement ratio r = 2:
 
-````@example euler_mms_convergence
+````julia
 gci_rho = let e1 = errors_rho[4], e2 = errors_rho[3], e3 = errors_rho[2], r = 2.0
     p = log(e3 / e2) / log(r)
     gci_fine = 1.25 * abs(e2 - e1) / (r^p - 1)
@@ -117,7 +118,7 @@ end
 
 ## Visualisation -- Solution Comparison
 
-````@example euler_mms_convergence
+````julia
 x_fine, W_fine, t_fine = solve_euler_mms_state(256)
 rho_num = [W_fine[i][1] for i in eachindex(W_fine)]
 rho_exact = [euler_mms_ic(mod(x_fine[i] - v0 * t_fine, 1.0))[1] for i in eachindex(x_fine)]
@@ -138,7 +139,7 @@ end
 
 ## Visualisation -- Convergence Plot
 
-````@example euler_mms_convergence
+````julia
 fig2 = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error}",
@@ -176,7 +177,7 @@ MUSCL with HLLC should achieve at least first-order convergence on smooth data.
 Pressure is constant in the exact entropy wave, so its error stays at machine precision.
 GCI asymptotic ratio should be near 1.0 (within tolerance for practical grids).
 
-````@example euler_mms_convergence
+````julia
 @assert all(r -> r > 0.8, rates_rho) #hide
 @assert errors_P[end] < 1.0e-10 #hide
 @assert abs(gci_rho.asymptotic_ratio - 1.0) < 0.5 #hide
@@ -212,6 +213,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 ```julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie

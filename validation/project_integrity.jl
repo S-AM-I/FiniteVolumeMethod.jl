@@ -97,6 +97,8 @@ function extract_used_modules(path::AbstractString)
             isempty(token) && continue
             startswith(token, ".") && continue
             token = split(token, '.')[1]
+            # `import Foo as Bar` binds Foo under an alias; the package is Foo.
+            token = strip(split(token, r"\s+as\s+")[1])
             isempty(token) && continue
             push!(modules, Symbol(token))
         end

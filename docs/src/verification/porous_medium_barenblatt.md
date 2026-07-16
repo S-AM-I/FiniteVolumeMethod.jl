@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/porous_medium_barenblatt.jl"
 ```
 
-````@example porous_medium_barenblatt
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -31,7 +31,7 @@ $C$ is determined by the initial mass.
   gas in a porous medium. Prikl. Mat. Mekh., 16, 67-78.
 - Vázquez, J.L. (2007). The Porous Medium Equation. Oxford University Press.
 
-````@example porous_medium_barenblatt
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation
 using OrdinaryDiffEq
 using CairoMakie
@@ -39,7 +39,7 @@ using CairoMakie
 
 ## Barenblatt-Pattle Exact Solution
 
-````@example porous_medium_barenblatt
+````julia
 m_pme = 2
 d_dim = 2
 alpha_bp = d_dim / (d_dim * (m_pme - 1) + 2)  # = 1/2 for m=2, d=2
@@ -60,7 +60,7 @@ end
 ## Nonlinear Diffusion Coefficient
 For PME: flux = D(u)∇u where D(u) = m·u^(m-1)
 
-````@example porous_medium_barenblatt
+````julia
 function D_pme(x, y, t, u, p)
     return m_pme * max(u, 0.0)^(m_pme - 1)
 end
@@ -70,7 +70,7 @@ bc_pme(x, y, t, u, p) = zero(u)
 
 ## Grid Refinement Study
 
-````@example porous_medium_barenblatt
+````julia
 mesh_sizes = [10, 20, 40]
 errors_L2 = Float64[]
 errors_Linf = Float64[]
@@ -108,7 +108,7 @@ end
 
 ## Convergence Rates
 
-````@example porous_medium_barenblatt
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -118,7 +118,7 @@ rates_L2 = convergence_rates(errors_L2)
 
 ## Visualisation — Solution at Finest Mesh
 
-````@example porous_medium_barenblatt
+````julia
 R = 3.0
 N_vis = mesh_sizes[end]
 tri_vis = triangulate_rectangle(-R, R, -R, R, N_vis, N_vis; single_boundary = true)
@@ -156,7 +156,7 @@ end
 L2 errors should decrease monotonically with mesh refinement.
 Convergence rate should be positive. The degenerate front limits order.
 
-````@example porous_medium_barenblatt
+````julia
 @assert all(errors_L2[i] > errors_L2[i + 1] for i in 1:(length(errors_L2) - 1)) #hide
 @assert minimum(rates_L2) > 0.3 #hide
 

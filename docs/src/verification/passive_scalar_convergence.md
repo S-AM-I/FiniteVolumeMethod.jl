@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/passive_scalar_convergence.jl"
 ```
 
-````@example passive_scalar_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -23,7 +23,7 @@ translation: $Y(x,t) = Y_0(x - v t)$.
 - **Riemann solver**: `HLLCSolver` (species-aware extension)
 - **Final time**: $t_f = 0.1$
 
-````@example passive_scalar_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -47,7 +47,7 @@ end
 
 ## Convergence Measurement
 
-````@example passive_scalar_convergence
+````julia
 function compute_scalar_error(N)
     mesh = StructuredMesh1D(0.0, 1.0, N)
     prob = HyperbolicProblem(
@@ -82,7 +82,7 @@ end
 
 ## Convergence Rates
 
-````@example passive_scalar_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -93,7 +93,7 @@ rates_L2 = convergence_rates(errors_L2)
 
 ## Visualisation
 
-````@example passive_scalar_convergence
+````julia
 fig = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig[1, 1], xlabel = "N", ylabel = "Error",
@@ -127,7 +127,7 @@ fig
 
 ## Test Assertions
 
-````@example passive_scalar_convergence
+````julia
 @assert all(r -> r > 1.0, rates_L1) #hide
 @assert all(r -> r > 1.0, rates_L2) #hide
 ````

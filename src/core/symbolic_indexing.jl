@@ -11,7 +11,7 @@
 # Symbol (which would re-enter the same dispatch) and has the correct
 # SII ScalarSymbolic trait.
 
-import SciMLBase.SymbolicIndexingInterface as SII
+import SymbolicIndexingInterface as SII
 
 """
     FVMVar

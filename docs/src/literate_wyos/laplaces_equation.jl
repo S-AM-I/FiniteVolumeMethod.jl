@@ -126,6 +126,7 @@ fvm_prob = SteadyFVMProblem(
 
 #-
 using SteadyStateDiffEq, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2
 fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2()))
 fvm_sol |> tc #hide
 

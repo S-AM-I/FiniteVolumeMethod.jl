@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/amr_regridding_conservation.jl"
 ```
 
-````@example amr_regridding_conservation
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -23,7 +23,7 @@ total mass, $x$-momentum, $y$-momentum, and total energy.
 - Berger, M.J. & Colella, P. (1989). Local Adaptive Mesh Refinement for
   Shock Hydrodynamics. *Journal of Computational Physics*, 82, 64-84.
 
-````@example amr_regridding_conservation
+````julia
 using CairoMakie
 
 amr_common_path = joinpath(@__DIR__, "amr_common.jl")
@@ -62,7 +62,7 @@ fig
 The regridding/conservation drift should stay below 1e-3 and improve as the
 base AMR resolution is increased.
 
-````@example amr_regridding_conservation
+````julia
 @assert all(result -> isapprox(result.final_time, AMR_DYNAMIC_FINAL_TIME; atol = 1.0e-12), results) #hide
 @assert all(result -> result.levels == 2, results) #hide
 @assert all(diff(max_drifts) .< 0.0) #hide

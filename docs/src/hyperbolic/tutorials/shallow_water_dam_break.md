@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/shallow_water_dam_break.jl"
 ```
 
-````@example shallow_water_dam_break
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -26,7 +26,7 @@ with initial conditions:
 
 We begin by loading the package and defining the conservation law.
 
-````@example shallow_water_dam_break
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -35,14 +35,14 @@ law = ShallowWaterEquations{1}(g = 9.81)
 
 Define left and right primitive states $(h, u)$:
 
-````@example shallow_water_dam_break
+````julia
 wL = SVector(2.0, 0.0)
 wR = SVector(1.0, 0.0)
 ````
 
 Set up the mesh, boundary conditions, and initial condition:
 
-````@example shallow_water_dam_break
+````julia
 N = 200
 mesh = StructuredMesh1D(0.0, 1.0, N)
 
@@ -53,7 +53,7 @@ ic(x) = x < 0.5 ? wL : wR
 We use the HLLC Riemann solver with MUSCL reconstruction
 using the minmod limiter.
 
-````@example shallow_water_dam_break
+````julia
 prob = HyperbolicProblem(
     law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), ic;
@@ -66,7 +66,7 @@ x |> tc #hide
 ## Visualisation
 Extract the primitive variables (water height $h$ and velocity $u$).
 
-````@example shallow_water_dam_break
+````julia
 using CairoMakie
 
 W = to_primitive(law, U)

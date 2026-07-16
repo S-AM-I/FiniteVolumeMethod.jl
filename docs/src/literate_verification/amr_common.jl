@@ -1,5 +1,6 @@
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 

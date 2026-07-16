@@ -105,7 +105,9 @@ end
 
 function run_scientific_smoke_lane()
     instantiate_test_project()
-    run_test_file("scientific_smoke.jl")
+    # Mirrors the CI scientific-smoke job (.github/workflows/CI.yml), which runs
+    # the manifest-driven evidence suite.
+    run_test_file("scientific_evidence.jl")
     return nothing
 end
 

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/srmhd_convergence.jl"
 ```
 
-````@example srmhd_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -30,7 +30,7 @@ $B_y = B_z = 0$, the density wave advects at $v_x = 0.5$ without distortion.
 - Mignone, A. & Bodo, G. (2006). An HLLC Riemann solver for relativistic
   flows. Mon. Not. R. Astron. Soc., 364, 126-136.
 
-````@example srmhd_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -54,7 +54,7 @@ end
 
 ## Convergence Measurement
 
-````@example srmhd_convergence
+````julia
 function compute_srmhd_error(N)
     mesh = StructuredMesh1D(0.0, 1.0, N)
     prob = HyperbolicProblem(
@@ -79,7 +79,7 @@ errors = [compute_srmhd_error(N) for N in resolutions]
 
 ## Convergence Rates
 
-````@example srmhd_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -89,7 +89,7 @@ rates = convergence_rates(errors)
 
 ## Visualisation — Solutions
 
-````@example srmhd_convergence
+````julia
 mesh_lo = StructuredMesh1D(0.0, 1.0, 64)
 mesh_hi = StructuredMesh1D(0.0, 1.0, 256)
 prob_lo = HyperbolicProblem(
@@ -127,7 +127,7 @@ end
 
 ## Visualisation — Convergence Plot
 
-````@example srmhd_convergence
+````julia
 fig2 = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error } (\rho)",
@@ -151,7 +151,7 @@ end
 
 ## Test Assertions
 
-````@example srmhd_convergence
+````julia
 @assert all(r -> r > 0.8, rates) #hide
 
 if isdefined(@__MODULE__, :record_evidence_result)

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system.jl"
 ```
 
-````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -31,19 +31,19 @@ v(x, y, 0) &= \exp\left[-80\left(x^2+y^2\right)\right].
 The domain we use is $[-1, 1]^2$, and we use
 zero flux boundary conditions.
 
-````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation
 tri = triangulate_rectangle(-1, 1, -1, 1, 200, 200, single_boundary = true)
 mesh = FVMGeometry(tri)
 ````
 
-````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
+````julia
 bc = (x, y, t, (u, v), p) -> zero(u) * zero(v)
 u_BCs = BoundaryConditions(mesh, bc, Neumann)
 v_BCs = BoundaryConditions(mesh, bc, Neumann)
 ````
 
-````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
+````julia
 ε₁ = 0.00002
 ε₂ = 0.00001
 b = 0.04
@@ -77,15 +77,16 @@ prob = FVMSystem(u_prob, v_prob)
 
 Now that we have our system, we can solve.
 
-````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
+````julia
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 10.0, parallel = Val(false))
 sol |> tc #hide
 ````
 
 Here is an animation of the solution, looking only at the $v$ variable.
 
-````@example gray_scott_model_turing_patterns_from_a_coupled_reaction_diffusion_system
+````julia
 using CairoMakie
 fig = Figure(fontsize = 33)
 ax = Axis(fig[1, 1], xlabel = L"x", ylabel = L"y")
@@ -97,7 +98,7 @@ y = LinRange(-1, 1, 200)
 heatmap!(ax, x, y, u, colorrange = (0.0, 0.4))
 hidedecorations!(ax)
 record(
-    fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol);
+    fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol.u);
     framerate = 60
 ) do _i
     i[] = _i
@@ -150,6 +151,7 @@ v_prob = FVMProblem(
 prob = FVMSystem(u_prob, v_prob)
 
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 10.0, parallel = Val(false))
 
 using CairoMakie
@@ -163,7 +165,7 @@ y = LinRange(-1, 1, 200)
 heatmap!(ax, x, y, u, colorrange = (0.0, 0.4))
 hidedecorations!(ax)
 record(
-    fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol);
+    fig, joinpath(@__DIR__, "../figures", "gray_scott_patterns.mp4"), eachindex(sol.u);
     framerate = 60
 ) do _i
     i[] = _i

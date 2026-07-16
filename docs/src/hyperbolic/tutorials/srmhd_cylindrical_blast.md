@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/srmhd_cylindrical_blast.jl"
 ```
 
-````@example srmhd_cylindrical_blast
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,7 +22,7 @@ A uniform magnetic field $B_x = 0.5$ threads the domain.
 The initial pressure is $P = 1$ inside a circle of radius $r = 0.1$
 and $P = 0.01$ outside.
 
-````@example srmhd_cylindrical_blast
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -45,13 +45,13 @@ end
 
 Vector potential for uniform $B_x$:
 
-````@example srmhd_cylindrical_blast
+````julia
 Az_blast(x, y) = Bx0 * y
 ````
 
 ## Solving
 
-````@example srmhd_cylindrical_blast
+````julia
 N = 100
 mesh = StructuredMesh2D(-0.5, 0.5, -0.5, 0.5, N, N)
 
@@ -68,14 +68,14 @@ coords |> tc #hide
 
 ## Divergence Check
 
-````@example srmhd_cylindrical_blast
+````julia
 divB_max = max_divB(ct, mesh)
 divB_max < 1.0e-10 || @warn("divB exceeds tolerance: $divB_max") #hide
 ````
 
 ## Visualisation
 
-````@example srmhd_cylindrical_blast
+````julia
 using CairoMakie
 
 nx, ny = N, N
@@ -112,7 +112,7 @@ $\nabla\cdot\vb B$ constraint is maintained at machine precision
 ($|\nabla\cdot\vb B|_{\max} = $ $(round(divB_max, sigdigits=2)))
 thanks to constrained transport.
 
-````@example srmhd_cylindrical_blast
+````julia
 all(isfinite, rho) || @warn("Non-finite densities detected") #hide
 all(isfinite, P) || @warn("Non-finite pressures detected") #hide
 ````

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/conservation_verification.jl"
 ```
 
-````@example conservation_verification
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -25,9 +25,10 @@ constant (up to round-off) for all time.
 - **Solver**: HLLC + MUSCL(Minmod)
 - **CFL**: 0.4
 
-````@example conservation_verification
+````julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode, remake
 using StaticArrays
 using CairoMakie
@@ -61,7 +62,7 @@ end
 
 ## Sequential Canonical SciML Solves
 
-````@example conservation_verification
+````julia
 n_intervals = 20
 dt_interval = 0.025
 t_checkpoints = [i * dt_interval for i in 0:n_intervals]
@@ -133,7 +134,7 @@ end
 
 ## Relative Conservation Error
 
-````@example conservation_verification
+````julia
 mass_err = [abs(total_mass[i] - total_mass[1]) / abs(total_mass[1]) for i in eachindex(total_mass)]
 momentum_err = [abs(total_momentum[i] - total_momentum[1]) / abs(total_momentum[1]) for i in eachindex(total_momentum)]
 energy_err = [abs(total_energy[i] - total_energy[1]) / abs(total_energy[1]) for i in eachindex(total_energy)]
@@ -146,7 +147,7 @@ energy_err_plot = max.(energy_err, eps_floor)
 
 ## Visualisation
 
-````@example conservation_verification
+````julia
 fig = Figure(fontsize = 24, size = (1500, 400))
 titles = ["Mass", "Momentum", "Energy"]
 data = [mass_err_plot, momentum_err_plot, energy_err_plot]
@@ -169,7 +170,7 @@ end
 
 ## Test Assertions
 
-````@example conservation_verification
+````julia
 @assert maximum(mass_err) < 1.0e-10 #hide
 @assert maximum(momentum_err) < 1.0e-10 #hide
 @assert maximum(energy_err) < 1.0e-10 #hide
@@ -203,6 +204,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 ```julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode, remake
 using StaticArrays
 using CairoMakie

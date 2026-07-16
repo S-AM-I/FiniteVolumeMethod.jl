@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/mms_spatial_temporal_decoupled.jl"
 ```
 
-````@example mms_spatial_temporal_decoupled
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -32,7 +32,7 @@ solver tolerances to verify that the temporal error decreases independently.
 - Oberkampf, W.L. & Roy, C.J. (2010). Verification and Validation in
   Scientific Computing. Cambridge University Press.
 
-````@example mms_spatial_temporal_decoupled
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation
 using OrdinaryDiffEq
 using CairoMakie
@@ -42,7 +42,7 @@ using CairoMakie
 The exact solution is linear in $t$, so Tsit5 reproduces it exactly.
 Only the FVM spatial discretisation error remains.
 
-````@example mms_spatial_temporal_decoupled
+````julia
 u_exact_A(x, y, t) = sin(pi * x) * sin(pi * y) * (1 + t)
 
 function source_A(x, y, t, u, p)
@@ -86,7 +86,7 @@ end
 
 ## Part A — Convergence Rates
 
-````@example mms_spatial_temporal_decoupled
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -97,7 +97,7 @@ rates_A = convergence_rates(errors_A)
 ## Part B — Temporal Convergence (Fixed Mesh)
 Fix the mesh at $N = 80$ and sweep ODE solver tolerances.
 
-````@example mms_spatial_temporal_decoupled
+````julia
 u_exact_B(x, y, t) = sin(pi * x) * sin(pi * y) * exp(-t)
 
 function source_B(x, y, t, u, p)
@@ -136,7 +136,7 @@ end
 
 ## Visualisation — Spatial Convergence
 
-````@example mms_spatial_temporal_decoupled
+````julia
 h_vals = 1.0 ./ mesh_sizes_A
 fig1 = Figure(fontsize = 24, size = (1100, 500))
 ax1 = Axis(
@@ -173,7 +173,7 @@ fig1
 Part A: Spatial rates should be approximately second order.
 Part B: Errors should decrease monotonically with tighter tolerances.
 
-````@example mms_spatial_temporal_decoupled
+````julia
 @assert minimum(rates_A) > 1.5 #hide
 @assert all(errors_B[i] >= errors_B[i + 1] for i in 1:(length(errors_B) - 1)) #hide
 ````

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/source_term_convergence.jl"
 ```
 
-````@example source_term_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -29,7 +29,7 @@ $t = 1/c_s$ on the domain $[0,1]$.
 - LeVeque, R.J. (2002). Finite Volume Methods for Hyperbolic Problems.
   Cambridge University Press. Chapter 14.
 
-````@example source_term_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -55,7 +55,7 @@ end
 ## Convergence Measurement
 After one full period, the exact solution equals the IC.
 
-````@example source_term_convergence
+````julia
 function compute_acoustic_error(N)
     mesh = StructuredMesh1D(0.0, 1.0, N)
     prob = HyperbolicProblem(
@@ -84,7 +84,7 @@ errors_P = [r[2] for r in results]
 
 ## Convergence Rates
 
-````@example source_term_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -95,7 +95,7 @@ rates_P = convergence_rates(errors_P)
 
 ## Visualisation
 
-````@example source_term_convergence
+````julia
 fig = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error}",
@@ -129,7 +129,7 @@ fig
 MUSCL with HLLC should achieve at least first-order convergence on
 smooth acoustic data.
 
-````@example source_term_convergence
+````julia
 @assert all(r -> r > 0.8, rates_rho) #hide
 @assert all(r -> r > 0.8, rates_P) #hide
 ````

@@ -758,7 +758,7 @@ end
 Solve an AMR problem with forward-Euler time integration.
 
 For 2D grids, every step is a synchronized global step
-([`_amr_global_step_2d!`](@ref)): all active blocks (any mix of levels)
+(`_amr_global_step_2d!`): all active blocks (any mix of levels)
 exchange ghost data from pre-update neighbor data, are advanced with a
 single finest-CFL-limited `dt` (no subcycling), and coarse-fine seam
 fluxes at single-level jumps are flux-corrected so the scheme is

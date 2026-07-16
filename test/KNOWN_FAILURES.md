@@ -12,6 +12,7 @@ is `validation/manifest.toml`; this document is a human-readable companion.
 | `Aqua.test_ambiguities` | Enabled, passing (fixed 2026-07-15) | The `ODEProblem(model, mesh::AbstractParabolicMesh, bcs...)` overload in `src/parabolic/sciml_bridge.jl` is now constrained to `model::AbstractEquationModel`, removing both ambiguities against `SciMLBase.ODEProblem(f::AbstractODEFunction, ...)`. |
 | `ReferenceTests` image baselines | At risk on Linux CI | `JULIA_REFERENCETESTS_UPDATE=true` removed from CI in v3.112; committed baselines in `test/test_figures/` were rendered on macOS. See "Validation Level Notes". |
 | `keller_segel_chemotaxis.jl` | Skipped | Excluded from tutorial test loop (marked `manual_review` in manifest). |
+| `mhd_rotor.jl` tutorial | Broken (discovered 2026-07-16) | The MHD rotor tutorial's N=100 legacy `solve_hyperbolic` CT run produces an all-NaN solution (N=32 is finite — resolution-dependent positivity blow-up in the HLLD+MUSCL CT configuration). Previously masked: the old Makie rendered all-NaN heatmaps silently, so docs builds looked green; the new Makie's tick formatter crashes on the garbage values, which is how it surfaced. Almost certainly pre-existing — the SciMLBase-3 migration did not touch the legacy CT path. The page is `run_in_ci = false` / `full_docs` tier in the manifest and, since the docs-build fix of 2026-07-16, subset builds no longer execute it. Needs a physics investigation (positivity limiter or CFL/reconstruction change) in the hyperbolic-family overhaul stage. |
 
 ## Demoted From V&V Claims
 

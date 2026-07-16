@@ -1,5 +1,6 @@
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays
 using Test
 

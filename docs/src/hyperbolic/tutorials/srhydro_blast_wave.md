@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/srhydro_blast_wave.jl"
 ```
 
-````@example srhydro_blast_wave
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -27,7 +27,7 @@ Initial conditions (primitive $[\rho, v, P]$):
 
 We begin by loading the package and defining the conservation law.
 
-````@example srhydro_blast_wave
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -37,14 +37,14 @@ law = SRHydroEquations{1}(eos)
 
 Define left and right primitive states $(\rho, v, P)$:
 
-````@example srhydro_blast_wave
+````julia
 wL = SVector(1.0, 0.0, 1.0)
 wR = SVector(0.125, 0.0, 0.1)
 ````
 
 Set up the mesh and boundary conditions:
 
-````@example srhydro_blast_wave
+````julia
 N = 400
 mesh = StructuredMesh1D(0.0, 1.0, N)
 
@@ -56,7 +56,7 @@ We use the HLL Riemann solver with first-order reconstruction
 for robustness. The CFL is kept low (0.3) to respect the
 relativistic signal speeds.
 
-````@example srhydro_blast_wave
+````julia
 prob = HyperbolicProblem(
     law, mesh, HLLSolver(), NoReconstruction(),
     TransmissiveBC(), TransmissiveBC(), ic;
@@ -70,7 +70,7 @@ x |> tc #hide
 Extract primitive variables and compute the Lorentz factor
 $W = 1/\sqrt{1 - v^2}$.
 
-````@example srhydro_blast_wave
+````julia
 using CairoMakie
 
 W_prim = to_primitive(law, U)

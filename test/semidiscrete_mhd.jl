@@ -1,5 +1,6 @@
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test
 
@@ -270,7 +271,7 @@ end
 # SciMLStructures repack round-trip for MHD (Dim preserved)
 # ============================================================
 using SciMLBase: SciMLBase
-import SciMLBase.SciMLStructures as SciMLStructuresMod
+import SciMLStructures as SciMLStructuresMod
 
 @testset "SciMLStructures Tunable repack for MHD caches" begin
     eos = IdealGasEOS(gamma = 5.0 / 3.0)

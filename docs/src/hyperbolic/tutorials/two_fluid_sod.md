@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/two_fluid_sod.jl"
 ```
 
-````@example two_fluid_sod
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -26,7 +26,7 @@ W = \begin{cases}[1, 0, 1, 1, 0, 1] & x < 0.5,\\[0.125, 0, 0.1, 0.125, 0, 0.1] &
 
 We begin by loading the package and defining the conservation law.
 
-````@example two_fluid_sod
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -36,14 +36,14 @@ law = TwoFluidEquations{1}(eos, eos; mass_ratio = 1.0)
 
 Define left and right primitive states:
 
-````@example two_fluid_sod
+````julia
 wL = SVector(1.0, 0.0, 1.0, 1.0, 0.0, 1.0)
 wR = SVector(0.125, 0.0, 0.1, 0.125, 0.0, 0.1)
 ````
 
 Set up the mesh and solver:
 
-````@example two_fluid_sod
+````julia
 N = 200
 mesh = StructuredMesh1D(0.0, 1.0, N)
 
@@ -54,7 +54,7 @@ ic(x) = x < 0.5 ? wL : wR
 We use the global Lax-Friedrichs solver (the most diffusive but
 most robust option) with first-order reconstruction.
 
-````@example two_fluid_sod
+````julia
 prob = HyperbolicProblem(
     law, mesh, LaxFriedrichsSolver(), NoReconstruction(),
     TransmissiveBC(), TransmissiveBC(), ic;
@@ -67,7 +67,7 @@ x |> tc #hide
 ## Visualisation
 Extract primitive variables for each species.
 
-````@example two_fluid_sod
+````julia
 using CairoMakie
 
 W = to_primitive(law, U)

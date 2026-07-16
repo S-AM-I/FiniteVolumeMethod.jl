@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/tgv_kinetic_energy_decay.jl"
 ```
 
-````@example tgv_kinetic_energy_decay
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -25,7 +25,7 @@ error in the KE decay rate and perform a grid convergence study.
 - Taylor, G.I. & Green, A.E. (1937). Mechanism of the Production of
   Small Eddies from Large Ones. Proc. R. Soc. A, 158, 499-521.
 
-````@example tgv_kinetic_energy_decay
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -53,7 +53,7 @@ end
 ## KE Computation
 Kinetic energy = 0.5 * sum(rho * (vx^2 + vy^2) * dx * dy)
 
-````@example tgv_kinetic_energy_decay
+````julia
 function compute_ke(law, coords, U, N)
     dx = L / N
     ke = 0.0
@@ -69,7 +69,7 @@ end
 We run the TGV at each resolution and measure KE at final time.
 The analytical KE_0 = 0.5 * rho0 * U0^2 * L^2 / 2 (integral of cos^2*sin^2)
 
-````@example tgv_kinetic_energy_decay
+````julia
 KE_analytical_0 = 0.25 * rho0 * U0^2 * L^2
 
 t_final = 0.1
@@ -96,7 +96,7 @@ end
 
 ## Convergence Rates
 
-````@example tgv_kinetic_energy_decay
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -106,7 +106,7 @@ rates = convergence_rates(ke_errors)
 ## KE Time History at Finest Resolution
 Run the finest mesh and collect KE at multiple time snapshots.
 
-````@example tgv_kinetic_energy_decay
+````julia
 N_fine = 64
 ns_fine = NavierStokesEquations{2}(eos, mu = mu, Pr = 0.72)
 n_snapshots = 5
@@ -159,7 +159,7 @@ ke_exact_history = [KE_analytical_0 * exp(-decay_rate * t) for t in t_history]
 
 ## Visualisation
 
-````@example tgv_kinetic_energy_decay
+````julia
 fig = Figure(fontsize = 22, size = (1100, 500))
 ax1 = Axis(
     fig[1, 1], xlabel = "t", ylabel = "KE(t)",
@@ -191,7 +191,7 @@ fig
 Relative KE error at N=64 should be < 5%.
 KE errors should decrease with resolution.
 
-````@example tgv_kinetic_energy_decay
+````julia
 @assert ke_errors[end] < 0.05 #hide
 @assert all(ke_errors[i] > ke_errors[i + 1] for i in 1:(length(ke_errors) - 1)) #hide
 ````

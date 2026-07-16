@@ -6,7 +6,7 @@
 # workflows.  Tunable parameters are extracted from the EOS and CFL
 # stored in `cache.prob`; the padded arrays and mesh data are caches.
 
-import SciMLBase.SciMLStructures as SS
+import SciMLStructures as SS
 
 # ---- Hyperbolic caches ----
 

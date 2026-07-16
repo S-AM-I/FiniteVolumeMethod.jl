@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/species_conservation.jl"
 ```
 
-````@example species_conservation
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -25,7 +25,7 @@ and total species mass $\sum_k \int \rho Y_k\,dx$ are conserved.
 - **Periodic BCs**
 - **Solver**: HLLC + MUSCL(Minmod)
 
-````@example species_conservation
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -42,7 +42,7 @@ t_final = 0.3
 
 ## Initial Condition with 3 Species
 
-````@example species_conservation
+````julia
 function three_species_ic(x)
     rho = 1.0 + 0.15 * sin(2 * pi * x)
     v = 0.5
@@ -56,7 +56,7 @@ end
 
 ## Case 1: No Reactions — Individual Conservation
 
-````@example species_conservation
+````julia
 prob_noreact = HyperbolicProblem(
     law, mesh, HLLCSolver(), CellCenteredMUSCL(MinmodLimiter()),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(), three_species_ic;
@@ -86,7 +86,7 @@ err_prod_nr = abs(mass_prod_nr - mass0_prod) / abs(mass0_prod)
 
 ## Case 2: With Reactions — Total Mass Conservation
 
-````@example species_conservation
+````julia
 rxn = ArrheniusReaction{3}(
     500.0, 0.0, 5.0,
     (1.0, 0.5, 0.0),    # fuel + 0.5 oxidizer consumed
@@ -114,7 +114,7 @@ err_species_r = abs(mass_species_r - mass0_total) / abs(mass0_total)
 
 ## Visualisation
 
-````@example species_conservation
+````julia
 fig = Figure(fontsize = 20, size = (1100, 450))
 
 ax1 = Axis(
@@ -145,7 +145,7 @@ fig
 
 ## Test Assertions
 
-````@example species_conservation
+````julia
 # No reactions: individual species conserved
 @assert err_total_nr < 1.0e-10 #hide
 @assert err_fuel_nr < 1.0e-10 #hide

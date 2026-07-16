@@ -83,6 +83,13 @@ for entry in VALIDATION_MANIFEST.generated_pages
         execute = should_execute_example(entry),
         flavor = Literate.DocumenterFlavor(),
         name = splitext(file)[1],
+        # Pages excluded from this execution mode must emit plain fences —
+        # otherwise Documenter executes their `@example` blocks anyway and the
+        # run_locally/run_in_ci manifest flags have no effect.
+        (
+            should_execute_example(entry) ? () :
+                (codefence = "````julia" => "````",)
+        )...,
     )
 end
 

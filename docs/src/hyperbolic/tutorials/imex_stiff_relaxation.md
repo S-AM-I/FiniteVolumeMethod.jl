@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/imex_stiff_relaxation.jl"
 ```
 
-````@example imex_stiff_relaxation
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -25,7 +25,7 @@ $S_E = -\rho^2 \Lambda(T)$ with $\Lambda(T) = \lambda(T - T_{\mathrm{target}})$.
 When $\lambda \gg 1$, the cooling is stiff and an explicit time integrator
 would require impractically small time steps.
 
-````@example imex_stiff_relaxation
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -46,7 +46,7 @@ lambda_rate = 50.0  ## stiff cooling rate
 The `CoolingSource` takes a function $\Lambda(T)$ and the mean
 molecular weight $\mu$. The temperature is computed as $T = P\mu/\rho$.
 
-````@example imex_stiff_relaxation
+````julia
 T_target = P_target * mu_mol
 cooling_func = T -> lambda_rate * (T - T_target)
 source = CoolingSource(cooling_func; mu_mol = mu_mol)
@@ -57,7 +57,7 @@ w_init = SVector(rho_init, v_init, P_init)
 ## Solving with Different IMEX Schemes
 We compare three IMEX Runge-Kutta schemes:
 
-````@example imex_stiff_relaxation
+````julia
 N = 32
 mesh = StructuredMesh1D(0.0, 1.0, N)
 t_final = 0.05
@@ -72,7 +72,7 @@ prob = HyperbolicProblem(
 
 **SSP3(4,3,3)** — 4-stage, 3rd-order SSP scheme:
 
-````@example imex_stiff_relaxation
+````julia
 x_ssp, U_ssp, t_ssp = solve_hyperbolic_imex(
     prob, source; scheme = IMEX_SSP3_433(),
     newton_tol = 1.0e-12, newton_maxiter = 10
@@ -81,7 +81,7 @@ x_ssp, U_ssp, t_ssp = solve_hyperbolic_imex(
 
 **ARS(2,2,2)** — 3-stage, 2nd-order L-stable scheme:
 
-````@example imex_stiff_relaxation
+````julia
 x_ars, U_ars, t_ars = solve_hyperbolic_imex(
     prob, source; scheme = IMEX_ARS222(),
     newton_tol = 1.0e-12, newton_maxiter = 10
@@ -93,7 +93,7 @@ x_ars |> tc #hide
 The pressure should relax toward $P_{\mathrm{target}} = 1.0$ from
 the initial $P_{\mathrm{init}} = 3.0$:
 
-````@example imex_stiff_relaxation
+````julia
 P_ssp = [conserved_to_primitive(law, U_ssp[i])[3] for i in eachindex(U_ssp)]
 P_ars = [conserved_to_primitive(law, U_ars[i])[3] for i in eachindex(U_ars)]
 
@@ -106,7 +106,7 @@ abs(P_avg_ars - P_target) < abs(P_init - P_target) || @warn("ARS222 pressure did
 
 ## Visualisation
 
-````@example imex_stiff_relaxation
+````julia
 using CairoMakie
 
 fig = Figure(fontsize = 24, size = (900, 400))
@@ -139,7 +139,7 @@ energy). The IMEX scheme handles the stiff source implicitly,
 allowing stable time steps determined by the CFL condition rather
 than the fast cooling time scale.
 
-````@example imex_stiff_relaxation
+````julia
 rho_variation = maximum(rho_ssp) - minimum(rho_ssp) #hide
 rho_variation < 0.05 * rho_init || @warn("Density variation exceeds tolerance: $rho_variation") #hide
 ````

@@ -311,9 +311,7 @@ function _remake_check_f(ode_prob, f)
     # SciML's solve specialization may pass a re-wrapped ODEFunction (or the
     # raw closure) around the *same* underlying RHS — accept those, since the
     # rebuild regenerates an equivalent RHS from the physics problem anyway.
-    raw_old = SciMLBase.unwrapped_f(ode_prob.f)
-    raw_new = SciMLBase.unwrapped_f(f)
-    (raw_new === raw_old || raw_new === ode_prob.f.f) && return nothing
+    _same_underlying_rhs(ode_prob.f, f) && return nothing
     throw(
         ArgumentError(
             "remake: cannot replace `f` of a semidiscrete ODEProblem — the RHS " *
@@ -321,6 +319,18 @@ function _remake_check_f(ode_prob, f)
                 "Remake physics fields instead (e.g. `remake(ode_prob; law = ...)`)."
         )
     )
+end
+
+function _same_underlying_rhs(old, new)
+    raw_old = SciMLBase.unwrapped_f(old)
+    raw_new = SciMLBase.unwrapped_f(new)
+    raw_new === raw_old && return true
+    # SplitFunction (SciMLBase 3) carries the RHS pair in f1/f2 with no `f`
+    # field, so compare component-wise.
+    return hasfield(typeof(old), :f) && raw_new === old.f
+end
+function _same_underlying_rhs(old::SciMLBase.SplitFunction, new::SciMLBase.SplitFunction)
+    return _same_underlying_rhs(old.f1, new.f1) && _same_underlying_rhs(old.f2, new.f2)
 end
 
 # Apply u0/tspan overrides to a freshly rebuilt semidiscrete ODEProblem.

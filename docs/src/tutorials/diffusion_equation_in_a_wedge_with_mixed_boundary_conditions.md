@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.jl"
 ```
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -41,7 +41,7 @@ where we also `refine!` the mesh to get a better mesh. For the arc,
 we use the `CircularArc` so that the mesh knows that it is triangulating
 a certain arc in that area.
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 using DelaunayTriangulation, FiniteVolumeMethod, ElasticArrays
 
 α = π / 4
@@ -58,7 +58,7 @@ mesh = FVMGeometry(tri)
 
 This is the mesh we've constructed.
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 using CairoMakie
 fig, ax, sc = triplot(tri)
 fig
@@ -66,7 +66,7 @@ fig
 
 To confirm that the boundary is now in three parts, see:
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 get_boundary_nodes(tri)
 ````
 
@@ -75,7 +75,7 @@ we need to provide `Tuple`s, where the `i`th element of the
 `Tuple`s refers to the `i`th part of the boundary. The boundary
 conditions are thus:
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 lower_bc = arc_bc = upper_bc = (x, y, t, u, p) -> zero(u)
 types = (Neumann, Dirichlet, Neumann)
 BCs = BoundaryConditions(mesh, (lower_bc, arc_bc, upper_bc), types)
@@ -84,7 +84,7 @@ BCs = BoundaryConditions(mesh, (lower_bc, arc_bc, upper_bc), types)
 Now we can define the PDE. We use the reaction-diffusion formulation,
 specifying the diffusion function as a constant.
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 f = (x, y) -> 1 - sqrt(x^2 + y^2)
 D = (x, y, t, u, p) -> one(u)
 initial_condition = [f(x, y) for (x, y) in DelaunayTriangulation.each_point(tri)]
@@ -94,7 +94,7 @@ prob = FVMProblem(mesh, BCs; diffusion_function = D, initial_condition, final_ti
 
 If you did want to use the flux formulation, you would need to provide
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 flux = (x, y, t, α, β, γ, p) -> (-α, -β)
 ````
 
@@ -105,18 +105,19 @@ We now solve the problem. We provide the solver for this problem.
 In my experience, I've found that `TRBDF2(linsolve=KLUFactorization())` typically
 has the best performance for these problems.
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 0.01, parallel = Val(false))
 ind = findall(DelaunayTriangulation.each_point_index(tri)) do i #hide
     !DelaunayTriangulation.has_vertex(tri, i) #hide
 end #hide
 using Test #hide
-@test sol[ind, :] ≈ reshape(repeat(initial_condition, length(sol)), :, length(sol))[ind, :] # make sure that missing vertices don't change #hide
+@test sol[ind, :] ≈ reshape(repeat(initial_condition, length(sol.u)), :, length(sol.u))[ind, :] # make sure that missing vertices don't change #hide
 sol |> tc #hide
 ````
 
-````@example diffusion_equation_in_a_wedge_with_mixed_boundary_conditions
+````julia
 using CairoMakie
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
@@ -171,6 +172,7 @@ prob = FVMProblem(mesh, BCs; diffusion_function = D, initial_condition, final_ti
 flux = (x, y, t, α, β, γ, p) -> (-α, -β)
 
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = 0.01, parallel = Val(false))
 
 using CairoMakie

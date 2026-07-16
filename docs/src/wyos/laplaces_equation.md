@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/laplaces_equation.jl"
 ```
 
-````@example laplaces_equation
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -31,7 +31,7 @@ For the implementation, we can reuse a lot of what
 we had for Poisson's equation, except that
 we don't need `create_rhs_b`.
 
-````@example laplaces_equation
+````julia
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
 const FVM = FiniteVolumeMethod
 function laplaces_equation(
@@ -78,7 +78,7 @@ u(x, y) &= \left(\frac{\pi}{2} - \arctan\frac{y}{x}\right)\arctan\frac{y}{x} & r
 To start, we define our mesh. We need to define each part of the annulus separately, which
 takes some care.
 
-````@example laplaces_equation
+````julia
 using CairoMakie
 lower_x = [1.0, 2.0]
 lower_y = [0.0, 0.0]
@@ -99,13 +99,13 @@ refine!(tri; max_area = 1.0e-3get_area(tri))
 triplot(tri)
 ````
 
-````@example laplaces_equation
+````julia
 mesh = FVMGeometry(tri)
 ````
 
 The boundary conditions are defined as follows.
 
-````@example laplaces_equation
+````julia
 lower_f = (x, y, t, u, p) -> 0.0
 outer_arc_f = (x, y, t, u, p) -> (π / 2 - atan(y, x)) * atan(y, x)
 left_f = (x, y, t, u, p) -> 2x * y
@@ -117,17 +117,17 @@ BCs = BoundaryConditions(mesh, bc_f, bc_types)
 
 Now we can define and solve the problem.
 
-````@example laplaces_equation
+````julia
 prob = laplaces_equation(mesh, BCs, diffusion_function = (x, y, p) -> 1.0)
 prob |> tc #hide
 ````
 
-````@example laplaces_equation
+````julia
 sol = solve(prob, KLUFactorization())
 sol |> tc #hide
 ````
 
-````@example laplaces_equation
+````julia
 fig = Figure(fontsize = 33)
 ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y", width = 600, height = 600)
 tricontourf!(ax, tri, sol.u, levels = 0:0.1:1, colormap = :jet)
@@ -137,7 +137,7 @@ fig
 
 We can turn this type of problem into its corresponding `SteadyFVMProblem` as follows:
 
-````@example laplaces_equation
+````julia
 initial_condition = zeros(DelaunayTriangulation.num_points(tri))
 FVM.apply_dirichlet_conditions!(initial_condition, mesh, Conditions(mesh, BCs, InternalConditions())) # a good initial guess
 fvm_prob = SteadyFVMProblem(
@@ -150,13 +150,14 @@ fvm_prob = SteadyFVMProblem(
 )
 ````
 
-````@example laplaces_equation
+````julia
 using SteadyStateDiffEq, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2
 fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2()))
 fvm_sol |> tc #hide
 ````
 
-````@example laplaces_equation
+````julia
 ax = Axis(fig[1, 2], xlabel = "x", ylabel = "y", width = 600, height = 600)
 tricontourf!(ax, tri, fvm_sol.u, levels = 0:0.1:1, colormap = :jet)
 resize_to_layout!(fig)
@@ -183,7 +184,7 @@ u(5, y) &= 5 & 0 < y < 5, \\
 where $D(\vb x) = (x+1)(y+2)$. The exact solution
 is $u(x, y) = 5\log_6(1+x)$. We define this problem as follows.
 
-````@example laplaces_equation
+````julia
 tri = triangulate_rectangle(0, 5, 0, 5, 100, 100, single_boundary = false)
 mesh = FVMGeometry(tri)
 zero_f = (x, y, t, u, p) -> 0.0
@@ -195,12 +196,12 @@ diffusion_function = (x, y, p) -> (x + 1) * (y + 2)
 prob = LaplacesEquation(mesh, BCs; diffusion_function)
 ````
 
-````@example laplaces_equation
+````julia
 sol = solve(prob, KLUFactorization())
 sol |> tc #hide
 ````
 
-````@example laplaces_equation
+````julia
 fig = Figure(fontsize = 33)
 ax = Axis(
     fig[1, 1], xlabel = "x", ylabel = "y",
@@ -222,7 +223,7 @@ fig
 To finish, here is a benchmark comparing this problem to the corresponding
 `SteadyFVMProblem`.
 
-````@example laplaces_equation
+````julia
 initial_condition = zeros(DelaunayTriangulation.num_points(tri))
 FVM.apply_dirichlet_conditions!(initial_condition, mesh, Conditions(mesh, BCs, InternalConditions())) # a good initial guess
 fvm_prob = SteadyFVMProblem(
@@ -334,6 +335,7 @@ fvm_prob = SteadyFVMProblem(
 )
 
 using SteadyStateDiffEq, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2
 fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2()))
 
 ax = Axis(fig[1, 2], xlabel = "x", ylabel = "y", width = 600, height = 600)

@@ -61,7 +61,7 @@ is negated in the ghost cells while density, pressure, and tangential
 velocities are copied.
 
 Supported for any conservation law that implements
-[`normal_velocity_index`](@ref); laws without that method throw an
+`normal_velocity_index`; laws without that method throw an
 informative error at the first boundary application.
 """
 struct ReflectiveBC <: AbstractHyperbolicBC end
@@ -84,7 +84,7 @@ normal_velocity_index(::EulerEquations, dir::Int) = dir + 1
     _reflect_primitive(law, w, dir) -> SVector
 
 Return the primitive state `w` with the `dir`-direction velocity component
-negated, using [`normal_velocity_index`](@ref). Throws an informative
+negated, using `normal_velocity_index`. Throws an informative
 `ArgumentError` when the law does not implement the interface.
 """
 @inline function _reflect_primitive(law, w, dir::Int)

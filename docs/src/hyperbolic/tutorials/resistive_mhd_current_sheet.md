@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/resistive_mhd_current_sheet.jl"
 ```
 
-````@example resistive_mhd_current_sheet
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -25,7 +25,7 @@ The 8-variable MHD system is used with a $B_y$ reversal at $x = 0.5$.
 Uniform density $\rho = 1$, pressure $P = 1$, and $B_x = 0.75$
 (a guide field).
 
-````@example resistive_mhd_current_sheet
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -35,7 +35,7 @@ law = ResistiveMHDEquations{1}(eos; eta = 0.01)
 
 Initial condition: $B_y$ reverses across the midpoint.
 
-````@example resistive_mhd_current_sheet
+````julia
 function current_sheet_ic(x)
     rho = 1.0
     vx, vy, vz = 0.0, 0.0, 0.0
@@ -62,7 +62,7 @@ x |> tc #hide
 The current density $J_z \approx \partial B_y / \partial x$ and
 Ohmic heating rate $\eta |J|^2$ are computed from the cell data.
 
-````@example resistive_mhd_current_sheet
+````julia
 W = to_primitive(law, U)
 By_vals = [W[i][7] for i in eachindex(W)]
 dx = 1.0 / N
@@ -85,7 +85,7 @@ flux_demo = resistive_flux_x(law, U[i_mid], U[i_mid + 1], dx)
 
 ## Visualisation
 
-````@example resistive_mhd_current_sheet
+````julia
 using CairoMakie
 
 fig = Figure(fontsize = 24, size = (1200, 400))

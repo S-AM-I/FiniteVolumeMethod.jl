@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/limiter_comparison.jl"
 ```
 
-````@example limiter_comparison
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,7 +22,7 @@ tube to visualise these trade-offs.
 ## Problem Setup
 We use the standard 1D Sod shock tube with $N = 200$ cells:
 
-````@example limiter_comparison
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -45,7 +45,7 @@ We solve the same problem with all five limiters: Minmod (most
 dissipative), Superbee (least dissipative), Van Leer, Koren, and
 Ospre.
 
-````@example limiter_comparison
+````julia
 limiters = [
     ("Minmod", MinmodLimiter()),
     ("Superbee", SuperbeeLimiter()),
@@ -68,7 +68,7 @@ end
 
 We also include a first-order (no reconstruction) baseline:
 
-````@example limiter_comparison
+````julia
 prob_first = HyperbolicProblem(
     law, mesh, HLLCSolver(), NoReconstruction(),
     bc_left, bc_right, ic;
@@ -80,7 +80,7 @@ rho_first = [conserved_to_primitive(law, U_first[i])[1] for i in eachindex(U_fir
 
 ## Exact Solution
 
-````@example limiter_comparison
+````julia
 function sod_exact(x, t; x0 = 0.5, gamma = 1.4)
     cL = sqrt(gamma * 1.0 / 1.0)
     P_star = 0.30313017805064707
@@ -109,7 +109,7 @@ end
 
 ## Visualisation
 
-````@example limiter_comparison
+````julia
 using CairoMakie
 
 x_exact = range(0.0, 1.0, length = 1000)
@@ -129,7 +129,7 @@ axislegend(ax1, position = :cb)
 
 Zoom into the contact discontinuity region:
 
-````@example limiter_comparison
+````julia
 ax2 = Axis(
     fig[2, 1], xlabel = "x", ylabel = L"\rho",
     title = "Contact Discontinuity (zoom)"
@@ -156,7 +156,7 @@ fig
 - The **first-order** solution (no reconstruction) is very diffusive,
   illustrating why MUSCL reconstruction is important.
 
-````@example limiter_comparison
+````julia
 all(r -> all(isfinite, r.rho), results) || @warn("Non-finite densities detected in limiter comparison") #hide
 all(r -> all(>(0), r.rho), results) || @warn("Negative densities detected in limiter comparison") #hide
 ````

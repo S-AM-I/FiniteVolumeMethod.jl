@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/orszag_tang_vortex.jl"
 ```
 
-````@example orszag_tang_vortex
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -24,7 +24,7 @@ vortices:
 B_x = -\frac{\sin(2\pi y)}{\sqrt{4\pi}}, \quad B_y = \frac{\sin(4\pi x)}{\sqrt{4\pi}}.
 ```
 
-````@example orszag_tang_vortex
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -54,7 +54,7 @@ using a vector potential $A_z(x,y)$ to guarantee $\nabla\cdot\vb B = 0$
 to machine precision. The vector potential satisfying
 $B_x = \partial A_z/\partial y$ and $B_y = -\partial A_z/\partial x$ is:
 
-````@example orszag_tang_vortex
+````julia
 function Az_ot(x, y)
     return cos(2 * pi * y) / (2 * pi * sqrt(4 * pi)) +
         cos(4 * pi * x) / (4 * pi * sqrt(4 * pi))
@@ -64,7 +64,7 @@ end
 ## Solving
 We use the HLLD Riemann solver with MUSCL reconstruction and periodic BCs.
 
-````@example orszag_tang_vortex
+````julia
 prob = HyperbolicProblem2D(
     law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
     PeriodicHyperbolicBC(), PeriodicHyperbolicBC(),
@@ -76,7 +76,7 @@ prob = HyperbolicProblem2D(
 The `vector_potential` keyword tells `solve_hyperbolic` to initialise
 the face-centred magnetic field from $A_z$ via Stokes' theorem:
 
-````@example orszag_tang_vortex
+````julia
 coords, U, t_final, ct = solve_hyperbolic(prob; vector_potential = Az_ot)
 coords |> tc #hide
 ````
@@ -85,7 +85,7 @@ coords |> tc #hide
 The constrained transport algorithm should keep $|\nabla\cdot\vb B|$
 at machine precision:
 
-````@example orszag_tang_vortex
+````julia
 divB_max = max_divB(ct, mesh)
 
 divB_max < 1.0e-10 || @warn("divB exceeds tolerance: $divB_max") #hide
@@ -93,7 +93,7 @@ divB_max < 1.0e-10 || @warn("divB exceeds tolerance: $divB_max") #hide
 
 ## Visualisation
 
-````@example orszag_tang_vortex
+````julia
 using CairoMakie
 
 nx, ny = N, N

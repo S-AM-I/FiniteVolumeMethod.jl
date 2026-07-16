@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems.jl"
 ```
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -23,7 +23,7 @@ T &= 70 & \vb x \in \Gamma_4. \\
 ```
 This domain $\Omega$ with boundary $\partial\Omega=\Gamma_1\cup\Gamma_2\cup\Gamma_3\cup\Gamma_4$ is shown below.
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 using CairoMakie #hide
 A = (0.0, 0.06) #hide
 B = (0.03, 0.06) #hide
@@ -48,7 +48,7 @@ fig #hide
 
 Let us start by defining the mesh.
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 using DelaunayTriangulation, FiniteVolumeMethod, CairoMakie
 A, B,
     C,
@@ -73,7 +73,7 @@ refine!(tri; max_area = 1.0e-4get_area(tri))
 triplot(tri)
 ````
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 mesh = FVMGeometry(tri)
 ````
 
@@ -81,7 +81,7 @@ For the boundary conditions, the parameters that we use are
 $k = 3$, $h = 20$, and $T_{\infty} = 20$ for thermal conductivity,
 heat transfer coefficient, and ambient temperature, respectively.
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 k = 3.0
 h = 20.0
 T∞ = 20.0
@@ -102,7 +102,7 @@ which recall is used as an initial guess for steady state problems,
 let us use an initial condition which ranges from $T=70$ at $y=0.06$
 down to $T=40$ at $y=0$.
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 diffusion_function = (x, y, t, T, p) -> one(T)
 f = (x, y) -> 500y + 40
 initial_condition = [f(x, y) for (x, y) in DelaunayTriangulation.each_point(tri)]
@@ -115,19 +115,19 @@ prob = FVMProblem(
 )
 ````
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 steady_prob = SteadyFVMProblem(prob)
 ````
 
 Now we can solve.
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 using OrdinaryDiffEq, SteadyStateDiffEq
 sol = solve(steady_prob, DynamicSS(Rosenbrock23()))
 sol |> tc #hide
 ````
 
-````@example equilibrium_temperature_distribution_with_mixed_boundary_conditions_and_using_ensembleproblems
+````julia
 fig, ax, sc = tricontourf(tri, sol.u, levels = 40:70, axis = (xlabel = "x", ylabel = "y"))
 fig
 ````

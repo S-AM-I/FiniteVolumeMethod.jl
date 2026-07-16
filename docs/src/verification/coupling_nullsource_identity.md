@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/coupling_nullsource_identity.jl"
 ```
 
-````@example coupling_nullsource_identity
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,9 +22,10 @@ We solve the 1D Euler equations for a Sod shock tube and compare:
 The identity claim is implementation-level: the coupling wrapper must not
 perturb the underlying finite-volume update when the source is truly zero.
 
-````@example coupling_nullsource_identity
+````julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie
@@ -100,7 +101,7 @@ end
 
 ## Test Assertions
 
-````@example coupling_nullsource_identity
+````julia
 @assert all(result -> isapprox(result.t_canonical, result.t_split; atol = 1.0e-12), results) #hide
 @assert all(diff -> diff < 1.0e-12, max_differences) #hide
 
@@ -130,6 +131,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 ```julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie

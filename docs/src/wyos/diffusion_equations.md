@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/diffusion_equations.jl"
 ```
 
-````@example diffusion_equations
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -114,7 +114,7 @@ terms for $b_i$ and also to put into $\vb A$.
 
 Let us start by writing out the contribution from all the triangles.
 
-````@example diffusion_equations
+````julia
 using FiniteVolumeMethod
 const FVM = FiniteVolumeMethod
 function triangle_contributions!(
@@ -148,7 +148,7 @@ end
 
 Now we need the function that gets the contributions from the boundary edges.
 
-````@example diffusion_equations
+````julia
 function boundary_edge_contributions!(
         A, b, mesh, conditions,
         diffusion_function, diffusion_parameters
@@ -194,7 +194,7 @@ the boundary conditions. Note that in the code above we have already taken not t
 $\vb A$ or $\vb b$ if there a boundary condition at the associated node, so we do not
 need to worry about e.g. zeroing out rows of $\vb A$ for a node with a boundary condition.
 
-````@example diffusion_equations
+````julia
 function apply_dirichlet_conditions!(initial_condition, mesh, conditions)
     for (i, function_index) in FVM.get_dirichlet_nodes(conditions)
         x, y = get_point(mesh, i)
@@ -236,7 +236,7 @@ so that
 ```
 Note that this also requires that we append a `1` to the initial condition.
 
-````@example diffusion_equations
+````julia
 function diffusion_equation(
         mesh::FVMGeometry,
         BCs::BoundaryConditions,
@@ -267,8 +267,10 @@ end
 
 Let's now test the function. We use the same problem as in [this tutorial](../tutorials/diffusion_equation_on_a_square_plate.md).
 
-````@example diffusion_equations
+````julia
 using DelaunayTriangulation, OrdinaryDiffEq, LinearAlgebra, SparseArrays
+using SciMLBase: MatrixOperator
+using OrdinaryDiffEqSDIRK: TRBDF2
 tri = triangulate_rectangle(0, 2, 0, 2, 50, 50, single_boundary = true)
 mesh = FVMGeometry(tri)
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> zero(x), Dirichlet)
@@ -291,11 +293,11 @@ sol |> tc #hide
 (It would be nice to use `LinearExponential()` in the call above, but it just seems to be extremely numerically unstable, so it's unusable.)
 Note also that `sol` contains an extra component:
 
-````@example diffusion_equations
+````julia
 length(sol.u[1])
 ````
 
-````@example diffusion_equations
+````julia
 DelaunayTriangulation.num_solid_vertices(tri)
 ````
 
@@ -305,7 +307,7 @@ So, the solution is in `sol[begin:end-1, :]`, and you should ignore `sol[end, :]
 
 Let's now plot.
 
-````@example diffusion_equations
+````julia
 using CairoMakie
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
@@ -331,7 +333,7 @@ This is exactly the solution we expect!
 ## Using the Provided Template
 Let's now use the built-in `DiffusionEquation()` which implements the above template inside FiniteVolumeMethod.jl.
 
-````@example diffusion_equations
+````julia
 diff_eq = DiffusionEquation(
     mesh, BCs;
     diffusion_function,
@@ -342,7 +344,7 @@ diff_eq = DiffusionEquation(
 
 Let's compare `DiffusionEquation` to the `FVMProblem` approach.
 
-````@example diffusion_equations
+````julia
 fvm_prob = FVMProblem(
     mesh, BCs;
     diffusion_function = let D = diffusion_function
@@ -384,7 +386,7 @@ To finish this example, let's solve a diffusion equation with constant Neumann b
 ```
 Here, $\Omega = [0, 320]^2$.
 
-````@example diffusion_equations
+````julia
 L = 320.0
 tri = triangulate_rectangle(0, L, 0, L, 100, 100, single_boundary = true)
 mesh = FVMGeometry(tri)
@@ -409,14 +411,14 @@ prob = DiffusionEquation(
 
 Let's solve and plot.
 
-````@example diffusion_equations
+````julia
 sol = solve(prob, Tsit5(); saveat = 100.0)
 sol |> tc #hide
 ````
 
-````@example diffusion_equations
+````julia
 fig = Figure(fontsize = 38)
-for j in eachindex(sol)
+for j in eachindex(sol.u)
     ax = Axis(
         fig[1, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
@@ -439,7 +441,7 @@ defined in terms of $\vb q = -D(\vb x)\grad u$ rather than $\grad u \vdot \vu n$
 since $\grad u \vdot \vu n = 2$, we have $-D\grad u \vdot \vu n = -2D = -4$, so
 $\vb q \vdot \vu n = -4$. Here is a comparison of the two solutions.
 
-````@example diffusion_equations
+````julia
 using LinearSolve
 BCs_prob = BoundaryConditions(mesh, (x, y, t, u, p) -> -4, Neumann)
 fvm_prob = FVMProblem(
@@ -453,7 +455,7 @@ fvm_prob = FVMProblem(
 fvm_sol = solve(fvm_prob, TRBDF2(linsolve = KLUFactorization()); saveat = 100.0)
 fvm_sol |> tc #hide
 
-for j in eachindex(fvm_sol)
+for j in eachindex(fvm_sol.u)
     ax = Axis(
         fig[2, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
@@ -491,7 +493,7 @@ using Sundials
 
 These problems also work with the `pl_interpolate` function:
 
-````@example diffusion_equations
+````julia
 q = (30.0, 45.0)
 T = jump_and_march(tri, q)
 val = pl_interpolate(prob, T, sol.u[3], q[1], q[2])
@@ -620,6 +622,8 @@ function diffusion_equation(
 end
 
 using DelaunayTriangulation, OrdinaryDiffEq, LinearAlgebra, SparseArrays
+using SciMLBase: MatrixOperator
+using OrdinaryDiffEqSDIRK: TRBDF2
 tri = triangulate_rectangle(0, 2, 0, 2, 50, 50, single_boundary = true)
 mesh = FVMGeometry(tri)
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> zero(x), Dirichlet)
@@ -700,7 +704,7 @@ prob = DiffusionEquation(
 sol = solve(prob, Tsit5(); saveat = 100.0)
 
 fig = Figure(fontsize = 38)
-for j in eachindex(sol)
+for j in eachindex(sol.u)
     ax = Axis(
         fig[1, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",
@@ -729,7 +733,7 @@ fvm_prob = FVMProblem(
 )
 fvm_sol = solve(fvm_prob, TRBDF2(linsolve = KLUFactorization()); saveat = 100.0)
 
-for j in eachindex(fvm_sol)
+for j in eachindex(fvm_sol.u)
     ax = Axis(
         fig[2, j], width = 600, height = 600,
         xlabel = "x", ylabel = "y",

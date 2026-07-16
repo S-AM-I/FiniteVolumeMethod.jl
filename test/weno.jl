@@ -2,7 +2,7 @@ using FiniteVolumeMethod
 using Test
 using StaticArrays
 using LinearAlgebra
-using OrdinaryDiffEq: SSPRK33
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: SciMLBase
 
 # ============================================================

@@ -138,6 +138,8 @@ using FiniteVolumeMethod
     # ------------------------------------------------------------------
     @testset "ODEProblem(model, mesh, bcs; tspan, u0)" begin
         using OrdinaryDiffEq
+        using OrdinaryDiffEqSDIRK: ImplicitEuler
+        using ADTypes: AutoFiniteDiff
         using SciMLBase
         mesh = generate_mesh_1d(50, 1.0e-3)
         u0 = fill(560.0, length(mesh.cells))
@@ -154,7 +156,7 @@ using FiniteVolumeMethod
         # `_tmp = similar(b)` buffer is Float64-typed and breaks ForwardDiff's
         # Dual-number propagation. Tracked as a separate FVM issue (DiffCache
         # refactor); not blocking for the convenience method's correctness.
-        sol = solve(prob, ImplicitEuler(autodiff = false); adaptive = false, dt = 0.01)
+        sol = solve(prob, ImplicitEuler(autodiff = AutoFiniteDiff()); adaptive = false, dt = 0.01)
         # After 10 s with α=2e-7 and L=1e-3 (τ ≈ 5 s), the rod should have nearly
         # equilibrated to the 600 K wall.
         T_final = sol.u[end]

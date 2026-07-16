@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/sod_grid_convergence.jl"
 ```
 
-````@example sod_grid_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -25,9 +25,10 @@ with $\gamma = 1.4$.
 - **Riemann solvers**: Lax-Friedrichs, HLL, HLLC
 - **Reconstruction**: `NoReconstruction`, `MUSCL(Minmod)`, `WENO3`
 
-````@example sod_grid_convergence
+````julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie
@@ -51,7 +52,7 @@ end
 
 ## Exact Solution
 
-````@example sod_grid_convergence
+````julia
 function sod_exact(x, t; x0 = 0.5, gamma = 1.4)
     rhoL, vL, PL = 1.0, 0.0, 1.0
     rhoR, vR, PR = 0.125, 0.0, 0.1
@@ -84,7 +85,7 @@ end
 
 ## Part 1: Grid Convergence with HLLC + MUSCL
 
-````@example sod_grid_convergence
+````julia
 t_final = 0.2
 grid_sizes = [50, 100, 200, 400]
 
@@ -121,7 +122,7 @@ end
 
 ## Visualisation -- Density at Multiple Resolutions
 
-````@example sod_grid_convergence
+````julia
 x_exact_plot = range(0.0, 1.0, length = 1000)
 rho_exact_plot = [sod_exact(xi, t_final)[1] for xi in x_exact_plot]
 
@@ -151,7 +152,7 @@ end
 
 ## Visualisation -- L1 Error Convergence
 
-````@example sod_grid_convergence
+````julia
 fig2 = Figure(fontsize = 24, size = (600, 500))
 ax = Axis(
     fig2[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error}",
@@ -175,7 +176,7 @@ end
 
 ## Part 2: Solver/Reconstruction Comparison at N = 200
 
-````@example sod_grid_convergence
+````julia
 N_compare = 200
 combos = [
     ("LxF + NoRecon", LaxFriedrichsSolver(), NoReconstruction()),
@@ -208,7 +209,7 @@ end
 
 ## Visualisation -- Solver Comparison
 
-````@example sod_grid_convergence
+````julia
 fig3 = Figure(fontsize = 20, size = (700, 450))
 ax3 = Axis(
     fig3[1, 1], xlabel = "Solver + Reconstruction", ylabel = L"L^1 \text{ density error}",
@@ -225,7 +226,7 @@ end
 
 ## Test Assertions
 
-````@example sod_grid_convergence
+````julia
 @assert all(errs_rho[i] > errs_rho[i + 1] for i in 1:(length(errs_rho) - 1)) #hide
 @assert combo_errors[5] < combo_errors[1] #hide
 
@@ -264,6 +265,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 ```julia
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode
 using StaticArrays
 using CairoMakie

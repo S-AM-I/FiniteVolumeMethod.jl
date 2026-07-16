@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/grmhd_convergence.jl"
 ```
 
-````@example grmhd_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -26,7 +26,7 @@ with constant $B_x = 0.5$ and $B_y = B_z = 0$.
 - Del Zanna, L. et al. (2007). ECHO: a Eulerian conservative high-order
   scheme for general relativistic MHD. A&A, 473, 11-30.
 
-````@example grmhd_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -51,7 +51,7 @@ end
 
 ## Convergence Measurement
 
-````@example grmhd_convergence
+````julia
 function compute_grmhd_error(N)
     mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, 4)
     prob = HyperbolicProblem2D(
@@ -79,7 +79,7 @@ errors = [compute_grmhd_error(N) for N in resolutions]
 
 ## Convergence Rates
 
-````@example grmhd_convergence
+````julia
 function convergence_rates(errs)
     return [log2(errs[i] / errs[i + 1]) for i in 1:(length(errs) - 1)]
 end
@@ -89,7 +89,7 @@ rates = convergence_rates(errors)
 
 ## Visualisation — Convergence Plot
 
-````@example grmhd_convergence
+````julia
 fig = Figure(fontsize = 24, size = (700, 550))
 ax = Axis(
     fig[1, 1], xlabel = "N", ylabel = L"L^1 \text{ error } (\rho)",
@@ -116,7 +116,7 @@ fig
 With MUSCL reconstruction, expect at least first-order convergence.
 The Minkowski limit should not degrade accuracy relative to SRMHD.
 
-````@example grmhd_convergence
+````julia
 @assert all(r -> r > 1.0, rates) #hide
 ````
 

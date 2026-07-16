@@ -117,6 +117,7 @@ steady_prob = SteadyFVMProblem(prob)
 
 # Now let's solve the problem.
 using SteadyStateDiffEq, LinearSolve, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 sol |> tc #hide
 

@@ -1,3 +1,11 @@
+# ChunkSplitters 3 dropped the legacy `chunks(x, n)` iterator of `(range, idx)`
+# tuples; rebuild that contract (including its clamp of the chunk count to
+# `length(x)`) on top of `index_chunks`.
+function _chunk_ranges(x, nt::Int)
+    n = max(1, min(nt, length(x)))
+    return [(r, i) for (i, r) in enumerate(index_chunks(x; n))]
+end
+
 function get_multithreading_parameters(prob::Union{FVMProblem, FVMSystem})
     u = prob.initial_condition
     nt = Threads.nthreads()
@@ -10,9 +18,9 @@ function get_multithreading_parameters(prob::Union{FVMProblem, FVMSystem})
     end
     solid_triangles = collect(each_solid_triangle(prob.mesh.triangulation))
     solid_vertices = collect(DelaunayTriangulation.each_point_index(prob.mesh.triangulation)) # we check for points in the vertex inside the source contribution codes
-    chunked_solid_triangles = chunks(solid_triangles, nt)
+    chunked_solid_triangles = _chunk_ranges(solid_triangles, nt)
     boundary_edges = collect(keys(get_boundary_edge_map(prob.mesh.triangulation)))
-    chunked_boundary_edges = chunks(boundary_edges, nt)
+    chunked_boundary_edges = _chunk_ranges(boundary_edges, nt)
     return (
         duplicated_du = duplicated_du,
         dirichlet_nodes = dirichlet_nodes,

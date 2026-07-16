@@ -65,6 +65,7 @@ using NonlinearSolve
 sol = solve(steady_prob, NewtonRaphson())
 copyto!(prob.initial_condition, sol.u) # this also changes steady_prob's initial condition
 using SteadyStateDiffEq, LinearSolve, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(steady_prob, DynamicSS(TRBDF2(linsolve = KLUFactorization())))
 sol |> tc #hide
 

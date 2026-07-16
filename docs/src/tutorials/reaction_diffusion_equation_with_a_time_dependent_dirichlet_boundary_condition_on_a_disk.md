@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.jl"
 ```
 
-````@example reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -28,7 +28,7 @@ is $R(\vb x, t, u) = u(1-u)$, or equivalently the force function is
 ```
 As usual, we start by generating the mesh.
 
-````@example reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation, ElasticArrays
 r = 1.0
 circle = CircularArc((0.0, r), (0.0, r), (0.0, 0.0))
@@ -40,19 +40,19 @@ refine!(tri; max_area = 1.0e-4A)
 mesh = FVMGeometry(tri)
 ````
 
-````@example reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk
+````julia
 using CairoMakie
 triplot(tri)
 ````
 
 Now we define the boundary conditions and the PDE.
 
-````@example reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk
+````julia
 using Bessels
 BCs = BoundaryConditions(mesh, (x, y, t, u, p) -> u, Dudt)
 ````
 
-````@example reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk
+````julia
 f = (x, y) -> sqrt(besseli(0.0, sqrt(2) * sqrt(x^2 + y^2)))
 D = (x, y, t, u, p) -> u
 R = (x, y, t, u, p) -> u * (1 - u)
@@ -69,14 +69,15 @@ prob = FVMProblem(
 
 We can now solve.
 
-````@example reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk
+````julia
 using OrdinaryDiffEq, LinearSolve
-alg = FBDF(linsolve = UMFPACKFactorization(), autodiff = false)
+using ADTypes: AutoFiniteDiff
+alg = FBDF(linsolve = UMFPACKFactorization(), autodiff = AutoFiniteDiff())
 sol = solve(prob, alg, saveat = 0.01)
 sol |> tc #hide
 ````
 
-````@example reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk
+````julia
 fig = Figure(fontsize = 38)
 for (i, j) in zip(1:3, (1, 6, 11))
     ax = Axis(
@@ -127,7 +128,8 @@ prob = FVMProblem(
 )
 
 using OrdinaryDiffEq, LinearSolve
-alg = FBDF(linsolve = UMFPACKFactorization(), autodiff = false)
+using ADTypes: AutoFiniteDiff
+alg = FBDF(linsolve = UMFPACKFactorization(), autodiff = AutoFiniteDiff())
 sol = solve(prob, alg, saveat = 0.01)
 
 fig = Figure(fontsize = 38)

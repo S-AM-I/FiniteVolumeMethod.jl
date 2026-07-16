@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_verification/coupling_cooling_reference.jl"
 ```
 
-````@example coupling_cooling_reference
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -23,7 +23,7 @@ We evolve a smooth periodic state
 under the source term `CoolingSource(T -> 0.05*T)`. The benchmark metric is
 the L1 pressure error against a `N = 800` Strang-split reference solution.
 
-````@example coupling_cooling_reference
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 using CairoMakie
@@ -106,7 +106,7 @@ end
 
 ## Test Assertions
 
-````@example coupling_cooling_reference
+````julia
 @assert reference.t ≈ t_final atol = 1.0e-12 #hide
 @assert all(diff(pressure_errors) .< 0.0) #hide
 @assert all(rate -> rate > 1.7, pressure_rates) #hide

@@ -57,7 +57,7 @@ end
 
 @testset "Stage 1e: Extensible SciMLStructures.Tunable schema" begin
     using LinearSolve
-    using SciMLBase.SciMLStructures: Tunable, canonicalize, replace as ss_replace
+    using SciMLStructures: Tunable, canonicalize, replace as ss_replace
 
     mesh = build_cartesian_unstructured_mesh(3, 3, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(

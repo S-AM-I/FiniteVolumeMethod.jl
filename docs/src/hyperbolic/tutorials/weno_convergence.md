@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/weno_convergence.jl"
 ```
 
-````@example weno_convergence
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -21,7 +21,7 @@ uniform velocity and periodic boundary conditions:
 \rho(x, 0) = 1 + 0.01\sin(2\pi x), \qquad v = 1, \qquad P = 1.
 ```
 
-````@example weno_convergence
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -45,7 +45,7 @@ end
 We compute the $L^1$ density error at multiple resolutions for
 each reconstruction scheme.
 
-````@example weno_convergence
+````julia
 function compute_error(N, recon)
     mesh = StructuredMesh1D(0.0, 1.0, N)
     prob = HyperbolicProblem(
@@ -79,7 +79,7 @@ err_char_weno3 = [compute_error(N, CharacteristicWENO(WENO3())) for N in resolut
 ## Convergence Rates
 We compute the convergence rate as $\log_2(e_N / e_{2N})$:
 
-````@example weno_convergence
+````julia
 using CairoMakie
 
 function convergence_rate(errs)
@@ -121,7 +121,7 @@ fig
 We also apply WENO-3 to the Sod shock tube to demonstrate
 shock-capturing capabilities.
 
-````@example weno_convergence
+````julia
 wL = SVector(1.0, 0.0, 1.0)
 wR = SVector(0.125, 0.0, 0.1)
 sod_ic(x) = x < 0.5 ? wL : wR

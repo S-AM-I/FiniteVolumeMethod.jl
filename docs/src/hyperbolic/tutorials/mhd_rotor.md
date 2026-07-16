@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/mhd_rotor.jl"
 ```
 
-````@example mhd_rotor
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,7 +22,7 @@ $v_\phi = 2$. Outside a taper zone $r_1 = 0.115$ the fluid is at
 rest with $\rho = 1$. A uniform magnetic field $B_x = 5/\sqrt{4\pi}$
 threads the entire domain.
 
-````@example mhd_rotor
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -42,7 +42,7 @@ vphi_max = 2.0
 The taper function smoothly transitions between the rotor interior
 and the ambient medium:
 
-````@example mhd_rotor
+````julia
 function rotor_ic(x, y)
     dx, dy = x - 0.5, y - 0.5
     r = sqrt(dx^2 + dy^2)
@@ -67,13 +67,13 @@ We initialise the uniform magnetic field via a vector potential
 $A_z(x,y) = B_0 \, y$ to ensure $\nabla\cdot\vb B = 0$ at machine
 precision through constrained transport.
 
-````@example mhd_rotor
+````julia
 Az_rotor(x, y) = B0 * y
 ````
 
 ## Solving
 
-````@example mhd_rotor
+````julia
 N = 100
 mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, N)
 
@@ -90,14 +90,14 @@ coords |> tc #hide
 
 ## Checking Divergence
 
-````@example mhd_rotor
+````julia
 divB_max = max_divB(ct, mesh)
 divB_max < 1.0e-10 || @warn("divB exceeds tolerance: $divB_max") #hide
 ````
 
 ## Visualisation
 
-````@example mhd_rotor
+````julia
 using CairoMakie
 
 nx, ny = N, N
@@ -146,7 +146,7 @@ Alfvén waves wrapping around the disk. The maximum
 $|\nabla\cdot\vb B| = $ $(round(divB_max, sigdigits=2)) confirms that
 constrained transport maintains the solenoidal constraint.
 
-````@example mhd_rotor
+````julia
 all(rho .> 0) || @warn("Negative densities detected in MHD rotor") #hide
 all(P .> 0) || @warn("Negative pressures detected in MHD rotor") #hide
 ````

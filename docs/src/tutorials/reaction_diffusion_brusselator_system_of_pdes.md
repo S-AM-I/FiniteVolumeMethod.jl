@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_tutorials/reaction_diffusion_brusselator_system_of_pdes.jl"
 ```
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -91,7 +91,7 @@ our boundary become:
 \end{equation*}
 ```
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 using FiniteVolumeMethod, DelaunayTriangulation
 tri = triangulate_rectangle(0, 1, 0, 1, 100, 100, single_boundary = false)
 mesh = FVMGeometry(tri)
@@ -105,7 +105,7 @@ of just a scalar. This last point is not relevant here, but you do need to know
 about it for other problems more generally. So, let us now define the
 boundary conditions. First, for $\Phi$:
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 Φ_bot = (x, y, t, u, p) -> -1 / 4 * exp(-x - t / 2)
 Φ_right = (x, y, t, u, p) -> 1 / 4 * exp(-1 - y - t / 2)
 Φ_top = (x, y, t, u, p) -> exp(-1 - x - t / 2)
@@ -117,7 +117,7 @@ boundary conditions. First, for $\Phi$:
 
 Now, for $\Psi$:
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 Ψ_bot = (x, y, t, u, p) -> exp(x + t / 2)
 Ψ_right = (x, y, t, u, p) -> -1 / 4 * exp(1 + y + t / 2)
 Ψ_top = (x, y, t, u, p) -> -1 / 4 * exp(1 + x + t / 2)
@@ -134,7 +134,7 @@ $\beta$, and $\gamma$, where the $i$th element of the `Tuple` refers to the
 $i$th variable. Similarly, the source function takes a `Tuple` of the variables
 in the `u` argument.
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 Φ_q = (x, y, t, α, β, γ, p) -> (-α[1] / 4, -β[1] / 4)
 Ψ_q = (x, y, t, α, β, γ, p) -> (-α[2] / 4, -β[2] / 4)
 Φ_S = (x, y, t, (Φ, Ψ), p) -> Φ^2 * Ψ - 2Φ
@@ -143,7 +143,7 @@ in the `u` argument.
 
 Now we define the initial conditions.
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 Φ_exact = (x, y, t) -> exp(-x - y - t / 2)
 Ψ_exact = (x, y, t) -> exp(x + y + t / 2)
 Φ₀ = [Φ_exact(x, y, 0) for (x, y) in DelaunayTriangulation.each_point(tri)]
@@ -153,14 +153,14 @@ nothing #hide
 
 Next, we can define the `FVMProblem`s for each variable.
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 Φ_prob = FVMProblem(
     mesh, Φ_BCs; flux_function = Φ_q, source_function = Φ_S,
     initial_condition = Φ₀, final_time = 5.0
 )
 ````
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 Ψ_prob = FVMProblem(
     mesh, Ψ_BCs; flux_function = Ψ_q, source_function = Ψ_S,
     initial_condition = Ψ₀, final_time = 5.0
@@ -169,28 +169,29 @@ Next, we can define the `FVMProblem`s for each variable.
 
 Finally, the `FVMSystem` is constructed by these two problems:
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 system = FVMSystem(Φ_prob, Ψ_prob)
 ````
 
 We can now solve the problem just as we've done previously.
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(system, TRBDF2(linsolve = KLUFactorization()), saveat = 1.0)
 sol |> tc #hide
 ````
 
 For this solution, note that the `u` values are matrices. For example:
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 sol.u[3]
 sol.u[3] |> tc #hide
 ````
 
 The `i`th row is the `i`th variable, so
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 sol.u[3][1, :]
 sol.u[3][1, :] |> tc #hide
 ````
@@ -198,10 +199,10 @@ sol.u[3][1, :] |> tc #hide
 are the value of $\Phi$ at the third time, and similarly `sol.u[3][2, :]`
 are the values of $\Psi$ at the third time. We can visualise the solutions as follows:
 
-````@example reaction_diffusion_brusselator_system_of_pdes
+````julia
 using CairoMakie
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax1 = Axis(
         fig[1, i], xlabel = L"x", ylabel = L"y",
         width = 400, height = 400,
@@ -212,8 +213,8 @@ for i in eachindex(sol)
         width = 400, height = 400,
         title = L"\Psi: t = %$(sol.t[i])", titlealign = :left
     )
-    tricontourf!(ax1, tri, sol[i][1, :], levels = 0:0.1:1, colormap = :matter)
-    tricontourf!(ax2, tri, sol[i][2, :], levels = 1:10:100, colormap = :matter)
+    tricontourf!(ax1, tri, sol.u[i][1, :], levels = 0:0.1:1, colormap = :matter)
+    tricontourf!(ax2, tri, sol.u[i][2, :], levels = 1:10:100, colormap = :matter)
 end
 resize_to_layout!(fig)
 fig
@@ -267,6 +268,7 @@ mesh = FVMGeometry(tri)
 system = FVMSystem(Φ_prob, Ψ_prob)
 
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 sol = solve(system, TRBDF2(linsolve = KLUFactorization()), saveat = 1.0)
 
 sol.u[3]
@@ -275,7 +277,7 @@ sol.u[3][1, :]
 
 using CairoMakie
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax1 = Axis(
         fig[1, i], xlabel = L"x", ylabel = L"y",
         width = 400, height = 400,
@@ -286,8 +288,8 @@ for i in eachindex(sol)
         width = 400, height = 400,
         title = L"\Psi: t = %$(sol.t[i])", titlealign = :left
     )
-    tricontourf!(ax1, tri, sol[i][1, :], levels = 0:0.1:1, colormap = :matter)
-    tricontourf!(ax2, tri, sol[i][2, :], levels = 1:10:100, colormap = :matter)
+    tricontourf!(ax1, tri, sol.u[i][1, :], levels = 0:0.1:1, colormap = :matter)
+    tricontourf!(ax2, tri, sol.u[i][2, :], levels = 1:10:100, colormap = :matter)
 end
 resize_to_layout!(fig)
 fig

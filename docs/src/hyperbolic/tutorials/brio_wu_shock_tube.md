@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/brio_wu_shock_tube.jl"
 ```
 
-````@example brio_wu_shock_tube
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -19,7 +19,7 @@ The 1D ideal MHD equations with 8 conserved variables
 $(\rho, \rho v_x, \rho v_y, \rho v_z, E, B_x, B_y, B_z)$ are solved
 with $\gamma = 2$ and a constant normal magnetic field $B_x = 0.75$.
 
-````@example brio_wu_shock_tube
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -31,7 +31,7 @@ law = IdealMHDEquations{1}(eos)
 The left and right primitive states are
 $(\rho, v_x, v_y, v_z, P, B_x, B_y, B_z)$:
 
-````@example brio_wu_shock_tube
+````julia
 Bx = 0.75
 wL = SVector(1.0, 0.0, 0.0, 0.0, 1.0, Bx, 1.0, 0.0)
 wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, Bx, -1.0, 0.0)
@@ -40,7 +40,7 @@ wR = SVector(0.125, 0.0, 0.0, 0.0, 0.1, Bx, -1.0, 0.0)
 Note the sign change in $B_y$: this is the key feature that produces
 compound MHD waves.
 
-````@example brio_wu_shock_tube
+````julia
 N = 800
 mesh = StructuredMesh1D(0.0, 1.0, N)
 bw_ic(x) = x < 0.5 ? wL : wR
@@ -50,7 +50,7 @@ bw_ic(x) = x < 0.5 ? wL : wR
 The HLLD solver (Miyoshi & Kusano 2005) resolves all five MHD wave
 families: two fast magnetosonic, two Alfven/rotational, and the contact.
 
-````@example brio_wu_shock_tube
+````julia
 prob = HyperbolicProblem(
     law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
     TransmissiveBC(), TransmissiveBC(), bw_ic;
@@ -64,7 +64,7 @@ x |> tc #hide
 The Brio-Wu problem is best visualised with multiple panels showing
 different variables.
 
-````@example brio_wu_shock_tube
+````julia
 using CairoMakie
 
 rho = [conserved_to_primitive(law, U[i])[1] for i in eachindex(U)]
@@ -91,7 +91,7 @@ of MHD: the fast rarefaction on the left, slow compound wave,
 contact discontinuity, slow shock, and fast rarefaction on the right.
 Note that $B_x$ remains constant at $0.75$ throughout (not shown).
 
-````@example brio_wu_shock_tube
+````julia
 Bx_vals = [U[i][6] for i in eachindex(U)] #hide
 all(b -> abs(b - 0.75) < 1.0e-10, Bx_vals) || @warn("Bx deviates from 0.75") #hide
 all(rho .> 0) || @warn("Negative densities detected") #hide

@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_wyos/mean_exit_time.jl"
 ```
 
-````@example mean_exit_time
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -54,7 +54,7 @@ for nodes with conditions. For this problem, though, we need $a_{ii} = 1$ for
 Dirichlet nodes $i$. So, let's write a function that creates $\vb b$ but also
 enforces Dirichlet constraints.
 
-````@example mean_exit_time
+````julia
 function create_met_b!(A, mesh, conditions)
     b = zeros(DelaunayTriangulation.num_points(mesh.triangulation))
     for i in each_solid_vertex(mesh.triangulation)
@@ -71,7 +71,7 @@ end
 Let us now define the function which gives us our matrices $\vb A$ and $\vb b$. We will
 return the problem as a `LinearProblem` from LinearSolve.jl.
 
-````@example mean_exit_time
+````julia
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
 const FVM = FiniteVolumeMethod
 function met_problem(
@@ -97,7 +97,7 @@ Now let us test this problem. To test, we will consider the last
 problem [here](../tutorials/mean_exit_time.md) which
 includes mixed boundary conditions and also an internal condition.
 
-````@example mean_exit_time
+````julia
 # Define the triangulation
 R₁, R₂ = 2.0, 3.0
 ε = 0.05
@@ -153,21 +153,21 @@ prob |> tc #hide
 This problem can now be solved using the `solve` interface from LinearSolve.jl. Note that the matrix
 $\vb A$ is very dense, but there is no structure to it:
 
-````@example mean_exit_time
+````julia
 prob.A
 prob.A |> DisplayAs.withcontext(:compact => true) #hide
 ````
 
 We will use `KLUFactorization`.
 
-````@example mean_exit_time
+````julia
 sol = solve(prob, KLUFactorization())
 sol |> tc #hide
 ````
 
 We can easily visualise our solution:
 
-````@example mean_exit_time
+````julia
 using CairoMakie
 fig, ax,
     sc = tricontourf(
@@ -181,7 +181,7 @@ This result is a great match to what we found in the [tutorial](../tutorials/mea
 If we wanted to convert this mean exit time problem into the corresponding [`SteadyFVMProblem`](@ref),
 we can do:
 
-````@example mean_exit_time
+````julia
 function T_exact(x, y)
     r = sqrt(x^2 + y^2)
     if r < R₁
@@ -207,13 +207,14 @@ fvm_prob = SteadyFVMProblem(
 
 Let's compare the two solutions.
 
-````@example mean_exit_time
+````julia
 using SteadyStateDiffEq, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2, KenCarp47
 fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2()))
 fvm_sol |> tc #hide
 ````
 
-````@example mean_exit_time
+````julia
 ax = Axis(fig[1, 2], width = 600, height = 600, title = "Template")
 tricontourf!(ax, tri, fvm_sol.u, levels = 0:1000:15000, extendhigh = :auto)
 resize_to_layout!(fig)
@@ -224,7 +225,7 @@ fig
 Let's now use the built-in `MeanExitTimeProblem` which implements the above template
 inside FiniteVolumeMethod.jl.
 
-````@example mean_exit_time
+````julia
 prob = MeanExitTimeProblem(
     mesh, BCs, ICs;
     diffusion_function,
@@ -234,7 +235,7 @@ sol = solve(prob, KLUFactorization())
 sol |> tc #hide
 ````
 
-````@example mean_exit_time
+````julia
 fig, ax,
     sc = tricontourf(
     tri, sol.u, levels = 0:1000:15000, extendhigh = :auto,
@@ -385,6 +386,7 @@ fvm_prob = SteadyFVMProblem(
 )
 
 using SteadyStateDiffEq, OrdinaryDiffEq
+using OrdinaryDiffEqSDIRK: TRBDF2, KenCarp47
 fvm_sol = solve(fvm_prob, DynamicSS(TRBDF2()))
 
 ax = Axis(fig[1, 2], width = 600, height = 600, title = "Template")

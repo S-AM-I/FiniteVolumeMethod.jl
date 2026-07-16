@@ -2,7 +2,7 @@
 EditURL = "https://github.com/cx-xd/FiniteVolumeMethod.jl/tree/main/docs/src/literate_hyperbolic/couette_flow.jl"
 ```
 
-````@example couette_flow
+````julia
 using DisplayAs #hide
 tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 nothing #hide
@@ -22,7 +22,7 @@ We solve in a channel $[0, 1] \times [0, H]$ with $H = 1$,
 periodic in $x$. The bottom wall is stationary and the top wall
 moves at velocity $U_w = 0.01$.
 
-````@example couette_flow
+````julia
 using FiniteVolumeMethod
 using StaticArrays
 
@@ -42,7 +42,7 @@ H = 1.0
 We initialise with the exact Couette profile so the simulation
 remains near steady state:
 
-````@example couette_flow
+````julia
 w_top = SVector(rho0, U_wall, 0.0, P0)
 
 function ic_couette(x, y)
@@ -56,7 +56,7 @@ end
 - Bottom: `NoSlipBC` — negates all velocity components
 - Top: `DirichletHyperbolicBC` — prescribes the moving wall state
 
-````@example couette_flow
+````julia
 nx, ny = 4, 16
 mesh = StructuredMesh2D(0.0, 1.0, 0.0, H, nx, ny)
 
@@ -72,7 +72,7 @@ coords |> tc #hide
 
 ## Comparison with Exact Solution
 
-````@example couette_flow
+````julia
 yc = [coords[1, j][2] for j in 1:ny]
 # Take a slice at the middle x-cell
 ix_mid = nx ÷ 2 + 1
@@ -85,7 +85,7 @@ max_err < 0.1 * U_wall || @warn("Couette flow error exceeds tolerance: $max_err"
 
 ## Visualisation
 
-````@example couette_flow
+````julia
 using CairoMakie
 
 fig = Figure(fontsize = 24, size = (600, 500))

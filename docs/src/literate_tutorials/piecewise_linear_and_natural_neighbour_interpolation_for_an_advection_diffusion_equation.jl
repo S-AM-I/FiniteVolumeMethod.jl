@@ -97,6 +97,7 @@ prob = FVMProblem(
 
 # Now we can solve and visualise the solution.
 using OrdinaryDiffEq, LinearSolve
+using OrdinaryDiffEqSDIRK: TRBDF2
 times = [0, 10, 25, 50, 100, 200, 250]
 sol = solve(prob, TRBDF2(linsolve = KLUFactorization()), saveat = times)
 sol |> tc #hide
@@ -105,7 +106,7 @@ sol |> tc #hide
 using CairoMakie
 using ReferenceTests #src
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax = Axis(
         fig[1, i], width = 400, height = 400,
         xlabel = "x", ylabel = "y",
@@ -133,9 +134,9 @@ function exact_solution(x, y, t, D, ν) #src
     return 1 / (4 * D * π * t) * exp(1 / (4 * D * t) * (-(x - ν * t)^2 - y^2)) #src
 end #src
 function get_errs(_sol, tri, flux_parameters) #src
-    _errs = zeros(length(_sol)) #src
+    _errs = zeros(length(_sol.u)) #src
     _err = zeros(DelaunayTriangulation.num_points(tri)) #src
-    for i in eachindex(_sol) #src
+    for i in eachindex(_sol.u) #src
         !DelaunayTriangulation.has_vertex(tri, i) && continue #src
         i == 1 && continue #src
         m = maximum(_sol.u[i]) #src
@@ -205,8 +206,8 @@ for j in eachindex(y)
         triangles[i, j] = jump_and_march(tri, (x[i], y[j]))
     end
 end
-interpolated_vals = zeros(length(x), length(y), length(sol))
-for k in eachindex(sol)
+interpolated_vals = zeros(length(x), length(y), length(sol.u))
+for k in eachindex(sol.u)
     for j in eachindex(y)
         for i in eachindex(x)
             interpolated_vals[i, j, k] = pl_interpolate(
@@ -220,7 +221,7 @@ end
 # our grid to make the `tricontourf` call faster.
 _tri = triangulate([[x for x in x, _ in y] |> vec [y for _ in x, y in y] |> vec]')
 fig = Figure(fontsize = 38)
-for i in eachindex(sol)
+for i in eachindex(sol.u)
     ax = Axis(
         fig[1, i], width = 400, height = 400,
         xlabel = "x", ylabel = "y",

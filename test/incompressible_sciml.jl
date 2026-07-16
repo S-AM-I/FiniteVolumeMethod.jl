@@ -4,7 +4,7 @@ using LinearAlgebra
 using LinearSolve
 using StaticArrays
 using SciMLBase
-import SciMLBase.SciMLStructures as SS
+import SciMLStructures as SS
 
 # ── Mesh builder (shared helper) ─────────────────────────────────────
 include("TestHelpers.jl")

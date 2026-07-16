@@ -1,6 +1,7 @@
 using FiniteVolumeMethod
 using OrdinaryDiffEq
-using OrdinaryDiffEq.SciMLBase: SplitFunction
+using OrdinaryDiffEqSSPRK: SSPRK33
+using SciMLBase: SplitFunction
 using StaticArrays
 using Test
 

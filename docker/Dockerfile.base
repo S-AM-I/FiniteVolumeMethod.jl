@@ -1,10 +1,10 @@
 # Base image for local CI of FiniteVolumeMethod.jl
-# Mirrors ubuntu-latest / x64 used in the disabled GitHub CI template (.github/workflows/CI.yml.disabled)
+# Mirrors ubuntu-latest / x64 used in the GitHub CI workflow (.github/workflows/CI.yml)
 #
 # Build:  docker compose build base
 # Or:     docker build -f docker/Dockerfile.base -t fvm-base .
 
-ARG JULIA_VERSION=1.11
+ARG JULIA_VERSION=1.12
 FROM julia:${JULIA_VERSION}-bookworm
 
 # ── System dependencies for CairoMakie / GLMakie headless ──

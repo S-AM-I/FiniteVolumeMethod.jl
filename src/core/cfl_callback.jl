@@ -37,7 +37,7 @@ function cfl_stepsize_callback(cache::AbstractSemidiscreteCache)
         if hasproperty(integrator, :dtcache)
             integrator.dtcache = dt_cfl
         end
-        SciMLBase.u_modified!(integrator, false)
+        SciMLBase.derivative_discontinuity!(integrator, false)
         return nothing
     end
     return DiscreteCallback(condition, affect!; save_positions = (false, false))

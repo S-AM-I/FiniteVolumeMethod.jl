@@ -19,6 +19,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 
 using FiniteVolumeMethod
 using OrdinaryDiffEq
+using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode, remake
 using StaticArrays
 using Test #src
