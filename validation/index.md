@@ -8,9 +8,12 @@ Narrative V&V documentation for FiniteVolumeMethod.jl. The **executable** V&V sc
 
 ## V&V
 
-- [[vv-plan]] — primary V&V plan and implementation history
-- [[vv-research-cfd]] — upstream research dump: general CFD V&V (ASME V&V 20, MMS, GCI, classical benchmarks)
-- [[vv-research-mhd-relativistic]] — upstream research dump: relativistic and Newtonian MHD V&V
+The narrative plan and research notes moved to `docs/research/` (2026-07-16) so this
+directory holds only the load-bearing manifest + runner infrastructure:
+
+- [docs/research/vv-plan.md](../docs/research/vv-plan.md) — primary V&V plan and implementation history
+- [docs/research/vv-research-cfd.md](../docs/research/vv-research-cfd.md) — upstream research dump: general CFD V&V (ASME V&V 20, MMS, GCI, classical benchmarks)
+- [docs/research/vv-research-mhd-relativistic.md](../docs/research/vv-research-mhd-relativistic.md) — upstream research dump: relativistic and Newtonian MHD V&V
 
 ## Release
 
