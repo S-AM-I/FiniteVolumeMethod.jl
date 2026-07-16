@@ -9,7 +9,6 @@ using Printf: @sprintf
 # keeps the main layer file (`src/layers/discretization_assembly_kernels.jl`)
 # unchanged while ensuring the symbols are available whenever the VOF
 # solver is loaded.
-include("iso_advector.jl")
 
 """
     solve_vof(mesh, props, bcs_U, bcs_p, bcs_alpha, tspan, dt; kwargs...)

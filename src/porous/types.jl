@@ -128,5 +128,3 @@ end
 # general 3×3 SMatrices so anisotropic / off-diagonal porous media are
 # supported with no extra code.
 # ---------------------------------------------------------------------------
-
-include("darcy_forchheimer.jl")

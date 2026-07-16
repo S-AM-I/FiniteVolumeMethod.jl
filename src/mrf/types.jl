@@ -178,5 +178,3 @@ end
 # Wave 3: momentum source + multi-zone dispatch. Kept as sibling files to
 # keep per-file concerns narrow; `types.jl` is the single `include` point
 # registered in the assembly-kernels layer.
-include("momentum_source.jl")
-include("multi_zone.jl")

@@ -37,17 +37,6 @@ the interface is from LinearSolve.jl.
 """
 abstract type AbstractFVMTemplate <: AbstractFVMProblem end
 
-include("diffusion_equation.jl")
-include("linear_reaction_diffusion_equations.jl")
-include("mean_exit_time.jl")
-include("poissons_equation.jl")
-include("laplaces_equation.jl")
-
-export DiffusionEquation
-export LinearReactionDiffusionEquation
-export MeanExitTimeProblem
-export PoissonsEquation
-export LaplacesEquation
 
 @doc raw"""
     triangle_contributions!(A, mesh, conditions, diffusion_function, diffusion_parameters)

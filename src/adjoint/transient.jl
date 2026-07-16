@@ -5,8 +5,6 @@
 # (so Wave-4 module loading stays a single `include("../adjoint/...")`
 # sequence). Include them here so the user-facing promotion from stub to
 # real implementation is a strict superset of the old include list.
-include("checkpointing.jl")
-include("reverse_sweep.jl")
 
 #
 # For a linear transient state equation

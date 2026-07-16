@@ -24,8 +24,6 @@
 
 using StaticArrays: SVector
 
-include("stl_reader.jl")
-include("snap.jl")
 
 """
     SnappyMesher{T}

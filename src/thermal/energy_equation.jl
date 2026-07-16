@@ -101,4 +101,3 @@ function compute_alpha_eff(k_eff::Vector{T}, rho::T, Cp::T) where {T}
 end
 
 # Enthalpy formulation lives in a sibling file to keep this module small.
-include("enthalpy_equation.jl")

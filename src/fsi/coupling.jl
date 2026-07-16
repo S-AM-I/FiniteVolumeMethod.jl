@@ -124,5 +124,3 @@ end
 # `solve_partitioned_fsi`. They are strictly additive — existing
 # `AitkenRelaxation` / `FSIInterface` / `update_aitken!` behavior is
 # unchanged.
-include("interface.jl")
-include("partitioned.jl")

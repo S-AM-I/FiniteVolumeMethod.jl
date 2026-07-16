@@ -137,6 +137,3 @@ end
 # (`src/layers/discretization_assembly_kernels.jl`) does not need to be
 # updated in the same commit. The wave's main-thread pass will lift
 # these into the layer file once the rest of Wave 1 lands.
-include("wmles.jl")
-include("sa_ddes.jl")
-include("iddes.jl")

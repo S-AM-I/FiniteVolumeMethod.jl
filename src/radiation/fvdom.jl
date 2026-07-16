@@ -613,7 +613,6 @@ end
 # both `FvDOMModel` (declared above) and `P1Model`/`solve_p1_radiation`
 # (declared in `types.jl` and `p1.jl` loaded earlier) to be available at
 # load time.
-include("wsggm.jl")
 
 """
     _solve_radiation_step(
