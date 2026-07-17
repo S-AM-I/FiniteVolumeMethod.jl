@@ -10,7 +10,7 @@ module FVMMetisExt
 #
 # Loaded automatically when the user runs `using Metis` alongside
 # `using FiniteVolumeMethod`. Overrides `partition_mesh_metis` from
-# `src/parallel/metis_stub.jl`.
+# `src/experimental/parallel/metis_stub.jl`.
 
 using FiniteVolumeMethod
 using Metis: Metis

@@ -25,7 +25,7 @@
 # Reference: Marchisio & Fox (2013), Computational Models for
 # Polydisperse Particulate and Multiphase Systems (Cambridge).
 
-using LinearAlgebra: lu, LinearAlgebra
+using LinearAlgebra: LinearAlgebra
 
 """
     dqmom_kernel(abscissae::AbstractVector{T}) -> Matrix{T}
@@ -79,6 +79,7 @@ function dqmom_sources(
         abscissae::AbstractVector{T},
         moment_sources::AbstractVector{T},
     ) where {T}
+    _experimental_warn(:population_balance)
     N = length(abscissae)
     length(weights) == N ||
         error("dqmom_sources: weights and abscissae length mismatch")

@@ -22,7 +22,7 @@ include("TestHelpers.jl")
 # we eval them here so the V&V file runs standalone.
 
 if !isdefined(FiniteVolumeMethod, :CompressibleSIMPLE)
-    _src_root = joinpath(@__DIR__, "..", "src", "pressure_based")
+    _src_root = joinpath(@__DIR__, "..", "src", "experimental", "pressure_based")
     FiniteVolumeMethod.eval(:(include($(joinpath(_src_root, "eos_coupling.jl")))))
     FiniteVolumeMethod.eval(:(include($(joinpath(_src_root, "compressible_simple.jl")))))
     FiniteVolumeMethod.eval(:(include($(joinpath(_src_root, "compressible_pimple.jl")))))

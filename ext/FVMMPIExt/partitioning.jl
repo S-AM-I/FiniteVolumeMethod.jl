@@ -2,8 +2,8 @@
 #
 # Replaces the Stage-0/1 full-mesh-per-rank implementation with a true
 # per-rank submesh plus halo layer. Uses the dep-free RCB partitioner
-# in src/parallel/rcb_partitioner.jl to assign each global cell to a
-# rank, then calls src/parallel/local_mesh.jl's `extract_local_mesh`
+# in src/experimental/parallel/rcb_partitioner.jl to assign each global cell to a
+# rank, then calls src/experimental/parallel/local_mesh.jl's `extract_local_mesh`
 # on each process.
 
 """
@@ -106,6 +106,6 @@ function _build_halo_pattern(global_mesh, cell_to_rank, local_data, my_rank::Int
         recv_indices[k] = unique(v)
     end
 
-    neighbor_ranks = sort(union(keys(send_indices), keys(recv_indices)))
+    neighbor_ranks = sort!(collect(union(keys(send_indices), keys(recv_indices))))
     return HaloPattern(send_indices, recv_indices, neighbor_ranks)
 end

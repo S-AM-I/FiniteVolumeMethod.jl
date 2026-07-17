@@ -38,6 +38,7 @@ function solve_steady_adjoint(
         partial_dJ_dp = nothing,
         linear_solver = nothing,
     )
+    _experimental_warn(:adjoint)
     # Lagrangian derivation with A^T·λ = (∂J/∂u)^T gives
     # dJ/dp = ∂J/∂p − λ^T · ∂R/∂p (sign from ∂u/∂p = −A^{−1}·∂R/∂p).
     lambda = transpose(A) \ collect(dJ_du)

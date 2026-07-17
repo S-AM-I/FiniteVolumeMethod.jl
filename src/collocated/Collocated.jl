@@ -27,7 +27,7 @@ using ..Parabolic
 # verb owned by Parabolic (parabolic/particles.jl) — one shared generic.
 import ..Parabolic: inject_particles!
 using CommonSolve: CommonSolve, solve
-using SciMLBase: SciMLBase, LinearProblem
+using SciMLBase: SciMLBase, LinearProblem, remake
 using LinearAlgebra: LinearAlgebra, inertia, normalize
 using Printf: @sprintf
 using SparseArrays: sparse

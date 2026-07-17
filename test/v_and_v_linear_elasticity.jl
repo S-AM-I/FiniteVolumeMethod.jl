@@ -27,7 +27,7 @@ include("TestHelpers.jl")
 # test/v_and_v_linear_elasticity.jl`) before the main thread lands the
 # include + export diff.
 if !isdefined(FiniteVolumeMethod, :solve_linear_elasticity)
-    _fvm_root = normpath(joinpath(@__DIR__, "..", "src", "solid_mechanics"))
+    _fvm_root = normpath(joinpath(@__DIR__, "..", "src", "experimental", "solid_mechanics"))
     FiniteVolumeMethod.eval(:(include($(joinpath(_fvm_root, "linear_elasticity.jl")))))
     FiniteVolumeMethod.eval(:(include($(joinpath(_fvm_root, "finite_strain.jl")))))
     FiniteVolumeMethod.eval(:(include($(joinpath(_fvm_root, "solvers.jl")))))

@@ -73,6 +73,7 @@ function solve_transient_adjoint_linear(
         checkpoint_interval::Integer = 10,
         terminal_dJ_du::Union{Nothing, AbstractVector} = nothing,
     )
+    _experimental_warn(:adjoint)
     n_plus_one = length(u_series)
     n_plus_one >= 1 || throw(ArgumentError("u_series must be non-empty"))
     n_steps = n_plus_one - 1
@@ -185,6 +186,7 @@ function solve_transient_adjoint(
         checkpoint_interval::Integer = 10,
         terminal_dJ_du::Union{Nothing, AbstractVector} = nothing,
     )
+    _experimental_warn(:adjoint)
     return solve_transient_adjoint_linear(
         M, A, b_series, u_series,
         dJ_du_series, dR_dp_series, dt;

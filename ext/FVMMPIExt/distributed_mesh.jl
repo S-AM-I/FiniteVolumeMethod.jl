@@ -4,7 +4,7 @@
 # "every rank holds the full mesh" workaround.
 #
 # Each rank constructs a `LocalMeshData` (owned cells + halo layer) using
-# the dep-free RCB partitioner in src/parallel/rcb_partitioner.jl. The
+# the dep-free RCB partitioner in src/experimental/parallel/rcb_partitioner.jl. The
 # `HaloPattern` is then built from the partition so halo_exchange! can
 # post MPI Irecv/Isend pairs against only the cells that actually need
 # to travel between ranks.

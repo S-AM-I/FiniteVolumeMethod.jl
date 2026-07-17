@@ -8,7 +8,7 @@
 
 using Test
 
-include(joinpath(@__DIR__, "..", "src", "dynamic_mesh", "ami.jl"))
+include(joinpath(@__DIR__, "..", "src", "collocated", "dynamic_mesh", "ami.jl"))
 
 @testset "V&V AMI: uniform donor ⇒ uniform receiver (non-conformal pairing)" begin
     # 3 donor faces of area 1, 1, 1. Two receiver faces of area 1.5, 1.5.

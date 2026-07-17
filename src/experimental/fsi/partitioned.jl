@@ -133,6 +133,7 @@ function solve_partitioned_fsi(
         initial_displacement::Union{Nothing, AbstractVector{SVector{Dim, T}}} = nothing,
         verbose::Bool = false,
     ) where {Dim, T}
+    _experimental_warn(:fsi)
 
     n_solid = length(interface.solid_face_indices)
     u_current = if initial_displacement === nothing

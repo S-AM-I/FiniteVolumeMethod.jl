@@ -40,7 +40,7 @@ struct UnstructuredFVMMesh{N, T}
     cell_centers::Matrix{T}
 end
 
-include(joinpath(@__DIR__, "..", "src", "lagrangian", "collisions.jl"))
+include(joinpath(@__DIR__, "..", "src", "collocated", "lagrangian", "collisions.jl"))
 
 function _make_particle(pos::SVector{2, Float64}, vel::SVector{2, Float64}; d = 1.0e-3, rho = 1000.0)
     mass = pi / 6 * d^3 * rho

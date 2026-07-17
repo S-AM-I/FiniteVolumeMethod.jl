@@ -21,7 +21,7 @@ using Test
 # The Wave-5 two-fluid files are owned by this agent and wired into
 # the package by the main thread in a later pass. Include them
 # directly so this V&V file is runnable standalone.
-const _WAVE5_SRC = joinpath(@__DIR__, "..", "src", "multiphase")
+const _WAVE5_SRC = joinpath(@__DIR__, "..", "src", "collocated", "multiphase")
 isdefined(Main, :AbstractDragClosure) || include(joinpath(_WAVE5_SRC, "drag_closures.jl"))
 
 @testset "V&V: drag closures — zero slip gives zero force" begin

@@ -8,7 +8,7 @@
 
 using Test
 
-include(joinpath(@__DIR__, "..", "src", "dynamic_mesh", "topo_changer.jl"))
+include(joinpath(@__DIR__, "..", "src", "collocated", "dynamic_mesh", "topo_changer.jl"))
 
 @testset "V&V topoChanger: single split preserves total volume" begin
     volumes = [1.0, 2.0, 3.0, 4.0]

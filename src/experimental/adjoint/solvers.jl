@@ -11,6 +11,7 @@ function solve_adjoint(
         ::SteadyAdjoint, A, b, u, dJ_du, dR_dp;
         partial_dJ_dp = nothing, linear_solver = nothing,
     )
+    _experimental_warn(:adjoint)
     return solve_steady_adjoint(
         A, b, u, dJ_du, dR_dp;
         partial_dJ_dp = partial_dJ_dp, linear_solver = linear_solver,
@@ -18,5 +19,6 @@ function solve_adjoint(
 end
 
 function solve_adjoint(::TransientAdjoint, args...; kwargs...)
+    _experimental_warn(:adjoint)
     return solve_transient_adjoint(args...; kwargs...)
 end

@@ -21,7 +21,7 @@ using StaticArrays
 include("TestHelpers.jl")
 
 if !isdefined(FiniteVolumeMethod, :solve_finite_strain)
-    _fvm_root = normpath(joinpath(@__DIR__, "..", "src", "solid_mechanics"))
+    _fvm_root = normpath(joinpath(@__DIR__, "..", "src", "experimental", "solid_mechanics"))
     FiniteVolumeMethod.eval(:(include($(joinpath(_fvm_root, "linear_elasticity.jl")))))
     FiniteVolumeMethod.eval(:(include($(joinpath(_fvm_root, "finite_strain.jl")))))
     FiniteVolumeMethod.eval(:(include($(joinpath(_fvm_root, "solvers.jl")))))

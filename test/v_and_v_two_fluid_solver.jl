@@ -27,7 +27,7 @@ include("TestHelpers.jl")
 # this V&V file is runnable standalone. `two_fluid.jl` is already
 # wired into the package through the existing multiphase layer
 # include chain.
-const _V31A_SRC = joinpath(@__DIR__, "..", "src", "multiphase")
+const _V31A_SRC = joinpath(@__DIR__, "..", "src", "collocated", "multiphase")
 if !isdefined(FiniteVolumeMethod, :NoMassTransfer)
     Base.include(FiniteVolumeMethod, joinpath(_V31A_SRC, "mass_transfer.jl"))
 end

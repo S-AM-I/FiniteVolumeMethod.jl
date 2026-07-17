@@ -36,7 +36,10 @@ using .Numerics
 # qualified as `FiniteVolumeMethod.NAME` inside package extensions and must
 # resolve to the Numerics function objects.
 import .Numerics: total_energy, _solve_linear, _unsupported_backend,
-    autodiff_forward_step, _extension_preconditioner, _try_krylov_solver
+    autodiff_forward_step, _extension_preconditioner, _try_krylov_solver,
+    # KA CPU-fallback kernels: reached as FiniteVolumeMethod.<name> by
+    # test/v_and_v_ka_backend.jl (unresolvable since the Stage-3c wrap)
+    interpolate_face_ka!, elementwise_sum_ka!
 # ============================================================
 # Domain / Problem Definitions
 # ============================================================
@@ -96,7 +99,11 @@ import .Collocated: DynamicContactAngle, KHACTBreakup, LISABreakup,
     scattering_phase_value, scattering_source_contribution,
     solve_wsggm_radiation, temperature_from_enthalpy!,
     turbulent_viscosity_sa!, wmles_wall_nut, wmles_wall_shear,
-    wsggm_effective_absorption
+    wsggm_effective_absorption,
+    # MRF internals reached via `using FiniteVolumeMethod:` in the
+    # v_and_v_mrf_* tests (unresolvable since the Stage-3f wrap)
+    add_mrf_source!, add_multi_mrf_source!, centrifugal_force,
+    coriolis_force, mrf_cell_source
 
 # ============================================================
 # Discretization / Assembly Kernels
@@ -142,55 +149,42 @@ import .Hyperbolic: fvm_symbolic_index, _amr_symbolic_index,
 
 include("sciml/solve.jl")
 
-# Flat remainder (experimental scaffolds; Stage 3h candidates).
-# The hyperbolic coupling/ files and the whole collocated family
-# (operators, incompressible, physics, multiphase, lagrangian,
-# dynamic_mesh, function_objects, collocated AMR, zone models,
-# postprocessing) moved into the Hyperbolic and Collocated submodules
-# in Stages 3e/3f.
-include("pressure_based/thermo_models.jl")
-include("pressure_based/rheology.jl")
-include("pressure_based/coolprop_stub.jl")
-include("aeroacoustics/fwh.jl")
-include("aeroacoustics/pml.jl")
-include("population_balance/qmom.jl")
-include("population_balance/types.jl")
-include("population_balance/dqmom.jl")
-include("population_balance/class_method.jl")
-include("solid_mechanics/types.jl")
-include("solid_mechanics/linear_elasticity.jl")
-include("solid_mechanics/finite_strain.jl")
-include("solid_mechanics/solvers.jl")
-include("fsi/coupling.jl")
-include("fsi/interface.jl")
-include("fsi/partitioned.jl")
-include("mesh_generation/octree.jl")
-include("mesh_generation/stl_reader.jl")
-include("mesh_generation/snap.jl")
-include("mesh_generation/snappy.jl")
-include("mesh_generation/gmsh_pipeline.jl")
-
-# Compressible pressure-based family (Wave 1)
-# Extends SIMPLE/PIMPLE with density coupling + EOS dispatch; calls
-# unexported Collocated internals via the import guard above.
-include("pressure_based/eos_coupling.jl")
-include("pressure_based/compressible_simple.jl")
-include("pressure_based/compressible_pimple.jl")
-
-# Discrete adjoint (Wave 4) — steady linear-system identity; transient stubbed
-include("adjoint/types.jl")
-include("adjoint/steady.jl")
-include("adjoint/checkpointing.jl")
-include("adjoint/reverse_sweep.jl")
-include("adjoint/transient.jl")
-include("adjoint/solvers.jl")
-
-# MPI Parallelism stubs (Phase 6)
-# Concrete implementations live in ext/FVMMPIExt/.
-include("parallel/stubs.jl")
-include("parallel/rcb_partitioner.jl")
-include("parallel/local_mesh.jl")
-include("parallel/metis_stub.jl")
+# Experimental scaffolds (Stage 3h): quarantined in the Experimental
+# submodule — every dir is either manifest-`experimental` (mpi_parallel;
+# pressure_based/adjoint/mesh_generation as smoke-only evidence) or has
+# no manifest coverage (aeroacoustics, population_balance,
+# solid_mechanics, fsi). Entry points warn once per feature on first
+# use. The hyperbolic coupling/ files and the whole collocated family
+# moved into the Hyperbolic and Collocated submodules in Stages 3e/3f.
+include("experimental/Experimental.jl")
+using .Experimental
+# Qualified-internal passthroughs (Stage-3 recipe; temporary until the
+# Stage-4 export curation): the MPI/Metis/CoolProp/Gmsh package
+# extensions add methods as `function FiniteVolumeMethod.NAME(...)` to
+# the Experimental stub seams, and tests/docs reach the remaining
+# unexported internals as FiniteVolumeMethod.<name> — every one must
+# resolve to the Experimental binding or extension dispatch fractures.
+import .Experimental: solve_simple_distributed, distribute_mesh,
+    halo_exchange!, partition_mesh_metis, partition_rcb,
+    extract_local_mesh, build_local_mesh, LocalFVMMesh, LocalMeshData,
+    CoolPropFluid, coolprop_density, coolprop_viscosity,
+    coolprop_specific_heat, coolprop_thermal_conductivity, GmshPipeline,
+    run_gmsh_pipeline,
+    # test/docs-qualified internals
+    CompressibleSIMPLE, CompressiblePIMPLE, CompressibleProblem,
+    CompressibleState, solve_compressible, PengRobinson, RedlichKwong,
+    TabulatedProperties, compute_face_densities!, update_density!,
+    update_viscosity!, update_mass_flux!, face_density,
+    solve_linear_elasticity, solve_finite_strain, SolidMechanicsState,
+    SolidProperties, solve_partitioned_fsi, update_aitken_omega!,
+    leaves, _uniform_refine!, read_stl_ascii, write_stl_ascii,
+    solve_transient_adjoint_linear, UniformCheckpoint, add_checkpoint!,
+    nearest_checkpoint, restore_between, Sutherland,
+    build_castellated_mesh, build_snappy_mesh, cell_count,
+    snap_to_surface!, triangle_intersects_aabb,
+    # standalone-shim support: v_and_v_compressible.jl may eval the
+    # compressible sources into this module, whose drivers call it
+    _experimental_warn
 
 # ============================================================
 # SciML Adapters / Accessors

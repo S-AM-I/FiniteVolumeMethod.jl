@@ -19,7 +19,7 @@ using Test
 
 include("TestHelpers.jl")
 
-const _WAVE5_SRC = joinpath(@__DIR__, "..", "src", "multiphase")
+const _WAVE5_SRC = joinpath(@__DIR__, "..", "src", "collocated", "multiphase")
 isdefined(Main, :AbstractDragClosure) || include(joinpath(_WAVE5_SRC, "drag_closures.jl"))
 isdefined(Main, :TwoFluidProperties) || include(joinpath(_WAVE5_SRC, "two_fluid.jl"))
 

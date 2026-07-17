@@ -53,6 +53,7 @@ function aggregate_classes!(
         cm::ClassMethod{T},
         kernel::Function,
     ) where {T}
+    _experimental_warn(:population_balance)
     N = cm.N_class
     length(n_bins) == N || error("aggregate_classes!: n_bins length mismatch")
     length(dn_bins) == N || error("aggregate_classes!: dn_bins length mismatch")
@@ -127,6 +128,7 @@ function breakage_classes!(
         Kb::Function,
         fragment_distribution::Function,
     ) where {T}
+    _experimental_warn(:population_balance)
     N = cm.N_class
     L = cm.L_centers
     fill!(dn_bins, zero(T))

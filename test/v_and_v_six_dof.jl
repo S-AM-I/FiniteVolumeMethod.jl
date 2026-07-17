@@ -16,7 +16,7 @@ using Test
 # into src/FiniteVolumeMethod.jl lands. The standalone form avoids depending
 # on FiniteVolumeMethod's precompile graph while wave-2 parallel work is in
 # flight.
-include(joinpath(@__DIR__, "..", "src", "dynamic_mesh", "six_dof.jl"))
+include(joinpath(@__DIR__, "..", "src", "collocated", "dynamic_mesh", "six_dof.jl"))
 
 @testset "V&V 6-DOF: zero force and zero torque ⇒ state frozen" begin
     I3 = SMatrix{3, 3, Float64, 9}(Matrix(1.0I, 3, 3))

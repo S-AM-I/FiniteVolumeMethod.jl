@@ -18,7 +18,8 @@
 using StaticArrays
 using Test
 
-include(joinpath(@__DIR__, "..", "src", "aeroacoustics", "pml.jl"))
+_experimental_warn(::Symbol) = nothing # no-op shim: source included standalone, outside module Experimental
+include(joinpath(@__DIR__, "..", "src", "experimental", "aeroacoustics", "pml.jl"))
 
 @testset "V&V: PML σ endpoints — σ(inner) = 0, σ(outer) = σ_max" begin
     inner = SVector(1.0, 0.0)

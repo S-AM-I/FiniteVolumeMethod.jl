@@ -141,6 +141,7 @@ function add_pml_source!(
         pml::PMLZone{Dim, T},
         points::AbstractVector{SVector{Dim, T}},
     ) where {Dim, T}
+    _experimental_warn(:aeroacoustics)
     n = length(points)
     length(source) == n ||
         error("add_pml_source!: source length $(length(source)) ≠ points length $n")

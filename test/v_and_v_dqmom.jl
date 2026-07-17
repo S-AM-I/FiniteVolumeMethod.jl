@@ -11,7 +11,8 @@
 using LinearAlgebra
 using Test
 
-include(joinpath(@__DIR__, "..", "src", "population_balance", "dqmom.jl"))
+_experimental_warn(::Symbol) = nothing # no-op shim: source included standalone, outside module Experimental
+include(joinpath(@__DIR__, "..", "src", "experimental", "population_balance", "dqmom.jl"))
 
 @testset "V&V: DQMoM — zero moment sources ⇒ zero (a, b)" begin
     abscissae = [1.0, 2.5, 4.0]

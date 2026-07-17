@@ -18,7 +18,7 @@ using Test
 
 # primary_breakup.jl has no dependencies on LagrangianParticle; it ships
 # only algebraic helpers, so we include it directly.
-include(joinpath(@__DIR__, "..", "src", "lagrangian", "primary_breakup.jl"))
+include(joinpath(@__DIR__, "..", "src", "collocated", "lagrangian", "primary_breakup.jl"))
 
 @testset "V&V: KH-ACT — zero slip ⇒ no break-up" begin
     d_child, τ = kh_act_breakup(1.0e-4, 0.0, 1.2, 1000.0, 1.0e-3, 0.072)

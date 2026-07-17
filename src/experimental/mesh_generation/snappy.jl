@@ -185,6 +185,7 @@ bookkeeping.  If no STL is supplied the pipeline still runs but the
 snap step is a no-op.
 """
 function build_snappy_mesh(mesher::SnappyMesher{T}) where {T}
+    _experimental_warn(:mesh_generation)
     octree = build_castellated_mesh(mesher)
 
     snap_applied = false

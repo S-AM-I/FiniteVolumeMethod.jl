@@ -42,7 +42,8 @@ using Test
 # Self-contained include — the main thread will wire `pml.jl` and the
 # extended `fwh.jl` into the package module; for now we pull them in
 # directly so this V&V runs standalone.
-include(joinpath(@__DIR__, "..", "src", "aeroacoustics", "fwh.jl"))
+_experimental_warn(::Symbol) = nothing # no-op shim: source included standalone, outside module Experimental
+include(joinpath(@__DIR__, "..", "src", "experimental", "aeroacoustics", "fwh.jl"))
 
 @testset "V&V: FWHSurface constructor length validation" begin
     # Matched lengths: should succeed.

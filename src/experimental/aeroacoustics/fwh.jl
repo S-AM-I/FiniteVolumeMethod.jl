@@ -406,6 +406,7 @@ function fwh_farassat1a(
         U_n::AbstractMatrix{T};
         p_inf::T = zero(T),
     ) where {Dim, T}
+    _experimental_warn(:aeroacoustics)
     nf = length(surface.face_indices)
     dt = _fwh_uniform_dt(times)
     size(p_surface) == (nf, length(times)) || error(
@@ -439,6 +440,7 @@ function fwh_farassat1a(
         p_surface::AbstractMatrix{T};
         p_inf::T = zero(T),
     ) where {Dim, T}
+    _experimental_warn(:aeroacoustics)
     surface = curle.surface
     nf = length(surface.face_indices)
     dt = _fwh_uniform_dt(times)

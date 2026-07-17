@@ -9,7 +9,7 @@
 using StaticArrays
 using Test
 
-include(joinpath(@__DIR__, "..", "src", "dynamic_mesh", "overset.jl"))
+include(joinpath(@__DIR__, "..", "src", "collocated", "dynamic_mesh", "overset.jl"))
 
 @testset "V&V overset: constant donor field ⇒ constant receiver field" begin
     # Donor mesh: 3×3 background Cartesian centers

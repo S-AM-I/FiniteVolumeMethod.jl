@@ -22,6 +22,8 @@
 using FiniteVolumeMethod
 using Test
 using MPI
+using PartitionedArrays # FVMMPIExt trigger (with MPI) — provides distribute_mesh methods
+using LinearSolve
 using LinearAlgebra: norm
 using StaticArrays: SVector
 

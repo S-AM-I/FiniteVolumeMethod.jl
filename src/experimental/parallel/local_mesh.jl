@@ -54,6 +54,7 @@ function extract_local_mesh(
         cell_to_rank::AbstractVector{Int},
         my_rank::Int,
     ) where {Dim, T}
+    _experimental_warn(:parallel)
     nc_g = length(global_mesh.cell_volumes)
     nf_g = size(global_mesh.face_cells, 2)
     length(cell_to_rank) == nc_g ||
@@ -251,6 +252,7 @@ function build_local_mesh(
         cell_to_rank::AbstractVector{<:Integer},
         my_rank::Integer,
     ) where {Dim, T}
+    _experimental_warn(:parallel)
     nc_g = length(mesh.cell_volumes)
     length(cell_to_rank) == nc_g ||
         error("cell_to_rank length $(length(cell_to_rank)) ≠ ncells $nc_g")

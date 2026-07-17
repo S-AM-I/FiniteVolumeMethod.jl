@@ -352,6 +352,7 @@ function snap_to_surface!(
         tol::Real = 1.0e-8,
         damping::Real = 0.5,
     ) where {T <: AbstractFloat}
+    _experimental_warn(:mesh_generation)
     state = _snap_state!(octree)
 
     tol_f = T(tol)

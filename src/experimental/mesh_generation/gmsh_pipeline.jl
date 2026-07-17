@@ -39,6 +39,7 @@ Invoke Gmsh via the `FVMGmshExt` extension. Errors with a helpful
 message if Gmsh.jl is not loaded.
 """
 function run_gmsh_pipeline(pipeline::GmshPipeline, out_path::AbstractString)
+    _experimental_warn(:mesh_generation)
     return error(
         "Gmsh.jl required — run `using Gmsh` to activate FVMGmshExt",
     )

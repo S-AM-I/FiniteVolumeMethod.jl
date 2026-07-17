@@ -22,7 +22,7 @@
 # diagnostics, non-manifold healing, parallelism.
 
 using StaticArrays: SVector
-using LinearAlgebra: norm, dot, cross
+using LinearAlgebra: norm, dot
 
 """
     Octree{Dim, T}
@@ -99,6 +99,7 @@ Construct a uniformly-refined octree down to `max_level`.
 function build_octree(
         bbox_min::SVector{Dim, T}, bbox_max::SVector{Dim, T}, max_level::Int,
     ) where {Dim, T}
+    _experimental_warn(:mesh_generation)
     root = Octree{Dim, T}(bbox_min, bbox_max, 0)
     _uniform_refine!(root, max_level)
     return root

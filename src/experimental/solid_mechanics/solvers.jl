@@ -60,6 +60,7 @@ function solve_solid_mechanics(
         ::SmallStrainElasticity;
         kwargs...,
     ) where {Dim, T}
+    _experimental_warn(:solid_mechanics)
     _check_no_traction_bcs(problem)
     return solve_linear_elasticity(
         problem.mesh, problem.material,
@@ -73,6 +74,7 @@ function solve_solid_mechanics(
         ::UpdatedLagrangian;
         kwargs...,
     ) where {Dim, T}
+    _experimental_warn(:solid_mechanics)
     _check_no_traction_bcs(problem)
     return solve_finite_strain(
         problem.mesh, problem.material,

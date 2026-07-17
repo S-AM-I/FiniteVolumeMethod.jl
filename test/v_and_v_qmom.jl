@@ -17,7 +17,8 @@
 using LinearAlgebra
 using Test
 
-include(joinpath(@__DIR__, "..", "src", "population_balance", "qmom.jl"))
+_experimental_warn(::Symbol) = nothing # no-op shim: source included standalone, outside module Experimental
+include(joinpath(@__DIR__, "..", "src", "experimental", "population_balance", "qmom.jl"))
 
 function _moments_monodisperse(m_0::T, L_0::T, n_moments::Int) where {T}
     return T[m_0 * L_0^k for k in 0:(n_moments - 1)]

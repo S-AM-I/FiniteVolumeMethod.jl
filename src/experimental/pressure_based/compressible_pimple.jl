@@ -259,6 +259,7 @@ function solve_compressible(
         p0::Real = 1.01325e5,
         p_init::Union{Nothing, Vector{T}} = nothing,
     ) where {Dim, T, Mesh, BC, Model}
+    _experimental_warn(:pressure_based)
     mesh = prob.mesh
     t_start, t_end = tspan
     nc = length(mesh.cell_volumes)

@@ -36,7 +36,7 @@ struct ParticleTracker{N, T}
 end
 ParticleTracker{N, T}() where {N, T} = ParticleTracker(Vector{LagrangianParticle{N, T}}(), Ref(1))
 
-include(joinpath(@__DIR__, "..", "src", "lagrangian", "injection.jl"))
+include(joinpath(@__DIR__, "..", "src", "collocated", "lagrangian", "injection.jl"))
 
 const TOL = 1.0e-10
 

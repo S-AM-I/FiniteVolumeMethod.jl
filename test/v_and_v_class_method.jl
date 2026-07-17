@@ -13,8 +13,9 @@
 using LinearAlgebra
 using Test
 
-include(joinpath(@__DIR__, "..", "src", "population_balance", "types.jl"))
-include(joinpath(@__DIR__, "..", "src", "population_balance", "class_method.jl"))
+_experimental_warn(::Symbol) = nothing # no-op shim: source included standalone, outside module Experimental
+include(joinpath(@__DIR__, "..", "src", "experimental", "population_balance", "types.jl"))
+include(joinpath(@__DIR__, "..", "src", "experimental", "population_balance", "class_method.jl"))
 
 @testset "V&V: ClassMethod — construction" begin
     cm = ClassMethod(5, 1.0e-3, 1.0e-1; spacing = :geometric)

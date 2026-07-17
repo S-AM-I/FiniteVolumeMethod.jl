@@ -28,6 +28,7 @@ Properties:
   better load balance on meshes with poor geometric locality.
 """
 function partition_rcb(mesh::UnstructuredFVMMesh{Dim, T}, nranks::Int) where {Dim, T}
+    _experimental_warn(:parallel)
     nc = length(mesh.cell_volumes)
     nranks >= 1 || error("nranks must be >= 1, got $nranks")
     nc > 0 || error("mesh has zero cells")

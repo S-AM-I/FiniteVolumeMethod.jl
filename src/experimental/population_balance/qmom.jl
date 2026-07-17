@@ -41,6 +41,7 @@ Chebyshev coefficients yield negative values, which happens when the
 moments don't come from any real distribution).
 """
 function qmom_recover_abscissae_weights(moments::AbstractVector{T}, N::Int) where {T}
+    _experimental_warn(:population_balance)
     length(moments) >= 2 * N ||
         error("qmom requires $(2N) moments, got $(length(moments))")
     moments[1] > zero(T) ||

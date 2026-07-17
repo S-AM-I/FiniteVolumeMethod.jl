@@ -357,6 +357,7 @@ function solve_compressible(
         verbose::Bool = false,
         p0::Real = 1.01325e5,
     ) where {Dim, T, Mesh, BC, Model}
+    _experimental_warn(:pressure_based)
     algo = prob.algorithm
     mesh = prob.mesh
     alpha_U = algo.alpha_U
