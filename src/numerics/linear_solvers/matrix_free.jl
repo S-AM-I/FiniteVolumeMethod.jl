@@ -15,7 +15,6 @@
 #     adjoint solvers.
 
 import LinearAlgebra
-using LinearAlgebra: mul!
 
 """
     MatrixFreeLinearOperator{T, F, Ft, D} <: AbstractLinearOperator{T}

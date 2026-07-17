@@ -19,7 +19,7 @@ using Printf: Printf, @printf, @sprintf
 using StaticArrays: SVector
 using DelaunayTriangulation: DelaunayTriangulation, Triangulation, statistics,
     each_solid_triangle, triangle_vertices, get_point, getxy,
-    num_solid_triangles
+    num_solid_triangles, get_adjacent, get_boundary_edge_map
 
 include("abstract_mesh.jl")
 include("parabolic_abstract_types.jl")

@@ -5,14 +5,9 @@
 # All canonical SciML problem construction, remake behavior, cache
 # layout, and solution-accessor logic is collected here.
 
-include("../core/cache.jl")
-include("../core/state_mapping.jl")
-include("../core/cfl_callback.jl")
-include("../core/callback_merge.jl")
-include("../core/ode_construction.jl")
-include("../core/split_construction.jl")
-include("../core/sciml_contract.jl")
-include("../core/results.jl")
+# The semidiscrete cache/state-mapping/ODE-construction/contract/accessor
+# files moved into the Hyperbolic submodule (Layer 2) in Stage 3e. The
+# cross-family glue below stays flat until the sciml/ relocation step.
 include("../core/symbolic_indexing.jl")
 include("../core/sciml_structures.jl")
 include("../remake.jl")

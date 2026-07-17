@@ -11,6 +11,10 @@ using .VertexConditions
 
 include("../parabolic/Parabolic.jl")
 using .Parabolic
+# physics/turbulence/k_epsilon.jl (flat, Layer 2) adds an outer constructor
+# to this Parabolic type with an unqualified definition — import so it
+# extends rather than triggers Julia 1.12's implicit-extension deprecation.
+import .Parabolic: ParabolicKEpsilon
 
 # Collocated cell-centered operators (Phase 0 — OpenFOAM-style FVM).
 # Load after Parabolic: collocated BC handling dispatches on

@@ -9,13 +9,12 @@ on top of this module.
 """
 module Numerics
 
-using LinearAlgebra: Diagonal, diag, mul!
+using LinearAlgebra: Diagonal, diag
 import LinearAlgebra
-using SparseArrays: SparseMatrixCSC, sparse
+using SparseArrays: SparseMatrixCSC
 using CommonSolve: solve
-using DelaunayTriangulation: DelaunayTriangulation, get_neighbours, is_ghost_vertex,
-    num_solid_vertices, get_adjacent, get_point, getxy, triangle_vertices,
-    each_solid_vertex
+using DelaunayTriangulation: DelaunayTriangulation, get_adjacent, get_point,
+    getxy, triangle_vertices, each_solid_vertex
 using ..Geometry: FVMGeometry, get_triangle_props, _safe_get_triangle_props
 
 include("backends.jl")

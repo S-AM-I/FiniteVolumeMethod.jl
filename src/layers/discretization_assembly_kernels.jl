@@ -6,99 +6,44 @@
 # assembly, update kernels, and legacy solve paths while making the
 # ownership boundary explicit for the v2 refactor.
 
+# The cell-centered hyperbolic family (conservation laws, Riemann solvers,
+# reconstruction, CT, metrics, AMR, and the semidiscrete SciML bridge) lives
+# in the Hyperbolic submodule. It must precede solve.jl, which calls
+# sciml_problem/_merge_problem_callbacks from the module.
+include("../hyperbolic/Hyperbolic.jl")
+using .Hyperbolic
+# Dispatch-fracture guards + qualified-internal passthroughs (Stage-3 recipe):
+# the flat remainder extends fvm_symbolic_index/_amr_symbolic_index
+# (core/symbolic_indexing.jl) and variable_names (dashboard consumers) with
+# unqualified definitions, ext/FVMCUDAExt extends FVM._solve_hyperbolic, and
+# tests/validation/docs call the remaining unexported internals as
+# FiniteVolumeMethod.<name> — all must resolve to the Hyperbolic bindings.
+import .Hyperbolic: fvm_symbolic_index, _amr_symbolic_index,
+    _mhd_ct_2d_symbolic_index, _mhd_ct_3d_symbolic_index, variable_names,
+    solve_hyperbolic, _solve_hyperbolic, solve_hyperbolic_imex,
+    initialize_1d, initialize_3d, _cell_center_coords_2d, _reconstruct_face,
+    _reconstruct_face_2d, _reconstruct_face_2d_y, reconstruct_interface_1d,
+    _reflect_primitive, _nghost_for_reconstruction, _merge_problem_callbacks,
+    _problem_callback, _compute_dt_2d_threaded, _hyperbolic_rhs_2d_threaded!,
+    _implicit_solve_1d!, _implicit_solve_2d!, _implicit_solve_2d_threaded!,
+    apply_bc_left!,
+    apply_bc_right!, apply_bc_2d_left!, apply_bc_2d_bottom!,
+    apply_boundary_conditions!, apply_boundary_conditions_2d!,
+    apply_boundary_conditions_3d!, apply_periodic_bcs!,
+    grmhd_recover_primitive_field, _grmhd_coord_wave_speeds,
+    _grmhd_wave_speeds, _grmhd_valencia_flux, _grmhd_stage_rhs!,
+    _grmhd_initialize_densitized_2d!, _weno3_reconstruct_left,
+    _weno3_reconstruct_right, _weno5_reconstruct_left,
+    _weno5_reconstruct_right,
+    # mesh_generation/octree.jl (flat, later in this layer) adds an
+    # is_leaf(::Octree) method to what is one shared generic — import so it
+    # extends the Hyperbolic (AMRBlock) function instead of shadowing it.
+    is_leaf
+
 include("../solve.jl")
 
 
 include("../physics/turbulence/k_epsilon.jl")
-
-include("../hyperbolic/conservation_laws.jl")
-include("../hyperbolic/euler.jl")
-include("../hyperbolic/riemann_solvers.jl")
-include("../hyperbolic/reconstruction.jl")
-include("../hyperbolic/boundary_conditions_hyp.jl")
-include("../hyperbolic/hllc_solver.jl")
-include("../hyperbolic/mhd.jl")
-include("../hyperbolic/hlld_solver.jl")
-include("../hyperbolic/hyperbolic_problem.jl")
-include("../hyperbolic/hyperbolic_solve.jl")
-include("../hyperbolic/hyperbolic_problem_2d.jl")
-include("../hyperbolic/boundary_conditions_2d.jl")
-include("../hyperbolic/hyperbolic_solve_2d.jl")
-
-include("../constrained_transport/ct_data.jl")
-include("../constrained_transport/emf.jl")
-include("../constrained_transport/ct_update.jl")
-include("../constrained_transport/divb.jl")
-
-include("../hyperbolic/mhd_solve_2d.jl")
-
-include("../hyperbolic/navier_stokes.jl")
-include("../hyperbolic/viscous_flux.jl")
-include("../hyperbolic/noslip_bc.jl")
-include("../hyperbolic/navier_stokes_solve.jl")
-include("../hyperbolic/navier_stokes_solve_2d.jl")
-
-include("../hyperbolic/resistive_mhd.jl")
-include("../hyperbolic/hall_mhd.jl")
-include("../hyperbolic/shallow_water.jl")
-include("../hyperbolic/srhydro.jl")
-include("../hyperbolic/two_fluid.jl")
-
-include("../hyperbolic/con2prim.jl")
-include("../hyperbolic/srmhd.jl")
-include("../hyperbolic/srmhd_solve.jl")
-include("../hyperbolic/srmhd_solve_2d.jl")
-
-include("../metric/abstract_metric.jl")
-include("../metric/minkowski.jl")
-include("../metric/schwarzschild.jl")
-include("../metric/kerr.jl")
-include("../metric/metric_data.jl")
-
-include("../hyperbolic/grmhd.jl")
-include("../hyperbolic/grmhd_con2prim.jl")
-include("../hyperbolic/grmhd_solve_2d.jl")
-
-include("../hyperbolic/euler_3d.jl")
-include("../hyperbolic/mhd_3d.jl")
-
-include("../hyperbolic/hyperbolic_problem_3d.jl")
-include("../hyperbolic/boundary_conditions_3d.jl")
-include("../hyperbolic/hyperbolic_solve_3d.jl")
-
-include("../constrained_transport/ct_data_3d.jl")
-include("../constrained_transport/emf_3d.jl")
-include("../constrained_transport/ct_update_3d.jl")
-include("../constrained_transport/divb_3d.jl")
-
-include("../hyperbolic/mhd_solve_3d.jl")
-
-include("../amr/amr_grid.jl")
-include("../amr/refinement.jl")
-include("../amr/prolongation.jl")
-include("../amr/restriction.jl")
-include("../amr/flux_correction.jl")
-include("../amr/amr_solve.jl")
-
-include("../hyperbolic/multirate.jl")
-
-include("../hyperbolic/ppm.jl")
-
-include("../hyperbolic/weno3.jl")
-include("../hyperbolic/weno.jl")
-include("../hyperbolic/characteristic_projection.jl")
-include("../hyperbolic/stiff_sources.jl")
-include("../hyperbolic/imex.jl")
-include("../hyperbolic/imex_solve.jl")
-
-include("../hyperbolic/reactive_euler.jl")
-include("../hyperbolic/chemistry.jl")
-
-include("../hyperbolic/positivity_limiter.jl")
-include("../hyperbolic/threading.jl")
-
-include("../hyperbolic/unstructured_problem.jl")
-include("../hyperbolic/unstructured_solve.jl")
 
 include("../coupling/abstract_coupling.jl")
 include("../coupling/operators.jl")

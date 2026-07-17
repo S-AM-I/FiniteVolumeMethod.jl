@@ -15,7 +15,6 @@
 # `AbstractLinearOperator` before constructing the SciMLBase `LinearProblem`.
 
 import LinearAlgebra
-using LinearAlgebra: mul!
 using SparseArrays: SparseMatrixCSC
 
 """

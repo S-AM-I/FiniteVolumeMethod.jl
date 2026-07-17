@@ -23,20 +23,14 @@ import ..VertexConditions: get_dudt_fidx, get_neumann_fidx, get_robin_fidx,
     is_constrained_edge, has_condition, has_dirichlet_nodes, get_dirichlet_nodes
 
 using SciMLBase: SciMLBase, ODEProblem, ODEFunction, MatrixOperator,
-    LinearProblem, SplitODEProblem, SteadyStateProblem
-using DelaunayTriangulation: DelaunayTriangulation, Triangulation,
-    add_ghost_triangles!, convert_boundary_points_to_indices,
-    delete_ghost_triangles!, each_solid_triangle, each_solid_vertex,
-    get_adjacent, get_area, get_boundary_edge_map, get_boundary_nodes,
-    get_ghost_vertex_map, get_neighbours, get_point, getxy,
-    lock_convex_hull!, num_boundary_edges, num_solid_triangles, refine!,
-    statistics, triangle_vertices, triangulate, triangulate_rectangle,
-    unlock_convex_hull!
-using LinearAlgebra: LinearAlgebra, norm, dot, mul!, ldiv!, factorize, I
-using SparseArrays: SparseArrays, sparse, spzeros, spdiagm, SparseMatrixCSC,
-    rowvals, nzrange, nonzeros
+    LinearProblem
+using DelaunayTriangulation: DelaunayTriangulation, each_solid_triangle,
+    each_solid_vertex, get_adjacent, get_boundary_edge_map, get_point, getxy,
+    triangle_vertices
+using LinearAlgebra: LinearAlgebra, norm, dot
+using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
-using PreallocationTools: PreallocationTools, DiffCache, get_tmp
+using PreallocationTools: PreallocationTools, get_tmp
 using Base.Threads
 
 include("types.jl")

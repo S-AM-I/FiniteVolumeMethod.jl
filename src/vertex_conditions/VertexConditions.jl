@@ -11,12 +11,11 @@
 # `Conditions` struct, which could not live inside a module of the same name.
 module VertexConditions
 
-using ..Geometry: FVMGeometry, get_triangle_props, _safe_get_triangle_props
-using DelaunayTriangulation: DelaunayTriangulation, get_point, getxy, get_adjacent,
-    is_ghost_vertex, num_ghost_vertices, num_segments, num_solid_vertices,
-    has_ghost_triangles, has_boundary_nodes, add_ghost_triangles!,
-    delete_ghost_triangles!, lock_convex_hull!, unlock_convex_hull!,
-    get_ghost_vertex_map, get_boundary_nodes, num_boundary_edges
+using ..Geometry: FVMGeometry, _safe_get_triangle_props
+using DelaunayTriangulation: DelaunayTriangulation, get_point, getxy,
+    add_ghost_triangles!, delete_ghost_triangles!, lock_convex_hull!,
+    unlock_convex_hull!, get_ghost_vertex_map, get_boundary_nodes,
+    num_boundary_edges
 using SparseArrays: sparse
 
 include("conditions.jl")
