@@ -57,6 +57,21 @@ using StaticArrays
         end
     end
 
+    @testset "VTK 3D structured (WriteVTK extension)" begin
+        using WriteVTK
+        mesh = StructuredMesh3D(0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 4, 5, 6)
+        data = rand(4, 5, 6)
+        dir = mktempdir()
+        base = joinpath(dir, "smoke3d")
+        out = write_structured_vtk_3d(base, mesh, data; label = "rho")
+        @test out == base
+        # WriteVTK picks the concrete flavor (.vti for uniform axes); assert
+        # exactly one smoke3d.vt* file was produced.
+        written = filter(startswith("smoke3d.vt"), readdir(dir))
+        @test length(written) == 1
+        @test_throws Exception write_structured_vtk_3d(base, mesh, rand(2, 2, 2))
+    end
+
     @testset "Volume Integral" begin
         mesh = generate_mesh_1d(10, 1.0)
         field = ones(10)

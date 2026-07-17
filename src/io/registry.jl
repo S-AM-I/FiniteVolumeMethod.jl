@@ -1,8 +1,6 @@
 # Model registry — migrated from Simu.jl SimuIO
 # Provides save/load of simulation setup as a portable package.
-
-using TOML
-using DelimitedFiles
+# Stdlib imports are hoisted into the FVMIO module header.
 
 const MODEL_PACKAGE_SCHEMA_VERSION = 1
 

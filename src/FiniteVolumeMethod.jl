@@ -37,10 +37,203 @@ using .Numerics
 # resolve to the Numerics function objects.
 import .Numerics: total_energy, _solve_linear, _unsupported_backend,
     autodiff_forward_step, _extension_preconditioner, _try_krylov_solver
-include("layers/domain_problem_definitions.jl")
-include("layers/discretization_assembly_kernels.jl")
-include("layers/sciml_adapters_and_accessors.jl")
-include("layers/extensions_tooling_output.jl")
+# ============================================================
+# Domain / Problem Definitions
+# ============================================================
+#
+# As of Stage 3d the parabolic family lives in
+# the Parabolic submodule; this section wires the cell-vertex conditions
+# engine, the Parabolic family, and the collocated Phase-0 operators.
+
+include("vertex_conditions/VertexConditions.jl")
+using .VertexConditions
+
+include("parabolic/Parabolic.jl")
+using .Parabolic
+
+# The collocated (OpenFOAM-style) family: operators, incompressible
+# SIMPLE/PISO/PIMPLE, multiphase, DPM, dynamic mesh, collocated AMR,
+# post-processing, zone models, and nested Collocated.Physics
+# (turbulence/thermal/radiation/combustion). Loads after Parabolic:
+# its BC handling dispatches on AbstractBoundaryCondition.
+include("collocated/Collocated.jl")
+using .Collocated
+# Dispatch-fracture guards + qualified-internal passthroughs (Stage-3
+# recipe): the flat pressure_based/ family calls unexported
+# incompressible/cyclic internals, solid_mechanics uses _face_tag, and
+# tests/validation/docs reach the remaining internals as
+# FiniteVolumeMethod.<name> — all must resolve to the Collocated
+# bindings (temporary over-import, curated in Stage 4).
+import .Collocated: DynamicContactAngle, KHACTBreakup, LISABreakup,
+    NoMassTransfer, StaticContactAngle, TwoFluidProblem,
+    _cyclic_cell_pairs, _extract_component, _face_diffusivity, _face_tag,
+    _make_incompressible_workspace, _make_scalar_field,
+    _needs_pressure_reference, _particle_reynolds, _pimple_step!,
+    _set_component!, _snapshot_old_time!, _velocity_labels,
+    _non_ortho_E_magnitude, _zz_indicator_smoothed, add_darcy_forchheimer_source!,
+    apply_contact_angle, apply_cyclic_to_equation!,
+    assemble_isoadvector_flux!, collect_cyclic_pairs, compute_HbyA_flux,
+    couple_primary_breakup_fsi!, cox_voinov_angle, expand_bcs_pressure,
+    expand_pressure_bc, expand_velocity_bc, fix_pressure_reference!,
+    kunz_cond_rate, kunz_rate, kunz_vap_rate, least_squares_gradient,
+    merkle_cond_rate, merkle_rate, merkle_vap_rate, run!,
+    schnerr_sauer_bubble_radius, schnerr_sauer_rate, solve_two_fluid,
+    two_fluid_mixture_continuity_residual, under_relax_momentum!,
+    update!, update_boundary_cyclic!, update_boundary_pressure!,
+    update_boundary_velocity!, warn_experimental!,
+    # Collocated.Physics internals (passed through Collocated)
+    T_from_h, h_from_T, _sym_self_magnitude_sq, _durbin_C_T,
+    _wall_projection, patankar_interface_coupling,
+    EquilibriumWMLES, IDDES, WSGGMModel, _EDC_FALLBACK_MIXING_RATE,
+    _apply_durbin_cap!, _blend, _cell_absorption, _ddes_length_scale,
+    _ddes_shielding, _iddes_alpha, _iddes_f_B, _iddes_f_d_tilde,
+    _iddes_f_dt, _iddes_f_e, _iddes_r_dl, _iddes_r_dt, _s12_quadrature,
+    _s2_quadrature, _s4_quadrature, _s6_quadrature, _s8_quadrature,
+    _sa_fv1, _species_index, _sst_F1, _sst_F2, _sym_contract,
+    _test_filter, _update_turbulence!, compute_band_emissivity,
+    compute_band_weight, enthalpy_bcs_from_temperature,
+    enthalpy_field_from_temperature, iddes_blended_length,
+    scattering_phase_value, scattering_source_contribution,
+    solve_wsggm_radiation, temperature_from_enthalpy!,
+    turbulent_viscosity_sa!, wmles_wall_nut, wmles_wall_shear,
+    wsggm_effective_absorption
+
+# ============================================================
+# Discretization / Assembly Kernels
+# ============================================================
+#
+# This section retains the current include order for reconstruction,
+# assembly, update kernels, and legacy solve paths while making the
+# ownership boundary explicit for the v2 refactor.
+
+# The cell-centered hyperbolic family (conservation laws, Riemann solvers,
+# reconstruction, CT, metrics, AMR, and the semidiscrete SciML bridge) lives
+# in the Hyperbolic submodule. It must precede solve.jl, which calls
+# sciml_problem/_merge_problem_callbacks from the module.
+include("hyperbolic/Hyperbolic.jl")
+using .Hyperbolic
+# Dispatch-fracture guards + qualified-internal passthroughs (Stage-3 recipe):
+# the flat remainder extends fvm_symbolic_index/_amr_symbolic_index
+# (sciml/symbolic_indexing.jl) and variable_names (dashboard consumers) with
+# unqualified definitions, ext/FVMCUDAExt extends FVM._solve_hyperbolic, and
+# tests/validation/docs call the remaining unexported internals as
+# FiniteVolumeMethod.<name> — all must resolve to the Hyperbolic bindings.
+import .Hyperbolic: fvm_symbolic_index, _amr_symbolic_index,
+    _mhd_ct_2d_symbolic_index, _mhd_ct_3d_symbolic_index, variable_names,
+    solve_hyperbolic, _solve_hyperbolic, solve_hyperbolic_imex,
+    initialize_1d, initialize_3d, _cell_center_coords_2d, _reconstruct_face,
+    _reconstruct_face_2d, _reconstruct_face_2d_y, reconstruct_interface_1d,
+    _reflect_primitive, _nghost_for_reconstruction, _merge_problem_callbacks,
+    _problem_callback, _compute_dt_2d_threaded, _hyperbolic_rhs_2d_threaded!,
+    _implicit_solve_1d!, _implicit_solve_2d!, _implicit_solve_2d_threaded!,
+    apply_bc_left!,
+    apply_bc_right!, apply_bc_2d_left!, apply_bc_2d_bottom!,
+    apply_boundary_conditions!, apply_boundary_conditions_2d!,
+    apply_boundary_conditions_3d!, apply_periodic_bcs!,
+    grmhd_recover_primitive_field, _grmhd_coord_wave_speeds,
+    _grmhd_wave_speeds, _grmhd_valencia_flux, _grmhd_stage_rhs!,
+    _grmhd_initialize_densitized_2d!, _weno3_reconstruct_left,
+    _weno3_reconstruct_right, _weno5_reconstruct_left,
+    _weno5_reconstruct_right,
+    # mesh_generation/octree.jl (flat, later in this section) adds an
+    # is_leaf(::Octree) method to what is one shared generic — import so it
+    # extends the Hyperbolic (AMRBlock) function instead of shadowing it.
+    is_leaf
+
+include("sciml/solve.jl")
+
+# Flat remainder (experimental scaffolds; Stage 3h candidates).
+# The hyperbolic coupling/ files and the whole collocated family
+# (operators, incompressible, physics, multiphase, lagrangian,
+# dynamic_mesh, function_objects, collocated AMR, zone models,
+# postprocessing) moved into the Hyperbolic and Collocated submodules
+# in Stages 3e/3f.
+include("pressure_based/thermo_models.jl")
+include("pressure_based/rheology.jl")
+include("pressure_based/coolprop_stub.jl")
+include("aeroacoustics/fwh.jl")
+include("aeroacoustics/pml.jl")
+include("population_balance/qmom.jl")
+include("population_balance/types.jl")
+include("population_balance/dqmom.jl")
+include("population_balance/class_method.jl")
+include("solid_mechanics/types.jl")
+include("solid_mechanics/linear_elasticity.jl")
+include("solid_mechanics/finite_strain.jl")
+include("solid_mechanics/solvers.jl")
+include("fsi/coupling.jl")
+include("fsi/interface.jl")
+include("fsi/partitioned.jl")
+include("mesh_generation/octree.jl")
+include("mesh_generation/stl_reader.jl")
+include("mesh_generation/snap.jl")
+include("mesh_generation/snappy.jl")
+include("mesh_generation/gmsh_pipeline.jl")
+
+# Compressible pressure-based family (Wave 1)
+# Extends SIMPLE/PIMPLE with density coupling + EOS dispatch; calls
+# unexported Collocated internals via the import guard above.
+include("pressure_based/eos_coupling.jl")
+include("pressure_based/compressible_simple.jl")
+include("pressure_based/compressible_pimple.jl")
+
+# Discrete adjoint (Wave 4) — steady linear-system identity; transient stubbed
+include("adjoint/types.jl")
+include("adjoint/steady.jl")
+include("adjoint/checkpointing.jl")
+include("adjoint/reverse_sweep.jl")
+include("adjoint/transient.jl")
+include("adjoint/solvers.jl")
+
+# MPI Parallelism stubs (Phase 6)
+# Concrete implementations live in ext/FVMMPIExt/.
+include("parallel/stubs.jl")
+include("parallel/rcb_partitioner.jl")
+include("parallel/local_mesh.jl")
+include("parallel/metis_stub.jl")
+
+# ============================================================
+# SciML Adapters / Accessors
+# ============================================================
+#
+# All canonical SciML problem construction, remake behavior, cache
+# layout, and solution-accessor logic is collected here.
+
+# The semidiscrete cache/state-mapping/ODE-construction/contract/accessor
+# files moved into the Hyperbolic submodule in Stage 3e; the
+# incompressible solution/façade moved into Collocated in Stage 3f. The
+# cross-family glue below stays flat.
+# sciml_structures.jl and remake.jl define the SciMLStructures/remake
+# methods for IncompressibleProblem — import so they extend against the
+# Collocated-owned type.
+import .Collocated: IncompressibleProblem
+include("sciml/symbolic_indexing.jl")
+include("sciml/sciml_structures.jl")
+include("sciml/remake.jl")
+
+# ============================================================
+# Extensions / Tooling / Output
+# ============================================================
+#
+# The dashboard/output/diagnostics family lives in the FVMIO submodule.
+# capabilities.jl stays flat: it is coupled to validation/manifest.{jl,toml}.
+
+include("io/FVMIO.jl")
+using .FVMIO
+# Qualified-internal passthroughs (Stage-3 recipe): the six package
+# extensions add methods as `function FiniteVolumeMethod.NAME(...)` to the
+# FVMIO extension stubs (dashboard monitors/session IO, HDF5, checkpointing,
+# VTK 3D) and reference the session types and dict helpers the same way —
+# every one of these must resolve to the FVMIO binding, or the extension
+# method-adds silently create shadow generics and dispatch fractures.
+import .FVMIO: CheckpointManager, FVMMonitorCallback, FVMSessionData,
+    FVMSnapshot, conserved_totals, create_session_data, export_session,
+    hyperbolic_monitor, import_session, load_checkpoint, mesh_to_dict,
+    read_solution_hdf5, save_checkpoint, serve_dashboard, session_to_dict,
+    snapshot_to_dict, stringify_keys, write_solution_hdf5,
+    write_structured_vtk_3d
+
+include("capabilities.jl")
 
 # --- Parabolic Core Types ---
 export

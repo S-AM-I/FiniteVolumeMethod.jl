@@ -1,10 +1,7 @@
 # I/O utilities — migrated from Simu.jl SimuIO
 # Provides output directory management, CSV writing, TOML metadata,
 # formatted printing, and file-name helpers.
-
-using DelimitedFiles
-using TOML
-using Printf
+# Stdlib imports are hoisted into the FVMIO module header.
 
 """
     ensure_output_dirs(base)

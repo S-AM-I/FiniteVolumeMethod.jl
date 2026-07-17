@@ -1,7 +1,6 @@
 # Output manager — migrated from Simu.jl SimuIO
 # Provides scheduling, targeting, diagnostics, provenance, and output management.
-
-using Dates
+# Stdlib imports are hoisted into the FVMIO module header.
 
 """
     OutputSchedule{T}

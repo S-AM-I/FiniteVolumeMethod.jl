@@ -77,18 +77,21 @@ julia --project=docs docs/liveserver.jl
 
 ## Architecture
 
-### Layered Include System
-The main module (`src/FiniteVolumeMethod.jl`) loads code through four layer files in `src/layers/`. The ordering is a strict dependency chain — never import backwards across layers.
+### Module Structure (Stage 3 of the v4 overhaul)
+`src/FiniteVolumeMethod.jl` is the single include site (the former `src/layers/` files were dissolved in Stage 3g). It loads real submodules in dependency order, with flat cross-family glue between them — never import backwards in this chain:
 
-1. **`domain_problem_definitions.jl`** — Foundational types, mesh definitions (parabolic and structured), coordinate systems, geometry, conditions, problem types. Also: Phase 0 collocated operators (`src/collocated/`), Phase 4 mesh I/O (`src/mesh/`), cyclic BC assembly
-2. **`discretization_assembly_kernels.jl`** — FVM equation assembly, reconstruction schemes, all hyperbolic solvers, AMR, WENO/PPM/IMEX, coupling infrastructure. Also: Phase 1 incompressible solvers (`src/incompressible/`), Phase 5 linear solver config (`src/linear_solvers/`), Phase 2a/2b turbulence (`src/turbulence/`), Phase 3 thermal (`src/thermal/`), Phase 7 multiphase (`src/multiphase/`), Phase 8 combustion (`src/combustion/`), Phase 9 radiation (`src/radiation/`), Phase 10 dynamic mesh (`src/dynamic_mesh/`), Phase 11 Lagrangian DPM (`src/lagrangian/`), Phase 6 MPI stubs (`src/parallel/`)
-3. **`sciml_adapters_and_accessors.jl`** — SciML integration: cache types, state mapping (fold/unfold), CFL callbacks, ODE/SplitODE construction, solution accessors, `remake`. Also: `IncompressibleSolution` wrapper, `CommonSolve.solve` dispatch for incompressible problems
-4. **`extensions_tooling_output.jl`** — Dashboard types, I/O (VTK, HDF5, CSV), diagnostics, checkpointing, capability matrix. Also: Phase 12 post-processing (`src/postprocessing/`)
+1. `Geometry` (`src/geometry/`) — all mesh types + geometry; then `Numerics` (`src/numerics/`) — backends, EOS, schemes, kernels, linear-solver config
+2. `VertexConditions` (`src/vertex_conditions/`) → `Parabolic` (`src/parabolic/`) → `Collocated` (`src/collocated/`, with nested `Collocated.Physics` for turbulence/thermal/radiation/combustion)
+3. `Hyperbolic` (`src/hyperbolic/`, incl. the semidiscrete SciML bridge `src/hyperbolic/core/` and `coupling/`) → flat `src/sciml/` glue (symbolic indexing, SciMLStructures, `remake`, `solve.jl`)
+4. Flat experimental scaffolds (pressure_based, aeroacoustics, population_balance, solid_mechanics, fsi, mesh_generation, adjoint, parallel — Stage 3h will quarantine these under `Experimental`)
+5. `FVMIO` (`src/io/`) — dashboard session types, output management, diagnostics, VTK/HDF5/checkpoint extension stubs; then flat `capabilities.jl`
+
+After each submodule the main module has `import .Sub: ...` guard blocks — these keep unexported internals resolving as `FiniteVolumeMethod.name` for tests/docs/extensions and prevent dispatch fracture where flat code extends submodule generics. Do not remove them casually.
 
 ### Key Source Directories
 - `src/parabolic/` — Cell-vertex solver: types, mesh variants, assembly, boundary conditions, gradients, limiters, turbulence models
 - `src/hyperbolic/` — Cell-centered solver: conservation laws, Riemann solvers (HLL/HLLC/HLLD), reconstruction (MUSCL/PPM/WENO), plus advanced physics (Navier-Stokes, MHD variants, GRMHD, IMEX)
-- `src/core/` — SciML bridge: semidiscrete caches, state mapping, CFL callback, ODE problem construction, symbolic indexing (`symbolic_indexing.jl`), SciMLStructures parameter partitioning (`sciml_structures.jl`), `remake` support (`remake.jl`). `sciml_problem(prob)` returns the underlying `ODEProblem` for hyperbolic solvers (used to access `p`/`u0` for e.g. `compute_initial_dt`).
+- `src/sciml/` — flat cross-family SciML glue: symbolic indexing (`symbolic_indexing.jl`), SciMLStructures parameter partitioning (`sciml_structures.jl`), `remake` support (`remake.jl`), and the parabolic `solve.jl`. The semidiscrete caches/state mapping/CFL callback/ODE construction moved into `src/hyperbolic/core/` (Stage 3e). `sciml_problem(prob)` returns the underlying `ODEProblem` for hyperbolic solvers (used to access `p`/`u0` for e.g. `compute_initial_dt`).
 - `src/collocated/` — Phase 0: Cell-centered operators on `UnstructuredFVMMesh` (types, interpolation, gradient, laplacian, divergence, ddt, cyclic BC assembly). Foundation for all OpenFOAM-style solvers
 - `src/incompressible/` — Phase 1: SIMPLE/PISO/PIMPLE pressure-velocity coupling (types, BCs, momentum, pressure, correction, residuals, solver loops, SciML interface with `CommonSolve.solve` dispatch and `IncompressibleSolution`)
 - `src/turbulence/` — Phase 2a/2b: RANS (k-ε, k-ω, k-ω SST, SA), LES (Smagorinsky, WALE, dynamic), hybrid (DDES). Interface, strain rate, wall distance, wall functions, solver wrappers
