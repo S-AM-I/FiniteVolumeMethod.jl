@@ -181,3 +181,15 @@ function FVMGeometry(tri::Triangulation; coordinate_system::AbstractCoordinateSy
     end
     return FVMGeometry(tri, stats, cv_volumes, triangle_props, coordinate_system)
 end
+
+function _safe_get_triangle_props(mesh::FVMGeometry, T)
+    i, j, k = triangle_vertices(T)
+    props = mesh.triangle_props
+    if haskey(props, (i, j, k))
+        return (i, j, k), get_triangle_props(mesh, i, j, k)
+    elseif haskey(props, (j, k, i))
+        return (j, k, i), get_triangle_props(mesh, j, k, i)
+    else
+        return (k, i, j), get_triangle_props(mesh, k, i, j)
+    end
+end

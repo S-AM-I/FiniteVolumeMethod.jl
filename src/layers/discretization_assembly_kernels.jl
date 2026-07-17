@@ -6,39 +6,11 @@
 # assembly, update kernels, and legacy solve paths while making the
 # ownership boundary explicit for the v2 refactor.
 
-include("../equations/boundary_edge_contributions.jl")
-include("../equations/control_volumes.jl")
-include("../equations/dirichlet.jl")
-include("../equations/individual_flux_contributions.jl")
-include("../equations/main_equations.jl")
-include("../equations/shape_functions.jl")
-include("../equations/source_contributions.jl")
-include("../equations/triangle_contributions.jl")
 include("../solve.jl")
-include("../utils.jl")
 
-include("../schemes/gradients.jl")
-include("../schemes/muscl.jl")
-
-include("../conditions/nonlinear.jl")
-include("../conditions/periodic.jl")
-include("../conditions/coupled.jl")
-
-include("../specific_problems/abstract_templates.jl")
-include("../specific_problems/diffusion_equation.jl")
-include("../specific_problems/linear_reaction_diffusion_equations.jl")
-include("../specific_problems/mean_exit_time.jl")
-include("../specific_problems/poissons_equation.jl")
-include("../specific_problems/laplaces_equation.jl")
-include("../specific_problems/advection_diffusion_equation.jl")
-include("../specific_problems/anisotropic_diffusion.jl")
 
 include("../physics/turbulence/k_epsilon.jl")
 
-include("../mesh/structured_mesh.jl")
-include("../eos/eos_interface.jl")
-include("../eos/ideal_gas.jl")
-include("../eos/stiffened_gas.jl")
 include("../hyperbolic/conservation_laws.jl")
 include("../hyperbolic/euler.jl")
 include("../hyperbolic/riemann_solvers.jl")
@@ -87,7 +59,6 @@ include("../hyperbolic/grmhd.jl")
 include("../hyperbolic/grmhd_con2prim.jl")
 include("../hyperbolic/grmhd_solve_2d.jl")
 
-include("../mesh/structured_mesh_3d.jl")
 include("../hyperbolic/euler_3d.jl")
 include("../hyperbolic/mhd_3d.jl")
 
@@ -126,7 +97,6 @@ include("../hyperbolic/chemistry.jl")
 include("../hyperbolic/positivity_limiter.jl")
 include("../hyperbolic/threading.jl")
 
-include("../mesh/unstructured_hyperbolic_mesh.jl")
 include("../hyperbolic/unstructured_problem.jl")
 include("../hyperbolic/unstructured_solve.jl")
 
@@ -197,17 +167,7 @@ include("../pressure_based/compressible_pimple.jl")
 
 # Linear Solver Infrastructure (Phase 5)
 # Must come after incompressible (provides _solve_linear) and before turbulence.
-include("../linear_solvers/abstract_operator.jl")
-include("../linear_solvers/matrix_free.jl")
-include("../linear_solvers/preconditioners.jl")
-include("../linear_solvers/solver_config.jl")
-include("../units/units.jl")
-include("../units/unitful_integration.jl")
-include("../linear_solvers/petsc_stub.jl")
 # Kernel dispatch for KA/Enzyme extensions (v3.0 ships CPU path only)
-include("../kernels/types.jl")
-include("../kernels/ka_stubs.jl")
-include("../kernels/enzyme_stub.jl")
 # Discrete adjoint (Wave 4) — steady linear-system identity; transient stubbed
 include("../adjoint/types.jl")
 include("../adjoint/steady.jl")

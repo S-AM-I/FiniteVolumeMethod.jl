@@ -6,6 +6,15 @@
 
 using LinearAlgebra: Diagonal, diag
 
+"""
+    _solve_linear(lp, linear_solver)
+
+Extension point: the plain (non-configured) linear solve used by
+[`_dispatch_solve`](@ref) when no `FVMSolverConfig` is supplied. The method
+for `LinearProblem`s is provided by the incompressible solver stack.
+"""
+function _solve_linear end
+
 # ── Field solver configuration ───────────────────────────────────────
 
 """

@@ -10,7 +10,7 @@ using LinearAlgebra: norm, cross, det
 Subtypes the Stage 1d umbrella `AbstractFiniteVolumeMesh{Dim}` so generic
 library code dispatching on `::AbstractFiniteVolumeMesh` includes
 `StructuredFVMMesh`, `CurvilinearFVMMesh`, and `UnstructuredFVMMesh`."""
-abstract type AbstractFVMMesh{Dim, T} <: AbstractFiniteVolumeMesh{Dim} end
+abstract type AbstractFVMMesh{Dim, T} <: AbstractFVMesh{Dim} end
 
 """Axis-aligned structured finite-volume mesh with per-dimension cell centers, spacings, and face areas."""
 struct StructuredFVMMesh{Dim, T, A <: AbstractArray{T, Dim}} <: AbstractFVMMesh{Dim, T}
@@ -432,4 +432,81 @@ function load_unstructured_mesh(path::AbstractString; velocity = nothing, tag_bo
         parse_vtk(path)
     end
     return build_unstructured_from_polygons(verts, faces; velocity, tag_boundary)
+end
+
+"""
+    is_internal_face(mesh::UnstructuredFVMMesh, f::Int) -> Bool
+
+Return `true` if face `f` connects two cells (i.e. is not a boundary).
+"""
+is_internal_face(mesh::UnstructuredFVMMesh, f::Int) = mesh.face_cells[2, f] != 0
+
+"""
+    owner(mesh::UnstructuredFVMMesh, f::Int) -> Int
+
+Cell index of the face owner.
+"""
+owner(mesh::UnstructuredFVMMesh, f::Int) = mesh.face_cells[1, f]
+
+"""
+    neighbour(mesh::UnstructuredFVMMesh, f::Int) -> Int
+
+Cell index of the face neighbour (0 for boundary faces).
+"""
+neighbour(mesh::UnstructuredFVMMesh, f::Int) = mesh.face_cells[2, f]
+
+"""
+    face_normal_area(mesh::UnstructuredFVMMesh{Dim}, f::Int) -> SVector{Dim}
+
+Outward-pointing face area vector `S_f = A_f * n_f` (area × unit normal).
+"""
+function face_normal_area(mesh::UnstructuredFVMMesh{Dim}, f::Int) where {Dim}
+    A_f = mesh.face_areas[f]
+    n = SVector{Dim}(ntuple(d -> mesh.face_normals[d, f], Val(Dim)))
+    return A_f * n
+end
+
+"""
+    cell_center(mesh::UnstructuredFVMMesh{Dim}, c::Int) -> SVector{Dim}
+
+Position vector of cell center `c`.
+"""
+function cell_center(mesh::UnstructuredFVMMesh{Dim}, c::Int) where {Dim}
+    return SVector{Dim}(ntuple(d -> mesh.cell_centers[d, c], Val(Dim)))
+end
+
+"""
+    face_center(mesh::UnstructuredFVMMesh{Dim}, f::Int) -> SVector{Dim}
+
+Position vector of face center `f`.
+"""
+function face_center(mesh::UnstructuredFVMMesh{Dim}, f::Int) where {Dim}
+    return SVector{Dim}(ntuple(d -> mesh.face_centers[d, f], Val(Dim)))
+end
+
+"""
+    owner_neighbour_distance(mesh::UnstructuredFVMMesh{Dim}, f::Int) -> Tuple{SVector{Dim}, T}
+
+Return `(d_vec, |d_vec|)` where `d_vec = x_N - x_P` for internal face `f`.
+"""
+function owner_neighbour_distance(mesh::UnstructuredFVMMesh{Dim, T}, f::Int) where {Dim, T}
+    c_P = cell_center(mesh, owner(mesh, f))
+    c_N = cell_center(mesh, neighbour(mesh, f))
+    d = c_N - c_P
+    return d, norm(d)
+end
+
+"""
+    face_weight(mesh::UnstructuredFVMMesh{Dim, T}, f::Int) -> T
+
+Linear interpolation weight for the owner cell at face `f`:
+`w = |x_f - x_N| / |x_P - x_N|` so that `φ_f ≈ w φ_P + (1-w) φ_N`.
+"""
+function face_weight(mesh::UnstructuredFVMMesh{Dim, T}, f::Int) where {Dim, T}
+    c_P = cell_center(mesh, owner(mesh, f))
+    c_N = cell_center(mesh, neighbour(mesh, f))
+    x_f = face_center(mesh, f)
+    d_fN = norm(x_f - c_N)
+    d_PN = norm(c_P - c_N)
+    return d_PN > zero(T) ? d_fN / d_PN : one(T) / 2
 end

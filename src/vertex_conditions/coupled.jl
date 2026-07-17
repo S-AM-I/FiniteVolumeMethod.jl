@@ -251,30 +251,27 @@ Get the field indices involved in a coupled constraint.
 get_coupled_fields(bc::CoupledBC) = bc.field_indices
 
 @doc raw"""
-    extract_field_values_at_boundary(prob::FVMSystem, u, boundary_node::Int)
+    extract_field_values_at_boundary(u, boundary_node::Int, n_fields::Int)
 
 Extract the values of all fields at a boundary node from the system solution.
 
 # Arguments
-- `prob`: The FVMSystem
 - `u`: Solution matrix (n_fields × n_nodes)
 - `boundary_node`: Node index on the boundary
 
 # Returns
 Tuple of field values at the boundary node.
 """
-function extract_field_values_at_boundary(prob, u, boundary_node::Int)
-    n_fields = _neqs(prob)
+function extract_field_values_at_boundary(u, boundary_node::Int, n_fields::Int)
     return ntuple(i -> u[i, boundary_node], n_fields)
 end
 
 @doc raw"""
-    extract_field_gradients_at_boundary(prob::FVMSystem, mesh::FVMGeometry, u, i::Int, j::Int)
+    extract_field_gradients_at_boundary(mesh::FVMGeometry, u, i::Int, j::Int, n_fields::Int)
 
 Extract the gradients of all fields at a boundary edge.
 
 # Arguments
-- `prob`: The FVMSystem
 - `mesh`: The FVM geometry
 - `u`: Solution matrix (n_fields × n_nodes)
 - `i, j`: Boundary edge vertex indices
@@ -282,8 +279,7 @@ Extract the gradients of all fields at a boundary edge.
 # Returns
 Tuple of gradient tuples, one for each field.
 """
-function extract_field_gradients_at_boundary(prob, mesh::FVMGeometry, u, i::Int, j::Int)
-    n_fields = _neqs(prob)
+function extract_field_gradients_at_boundary(mesh::FVMGeometry, u, i::Int, j::Int, n_fields::Int)
     return ntuple(n_fields) do field
         # Extract single field solution
         u_field = view(u, field, :)

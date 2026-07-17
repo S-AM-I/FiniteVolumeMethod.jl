@@ -22,7 +22,21 @@ using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads
 
-# Module loading order: types → solvers → SciML bridge → I/O
+# Module loading order: Geometry submodule → types → solvers → SciML bridge → I/O
+include("geometry/Geometry.jl")
+using .Geometry
+# Explicit imports so the flat remainder can EXTEND these Geometry generics
+# with unqualified `function ncells(...)` definitions (a bare `using` would
+# silently shadow them with new local functions and fracture dispatch).
+import .Geometry: ncells, nfaces, cell_center
+include("numerics/Numerics.jl")
+using .Numerics
+# euler_3d.jl extends `total_energy` and incompressible/simple.jl extends
+# `_solve_linear` with unqualified definitions; the underscored names are
+# qualified as `FiniteVolumeMethod.NAME` inside package extensions and must
+# resolve to the Numerics function objects.
+import .Numerics: total_energy, _solve_linear, _unsupported_backend,
+    autodiff_forward_step, _extension_preconditioner, _try_krylov_solver
 include("layers/domain_problem_definitions.jl")
 include("layers/discretization_assembly_kernels.jl")
 include("layers/sciml_adapters_and_accessors.jl")
@@ -783,7 +797,6 @@ export FVMGeometry,
     ospre,
     apply_limiter,
     select_limiter,
-    ParabolicLimiters,
     # Gradient reconstruction
     AbstractGradientMethod,
     GreenGaussGradient,

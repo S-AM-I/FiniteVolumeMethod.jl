@@ -8,11 +8,11 @@ using LinearAlgebra: norm, cross, dot
 # ==============================================================================
 
 """
-    CurvilinearMesh2D <: AbstractParabolicMesh
+    CurvilinearMesh2D <: AbstractParabolicMesh{2}
 
 2D Body-fitted mesh defined by node coordinates `x_nodes` and `y_nodes`.
 """
-struct CurvilinearMesh2D <: AbstractParabolicMesh
+struct CurvilinearMesh2D <: AbstractParabolicMesh{2}
     # Primary grid data (nodes)
     x_nodes::Matrix{Float64} # (nx+1) x (ny+1)
     y_nodes::Matrix{Float64} # (nx+1) x (ny+1)
@@ -80,11 +80,11 @@ end
 # ==============================================================================
 
 """
-    CurvilinearMesh3D <: AbstractParabolicMesh
+    CurvilinearMesh3D <: AbstractParabolicMesh{3}
 
 3D Body-fitted mesh defined by node coordinates `x_nodes`, `y_nodes`, `z_nodes`.
 """
-struct CurvilinearMesh3D <: AbstractParabolicMesh
+struct CurvilinearMesh3D <: AbstractParabolicMesh{3}
     x_nodes::Array{Float64, 3} # (nx+1) x (ny+1) x (nz+1)
     y_nodes::Array{Float64, 3}
     z_nodes::Array{Float64, 3}

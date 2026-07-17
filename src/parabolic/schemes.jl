@@ -1,7 +1,6 @@
 # Higher-order numerical schemes
 # Migrated from Simu.jl SimuFVM/schemes.jl
 
-using .ParabolicLimiters: limit_slope_1d
 
 """
     muscl_reconstruction_1d(phi, i, direction, limiter_type)

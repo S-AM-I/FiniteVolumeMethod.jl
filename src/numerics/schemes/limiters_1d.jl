@@ -1,33 +1,6 @@
-# Flux limiters for higher-order advection schemes (parabolic solver)
-# Migrated from Simu.jl SimuFVM/limiters.jl
-#
-# Core limiter functions (minmod, superbee, van_leer, venkatakrishnan,
-# barth_jespersen, koren, ospre) are now delegated to the canonical
-# implementations in src/schemes/limiters.jl.
-#
-# This module provides parabolic-solver-specific utilities:
-#   - Symbol-based limiter dispatch (apply_limiter(:minmod, r))
-#   - Slope ratio computation for 1D MUSCL reconstruction
-#   - Limited slope computation for 1D reconstruction
-#   - Automatic limiter selection heuristics
-
-"""
-    ParabolicLimiters
-
-Submodule providing slope-limiter utilities for the parabolic solver's MUSCL
-reconstruction.  Delegates core limiter functions (minmod, superbee, van_leer,
-etc.) to `src/schemes/limiters.jl` and adds symbol-based dispatch
-([`apply_limiter`](@ref)), 1D slope-ratio computation, and automatic limiter
-selection heuristics.
-"""
-module ParabolicLimiters
-
-# Import canonical limiter functions from the parent module (src/schemes/limiters.jl)
-using ..FiniteVolumeMethod: minmod, superbee, van_leer, venkatakrishnan,
-    barth_jespersen, koren, ospre
-
-# Re-export so existing `using .ParabolicLimiters: minmod` still works
-export minmod, superbee, van_leer, venkatakrishnan, barth_jespersen, koren, ospre
+# schemes/limiters_1d.jl — symbol-dispatch and 1D slope-limiter utilities
+# (formerly the ParabolicLimiters submodule; collapsed into Numerics so the
+# canonical limiter set lives in one place).
 
 """
     apply_limiter(limiter_type, r)
@@ -160,5 +133,3 @@ function limit_slope_1d(phi, i::Int, direction::Symbol, limiter_type::Symbol)
         end
     end
 end
-
-end # module ParabolicLimiters

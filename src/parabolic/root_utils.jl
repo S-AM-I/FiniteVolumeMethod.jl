@@ -1,14 +1,3 @@
-function _safe_get_triangle_props(mesh::FVMGeometry, T)
-    i, j, k = triangle_vertices(T)
-    props = mesh.triangle_props
-    if haskey(props, (i, j, k))
-        return (i, j, k), get_triangle_props(mesh, i, j, k)
-    elseif haskey(props, (j, k, i))
-        return (j, k, i), get_triangle_props(mesh, j, k, i)
-    else
-        return (k, i, j), get_triangle_props(mesh, k, i, j)
-    end
-end
 function _safe_get_triangle_props(prob::AbstractFVMProblem, T)
     return _safe_get_triangle_props(prob.mesh, T)
 end
@@ -47,16 +36,6 @@ function flatten_tuples(f::NTuple{N, Any}) where {N}
 end
 flatten_tuples(::Tuple{}) = ()
 
-@inline function eval_fnc_in_het_tuple(functions::Tuple, fidx, x, y, t, u)
-    return _eval_fnc_in_het_tuple(x, y, t, u, fidx, functions...)
-end
-@inline function _eval_fnc_in_het_tuple(x, y, t, u, fidx, f::F, fs...) where {F}
-    fidx == 1 && return _eval_fnc_in_het_tuple(x, y, t, u, fidx, f)
-    return _eval_fnc_in_het_tuple(x, y, t, u, fidx - 1, fs...)
-end
-@inline function _eval_fnc_in_het_tuple(x, y, t, u, fidx, f::F) where {F} # need fidx to avoid dispatch report
-    return f(x, y, t, u)
-end
 
 @inline function eval_all_fncs_in_tuple(functions::Tuple, x, y, t, α, β, γ)
     return _eval_all_fncs_in_tuple(x, y, t, α, β, γ, functions...)

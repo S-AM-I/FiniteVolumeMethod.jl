@@ -1,5 +1,5 @@
 """
-    AbstractFiniteVolumeMesh{Dim}
+    AbstractFVMesh{Dim}
 
 Umbrella supertype for every mesh type used by any solver family in this
 repository (parabolic vertex-centered, hyperbolic cell-centered, and
@@ -19,7 +19,10 @@ The umbrella type exists purely to let downstream library code write one
 Stage 1d generic fallbacks (`n_cells`, `n_faces`, `dim_of`) are defined
 below; concrete types override as needed.
 """
-abstract type AbstractFiniteVolumeMesh{Dim} end
+abstract type AbstractFVMesh{Dim} end
+
+# Retired v3 name for the unified root (kept as an alias; remove in Stage 8).
+const AbstractFiniteVolumeMesh = AbstractFVMesh
 
 """
     AbstractMesh{Dim}
@@ -27,7 +30,7 @@ abstract type AbstractFiniteVolumeMesh{Dim} end
 Abstract supertype for all mesh types in the hyperbolic solver framework.
 `Dim` is the spatial dimension (1, 2, or 3).
 """
-abstract type AbstractMesh{Dim} <: AbstractFiniteVolumeMesh{Dim} end
+abstract type AbstractMesh{Dim} <: AbstractFVMesh{Dim} end
 
 """
     ndims_mesh(mesh::AbstractMesh{Dim}) -> Int
@@ -99,19 +102,19 @@ function face_neighbor end
 # but error-verbose fallback so that mistakes surface loudly.
 
 """
-    dim_of(mesh::AbstractFiniteVolumeMesh{Dim}) -> Int
+    dim_of(mesh::AbstractFVMesh{Dim}) -> Int
 
 Spatial dimension of the mesh. Matches the type parameter `Dim`.
 """
-dim_of(::AbstractFiniteVolumeMesh{Dim}) where {Dim} = Dim
+dim_of(::AbstractFVMesh{Dim}) where {Dim} = Dim
 
 """
-    n_cells(mesh::AbstractFiniteVolumeMesh) -> Int
+    n_cells(mesh::AbstractFVMesh) -> Int
 
 Total number of cells (control volumes) in the mesh. Concrete types must
 implement this.
 """
-function n_cells(mesh::AbstractFiniteVolumeMesh)
+function n_cells(mesh::AbstractFVMesh)
     return error(
         "n_cells(::$(typeof(mesh))) not implemented; ",
         "concrete mesh types must override this generic method."
@@ -119,11 +122,11 @@ function n_cells(mesh::AbstractFiniteVolumeMesh)
 end
 
 """
-    n_faces(mesh::AbstractFiniteVolumeMesh) -> Int
+    n_faces(mesh::AbstractFVMesh) -> Int
 
 Total number of faces (both internal and boundary) in the mesh.
 """
-function n_faces(mesh::AbstractFiniteVolumeMesh)
+function n_faces(mesh::AbstractFVMesh)
     return error(
         "n_faces(::$(typeof(mesh))) not implemented; ",
         "concrete mesh types must override this generic method."

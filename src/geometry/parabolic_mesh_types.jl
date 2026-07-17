@@ -40,7 +40,7 @@ end
 
 Structured 1D computational mesh.
 """
-struct Mesh1D <: AbstractParabolicMesh
+struct Mesh1D <: AbstractParabolicMesh{1}
     nodes::Vector{Node1D}
     cells::Vector{Cell1D}
     faces::Vector{Face1D}
@@ -85,7 +85,7 @@ end
 
 Structured 2D computational mesh.
 """
-struct Mesh2D <: AbstractParabolicMesh
+struct Mesh2D <: AbstractParabolicMesh{2}
     nodes::Vector{Node2D}
     cells::Vector{Cell2D}
     faces::Vector{Face2D}
@@ -135,7 +135,7 @@ end
 
 Structured 3D computational mesh.
 """
-struct Mesh3D <: AbstractParabolicMesh
+struct Mesh3D <: AbstractParabolicMesh{3}
     nodes::Vector{Node3D}
     cells::Vector{Cell3D}
     faces::Vector{Face3D}

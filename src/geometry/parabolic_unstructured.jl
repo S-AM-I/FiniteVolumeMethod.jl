@@ -23,7 +23,7 @@ mutable struct UnstructuredCell2D <: AbstractCell
 end
 
 """Complete 2D unstructured mesh consisting of nodes, cells, and faces."""
-mutable struct UnstructuredMesh2D <: AbstractParabolicMesh
+mutable struct UnstructuredMesh2D <: AbstractParabolicMesh{2}
     nodes::Vector{Node2D}
     cells::Vector{UnstructuredCell2D}
     faces::Vector{UnstructuredFace2D}
@@ -161,7 +161,7 @@ struct UnstructuredCell3D <: AbstractCell
 end
 
 """Complete 3D unstructured mesh consisting of nodes, cells, and faces."""
-struct UnstructuredMesh3D <: AbstractParabolicMesh
+struct UnstructuredMesh3D <: AbstractParabolicMesh{3}
     nodes::Vector{Node3D}
     cells::Vector{UnstructuredCell3D}
     faces::Vector{UnstructuredFace3D}
