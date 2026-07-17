@@ -1704,3 +1704,72 @@ limitations = [
   "Drag closures: Ishii-Zuber (default for bubbly), Gibilaro (granular). No turbulent-dispersion or virtual-mass terms yet.",
   "Smoke-tested only — bubbly column, fluidized-bed, and stratified-flow published benchmarks are v3.2+ deferrals before stable promotion.",
 ]
+
+# ── Stage 4a: Experimental-quarantined scaffolds (manifest stubs) ──
+# These four directories live under the `Experimental` submodule (Stage 3h
+# quarantine). The stubs make the quarantine criterion honest — every shipped
+# feature is manifested — without claiming any validation status they do not
+# have. See `test/KNOWN_FAILURES.md` and the module docstrings for scope.
+
+[[features]]
+feature = "aeroacoustics"
+maturity = "experimental"
+validation = "targeted_tests"
+role = "experimental_sandbox"
+solver_family = "research_tooling"
+precision_policy = "not_applicable"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+summary = "Acoustic-analogy post-processing scaffold. `fwh_farassat1a` is a real retarded-time FW-H Farassat 1A implementation for static surfaces (validated to within ~0.1% amplitude against analytic monopole/dipole references); the legacy static-sum functions are documented near-field snapshot approximations."
+limitations = [
+  "Quarantined under `Experimental` — entry points warn once per session.",
+  "Lighthill quadrupole term is a stub; the 'PML' absorbing layer is a plain damping sponge zone, not a perfectly matched layer.",
+  "No coupling to the flow solvers' time loops beyond user-supplied surface time series; no moving-surface (rotor) Farassat formulation.",
+]
+
+[[features]]
+feature = "population_balance"
+maturity = "experimental"
+validation = "smoke_tests"
+role = "experimental_sandbox"
+solver_family = "research_tooling"
+precision_policy = "not_applicable"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+summary = "0-D population-balance moment/class kernel library (QMoM, DQMoM, Class Method) for aggregation/breakage closures. Deliberately not coupled to spatial transport."
+limitations = [
+  "Quarantined under `Experimental` — entry points warn once per session.",
+  "0-D only: kernels operate on a single well-mixed control volume; wiring into species/scalar transport is deliberately deferred pending dedicated V&V.",
+]
+
+[[features]]
+feature = "solid_mechanics"
+maturity = "experimental"
+validation = "smoke_tests"
+role = "experimental_sandbox"
+solver_family = "research_tooling"
+precision_policy = "not_applicable"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+summary = "FVM solid-mechanics scaffold: decoupled per-component Poisson-type displacement solve (not full coupled elasticity)."
+limitations = [
+  "Quarantined under `Experimental` — entry points warn once per session.",
+  "Default solve decouples displacement components; inter-component shear coupling is absent.",
+  "`traction_bcs` are not consumed by the solvers and throw if supplied.",
+]
+
+[[features]]
+feature = "fsi"
+maturity = "experimental"
+validation = "smoke_tests"
+role = "experimental_sandbox"
+solver_family = "research_tooling"
+precision_policy = "not_applicable"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+summary = "Fluid-structure interaction scaffold: generic Aitken-Δ² accelerated fixed-point iteration over user-supplied fluid/solid callbacks with matching-mesh (1:1) interface transfer."
+limitations = [
+  "Quarantined under `Experimental` — entry points warn once per session.",
+  "No adapters to the package's PISO or solid-mechanics solvers exist; only exercised against a mock 1-DOF spring-damper.",
+  "Interface transfer supports matching meshes only (1:1 copy); no conservative interpolation between non-matching interfaces.",
+]
