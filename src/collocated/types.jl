@@ -6,7 +6,7 @@
 # produce SciMLBase-compatible LinearProblem / ODEFunction outputs.
 
 using LinearAlgebra: norm
-using SparseArrays: SparseArrays, spzeros, SparseMatrixCSC
+using SparseArrays: SparseArrays, SparseMatrixCSC
 
 # ── Abstract hierarchy ───────────────────────────────────────────────
 

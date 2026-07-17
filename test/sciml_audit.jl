@@ -16,34 +16,37 @@ using SciMLBase
     # ------------------------------------------------------------------
     # 1. Limiter unification
     # ------------------------------------------------------------------
-    @testset "Limiter unification — ParabolicLimiters delegates to canonical" begin
-        # Core limiter functions should be identical (same function object)
+    @testset "Limiter unification — single canonical implementation" begin
+        # The former ParabolicLimiters submodule was dissolved into
+        # Numerics (Stage 3c); the canonical limiters and the 1D slope
+        # helpers are one implementation reachable from the top level.
+        @test FiniteVolumeMethod.minmod === FiniteVolumeMethod.Numerics.minmod
+        @test FiniteVolumeMethod.superbee === FiniteVolumeMethod.Numerics.superbee
+        @test FiniteVolumeMethod.van_leer === FiniteVolumeMethod.Numerics.van_leer
+        @test FiniteVolumeMethod.ospre === FiniteVolumeMethod.Numerics.ospre
+
         for val_pair in [(1.0, 2.0), (-1.0, 2.0), (0.5, 0.5), (3.0, -1.0)]
             a, b = val_pair
-            @test ParabolicLimiters.minmod(a, b) === minmod(a, b)
-            @test ParabolicLimiters.superbee(a, b) === superbee(a, b)
-            @test ParabolicLimiters.van_leer(a, b) === van_leer(a, b)
+            @test isfinite(minmod(a, b))
+            @test isfinite(superbee(a, b))
+            @test isfinite(van_leer(a, b))
         end
 
-        for r in [0.0, 0.5, 1.0, 2.0, -1.0]
-            @test ParabolicLimiters.ospre(r) === ospre(r)
-        end
-
-        # ParabolicLimiters-specific helpers still work
+        # 1D slope helpers relocated from the dissolved submodule
         phi = [1.0, 2.0, 4.0, 7.0, 11.0]
-        slope = ParabolicLimiters.limit_slope_1d(phi, 3, :left, :minmod)
+        slope = FiniteVolumeMethod.limit_slope_1d(phi, 3, :left, :minmod)
         @test isfinite(slope)
 
-        ratio = ParabolicLimiters.compute_slope_ratio_1d(phi, 3, :left)
+        ratio = FiniteVolumeMethod.compute_slope_ratio_1d(phi, 3, :left)
         @test isfinite(ratio)
 
         # Symbol-based dispatch works
-        @test ParabolicLimiters.apply_limiter(:minmod, 0.5) == minmod(0.5, 1.0)
-        @test ParabolicLimiters.apply_limiter(:superbee, 0.5) == superbee(0.5, 1.0)
+        @test FiniteVolumeMethod.apply_limiter(:minmod, 0.5) == minmod(0.5, 1.0)
+        @test FiniteVolumeMethod.apply_limiter(:superbee, 0.5) == superbee(0.5, 1.0)
 
         # Strategy selection works
-        @test ParabolicLimiters.select_limiter_strategy(:conservative) == :minmod
-        @test ParabolicLimiters.select_limiter_strategy(:accuracy) == :van_leer
+        @test FiniteVolumeMethod.select_limiter_strategy(:conservative) == :minmod
+        @test FiniteVolumeMethod.select_limiter_strategy(:accuracy) == :van_leer
     end
 
     # ------------------------------------------------------------------

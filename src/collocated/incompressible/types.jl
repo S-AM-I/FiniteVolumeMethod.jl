@@ -5,7 +5,6 @@
 # types.  These are the foundational types used by all other files in
 # `src/incompressible/`.
 
-using SparseArrays: nzrange
 
 # ── Abstract coupling hierarchy ─────────────────────────────────────
 

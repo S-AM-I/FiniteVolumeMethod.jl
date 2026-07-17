@@ -145,6 +145,13 @@ include("core/split_construction.jl")
 include("core/sciml_contract.jl")
 include("core/results.jl")
 
+# Multi-physics operator splitting (Stage 3f: moved in from flat
+# coupling/ — it consumes only Hyperbolic + Geometry names).
+include("coupling/abstract_coupling.jl")
+include("coupling/operators.jl")
+include("coupling/data_transfer.jl")
+include("coupling/coupled_solve.jl")
+
 # Public API (re-exported from the main module).
 export
     # Conservation laws
@@ -248,6 +255,11 @@ export
     get_primitive, get_coordinates, get_ct_state,
     # Canonical SciML contract
     sciml_problem, fvm_symbolic_index, solution_accessor, solution_snapshot,
-    solution_coordinates, solution_state_layout, solution_variables
+    solution_coordinates, solution_state_layout, solution_variables,
+    # Multi-physics coupling (operator splitting)
+    AbstractOperator, AbstractSplittingScheme, LieTrotterSplitting,
+    StrangSplitting, CoupledProblem, HyperbolicOperator, SourceOperator,
+    advance!, compute_operator_dt, solve_coupled, cell_to_vertex,
+    vertex_to_cell
 
 end # module Hyperbolic

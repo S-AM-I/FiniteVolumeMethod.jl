@@ -13,7 +13,7 @@
 # elsewhere in the package.
 
 using LinearAlgebra: cross, dot, norm
-using StaticArrays: SVector, SMatrix, @SVector, @SMatrix
+using StaticArrays: SVector, SMatrix, @SVector
 
 @doc """
     RigidBody6DOF{T}

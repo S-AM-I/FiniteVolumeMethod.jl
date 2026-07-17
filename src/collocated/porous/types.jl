@@ -17,7 +17,7 @@
 # Reference: Whitaker (1996), "The Forchheimer equation: a theoretical
 # development"; standard treatment in every industrial CFD code.
 
-using StaticArrays: SVector, SMatrix, Diagonal as SDiagonal
+using StaticArrays: SVector, SMatrix
 
 """
     AbstractPorousModel{Dim, T}
