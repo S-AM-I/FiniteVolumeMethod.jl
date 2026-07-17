@@ -1,6 +1,7 @@
 # test/v_and_v_collocated_refine.jl — refinement + coarsening conservation V&V.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CoarseningPlan, RefinementPlan, apply_coarsening!, apply_refinement!, mark_for_refinement
 using Test
 
 include("TestHelpers.jl")

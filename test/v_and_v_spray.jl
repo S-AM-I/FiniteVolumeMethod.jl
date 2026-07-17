@@ -20,6 +20,7 @@
 #   7. d_child ∝ (1/We)^(1/3) at fixed d_parent.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: TABBreakup, breakup_diameter, should_breakup, weber_number
 using StaticArrays
 using Test
 

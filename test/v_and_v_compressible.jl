@@ -9,6 +9,7 @@
 # only; no published benchmarks.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: BoussinesqThermo, IdealGas, IncompressibleThermo, density_at, is_compressible, viscosity_at
 using LinearSolve
 using StaticArrays: SVector
 using Test

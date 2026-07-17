@@ -1,6 +1,7 @@
 # test/v_and_v_cht_problem.jl — ConjugateHeatTransferProblem V&V (v3.76)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: ConjugateHeatTransferProblem
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using StaticArrays
 using Test

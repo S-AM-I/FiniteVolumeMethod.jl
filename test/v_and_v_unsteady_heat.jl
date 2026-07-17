@@ -17,6 +17,7 @@
 # contributing toward future `stable` promotion.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: solve_solid_conduction
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using Test

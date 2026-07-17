@@ -1,6 +1,7 @@
 # test/v_and_v_gmsh_pipeline.jl — Gmsh automation stub V&V.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: GmshPipeline, auto_remediate!, run_gmsh_pipeline
 using Test
 
 @testset "V&V: GmshPipeline — constructor round-trip" begin

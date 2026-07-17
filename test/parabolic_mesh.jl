@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CellField, STATEVAR, build_axisymmetric_rz_mesh, generate_mesh_1d, generate_mesh_2d
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 
 @testset "Parabolic Mesh" begin

@@ -22,6 +22,9 @@ using ..Numerics
 # _solve_linear extension point (called by Numerics._dispatch_solve);
 # a bare `using` would shadow it and break every field sub-solve.
 import ..Numerics: _solve_linear
+# _dispatch_solve is unexported as of Stage 4c; the incompressible,
+# dynamic-mesh, and multiphase solver files call it bare.
+using ..Numerics: _dispatch_solve
 using ..Parabolic
 # lagrangian/injection.jl adds DPM injection methods to the particle
 # verb owned by Parabolic (parabolic/particles.jl) — one shared generic.
@@ -177,43 +180,17 @@ export
     set_particle_properties!, should_breakup, solve_ale, solve_incompressible, solve_simple,
     solve_vof, stokes_limit_drag, to_linear_problem, turbulence_intensity, update_mesh!,
     update_mixture_properties!, verify_gcl, weber_number, zz_error_indicator
-# Re-exported Collocated.Physics API incl. test-consumed internals
-# (temporary over-export, curated in Stage 4).
+# Re-exported Collocated.Physics public API (Stage 4c: the underscore
+# internals are no longer exported anywhere; they stay reachable in this
+# module via the selective `using .Physics:` block below, which the main
+# module's qualified passthrough imports resolve against).
 export
     T_from_h,
     h_from_T,
-    _sym_self_magnitude_sq,
-    _durbin_C_T,
-    _wall_projection,
     patankar_interface_coupling,
     EquilibriumWMLES,
     IDDES,
     WSGGMModel,
-    _EDC_FALLBACK_MIXING_RATE,
-    _apply_durbin_cap!,
-    _blend,
-    _cell_absorption,
-    _ddes_length_scale,
-    _ddes_shielding,
-    _iddes_alpha,
-    _iddes_f_B,
-    _iddes_f_d_tilde,
-    _iddes_f_dt,
-    _iddes_f_e,
-    _iddes_r_dl,
-    _iddes_r_dt,
-    _s12_quadrature,
-    _s2_quadrature,
-    _s4_quadrature,
-    _s6_quadrature,
-    _s8_quadrature,
-    _sa_fv1,
-    _species_index,
-    _sst_F1,
-    _sst_F2,
-    _sym_contract,
-    _test_filter,
-    _update_turbulence!,
     compute_band_emissivity,
     compute_band_weight,
     enthalpy_bcs_from_temperature,

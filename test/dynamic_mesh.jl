@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractMotionSolver, LaplacianMotion, MeshMotionState, SolveResult, ale_corrected_flux, compute_displacement!, compute_mesh_flux!, shift, update_mesh!
 using FiniteVolumeMethod.Parabolic: NeumannBC
 using Test
 using LinearAlgebra

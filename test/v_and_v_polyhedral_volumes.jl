@@ -1,6 +1,7 @@
 # test/v_and_v_polyhedral_volumes.jl — polyhedral volume primitives V&V (v3.101)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: volume_hex, volume_prism, volume_pyramid, volume_tet
 using Test
 
 include("TestHelpers.jl")

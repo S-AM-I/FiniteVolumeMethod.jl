@@ -19,6 +19,7 @@
 # `convergence_verified` on the transport side.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CONV_UPWIND, CollocatedEquation, assemble_convection!, assemble_species!, face_normal_area, solve_species!, to_linear_problem
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using StaticArrays

@@ -109,10 +109,10 @@ export
     pl_interpolate, create_muscl_problem, DiffusionEquation, LinearReactionDiffusionEquation,
     MeanExitTimeProblem, PoissonsEquation, LaplacesEquation, AdvectionDiffusionEquation,
     AnisotropicDiffusionEquation, make_rotation_tensor, make_spatially_varying_tensor, to_odefunction,
-    to_linearproblem, AbstractFVMTemplate, fvm_eqs!, _neqs,
+    to_linearproblem, AbstractFVMTemplate, fvm_eqs!,
     update_dirichlet_nodes!,
     AbstractField, AbstractConfig, AbstractOutputManager,
     get_coordinate_system,
-    InvalidFluxError, _get_boundary_flux, apply_dirichlet_conditions!, apply_dudt_conditions!, apply_steady_dirichlet_conditions!, boundary_edge_contributions!, construct_flux_function, eval_all_fncs_in_tuple, eval_condition_fnc, eval_flux_function, eval_source_fnc, fix_missing_vertices!, flatten_tuples, fvm_eqs!, fvm_eqs_single_source_contribution!, fvm_eqs_single_triangle!, get_boundary_cv_components, get_boundary_fluxes, get_conditions, get_constrained_fidx, get_cv_components, get_dirichlet_fidx, get_dirichlet_nodes, get_dudt_fidx, get_flux, get_fluxes, get_neumann_fidx, get_shape_function_coefficients, get_source_contribution, get_triangle_props, get_volume, has_condition, has_dirichlet_nodes, is_constrained_edge, is_dirichlet_node, is_dudt_node, is_neumann_edge, is_system, map_fidx, triangle_contributions!
+    InvalidFluxError, apply_dirichlet_conditions!, apply_dudt_conditions!, apply_steady_dirichlet_conditions!, boundary_edge_contributions!, construct_flux_function, eval_all_fncs_in_tuple, eval_condition_fnc, eval_flux_function, eval_source_fnc, fix_missing_vertices!, flatten_tuples, fvm_eqs!, fvm_eqs_single_source_contribution!, fvm_eqs_single_triangle!, get_boundary_cv_components, get_boundary_fluxes, get_conditions, get_constrained_fidx, get_cv_components, get_dirichlet_fidx, get_dirichlet_nodes, get_dudt_fidx, get_flux, get_fluxes, get_neumann_fidx, get_shape_function_coefficients, get_source_contribution, get_triangle_props, get_volume, has_condition, has_dirichlet_nodes, is_constrained_edge, is_dirichlet_node, is_dudt_node, is_neumann_edge, is_system, map_fidx, triangle_contributions!
 
 end # module Parabolic

@@ -1,6 +1,8 @@
 # test/stage6_physics.jl — Stage 6 MRF / porous / cavitation / FW-H / PBM gates
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: FWHObserver, FWHSurface, curle_dipole_pressure, fwh_monopole_pressure, qmom_moment_source_growth, qmom_recover_abscissae_weights
+using FiniteVolumeMethod: DarcyForchheimerPorous, DarcyPorous, KunzCavitation, MerkleCavitation, RotationalMRFZone, SchnerrSauerCavitation, cavitation_source, mrf_momentum_source, porous_momentum_source
 using Test
 using StaticArrays: SVector
 using LinearAlgebra: norm

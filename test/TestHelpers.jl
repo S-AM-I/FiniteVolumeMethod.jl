@@ -6,6 +6,7 @@
 # Keep this file bare (no `module` wrapper) so a plain `include` works.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: UnstructuredFVMMesh, cell_idx
 
 """
     build_cartesian_unstructured_mesh(nx, ny, Lx, Ly)

@@ -1,6 +1,7 @@
 # test/v_and_v_qgen.jl — SolidThermalProperties.Q_gen volumetric heat V&V (v3.88)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: solve_solid_conduction
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test

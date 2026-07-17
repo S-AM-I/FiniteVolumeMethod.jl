@@ -20,6 +20,7 @@
 #   4. Monotone ν_t(χ) at fixed ν̃: increasing χ increases ν_t.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: RANSTurbulenceState
 using StaticArrays
 using Test
 

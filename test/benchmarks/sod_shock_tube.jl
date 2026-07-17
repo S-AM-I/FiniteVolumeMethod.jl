@@ -32,6 +32,7 @@
 # Runs only when ENV["FVM_RUN_BENCHMARKS"] == "true".
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CPUBackend, cell_center
 using OrdinaryDiffEq
 using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: ReturnCode

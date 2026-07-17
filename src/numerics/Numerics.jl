@@ -58,10 +58,14 @@ export AbstractLinearOperator, SparseMatrixLinearOperator, MatrixFreeError,
     underlying_matrix, as_linear_operator, MatrixFreeLinearOperator
 export FVMSolverConfig, FieldSolverConfig, default_solver_config,
     build_preconditioner, PETScLinearSolver
-# Temporary over-exports for the still-flat remainder (Stage 4 curates)
-export _dispatch_solve, _cpu_backend_only, _unsupported_backend,
+export autodiff_forward_step, compute_slope_ratio, limit_gradient
+# Supported-but-unexported extension seams (Stage 4c): the linear-solve
+# dispatch chain extended by package extensions (ILU/AMG/LinearSolve) and
+# the collocated/experimental solver loops. Consumers import them
+# explicitly; extensions add methods via qualified FiniteVolumeMethod.NAME.
+using Compat: @compat
+@compat public _dispatch_solve, _cpu_backend_only, _unsupported_backend,
     _solve_with_config, _resolve_solver, _try_krylov_solver,
-    _extension_preconditioner, _solve_linear, autodiff_forward_step,
-    compute_slope_ratio, limit_gradient
+    _extension_preconditioner, _solve_linear
 
 end # module Numerics

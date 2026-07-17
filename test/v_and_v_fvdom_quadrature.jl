@@ -16,6 +16,7 @@
 #      weights so Σ w = 2π for 2D S2, 4π for 3D S2).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_radiation_source
 using LinearAlgebra: norm
 using StaticArrays
 using Test

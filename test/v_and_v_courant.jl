@@ -27,6 +27,7 @@
 # of `postprocessing`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_courant_number, compute_q_criterion, face_normal_area
 using StaticArrays
 using Test
 

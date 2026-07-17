@@ -1,6 +1,7 @@
 # test/turbulence_correctness.jl — Stage 4 correctness gates
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: solve_turbulence!
 using Test
 using StaticArrays: SVector
 using LinearAlgebra: norm

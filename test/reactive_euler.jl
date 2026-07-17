@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractConservationLaw, euler_conserved, euler_primitive, evaluate_stiff_source, solve_riemann, species_mass_fractions, species_partial_densities, stiff_source_jacobian, variable_names
 using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays

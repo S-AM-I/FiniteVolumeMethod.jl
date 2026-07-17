@@ -19,6 +19,7 @@
 #   5. Biaxial stretching U = (α·x, −α·y) ⇒ |S| = 2·|α|.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_strain_rate
 using StaticArrays
 using Test
 

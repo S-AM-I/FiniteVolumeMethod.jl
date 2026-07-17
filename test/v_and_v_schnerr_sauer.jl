@@ -9,6 +9,7 @@
 #   5. α_v = 0 or α_v = 1 ⇒ source vanishes.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_vapor_source
 using Test
 
 const SSM = FiniteVolumeMethod.SchnerrSauerModel

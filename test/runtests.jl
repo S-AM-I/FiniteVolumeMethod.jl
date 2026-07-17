@@ -1,4 +1,6 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: LocalFVMMesh, SnappyMesher
+using FiniteVolumeMethod: AbstractLinearOperator, CollocatedEquation, RadiationState, clip_alpha!, find_nearest_cell, update_mesh!, verify_gcl
 using Test
 using Dates
 using Aqua

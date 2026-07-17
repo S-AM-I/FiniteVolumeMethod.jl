@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: build_preconditioner, default_solver_config
 using Test
 using LinearAlgebra
 using SparseArrays

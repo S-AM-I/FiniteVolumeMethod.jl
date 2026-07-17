@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractOperator, AbstractSplittingScheme, CoupledProblem, HyperbolicOperator, ResistiveSource, SourceOperator, UnstructuredHyperbolicMesh, cell_to_vertex, compute_dt, compute_operator_dt, vertex_to_cell
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqSDIRK: KenCarp47
 using ADTypes: AutoFiniteDiff

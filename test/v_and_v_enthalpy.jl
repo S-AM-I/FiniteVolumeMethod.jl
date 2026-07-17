@@ -17,6 +17,7 @@
 # All tests run on a small Cartesian mesh; the algebraic checks dominate.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: shift, solve_incompressible_thermal
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 using LinearSolve
 using StaticArrays

@@ -27,6 +27,7 @@
 #       closed domain.)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SolveResult
 using LinearSolve
 using StaticArrays
 using Test

@@ -23,6 +23,7 @@
 # future stable promotion.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_strain_rate
 using StaticArrays
 using Test
 

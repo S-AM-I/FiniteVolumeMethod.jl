@@ -1,6 +1,7 @@
 # test/v_and_v_snappy_native.jl — castellated + snap invariants (v3.1).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: SnappyMesher
 using FiniteVolumeMethod:
     read_stl_ascii, write_stl_ascii,
     build_castellated_mesh, build_snappy_mesh,

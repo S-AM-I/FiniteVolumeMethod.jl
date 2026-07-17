@@ -5,6 +5,7 @@
 # Gated on CUDA.functional() — skips gracefully on non-GPU systems.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CPUBackend, CUDASolverBackend, backend_summary, initialize_2d, supports_backend
 using StaticArrays
 using Test
 

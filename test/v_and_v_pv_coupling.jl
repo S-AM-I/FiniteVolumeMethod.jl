@@ -1,6 +1,7 @@
 # test/v_and_v_pv_coupling.jl — SIMPLE/PISO/PIMPLE constructor V&V (v3.86)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractPVCoupling
 using Test
 
 include("TestHelpers.jl")

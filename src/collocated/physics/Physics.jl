@@ -12,6 +12,9 @@ module Physics
 
 using ...Geometry
 using ...Numerics
+# _dispatch_solve is unexported as of Stage 4c; the turbulence/thermal/
+# radiation/combustion solver files call it bare.
+using ...Numerics: _dispatch_solve
 using ...Parabolic
 # physics/turbulence/k_epsilon.jl defines the converting constructor
 # KEpsilon(::StandardKEpsilon) — import so it extends the
@@ -106,43 +109,15 @@ include("combustion/multi_step.jl")
 include("combustion/fgm.jl")
 include("combustion/solvers.jl")
 
-# Internals consumed by tests/docs as FiniteVolumeMethod.<name>
-# (temporary over-export, curated in Stage 4).
+# Supported internals consumed by tests/docs as FiniteVolumeMethod.<name>
+# (reached via the main module's qualified passthrough imports).
 export
     T_from_h,
     h_from_T,
-    _sym_self_magnitude_sq,
-    _durbin_C_T,
-    _wall_projection,
     patankar_interface_coupling,
     EquilibriumWMLES,
     IDDES,
     WSGGMModel,
-    _EDC_FALLBACK_MIXING_RATE,
-    _apply_durbin_cap!,
-    _blend,
-    _cell_absorption,
-    _ddes_length_scale,
-    _ddes_shielding,
-    _iddes_alpha,
-    _iddes_f_B,
-    _iddes_f_d_tilde,
-    _iddes_f_dt,
-    _iddes_f_e,
-    _iddes_r_dl,
-    _iddes_r_dt,
-    _s12_quadrature,
-    _s2_quadrature,
-    _s4_quadrature,
-    _s6_quadrature,
-    _s8_quadrature,
-    _sa_fv1,
-    _species_index,
-    _sst_F1,
-    _sst_F2,
-    _sym_contract,
-    _test_filter,
-    _update_turbulence!,
     compute_band_emissivity,
     compute_band_weight,
     enthalpy_bcs_from_temperature,

@@ -20,6 +20,8 @@
 
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: LocalFVMMesh, build_local_mesh
+using FiniteVolumeMethod: UnstructuredFVMMesh
 
 include(joinpath(@__DIR__, "TestHelpers.jl"))
 

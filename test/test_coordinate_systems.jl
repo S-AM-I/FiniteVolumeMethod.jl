@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod: Spherical, geometric_flux_weight, geometric_volume_weight, get_coordinate_system
 using DelaunayTriangulation
 
 @testset "Coordinate Systems" begin

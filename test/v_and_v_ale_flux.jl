@@ -12,6 +12,7 @@
 # mesh-velocity contribution. Five invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: ale_corrected_flux
 using Test
 
 include("TestHelpers.jl")

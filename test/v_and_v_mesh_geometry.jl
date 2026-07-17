@@ -14,6 +14,7 @@
 #   4. Face area magnitudes match Lx/Nx or Ly/Ny per direction.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: face_normal_area
 using LinearAlgebra: norm
 using StaticArrays
 using Test

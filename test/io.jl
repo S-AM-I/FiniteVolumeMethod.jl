@@ -1,6 +1,7 @@
 using Test
 using Dates
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CheckpointManager, Diagnostic, IntegralMonitor, Mesh1D, OutputManager, OutputSchedule, OutputTarget, Probe, Provenance, SimulationConfig, compute_integral, conservation_summary, ensure_extension, ensure_output_dirs, flux_inout, generate_mesh_1d, load_checkpoint, load_model_package, print_scientific, read_solution_hdf5, safe_filename, sample_probe, save_checkpoint, save_model_package, stringify_keys, validate_schedule, volume_integral, write_line_vtk, write_solution_hdf5, write_structured_vtk_3d
 using HDF5
 using JLD2
 using StaticArrays

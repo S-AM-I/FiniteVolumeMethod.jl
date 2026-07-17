@@ -106,6 +106,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 
 # Let us start by writing out the contribution from all the triangles.
 using FiniteVolumeMethod
+using FiniteVolumeMethod: DiffusionEquation
 const FVM = FiniteVolumeMethod
 function triangle_contributions!(
         A, mesh, conditions, diffusion_function, diffusion_parameters

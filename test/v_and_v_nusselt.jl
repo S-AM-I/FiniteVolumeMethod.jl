@@ -9,6 +9,7 @@
 # Six invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_nusselt_number, compute_y_plus
 using StaticArrays
 using Test
 

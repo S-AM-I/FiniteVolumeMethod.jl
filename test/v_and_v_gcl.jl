@@ -20,6 +20,7 @@
 # `smoke_tested` to `provisional`/`convergence_verified`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MeshMotionState, compute_displacement!, update_mesh!, verify_gcl
 using LinearAlgebra: norm
 using StaticArrays
 using Test

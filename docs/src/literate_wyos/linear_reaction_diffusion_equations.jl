@@ -23,6 +23,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # We can also reuse `apply_dirichlet_conditions!`, `apply_dudt_conditions`, and
 # `boundary_edge_contributions!` from the diffusion equation example. Here is our implementation.
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
+using FiniteVolumeMethod: LinearReactionDiffusionEquation
 using SciMLBase: MatrixOperator
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(

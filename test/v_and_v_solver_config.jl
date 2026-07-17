@@ -14,6 +14,7 @@
 #   4. Unknown solver symbols throw an error.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: default_solver_config
 using Test
 
 include("TestHelpers.jl")

@@ -8,6 +8,7 @@
 #   - recovers the closed-form `k_f(T)` at multiple temperatures.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_arrhenius_reaction_rates, compute_multi_step_rates, one_step_arrhenius_mechanism
 using Test
 
 include("TestHelpers.jl")

@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: RanzMarshall, SchillerNaumann, compute_drag_force, compute_energy_source, compute_momentum_source, compute_particle_heat_transfer
 using Test
 using LinearAlgebra
 using StaticArrays

@@ -1,6 +1,7 @@
 # test/v_and_v_equation_types.jl — CollocatedEquation constructor V&V (v3.87)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, add_diag!, to_linear_problem
 using Test
 
 include("TestHelpers.jl")

@@ -24,6 +24,10 @@ using ..Numerics: AbstractEOS, IdealGasEOS, StiffenedGasEOS, pressure,
 # euler_3d.jl defines the 5-argument 3D total_energy methods — import so they
 # extend the Numerics generic rather than shadow it (Stage-3 recipe).
 import ..Numerics: total_energy
+# Supported-but-unexported internal drivers behind the SciML solve surface
+# (threaded/GPU/parity paths; ext/FVMCUDAExt extends _solve_hyperbolic).
+using Compat: @compat
+@compat public solve_hyperbolic, solve_hyperbolic_imex
 # core/sciml_contract.jl and core/results.jl dispatch on the parabolic
 # problem types (sciml_problem/solution_accessor are cross-family verbs).
 using ..Parabolic: FVMProblem, FVMSystem, SteadyFVMProblem, AbstractFVMTemplate

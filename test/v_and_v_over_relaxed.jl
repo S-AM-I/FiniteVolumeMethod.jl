@@ -16,6 +16,7 @@
 #      for the OVER_RELAXED mode.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, NON_ORTHO_OVER_RELAXED, assemble_laplacian!, shift, to_linear_problem
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearAlgebra: dot, norm
 using LinearSolve

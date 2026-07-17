@@ -22,6 +22,7 @@
 # Runs only when ENV["FVM_RUN_BENCHMARKS"] == "true".
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CONV_LINEAR, continuity_residual_interior
 using LinearSolve
 using StaticArrays: SVector
 using Test

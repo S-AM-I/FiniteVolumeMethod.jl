@@ -1,6 +1,7 @@
 # test/v_and_v_unitful.jl — Unitful hook round-trip without Unitful.jl.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: annotate_units, is_unitful, strip_units
 using Test
 
 @testset "V&V: strip_units — plain Number passthrough" begin

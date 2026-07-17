@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractConservationLaw, StiffenedGasEOS, cell_volume, internal_energy, solve_riemann, sound_speed, thermal_conductivity, viscous_flux_1d, viscous_flux_x_2d, viscous_flux_y_2d, wave_speeds
 using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test

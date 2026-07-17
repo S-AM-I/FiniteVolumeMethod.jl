@@ -60,6 +60,7 @@ end
 # Let us now define the function which gives us our matrices $\vb A$ and $\vb b$. We will
 # return the problem as a `LinearProblem` from LinearSolve.jl.
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
+using FiniteVolumeMethod: MeanExitTimeProblem
 const FVM = FiniteVolumeMethod
 function met_problem(
         mesh::FVMGeometry,

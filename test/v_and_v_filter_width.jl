@@ -14,6 +14,7 @@
 # Puts `turbulence_les` at three convergence-verified benchmarks.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_filter_width
 using StaticArrays
 using Test
 

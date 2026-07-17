@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: InflowBC, Spherical, cell_center, cell_idx_3d, cell_ijk, cell_volume, ndims_mesh, solve_riemann, sound_speed, wave_speeds
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqLowOrderRK: Euler
 using Test

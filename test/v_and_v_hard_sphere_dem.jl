@@ -13,6 +13,7 @@
 # - Off-centre collision preserves tangential velocities
 
 using LinearAlgebra: dot, norm
+using FiniteVolumeMethod: AbstractParticle, LagrangianParticle, UnstructuredFVMMesh
 using StaticArrays
 using Test
 

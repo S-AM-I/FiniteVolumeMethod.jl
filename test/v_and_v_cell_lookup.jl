@@ -1,6 +1,7 @@
 # test/v_and_v_cell_lookup.jl — find_nearest_cell V&V (v3.83)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: find_nearest_cell
 using LinearAlgebra: norm
 using StaticArrays
 using Test

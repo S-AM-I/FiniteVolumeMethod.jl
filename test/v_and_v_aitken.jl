@@ -15,6 +15,7 @@
 #      factor 1/(1−α) for a geometric residual sequence δ_{k+1} = α δ_k.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: AitkenRelaxation
 using Test
 using LinearAlgebra: dot, norm
 

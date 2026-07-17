@@ -1,6 +1,7 @@
 # test/v_and_v_zz_indicator.jl — ZZ recovery-based error indicator V&V.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: zz_error_indicator
 using Test
 
 include("TestHelpers.jl")

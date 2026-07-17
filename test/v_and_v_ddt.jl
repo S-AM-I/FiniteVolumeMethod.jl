@@ -1,6 +1,7 @@
 # test/v_and_v_ddt.jl — temporal ddt assembly primitives V&V (v3.99)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, TIME_BDF2, TIME_EULER, TimeScheme, assemble_ddt!, assemble_ddt_bdf2!, assemble_ddt_crank_nicolson!, assemble_ddt_euler!
 using Test
 
 include("TestHelpers.jl")

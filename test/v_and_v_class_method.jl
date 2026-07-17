@@ -11,6 +11,7 @@
 # 5. Zero kernel / zero selection ⇒ zero source.
 
 using LinearAlgebra
+using FiniteVolumeMethod: shift
 using Test
 
 _experimental_warn(::Symbol) = nothing # no-op shim: source included standalone, outside module Experimental

@@ -5,6 +5,7 @@
 # the unity-Le limit exactly.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: VariableLewis, lewis_number, species_diffusivity
 using Test
 
 include("TestHelpers.jl")

@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_dt_2d, solve_riemann, sound_speed
 using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 using Test

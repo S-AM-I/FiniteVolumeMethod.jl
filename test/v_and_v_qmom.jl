@@ -15,6 +15,7 @@
 #    up to rtol 1e-12.
 
 using LinearAlgebra
+using FiniteVolumeMethod.Experimental: qmom_recover_abscissae_weights
 using Test
 
 _experimental_warn(::Symbol) = nothing # no-op shim: source included standalone, outside module Experimental

@@ -6,6 +6,7 @@
 # and multi-rate (subcycling) time stepping.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AMRBlock, PositivityLimiter, SubcyclingScheme, apply_positivity_limiter!, apply_positivity_limiter_2d!, limit_reconstructed_states, nghost, reconstruct_interface, total_substeps
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays

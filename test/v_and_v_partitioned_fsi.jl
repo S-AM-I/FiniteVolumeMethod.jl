@@ -21,6 +21,7 @@
 #      Aitken for the contractive case.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: AitkenRelaxation, FSIInterface
 using Test
 using LinearAlgebra: norm
 using StaticArrays: SVector

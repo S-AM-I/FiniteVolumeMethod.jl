@@ -11,6 +11,7 @@
 # Four algebraic invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_interface_heat_flux, solve_solid_conduction
 using LinearAlgebra: norm
 using LinearSolve
 using Test

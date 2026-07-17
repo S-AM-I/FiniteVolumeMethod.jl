@@ -9,6 +9,7 @@
 # when dispatching across parabolic, hyperbolic, and collocated families.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractFVMBoundaryCondition, AbstractFVMMesh, AbstractFVMSolution, AbstractFiniteVolumeMesh, AbstractLinearOperator, MatrixFreeError, SparseMatrixLinearOperator, as_linear_operator, dim_of, is_fvm_solution, n_faces, underlying_matrix
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 using Test
 using DelaunayTriangulation

@@ -1,6 +1,7 @@
 # test/v_and_v_species_index.jl — _species_index lookup V&V (v3.82)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_arrhenius_reaction_rates, compute_edm_reaction_rates
 using Test
 
 include("TestHelpers.jl")

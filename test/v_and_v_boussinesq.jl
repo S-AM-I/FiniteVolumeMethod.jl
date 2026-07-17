@@ -22,6 +22,7 @@
 # benchmarks — the 3-benchmark floor for stable-promotion review.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_buoyancy_source
 using LinearAlgebra: norm
 using StaticArrays
 using Test

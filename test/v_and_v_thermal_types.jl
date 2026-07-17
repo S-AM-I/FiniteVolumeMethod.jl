@@ -10,6 +10,7 @@
 # Seven invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: ThermalState, has_buoyancy
 using StaticArrays
 using Test
 

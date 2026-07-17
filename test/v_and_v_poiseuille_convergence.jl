@@ -18,6 +18,7 @@
 # headline V&V result needed for `incompressible_ns` manifest promotion.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SpatialVelocityBC
 using LinearSolve
 using StaticArrays: SVector
 using Test

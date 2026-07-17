@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: LESTurbulenceState, cell_volume, compute_filter_width, n_turbulence_fields, solve_turbulence!, turbulence_field_names, turbulent_viscosity!
 using Test
 using LinearAlgebra
 using StaticArrays

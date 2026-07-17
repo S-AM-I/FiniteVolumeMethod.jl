@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: InflowBC, StiffenedGasEOS, VenkatakrishnanLimiter, fast_magnetosonic_speed, slow_magnetosonic_speed, solve_riemann, wave_speeds
 using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays

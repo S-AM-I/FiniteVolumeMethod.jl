@@ -1,6 +1,7 @@
 # test/v_and_v_mesh_quality.jl — check_mesh_quality V&V (v3.98)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MeshQualityReport, check_mesh_quality
 using Test
 
 include("TestHelpers.jl")

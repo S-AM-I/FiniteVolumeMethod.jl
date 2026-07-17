@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SolveResult, ThermalState, assemble_energy!, cell_idx, compute_alpha_eff, compute_buoyancy_source, compute_interface_heat_flux, has_buoyancy, solve_incompressible_thermal, solve_solid_conduction, thermal_convective_bc, thermal_heated_wall_bc, update_k_eff!
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 using Test
 using LinearAlgebra

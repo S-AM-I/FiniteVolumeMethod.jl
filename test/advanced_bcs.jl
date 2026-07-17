@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CoupledBC, CoupledBoundaryConditions, CoupledDirichlet, CoupledNeumann, CoupledRobin, NonlinearDirichlet, NonlinearNeumann, NonlinearRobin, PeriodicBC, PeriodicConditions, PeriodicNodeMapping, add_coupled_bc!, apply_periodic_constraints!, compute_boundary_gradient, compute_periodic_mapping, evaluate_coupled_bc, get_coupled_bc, get_target_field, has_coupled_bc, has_periodic_conditions, linearize_bc, shift
 using FiniteVolumeMethod: compute_boundary_gradient, get_segment_nodes, _safe_get_triangle_props
 using DelaunayTriangulation
 using Test

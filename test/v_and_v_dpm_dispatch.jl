@@ -1,6 +1,7 @@
 # test/v_and_v_dpm_dispatch.jl — DPM drag dispatch across particles V&V (v3.70)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SchillerNaumann, compute_drag_force
 using LinearAlgebra: norm, dot
 using StaticArrays
 using Test

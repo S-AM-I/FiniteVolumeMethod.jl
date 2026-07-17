@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CavitationProperties, KunzModel, SolveResult, assemble_alpha!, clip_alpha!, compute_compression_flux, compute_curvature, compute_surface_tension_force, compute_vapor_source, has_surface_tension, update_mixture_properties!
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra

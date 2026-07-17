@@ -18,6 +18,7 @@
 # Evidence toward future `stable` promotion of `combustion`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_edm_reaction_rates, compute_heat_release
 using Test
 
 include("TestHelpers.jl")

@@ -22,6 +22,7 @@
 # - Reading the EOS-coupled density update at the end of the run
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: IdealGas
 using LinearAlgebra: norm
 using LinearSolve
 using StaticArrays

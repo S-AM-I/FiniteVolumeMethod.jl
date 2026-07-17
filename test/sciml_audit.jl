@@ -7,6 +7,7 @@
 # 5. VTK backward compatibility
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: superbee, van_leer, write_line_vtk, write_structured_vtk_3d
 using FiniteVolumeMethod.Parabolic: KEpsilon, to_odefunction, to_linearproblem
 using Test
 using LinearAlgebra

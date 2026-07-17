@@ -1,6 +1,7 @@
 # test/v_and_v_fvdom_model.jl — FvDOMModel primitive V&V (v3.81)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractRadiationModel
 using LinearAlgebra: norm
 using Test
 

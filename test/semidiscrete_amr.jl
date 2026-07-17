@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AMRCache, build_amr_cache, flatten_amr_state, fold_amr!, refine_block!, unfold_amr!
 using OrdinaryDiffEq
 using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays

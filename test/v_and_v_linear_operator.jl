@@ -1,6 +1,7 @@
 # test/v_and_v_linear_operator.jl — AbstractLinearOperator wrapper V&V (v3.97)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractLinearOperator, MatrixFreeError, SparseMatrixLinearOperator, as_linear_operator, underlying_matrix
 using LinearAlgebra
 using SparseArrays
 using Test

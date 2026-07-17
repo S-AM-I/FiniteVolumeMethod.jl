@@ -21,6 +21,7 @@
 # validation manifest.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SpatialVelocityBC
 using LinearSolve
 using StaticArrays: SVector
 using Test

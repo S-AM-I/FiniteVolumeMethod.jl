@@ -20,6 +20,7 @@
 # `smoke_tested` to `provisional`/`convergence_verified`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, assemble_alpha!, clip_alpha!, face_normal_area, shift, to_linear_problem
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearAlgebra: norm
 using LinearSolve

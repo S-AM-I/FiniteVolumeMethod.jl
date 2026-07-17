@@ -13,6 +13,8 @@
 # and is not part of the default `runtests.jl` loop.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: LocalFVMMesh, LocalMeshData, distribute_mesh, extract_local_mesh, partition_rcb
+using FiniteVolumeMethod: CollocatedEquation, assemble_laplacian!
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 

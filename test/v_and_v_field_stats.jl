@@ -14,6 +14,7 @@
 # to the 3-benchmark stable-review floor.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: field_average, field_min_max, turbulence_intensity
 using Test
 
 include("TestHelpers.jl")

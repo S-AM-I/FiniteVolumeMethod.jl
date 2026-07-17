@@ -18,6 +18,7 @@
 #   6. ρ·Cp scaling: doubling ρ·Cp doubles the turbulent contribution.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_alpha_eff, update_k_eff!
 using StaticArrays
 using Test
 

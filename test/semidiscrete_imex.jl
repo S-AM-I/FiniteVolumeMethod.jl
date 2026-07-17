@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractSemidiscreteCache, HyperbolicCache1D, HyperbolicCache2D, evaluate_stiff_source, stiff_source_jacobian
 using OrdinaryDiffEq
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqSDIRK: KenCarp47

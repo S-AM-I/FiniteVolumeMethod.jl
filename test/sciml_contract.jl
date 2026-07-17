@@ -1,5 +1,6 @@
 using DelaunayTriangulation
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AMRODESolutionAccessor, CTData3D, FVMSolutionAccessor, HyperbolicSolutionAccessor, MHD3DSolutionAccessor, MHDCTCache3D, max_divB_3d, solution_state_layout, solution_variables
 using OrdinaryDiffEq
 using OrdinaryDiffEqSSPRK: SSPRK33
 using SciMLBase: DiscreteCallback, ODEProblem, ReturnCode, SteadyStateProblem, remake

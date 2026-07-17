@@ -11,6 +11,7 @@
 # Four invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_compression_flux, face_normal_area
 using StaticArrays
 using Test
 

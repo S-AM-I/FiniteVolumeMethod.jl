@@ -13,6 +13,7 @@
 # divergence operators on uniform Cartesian meshes.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: assemble_convection!, assemble_laplacian!, gradient!
 using LinearAlgebra: norm
 using StaticArrays: SVector
 using Test

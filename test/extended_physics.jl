@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: BottomTopography, electron_conserved, electron_primitive, hall_dt, hall_flux_y, ion_conserved, ion_primitive, lorentz_source_1d, lorentz_source_2d, resistive_dt, resistive_flux_y, solve_riemann, sound_speed, srhydro_con2prim, topography_source_1d, wave_speeds
 using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays

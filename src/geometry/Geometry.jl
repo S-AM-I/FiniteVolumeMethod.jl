@@ -151,7 +151,6 @@ export
     FVMGeometry,
     TriangleProperties,
     get_triangle_props,
-    _safe_get_triangle_props,
     get_volume,
     # Hyperbolic structured meshes + interface verbs
     StructuredMesh1D,

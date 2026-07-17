@@ -21,6 +21,7 @@
 # "3+ published benchmarks per feature" gate.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SpatialVelocityBC
 using LinearSolve
 using StaticArrays: SVector
 using Test

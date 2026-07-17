@@ -1,6 +1,7 @@
 # test/v_and_v_steady_adjoint.jl — steady-adjoint identity V&V.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: solve_steady_adjoint, verify_adjoint_gradient
 using LinearAlgebra
 using Test
 

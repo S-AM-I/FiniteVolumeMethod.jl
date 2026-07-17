@@ -17,6 +17,7 @@
 #   6. `is_fvm_solution(sol)` returns true.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: is_fvm_solution
 using LinearSolve
 using StaticArrays: SVector
 using Test

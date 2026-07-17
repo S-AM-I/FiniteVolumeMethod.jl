@@ -23,6 +23,7 @@
 # `convergence_verified`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_enstrophy, compute_q_criterion, compute_vorticity
 using StaticArrays
 using Test
 

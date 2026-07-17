@@ -12,6 +12,7 @@
 # Five invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_wall_heat_flux, compute_wall_shear_stress
 using LinearAlgebra: norm
 using StaticArrays
 using Test

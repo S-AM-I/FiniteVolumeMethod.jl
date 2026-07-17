@@ -1,6 +1,7 @@
 # test/v_and_v_continuity.jl — continuity residual primitives V&V (v3.100)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_max_courant, continuity_residual, continuity_residual_interior
 using StaticArrays
 using Test
 

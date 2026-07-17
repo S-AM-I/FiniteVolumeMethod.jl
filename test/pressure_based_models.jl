@@ -2,6 +2,8 @@
 # correction contract tests.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: AbstractRheology, AbstractThermoModel, BirdCarreauRheology, BoussinesqThermo, CassonRheology, HerschelBulkleyRheology, IdealGas, IncompressibleThermo, NewtonianRheology, PowerLawRheology, SutherlandGas, cp_at, density_at, is_compressible, viscosity_at
+using FiniteVolumeMethod: CollocatedEquation, NON_ORTHO_MINIMUM, NON_ORTHO_ORTHOGONAL, NON_ORTHO_OVER_RELAXED, assemble_laplacian!
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 

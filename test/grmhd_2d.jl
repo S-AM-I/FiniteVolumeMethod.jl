@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: nghost
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqLowOrderRK: Euler
 using Test

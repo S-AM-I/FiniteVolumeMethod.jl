@@ -20,6 +20,7 @@
 #   7. Unknown phase function errors
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: solve_fvdom_radiation
 using LinearAlgebra: dot, norm
 using StaticArrays
 using Test

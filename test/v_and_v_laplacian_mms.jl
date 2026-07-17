@@ -15,6 +15,7 @@
 # as O(h²) on a uniform refinement sequence.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, assemble_laplacian!, to_linear_problem
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using StaticArrays: SVector

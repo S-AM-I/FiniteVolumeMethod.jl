@@ -14,6 +14,7 @@
 # convergence-verified benchmarks.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: clip_alpha!, update_mixture_properties!
 using Test
 
 include("TestHelpers.jl")

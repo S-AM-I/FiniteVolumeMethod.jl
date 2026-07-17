@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractMesh, VenkatakrishnanLimiter, cell_center, cell_volume, compute_dt, face_area, face_neighbor, face_owner, internal_energy, ndims_mesh, nfaces, solve_riemann, sound_speed, wave_speeds
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays

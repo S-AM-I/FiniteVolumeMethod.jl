@@ -19,6 +19,7 @@
 # convergence-verified benchmarks.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: RANSTurbulenceState
 using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using StaticArrays

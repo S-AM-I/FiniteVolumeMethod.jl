@@ -13,6 +13,7 @@
 #   - Λ_LISA is inversely proportional to U²
 
 using LinearAlgebra: norm
+using FiniteVolumeMethod: LagrangianParticle
 using StaticArrays
 using Test
 

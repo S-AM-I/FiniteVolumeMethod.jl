@@ -8,6 +8,7 @@
 #   - out-of-range inputs clamp to `[0, 1]`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: build_fgm_table_from_callback, lookup_fgm, lookup_fgm!
 using Test
 
 @testset "V&V: FGM — constant callback round-trip" begin

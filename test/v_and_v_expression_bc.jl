@@ -1,6 +1,7 @@
 # test/v_and_v_expression_bc.jl — runtime expression BC parse + evaluate V&V.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: StringExpressionBC
 using Test
 
 @testset "V&V: StringExpressionBC — sin(x) + cos(y) at (0, 0) = 1" begin

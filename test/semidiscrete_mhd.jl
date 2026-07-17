@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CTData2D, MHDCTCache2D, MHDSolutionAccessor, cell_center, cell_idx
 using OrdinaryDiffEq
 using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays

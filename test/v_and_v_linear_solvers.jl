@@ -18,6 +18,7 @@
 # v3.4 of the V&V suite.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, assemble_laplacian!, to_linear_problem
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test

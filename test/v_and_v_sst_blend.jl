@@ -1,6 +1,7 @@
 # test/v_and_v_sst_blend.jl — k-ω SST blending function algebra V&V (v3.89)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: turbulent_viscosity!
 using Test
 
 include("TestHelpers.jl")

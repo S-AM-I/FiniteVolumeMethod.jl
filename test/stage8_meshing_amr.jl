@@ -1,6 +1,8 @@
 # test/stage8_meshing_amr.jl — Stage 8 octree meshing + collocated AMR gates
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: Octree, build_octree, count_leaves, refine_near_sphere!, subdivide!
+using FiniteVolumeMethod: flux_correction_factor, is_leaf, mark_cells_by_gradient, zz_error_indicator
 using Test
 using StaticArrays: SVector
 

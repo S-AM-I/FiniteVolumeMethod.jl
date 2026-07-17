@@ -1,6 +1,7 @@
 # test/stage9_sciml.jl — Stage 9 SciML deep-integration gates
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractLinearOperator, MatrixFreeError, MatrixFreeLinearOperator, SparseMatrixLinearOperator, as_si_density, as_si_temperature, as_si_velocity, as_si_viscosity, is_dimensionless, strip_units, underlying_matrix
 using Test
 using LinearAlgebra
 using SparseArrays: sparse

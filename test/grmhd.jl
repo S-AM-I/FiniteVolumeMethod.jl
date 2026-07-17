@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MetricData2D, inv_spatial_metric, lapse, shift, spatial_metric, sqrt_gamma, wave_speeds
 using Test
 using StaticArrays
 using LinearAlgebra

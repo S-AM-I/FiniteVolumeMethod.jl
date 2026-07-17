@@ -21,6 +21,7 @@
 #   `cantilever_tip_deflection(E, I, L, P)` for a sanity check
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: IsotropicElastic, cantilever_tip_deflection
 using LinearSolve
 using StaticArrays
 using Printf

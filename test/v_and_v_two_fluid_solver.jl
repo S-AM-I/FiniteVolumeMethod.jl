@@ -14,6 +14,7 @@
 #     SIMPLE answer.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: IshiiZuberDrag, interphase_drag
 using LinearAlgebra: norm
 using LinearSolve
 using StaticArrays

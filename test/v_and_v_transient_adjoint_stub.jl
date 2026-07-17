@@ -10,6 +10,7 @@
 # and `TransientAdjoint()` is constructible without warnings.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: TransientAdjoint, solve_adjoint, solve_transient_adjoint
 using Test
 
 @testset "V&V: TransientAdjoint — type is constructible (no longer a stub)" begin

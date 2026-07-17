@@ -8,6 +8,7 @@
 #   5. C_dest, C_prod linear scaling.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_vapor_source
 using Test
 
 const MM = FiniteVolumeMethod.MerkleModel

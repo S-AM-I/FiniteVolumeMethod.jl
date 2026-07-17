@@ -23,6 +23,7 @@
 #   thickness / mass-flux terms
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: FWHObserver, FWHSurface, curle_dipole_pressure, fwh_monopole_pressure
 using StaticArrays
 using Printf
 

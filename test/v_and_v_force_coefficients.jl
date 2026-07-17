@@ -1,6 +1,7 @@
 # test/v_and_v_force_coefficients.jl — force_coefficients algebra V&V (v3.72)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: force_coefficients
 using StaticArrays
 using Test
 

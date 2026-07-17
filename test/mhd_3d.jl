@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CTData3D, compute_divB_3d, copy_ct, copyto_ct!, fast_magnetosonic_speed, initialize_ct_3d_from_potential!, max_divB_3d, slow_magnetosonic_speed, solve_riemann, wave_speeds
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqLowOrderRK: Euler
 using Test

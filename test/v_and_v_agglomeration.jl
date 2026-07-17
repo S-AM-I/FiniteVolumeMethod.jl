@@ -11,6 +11,7 @@
 # - Post-merge velocity = (m₁·U₁ + m₂·U₂) / (m₁ + m₂) (momentum mean, rtol 1e-14)
 
 using LinearAlgebra: norm
+using FiniteVolumeMethod: AbstractParticle, LagrangianParticle, UnstructuredFVMMesh
 using Random
 using StaticArrays
 using Test

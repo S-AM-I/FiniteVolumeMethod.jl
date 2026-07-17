@@ -1,6 +1,7 @@
 # test/v_and_v_psi_cell.jl — PSI-cell two-way coupling V&V (v3.94)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: LagrangianParticle
 using StaticArrays
 using Test
 

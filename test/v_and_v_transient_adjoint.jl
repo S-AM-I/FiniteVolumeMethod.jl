@@ -7,6 +7,7 @@
 # difference O(h^2) error at epsilon = 1e-5.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: TransientAdjoint, solve_adjoint, solve_steady_adjoint
 using LinearAlgebra
 using Test
 

@@ -19,6 +19,7 @@
 # source-term side.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: RANSTurbulenceState, solve_turbulence!
 using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using StaticArrays

@@ -20,6 +20,7 @@
 # follow-up in the roadmap.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: distribute_mesh, solve_simple_distributed
 using Test
 using MPI
 using PartitionedArrays # FVMMPIExt trigger (with MPI) — provides distribute_mesh methods

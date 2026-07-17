@@ -22,6 +22,7 @@
 #      Rhie-Chow design goal.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, compute_face_flux!, rhie_chow_correction!, to_linear_problem
 using LinearAlgebra: norm, dot
 using LinearSolve
 using StaticArrays: SVector

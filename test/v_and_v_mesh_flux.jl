@@ -25,6 +25,7 @@
 # Puts `dynamic_mesh` at three convergence-verified benchmarks.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MeshMotionState, compute_mesh_flux!, face_normal_area
 using StaticArrays
 using Test
 

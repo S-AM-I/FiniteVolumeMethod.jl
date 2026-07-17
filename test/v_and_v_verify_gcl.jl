@@ -1,6 +1,7 @@
 # test/v_and_v_verify_gcl.jl — verify_gcl diagnostic V&V (v3.95)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: verify_gcl
 using Test
 
 include("TestHelpers.jl")

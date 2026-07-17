@@ -1,6 +1,7 @@
 # test/v_and_v_field_constructors.jl — Field-container constructor V&V (v3.85)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: nfaces
 using StaticArrays
 using Test
 

@@ -21,6 +21,9 @@ using StaticArrays: StaticArrays, SVector
 
 using ..Geometry
 using ..Numerics
+# _dispatch_solve is unexported as of Stage 4c; the pressure_based,
+# solid_mechanics, and adjoint solver files call it bare.
+using ..Numerics: _dispatch_solve
 using ..VertexConditions
 using ..Parabolic
 using ..Collocated

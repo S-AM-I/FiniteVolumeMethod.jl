@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, SolveResult, ThermalState, assemble_species!, compute_edm_reaction_rates, compute_heat_release, solve_species!
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra

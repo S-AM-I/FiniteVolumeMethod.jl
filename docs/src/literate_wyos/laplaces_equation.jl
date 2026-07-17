@@ -23,6 +23,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # we had for Poisson's equation, except that
 # we don't need `create_rhs_b`.
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
+using FiniteVolumeMethod: LaplacesEquation
 const FVM = FiniteVolumeMethod
 function laplaces_equation(
         mesh::FVMGeometry,

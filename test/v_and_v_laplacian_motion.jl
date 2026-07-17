@@ -12,6 +12,7 @@
 # invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: LaplacianMotion, MeshMotionState, compute_displacement!
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearAlgebra: norm
 using LinearSolve

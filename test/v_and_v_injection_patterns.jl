@@ -15,6 +15,7 @@
 # for reproducibility.
 
 using LinearAlgebra: cross, dot, norm
+using FiniteVolumeMethod: AbstractParticle, LagrangianParticle
 using Random
 using StaticArrays
 using Test

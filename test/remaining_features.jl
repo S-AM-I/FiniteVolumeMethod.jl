@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, KHRTBreakup, RadiationState, TABBreakup, TIME_CRANK_NICOLSON, apply_breakup!, apply_cyclic_bc!, assemble_ddt!, assemble_ddt_crank_nicolson!, assemble_ddt_euler!, breakup_diameter, compute_edc_reaction_rates, compute_radiation_source, match_cyclic_faces, should_breakup, solve_fvdom_radiation, weber_number
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 using LinearAlgebra

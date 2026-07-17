@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: UnstructuredHyperbolicMesh, UnstructuredHyperbolicProblem
 using Test
 using StaticArrays
 using DelaunayTriangulation

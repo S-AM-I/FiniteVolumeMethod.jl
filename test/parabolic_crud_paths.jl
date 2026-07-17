@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractDiffusion, AbstractFVMMesh, AbstractProblemPDE, CellField, CylindricalDiffusion2D, Diffusion1D, Diffusion2D, Mesh1D, Mesh2D, STATEVAR, assemble_system, generate_mesh_1d, generate_mesh_2d, make_cell_field
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, to_odefunction
 
 # Integration test: exercises the exact FVM code paths that CRUD.jl uses.

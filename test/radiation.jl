@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, RadiationState, SolveResult, ThermalState, assemble_p1!, compute_radiation_source, radiation_inlet_bc, solve_simple_thermal_radiation
 using FiniteVolumeMethod.Parabolic: DirichletBC, RobinBC
 using Test
 using LinearAlgebra

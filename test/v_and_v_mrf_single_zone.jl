@@ -15,6 +15,7 @@
 #   9. `add_mrf_source!` leaves out-of-zone cells untouched.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MRFZone
 using FiniteVolumeMethod: MRFZone, coriolis_force, centrifugal_force,
     mrf_cell_source, add_mrf_source!
 using LinearAlgebra: dot, cross, norm

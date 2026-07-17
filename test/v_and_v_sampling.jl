@@ -1,6 +1,7 @@
 # test/v_and_v_sampling.jl — sample_field_at_point + sample_line V&V (v3.96)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: find_nearest_cell, sample_field_at_point, sample_line
 using StaticArrays
 using Test
 

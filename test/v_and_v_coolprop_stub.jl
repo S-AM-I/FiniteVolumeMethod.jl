@@ -1,6 +1,7 @@
 # test/v_and_v_coolprop_stub.jl — CoolProp weak-dep stub ergonomics.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: CoolPropFluid
 using Test
 
 @testset "V&V: CoolPropFluid — constructor round-trip" begin

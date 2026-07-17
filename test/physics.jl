@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AnisotropicDiffusionEquation, TurbulentWallBC, compute_friction_velocity, compute_production, compute_strain_rate_magnitude, compute_turbulent_viscosity, epsilon_wall_value, k_wall_value, make_rotation_tensor, make_spatially_varying_tensor
 using DelaunayTriangulation
 using Test
 

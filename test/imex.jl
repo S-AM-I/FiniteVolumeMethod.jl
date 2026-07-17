@@ -1,4 +1,5 @@
 using FiniteVolumeMethod, Test, StaticArrays, LinearAlgebra
+using FiniteVolumeMethod: IMEX_ARS222, IMEX_Midpoint, IMEX_SSP3_433, ResistiveSource, evaluate_stiff_source, imex_nstages, imex_tableau, stiff_source_jacobian
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqSDIRK: KenCarp47
 using ADTypes: AutoFiniteDiff

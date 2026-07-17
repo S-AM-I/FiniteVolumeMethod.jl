@@ -1,6 +1,7 @@
 # test/v_and_v_residual_indicator.jl — residual-based error indicator V&V.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, residual_error_indicator
 using Test
 
 include("TestHelpers.jl")

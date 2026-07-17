@@ -24,6 +24,7 @@
 # Evidence toward future `stable` promotion of `lagrangian_dpm`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SchillerNaumann, compute_drag_force
 using StaticArrays
 using Test
 

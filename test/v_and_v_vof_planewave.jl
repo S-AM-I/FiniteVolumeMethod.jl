@@ -29,6 +29,7 @@
 # for constant-coefficient advection).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, assemble_alpha!, face_normal_area, shift, to_linear_problem
 using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using Test

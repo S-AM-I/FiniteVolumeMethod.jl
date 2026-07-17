@@ -1,6 +1,7 @@
 # test/v_and_v_courant_edge.jl — Courant number edge-case V&V (v3.84)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_courant_number
 using Test
 
 include("TestHelpers.jl")

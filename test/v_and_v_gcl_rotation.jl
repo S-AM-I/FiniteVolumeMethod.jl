@@ -22,6 +22,7 @@
 # Evidence toward future `stable` promotion of `dynamic_mesh`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MeshMotionState, update_mesh!, verify_gcl
 using StaticArrays
 using Test
 

@@ -13,6 +13,7 @@
 # (`_hyperbolic_rhs_2d_threaded!` etc.) are integrator-independent.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CPUBackend, initialize_2d
 using OrdinaryDiffEqLowOrderRK: Euler
 using StaticArrays
 using Test

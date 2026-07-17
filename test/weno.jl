@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: left_eigenvectors, nghost, reconstruct_interface, reconstruct_interface_weno5, right_eigenvectors
 using Test
 using StaticArrays
 using LinearAlgebra

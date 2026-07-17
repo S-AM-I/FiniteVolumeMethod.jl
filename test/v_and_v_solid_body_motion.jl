@@ -1,6 +1,7 @@
 # test/v_and_v_solid_body_motion.jl — SolidBodyMotion V&V (v3.67)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MeshMotionState, compute_displacement!
 using StaticArrays
 using Test
 

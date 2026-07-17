@@ -1,6 +1,7 @@
 # test/v_and_v_turbulence_inlet.jl — turbulence_inlet_bc V&V (v3.77)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: turbulence_inlet_bc, turbulence_wall_bc
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 

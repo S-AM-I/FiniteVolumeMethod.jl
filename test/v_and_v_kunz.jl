@@ -15,6 +15,7 @@
 #   7. Closed-form match at three (p, α_v) sample points.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_vapor_source
 using Test
 
 const K = FiniteVolumeMethod.KunzModel

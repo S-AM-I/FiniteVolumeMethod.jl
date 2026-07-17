@@ -20,6 +20,7 @@
 #      is zero (planar interface has κ = 0).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_curvature, compute_surface_tension_force
 using LinearAlgebra: norm
 using StaticArrays
 using Test

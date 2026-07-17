@@ -1,6 +1,7 @@
 # test/v_and_v_heat_release.jl — compute_heat_release V&V (v3.71)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_heat_release
 using Test
 
 include("TestHelpers.jl")

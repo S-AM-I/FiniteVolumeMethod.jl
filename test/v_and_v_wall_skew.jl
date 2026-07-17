@@ -17,6 +17,7 @@
 # face) so the projection is tested as a pure geometric operation.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: UnstructuredFVMMesh, nfaces
 using LinearAlgebra
 using StaticArrays
 using Test

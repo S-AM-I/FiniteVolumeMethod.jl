@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: HyperbolicCache1D, HyperbolicCache2D, HyperbolicCache3D, HyperbolicSolutionAccessor, MHDCTCache2D, MHDSolutionAccessor, UnstructuredCache, UnstructuredHyperbolicMesh, UnstructuredHyperbolicProblem, build_cache, cell_volume, fold_from_padded!, initial_state_flat, unfold_to_padded!
 using OrdinaryDiffEq
 using OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays

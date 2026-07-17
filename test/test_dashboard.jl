@@ -1,4 +1,6 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: DiffusionEquation, FVMMonitorCallback, FVMSessionData, FVMSnapshot, add_convergence_point!, create_session_data, export_session, hyperbolic_monitor, import_session, mesh_to_dict, session_to_dict, snapshot_to_dict, unfold_to_padded!
+using FiniteVolumeMethod: variable_names
 using Test
 using StaticArrays
 using DelaunayTriangulation

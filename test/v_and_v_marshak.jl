@@ -9,6 +9,7 @@
 # Six invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: radiation_inlet_bc
 using FiniteVolumeMethod.Parabolic: DirichletBC, RobinBC
 using Test
 

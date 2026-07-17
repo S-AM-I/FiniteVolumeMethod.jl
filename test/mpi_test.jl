@@ -11,6 +11,8 @@ MPI.Init()
 
 using PartitionedArrays
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: distribute_mesh, halo_exchange!
+using FiniteVolumeMethod: UnstructuredFVMMesh
 using Test
 
 comm = MPI.COMM_WORLD

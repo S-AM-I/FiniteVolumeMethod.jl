@@ -1,6 +1,7 @@
 # test/v_and_v_mesh_accessors.jl — Mesh accessor primitives V&V (v3.74)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: cell_center, face_area, face_normal_area, face_weight, is_internal_face
 using LinearAlgebra: norm
 using StaticArrays
 using Test

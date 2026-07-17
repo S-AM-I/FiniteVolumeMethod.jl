@@ -15,6 +15,7 @@
 # Puts `combustion` at three convergence-verified benchmarks.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_arrhenius_reaction_rates
 using Test
 
 include("TestHelpers.jl")

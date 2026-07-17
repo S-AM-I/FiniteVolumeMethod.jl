@@ -1,6 +1,7 @@
 # test/v_and_v_mesh_update.jl — update_mesh! geometry-update V&V (v3.80)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MeshMotionState, compute_mesh_flux!, shift, update_mesh!
 using StaticArrays
 using Test
 

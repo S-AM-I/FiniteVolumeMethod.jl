@@ -1,6 +1,7 @@
 # test/stage5_correctness.jl — Stage 5 correctness gates
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: mules_limit_flux!, verify_gcl
 using Test
 using StaticArrays: SVector
 

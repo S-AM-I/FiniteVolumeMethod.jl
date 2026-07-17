@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: cell_idx, cell_volume, compute_courant_number, compute_enstrophy, compute_nusselt_number, compute_q_criterion, compute_vorticity, compute_wall_heat_flux, compute_wall_shear_stress, compute_y_plus, force_coefficients, sample_field_at_point, sample_line
 using Test
 using LinearAlgebra
 using StaticArrays

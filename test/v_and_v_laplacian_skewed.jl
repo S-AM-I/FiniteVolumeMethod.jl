@@ -23,6 +23,7 @@
 # levels of skewness that make minimum-correction blow up.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, NON_ORTHO_MINIMUM, NON_ORTHO_ORTHOGONAL, NON_ORTHO_OVER_RELAXED, assemble_laplacian!, to_linear_problem
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using StaticArrays: SVector

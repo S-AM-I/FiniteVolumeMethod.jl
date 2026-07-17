@@ -13,6 +13,7 @@
 # we gate that point on absolute error.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: continuity_residual_interior
 using LinearSolve
 using StaticArrays: SVector
 using Test

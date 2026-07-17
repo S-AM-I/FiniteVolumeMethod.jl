@@ -15,6 +15,7 @@
 # at rate p in Δt where p = 1 for Euler and p = 2 for BDF2.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CollocatedEquation, assemble_ddt_bdf2!, assemble_ddt_euler!, assemble_laplacian!, to_linear_problem
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using StaticArrays: SVector

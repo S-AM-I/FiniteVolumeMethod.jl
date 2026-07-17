@@ -11,6 +11,7 @@
 #   4. Two-zone hand-computed reference, rtol 1e-14.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MRFZone, MultiMRF, build_multi_mrf_from_zones
 using FiniteVolumeMethod: MRFZone, MultiMRF, build_multi_mrf_from_zones,
     add_mrf_source!, add_multi_mrf_source!, mrf_cell_source
 using LinearAlgebra: norm

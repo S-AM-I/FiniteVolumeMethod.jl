@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AMRBlock, AbstractRefinementCriterion, CurrentSheetRefinement, FluxRegister, accumulate_fine_flux!, apply_flux_correction_2d!, blocks_at_level, coarsen_block!, is_leaf, needs_coarsening, needs_refinement, prolongate!, refine_block!, reset_flux_register!, restrict!, store_coarse_flux!
 using OrdinaryDiffEqLowOrderRK: Euler
 using Test
 using StaticArrays

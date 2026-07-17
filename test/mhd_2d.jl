@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CTData2D, PeriodicBC, build_mhd_ct_cache, copy_ct, copyto_ct!, l2_divB
 using OrdinaryDiffEqSSPRK: SSPRK33
 using OrdinaryDiffEqLowOrderRK: Euler
 using Test

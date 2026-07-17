@@ -14,6 +14,7 @@
 # `experimental` to `provisional`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: solve_solid_conduction
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test

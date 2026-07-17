@@ -22,6 +22,7 @@
 # benchmarks — 3-benchmark floor for stable-promotion review.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: RanzMarshall, compute_particle_heat_transfer
 using StaticArrays
 using Test
 

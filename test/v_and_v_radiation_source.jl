@@ -17,6 +17,7 @@
 # 3-benchmark floor for stable-promotion review.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_radiation_source
 using Test
 
 include("TestHelpers.jl")

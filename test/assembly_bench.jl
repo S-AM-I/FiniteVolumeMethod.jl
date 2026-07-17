@@ -13,6 +13,7 @@
 #      drift from floating-point noise due to insertion order).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: BlockCollocatedEquation, CollocatedEquation, add_block_diag!, add_block_offdiag_NP!, add_block_offdiag_PN!, assemble_laplacian!, build_boundary_map, gradient!, nblocks, reset!
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 using BenchmarkTools

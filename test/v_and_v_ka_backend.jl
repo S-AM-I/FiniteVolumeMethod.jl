@@ -1,6 +1,7 @@
 # test/v_and_v_ka_backend.jl — CPU-path V&V for the KA-dispatched kernels.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CPUBackend, kernel_backend, per_term_ad
 using Test
 
 @testset "V&V: CPUBackend — interpolate_face_ka! matches hand-rolled loop" begin

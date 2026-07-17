@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MRFZone, PorousZone, SolveResult, SpatialVelocityBC, mrf_make_absolute!, mrf_make_relative!, solve_incompressible, solve_simple
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra

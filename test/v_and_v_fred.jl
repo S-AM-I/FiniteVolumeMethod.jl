@@ -16,6 +16,7 @@
 # kinetics, and FR/ED blending.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: compute_arrhenius_reaction_rates, compute_edm_reaction_rates, compute_fred_reaction_rates
 using Test
 
 include("TestHelpers.jl")

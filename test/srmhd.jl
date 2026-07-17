@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: wave_speeds
 using OrdinaryDiffEqSSPRK: SSPRK33
 using Test
 using StaticArrays

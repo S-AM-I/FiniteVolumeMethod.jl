@@ -15,6 +15,7 @@
 # Shipped alongside the Wave-1 MULES default switch.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: assemble_alpha!, face_normal_area, is_internal_face
 using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearAlgebra
 using SparseArrays

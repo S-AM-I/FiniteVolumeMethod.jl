@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod: CylindricalAdvection2D, CylindricalAdvectionDiffusion2D, CylindricalDiffusion2D, FunctionSource, VariableCylindricalAdvection2D, VariableCylindricalAdvectionDiffusion2D, VariableCylindricalDiffusion2D, assemble_system, generate_mesh_2d_nonuniform
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearAlgebra
 

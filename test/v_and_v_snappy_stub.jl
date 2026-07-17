@@ -1,6 +1,7 @@
 # test/v_and_v_snappy_stub.jl — verify snappy stub round-trip.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: SnappyMesher
 using StaticArrays
 using Test
 

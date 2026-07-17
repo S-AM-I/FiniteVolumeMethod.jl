@@ -27,6 +27,7 @@
 # Runs only when ENV["FVM_RUN_BENCHMARKS"] == "true".
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: SpatialVelocityBC, turbulence_inlet_bc
 using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using StaticArrays: SVector

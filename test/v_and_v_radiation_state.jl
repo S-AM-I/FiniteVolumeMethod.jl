@@ -1,6 +1,7 @@
 # test/v_and_v_radiation_state.jl — RadiationState + P1Model V&V (v3.68)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractRadiationModel, RadiationState
 using Test
 
 include("TestHelpers.jl")

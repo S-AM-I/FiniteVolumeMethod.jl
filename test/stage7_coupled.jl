@@ -1,6 +1,8 @@
 # test/stage7_coupled.jl — Stage 7 solid mechanics / FSI / function objects gates
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: AitkenRelaxation, FSIInterface, IsotropicElastic, cantilever_tip_deflection, interface_residual_norm, small_strain_tensor, stress_tensor, update_aitken!
+using FiniteVolumeMethod: AbstractFVMBoundaryCondition, ExpressionBC, FieldStatistics, ForceProbe, PointProbe, evaluate_expression_bc
 using Test
 using StaticArrays: SVector
 using LinearAlgebra: norm

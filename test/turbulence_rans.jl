@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: KOmegaSSTModel, RANSTurbulenceState, SolveResult, compute_nu_eff, compute_strain_rate, compute_wall_distance, n_turbulence_fields, solve_turbulence!, turbulence_field_names, turbulence_inlet_bc, turbulence_wall_bc, turbulent_viscosity!
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra

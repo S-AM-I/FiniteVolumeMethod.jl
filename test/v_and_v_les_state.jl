@@ -10,6 +10,7 @@
 # Six invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: LESTurbulenceState, compute_filter_width, turbulent_viscosity!
 using StaticArrays
 using Test
 

@@ -13,6 +13,7 @@
 
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Experimental: partition_mesh_metis, partition_rcb
 
 include(joinpath(@__DIR__, "TestHelpers.jl"))
 

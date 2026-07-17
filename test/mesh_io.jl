@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: MeshQualityReport, Node3D, UnstructuredFVMMesh, check_mesh_quality, print_mesh_quality, read_openfoam_polymesh, volume_hex, volume_prism, volume_pyramid, volume_tet
 using Test
 using LinearAlgebra
 

@@ -16,6 +16,7 @@
 #   8. solve_wsggm_radiation dispatches cleanly onto the :p1 grey solver.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractRadiationModel
 using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test

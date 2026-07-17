@@ -1,6 +1,7 @@
 # test/v_and_v_clip_alpha.jl — clip_alpha! V&V (v3.79)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: clip_alpha!
 using Test
 
 include("TestHelpers.jl")

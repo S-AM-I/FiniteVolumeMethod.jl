@@ -9,6 +9,7 @@
 # Six invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: AbstractRANSModel, RANSTurbulenceState
 using Test
 
 include("TestHelpers.jl")

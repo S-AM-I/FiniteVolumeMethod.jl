@@ -1,6 +1,7 @@
 # test/v_and_v_vof_state.jl — VOFState + TwoPhaseProperties V&V (v3.69)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod: has_surface_tension
 using Test
 
 include("TestHelpers.jl")
