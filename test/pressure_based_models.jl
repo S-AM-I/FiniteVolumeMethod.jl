@@ -2,6 +2,7 @@
 # correction contract tests.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 
 include("TestHelpers.jl")
@@ -78,10 +79,10 @@ end
 @testset "Stage 3c: Over-relaxed non-orthogonal correction" begin
     mesh = build_cartesian_unstructured_mesh(8, 6, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(1.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(1.0),
     )
 
     # On a Cartesian mesh, S_f · d̂ = |S_f|, so all three modes produce the

@@ -27,6 +27,7 @@
 # Runs only when ENV["FVM_RUN_BENCHMARKS"] == "true".
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using StaticArrays: SVector
 using Test
@@ -94,15 +95,15 @@ function solve_moser_re180(; Nx::Int = 32, Ny::Int = 64)
     turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
         :k => Dict{Symbol, AbstractBoundaryCondition}(
             :left => inlet_turb[:k],
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         ),
         :epsilon => Dict{Symbol, AbstractBoundaryCondition}(
             :left => inlet_turb[:epsilon],
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         ),
     )
 

@@ -99,7 +99,7 @@ end
         -> Dict{Symbol, AbstractBoundaryCondition}
 
 Convert the per-patch Dirichlet displacement dictionary into the
-primitive `ParabolicDirichlet` / `ParabolicNeumann` boundary conditions
+primitive `DirichletBC` / `NeumannBC` boundary conditions
 consumed by `assemble_laplacian!`. Patches that do not appear in
 `disp_bcs` fall back to a traction-free Neumann(0) condition.
 """
@@ -113,9 +113,9 @@ function _expand_displacement_bcs(
     for tag in unique(mesh.face_tags)
         tag === :internal && continue
         if haskey(disp_bcs, tag)
-            bcs_out[tag] = ParabolicDirichlet(disp_bcs[tag][component])
+            bcs_out[tag] = DirichletBC(disp_bcs[tag][component])
         else
-            bcs_out[tag] = ParabolicNeumann(zero(T))
+            bcs_out[tag] = NeumannBC(zero(T))
         end
     end
     return bcs_out

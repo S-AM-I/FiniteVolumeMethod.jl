@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -54,10 +55,10 @@ include("TestHelpers.jl")
         Y_field = CollocatedScalarField(:fuel, mesh; value = 0.5)
         phi = FaceFluxField(:phi, mesh; value = 0.01)
         bcs = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(1.0),
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :left => DirichletBC(1.0),
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
 
         eq = CollocatedEquation(mesh)
@@ -141,22 +142,22 @@ include("TestHelpers.jl")
 
         bcs_species = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
             :fuel => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(1.0),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(1.0),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
             :oxidizer => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(0.0),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(0.0),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
             :product => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(0.0),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(0.0),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
         )
 
@@ -196,22 +197,22 @@ include("TestHelpers.jl")
 
         bcs_species = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
             :fuel => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(1.0),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(1.0),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
             :oxidizer => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(0.0),
-                :right => ParabolicDirichlet(0.233),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(0.0),
+                :right => DirichletBC(0.233),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
             :product => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(0.0),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(0.0),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
         )
 

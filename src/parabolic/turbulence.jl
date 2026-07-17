@@ -1,16 +1,16 @@
 # Turbulence modeling utilities
 # Migrated from Simu.jl SimuFVM/turbulence.jl
-# StandardKEpsilon -> ParabolicKEpsilon
-# Dirichlet -> ParabolicDirichlet, Neumann -> ParabolicNeumann, Robin -> ParabolicRobin
-# TurbulentWall -> ParabolicTurbulentWall
+# StandardKEpsilon -> KEpsilon
+# Dirichlet -> DirichletBC, Neumann -> NeumannBC, Robin -> RobinBC
+# TurbulentWall kept its name (Stage 4b dropped the interim Parabolic prefix)
 
 """
-    update_turbulent_viscosity!(mu_t, model::ParabolicKEpsilon, rho, k, epsilon)
+    update_turbulent_viscosity!(mu_t, model::KEpsilon, rho, k, epsilon)
 
 Update turbulent viscosity field based on k-epsilon model.
 mu_t = rho * C_mu * k^2 / epsilon
 """
-function update_turbulent_viscosity!(mu_t::Vector{Float64}, model::ParabolicKEpsilon, rho::Vector{Float64}, k::Vector{Float64}, epsilon::Vector{Float64})
+function update_turbulent_viscosity!(mu_t::Vector{Float64}, model::KEpsilon, rho::Vector{Float64}, k::Vector{Float64}, epsilon::Vector{Float64})
     return @inbounds for i in 1:length(mu_t)
         eps = max(epsilon[i], 1.0e-10)
         k_val = max(k[i], 0.0)
@@ -164,7 +164,7 @@ S = Pk - rho * epsilon
 S_C = Pk
 S_P = -rho * epsilon / k
 """
-function assemble_k_source(model::ParabolicKEpsilon, rho::Vector{Float64}, k::Vector{Float64}, epsilon::Vector{Float64}, Pk::Vector{Float64})
+function assemble_k_source(model::KEpsilon, rho::Vector{Float64}, k::Vector{Float64}, epsilon::Vector{Float64}, Pk::Vector{Float64})
     nx = length(rho)
     sc = copy(Pk)
     sp = zeros(nx)
@@ -183,7 +183,7 @@ S = C1 * epsilon/k * Pk - C2 * rho * epsilon^2 / k
 S_C = C1 * epsilon/k * Pk
 S_P = -C2 * rho * epsilon / k
 """
-function assemble_epsilon_source(model::ParabolicKEpsilon, rho::Vector{Float64}, k::Vector{Float64}, epsilon::Vector{Float64}, Pk::Vector{Float64})
+function assemble_epsilon_source(model::KEpsilon, rho::Vector{Float64}, k::Vector{Float64}, epsilon::Vector{Float64}, Pk::Vector{Float64})
     nx = length(rho)
     sc = zeros(nx)
     sp = zeros(nx)
@@ -235,12 +235,12 @@ end
 """
     update_wall_bcs!(bcs, mesh, u, v, k, epsilon, rho, mu, equation)
 
-Update `ParabolicTurbulentWall` boundary conditions in `bcs` dictionary with concrete linear BCs.
+Update `TurbulentWall` boundary conditions in `bcs` dictionary with concrete linear BCs.
 equation: :momentum_x, :momentum_y, :momentum_z, :k, or :epsilon
 """
 function update_wall_bcs!(bcs::Dict, mesh::UnstructuredMesh2D, u, v, k, epsilon, rho, mu, equation::Symbol)
     for (f_idx, bc) in bcs
-        if bc isa ParabolicTurbulentWall
+        if bc isa TurbulentWall
             face = mesh.faces[f_idx]
             owner = face.owner
 
@@ -259,17 +259,17 @@ function update_wall_bcs!(bcs::Dict, mesh::UnstructuredMesh2D, u, v, k, epsilon,
             u_tau = parabolic_compute_friction_velocity(u_tan, dist, nu, bc.roughness)
 
             if equation == :k
-                bcs[f_idx] = ParabolicNeumann(0.0)
+                bcs[f_idx] = NeumannBC(0.0)
             elseif equation == :epsilon
                 C_mu = 0.09
                 kappa = 0.41
                 k_val = k[owner]
                 val = (C_mu^0.75 * k_val^1.5) / (kappa * dist)
-                bcs[f_idx] = ParabolicDirichlet(val)
+                bcs[f_idx] = DirichletBC(val)
             elseif equation == :momentum_x || equation == :momentum_y
                 tau_w = rho_val * u_tau^2
                 coeff = (u_tan > 1.0e-10) ? tau_w / u_tan : 0.0
-                bcs[f_idx] = ParabolicRobin(coeff, 1.0, 0.0)
+                bcs[f_idx] = RobinBC(coeff, 1.0, 0.0)
             end
         end
     end
@@ -279,11 +279,11 @@ end
 """
     update_wall_bcs!(bcs, mesh, u, v, w, k, epsilon, rho, mu, equation)
 
-Update `ParabolicTurbulentWall` boundary conditions in `bcs` dictionary with concrete linear BCs for 3D.
+Update `TurbulentWall` boundary conditions in `bcs` dictionary with concrete linear BCs for 3D.
 """
 function update_wall_bcs!(bcs::Dict, mesh::UnstructuredMesh3D, u, v, w, k, epsilon, rho, mu, equation::Symbol)
     for (f_idx, bc) in bcs
-        if bc isa ParabolicTurbulentWall
+        if bc isa TurbulentWall
             face = mesh.faces[f_idx]
             owner = face.owner
 
@@ -303,17 +303,17 @@ function update_wall_bcs!(bcs::Dict, mesh::UnstructuredMesh3D, u, v, w, k, epsil
             u_tau = parabolic_compute_friction_velocity(u_tan, dist, nu, bc.roughness)
 
             if equation == :k
-                bcs[f_idx] = ParabolicNeumann(0.0)
+                bcs[f_idx] = NeumannBC(0.0)
             elseif equation == :epsilon
                 C_mu = 0.09
                 kappa = 0.41
                 k_val = k[owner]
                 val = (C_mu^0.75 * k_val^1.5) / (kappa * dist)
-                bcs[f_idx] = ParabolicDirichlet(val)
+                bcs[f_idx] = DirichletBC(val)
             elseif equation == :momentum_x || equation == :momentum_y || equation == :momentum_z
                 tau_w = rho_val * u_tau^2
                 coeff = (u_tan > 1.0e-10) ? tau_w / u_tan : 0.0
-                bcs[f_idx] = ParabolicRobin(coeff, 1.0, 0.0)
+                bcs[f_idx] = RobinBC(coeff, 1.0, 0.0)
             end
         end
     end

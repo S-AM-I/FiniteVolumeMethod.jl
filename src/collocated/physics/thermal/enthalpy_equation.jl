@@ -90,10 +90,10 @@ end
 Translate a temperature-BC dictionary into the equivalent enthalpy-BC
 dictionary via `h = Cp·(T - T_ref)`:
 
-- `ParabolicDirichlet(T_val)`      → `ParabolicDirichlet(h_from_T(T_val))`
-- `ParabolicNeumann(q/Cp_scale)`   → `ParabolicNeumann(q * Cp)` where `q`
+- `DirichletBC(T_val)`      → `DirichletBC(h_from_T(T_val))`
+- `NeumannBC(q/Cp_scale)`   → `NeumannBC(q * Cp)` where `q`
   was originally supplied as a temperature gradient (∂T/∂n)
-- `ParabolicRobin(a, b, c)`        → `ParabolicRobin(a, b, c)` with
+- `RobinBC(a, b, c)`        → `RobinBC(a, b, c)` with
   `a, c` rescaled to enthalpy units
 
 The Neumann and Robin cases assume the BC value was expressed as a
@@ -105,17 +105,17 @@ function enthalpy_bcs_from_temperature(
     )
     out = Dict{Symbol, AbstractBoundaryCondition}()
     for (tag, bc) in bcs_T
-        if bc isa ParabolicDirichlet
-            out[tag] = ParabolicDirichlet(h_from_T(bc.value, T_ref, Cp))
-        elseif bc isa ParabolicNeumann
+        if bc isa DirichletBC
+            out[tag] = DirichletBC(h_from_T(bc.value, T_ref, Cp))
+        elseif bc isa NeumannBC
             # ∂T/∂n = g  ⇒  ∂h/∂n = Cp · g
-            out[tag] = ParabolicNeumann(Cp * bc.value)
-        elseif bc isa ParabolicRobin
+            out[tag] = NeumannBC(Cp * bc.value)
+        elseif bc isa RobinBC
             # a·T + b·∂T/∂n = c  ⇒
             # (a/Cp)·h + b·∂h/∂n = c - a·T_ref     (with h = Cp·(T-T_ref))
             a_h = bc.a / Cp
             c_h = bc.c - bc.a * T_ref
-            out[tag] = ParabolicRobin(a_h, bc.b, c_h)
+            out[tag] = RobinBC(a_h, bc.b, c_h)
         else
             out[tag] = bc
         end

@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -48,31 +49,31 @@ include("TestHelpers.jl")
         @test fv.value == SVector(1.0, 2.0)
         vel_bc_x = FiniteVolumeMethod.expand_velocity_bc(fv, 1)
         vel_bc_y = FiniteVolumeMethod.expand_velocity_bc(fv, 2)
-        @test vel_bc_x isa ParabolicDirichlet
+        @test vel_bc_x isa DirichletBC
         @test vel_bc_x.value == 1.0
         @test vel_bc_y.value == 2.0
         p_bc = FiniteVolumeMethod.expand_pressure_bc(fv)
-        @test p_bc isa ParabolicNeumann
+        @test p_bc isa NeumannBC
         @test p_bc.value == 0.0
 
         # FixedPressureBC -> Neumann on velocity, Dirichlet on pressure
         fp = FixedPressureBC(5.0)
         vel_bc = FiniteVolumeMethod.expand_velocity_bc(fp, 1)
-        @test vel_bc isa ParabolicNeumann
+        @test vel_bc isa NeumannBC
         p_bc2 = FiniteVolumeMethod.expand_pressure_bc(fp)
-        @test p_bc2 isa ParabolicDirichlet
+        @test p_bc2 isa DirichletBC
         @test p_bc2.value == 5.0
 
         # NoSlipWallBC -> Dirichlet(0) on velocity, Neumann on pressure
         ns = NoSlipWallBC()
-        @test FiniteVolumeMethod.expand_velocity_bc(ns, 1) isa ParabolicDirichlet
+        @test FiniteVolumeMethod.expand_velocity_bc(ns, 1) isa DirichletBC
         @test FiniteVolumeMethod.expand_velocity_bc(ns, 1).value == 0.0
-        @test FiniteVolumeMethod.expand_pressure_bc(ns) isa ParabolicNeumann
+        @test FiniteVolumeMethod.expand_pressure_bc(ns) isa NeumannBC
 
         # SlipWallBC -> Neumann on velocity, Neumann on pressure
         sw = SlipWallBC()
-        @test FiniteVolumeMethod.expand_velocity_bc(sw, 1) isa ParabolicNeumann
-        @test FiniteVolumeMethod.expand_pressure_bc(sw) isa ParabolicNeumann
+        @test FiniteVolumeMethod.expand_velocity_bc(sw, 1) isa NeumannBC
+        @test FiniteVolumeMethod.expand_pressure_bc(sw) isa NeumannBC
     end
 
     # ── 3. Momentum assembly smoke test ────────────────────────────────
@@ -500,10 +501,10 @@ include("TestHelpers.jl")
         function assemble_neumann(gval)
             eq = FiniteVolumeMethod.CollocatedEquation(mesh)
             bcs = Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(1.0),
-                :right => ParabolicNeumann(gval),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(1.0),
+                :right => NeumannBC(gval),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             )
             FiniteVolumeMethod.assemble_convection!(eq, phi_flux, mesh, bcs)
             return eq

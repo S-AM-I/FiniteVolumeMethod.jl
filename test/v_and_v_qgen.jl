@@ -1,6 +1,7 @@
 # test/v_and_v_qgen.jl — SolidThermalProperties.Q_gen volumetric heat V&V (v3.88)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test
 
@@ -12,10 +13,10 @@ include("TestHelpers.jl")
     mesh = build_cartesian_unstructured_mesh(16, 16, 1.0, 1.0)
     solid = SolidThermalProperties(; rho = 1.0, Cp = 1.0, k = 1.0, Q_gen = 0.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(1.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(1.0),
     )
     Tf = solve_solid_conduction(mesh, solid, bcs; linear_solver = LUFactorization())
     # Top boundary value propagates downward monotonically.
@@ -31,10 +32,10 @@ end
     mesh = build_cartesian_unstructured_mesh(16, 16, 1.0, 1.0)
     solid = SolidThermalProperties(; rho = 1.0, Cp = 1.0, k = 1.0, Q_gen = 10.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
     Tf = solve_solid_conduction(mesh, solid, bcs; linear_solver = LUFactorization())
     nc = length(mesh.cell_volumes)
@@ -56,10 +57,10 @@ end
     # scales linearly (Laplace equation is linear).
     mesh = build_cartesian_unstructured_mesh(8, 8, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
 
     solid_a = SolidThermalProperties(; rho = 1.0, Cp = 1.0, k = 1.0, Q_gen = 5.0)
@@ -80,10 +81,10 @@ end
     # (Poisson equation scales as T ∝ Q_gen / k).
     mesh = build_cartesian_unstructured_mesh(8, 8, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
 
     solid_a = SolidThermalProperties(; rho = 1.0, Cp = 1.0, k = 1.0, Q_gen = 5.0)

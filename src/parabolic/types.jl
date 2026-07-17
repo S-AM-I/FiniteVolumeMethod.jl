@@ -3,7 +3,7 @@
 # Names are adjusted to avoid collisions with existing FVM.jl types:
 #   AbstractMesh -> AbstractParabolicMesh
 #   AbstractOperator -> AbstractPhysicsOperator
-#   Dirichlet/Neumann/Robin -> ParabolicDirichlet/ParabolicNeumann/ParabolicRobin
+#   Dirichlet/Neumann/Robin -> DirichletBC/NeumannBC/RobinBC
 
 # --- Tagging System ---
 
@@ -121,35 +121,35 @@ Abstract type for initial state specifications.
 abstract type AbstractInitialCondition end
 
 """
-    ParabolicDirichlet <: AbstractBoundaryCondition
+    DirichletBC <: AbstractBoundaryCondition
 
 Fixed value boundary condition.
 Renamed from Simu.jl's `Dirichlet` to avoid collision with FVM.jl's
 `Dirichlet` enum member in `ConditionType`.
 """
-struct ParabolicDirichlet <: AbstractBoundaryCondition
+struct DirichletBC <: AbstractBoundaryCondition
     value::Float64
 end
 
 """
-    ParabolicNeumann <: AbstractBoundaryCondition
+    NeumannBC <: AbstractBoundaryCondition
 
 Fixed flux (gradient) boundary condition.
 Renamed from Simu.jl's `Neumann` to avoid collision with FVM.jl's
 `Neumann` enum member in `ConditionType`.
 """
-struct ParabolicNeumann <: AbstractBoundaryCondition
+struct NeumannBC <: AbstractBoundaryCondition
     value::Float64 # This represents the flux
 end
 
 """
-    ParabolicRobin <: AbstractBoundaryCondition
+    RobinBC <: AbstractBoundaryCondition
 
 Mixed boundary condition: a*phi + b*flux = c.
 Renamed from Simu.jl's `Robin` to avoid collision with FVM.jl's
 `Robin` enum member in `ConditionType`.
 """
-struct ParabolicRobin <: AbstractBoundaryCondition
+struct RobinBC <: AbstractBoundaryCondition
     a::Float64
     b::Float64
     c::Float64

@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearAlgebra
 
 # Tests for VariableCylindricalAdvectionDiffusion2D — spatially varying
@@ -21,10 +22,10 @@ using LinearAlgebra
         mesh = generate_mesh_2d_nonuniform(nx, ny, r_outer - r_inner, L, x_nodes, y_nodes)
 
         bcs = (
-            ParabolicDirichlet(1.0),
-            ParabolicDirichlet(0.0),
-            ParabolicDirichlet(0.5),
-            ParabolicDirichlet(0.5),
+            DirichletBC(1.0),
+            DirichletBC(0.0),
+            DirichletBC(0.5),
+            DirichletBC(0.5),
         )
         Q(r, z) = 1.0e-3
 
@@ -78,7 +79,7 @@ using LinearAlgebra
             x_nodes = collect(range(r_inner, r_outer; length = nx + 1))
             y_nodes = collect(range(0.0, L; length = ny + 1))
             mesh = generate_mesh_2d_nonuniform(nx, ny, r_outer - r_inner, L, x_nodes, y_nodes)
-            bcs = ntuple(_ -> ParabolicDirichlet(0.0), 4)
+            bcs = ntuple(_ -> DirichletBC(0.0), 4)
 
             model = VariableCylindricalAdvectionDiffusion2D(
                 VariableCylindricalAdvection2D(vr_fn, vz_fn),

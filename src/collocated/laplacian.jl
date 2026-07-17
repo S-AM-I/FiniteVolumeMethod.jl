@@ -196,7 +196,7 @@ function _apply_laplacian_bc!(
     x_f = face_center(mesh, f)
     d_n = norm(x_f - c_P)
 
-    if bc isa ParabolicDirichlet
+    if bc isa DirichletBC
         # Fixed value: implicit contribution + source
         flux_coeff = gamma_f * A_f / d_n
         add_diag!(eq, P, flux_coeff)
@@ -206,10 +206,10 @@ function _apply_laplacian_bc!(
         flux_coeff = gamma_f * A_f / d_n
         add_diag!(eq, P, flux_coeff)
         eq.b[P] += flux_coeff * T(bc.func(x_f))
-    elseif bc isa ParabolicNeumann
+    elseif bc isa NeumannBC
         # Fixed gradient: explicit flux added to RHS
         eq.b[P] += gamma_f * bc.value * A_f
-    elseif bc isa ParabolicRobin
+    elseif bc isa RobinBC
         # Robin: a*φ + b*∂φ/∂n = c
         # → flux = gamma * (c - a*φ_P) / b  (if b ≠ 0)
         if abs(bc.b) > eps(T)

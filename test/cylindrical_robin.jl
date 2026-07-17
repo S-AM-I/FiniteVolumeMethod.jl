@@ -1,13 +1,14 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: NeumannBC, RobinBC
 using LinearAlgebra
 
-# Regression coverage for the ParabolicRobin handlers in
+# Regression coverage for the RobinBC handlers in
 # src/parabolic/assembly/assembly_cylindrical.jl. These previously carried a
 # spurious sign flip on :right (1D) and :right/:top (2D) that produced large
 # errors at the Robin boundary — see the CRUD.jl side repro.
 
-@testset "Cylindrical ParabolicRobin sign correctness" begin
+@testset "Cylindrical RobinBC sign correctness" begin
     @testset "1D radial conduction with right-Robin" begin
         # Steady k * (1/r) d/dr (r dT/dr) = 0 between r_inner..r_outer
         # with Neumann inner (q_inner) and Robin outer (h, T_coolant).
@@ -25,8 +26,8 @@ using LinearAlgebra
         nodes = collect(range(r_inner, r_outer; length = n_cells + 1))
         mesh = generate_mesh_1d_nonuniform(nodes)
 
-        bc_inner = ParabolicNeumann(-q_inner)
-        bc_outer = ParabolicRobin(h_outer, 1.0, h_outer * T_coolant)
+        bc_inner = NeumannBC(-q_inner)
+        bc_outer = RobinBC(h_outer, 1.0, h_outer * T_coolant)
 
         A, b = assemble_system(CylindricalDiffusion1D(k), mesh, bc_inner, bc_outer)
         T = A \ Vector(b)
@@ -55,10 +56,10 @@ using LinearAlgebra
         mesh = generate_mesh_2d(nx, ny, R, H)
 
         bcs = (
-            ParabolicNeumann(0.0),                        # left (r=0): symmetry
-            ParabolicRobin(h, 1.0, h * T_∞),              # right (r=R): convection
-            ParabolicNeumann(0.0),                        # bottom (z=0): insulated
-            ParabolicNeumann(0.0),                        # top (z=H): insulated
+            NeumannBC(0.0),                        # left (r=0): symmetry
+            RobinBC(h, 1.0, h * T_∞),              # right (r=R): convection
+            NeumannBC(0.0),                        # bottom (z=0): insulated
+            NeumannBC(0.0),                        # top (z=H): insulated
         )
 
         A, b = assemble_system(
@@ -107,10 +108,10 @@ using LinearAlgebra
         mesh = generate_mesh_2d_nonuniform(nx, ny, r_outer - r_inner, H, x_nodes, y_nodes)
 
         bcs = (
-            ParabolicNeumann(-q_inner),                   # left (r=r_inner): inward flux
-            ParabolicRobin(h_outer, 1.0, h_outer * T_coolant),  # right (r=r_outer)
-            ParabolicNeumann(0.0),                        # bottom: insulated
-            ParabolicNeumann(0.0),                        # top: insulated
+            NeumannBC(-q_inner),                   # left (r=r_inner): inward flux
+            RobinBC(h_outer, 1.0, h_outer * T_coolant),  # right (r=r_outer)
+            NeumannBC(0.0),                        # bottom: insulated
+            NeumannBC(0.0),                        # top: insulated
         )
 
         A, b = assemble_system(CylindricalDiffusion2D(γ), mesh, bcs)
@@ -155,10 +156,10 @@ using LinearAlgebra
         mesh = generate_mesh_2d(nx, ny, R, H)
 
         bcs = (
-            ParabolicNeumann(0.0),                        # left (r=0): symmetry
-            ParabolicNeumann(0.0),                        # right (r=R): insulated
-            ParabolicNeumann(0.0),                        # bottom (z=0): insulated
-            ParabolicRobin(h, 1.0, h * T_∞),              # top (z=H): convection
+            NeumannBC(0.0),                        # left (r=0): symmetry
+            NeumannBC(0.0),                        # right (r=R): insulated
+            NeumannBC(0.0),                        # bottom (z=0): insulated
+            RobinBC(h, 1.0, h * T_∞),              # top (z=H): convection
         )
 
         A, b = assemble_system(

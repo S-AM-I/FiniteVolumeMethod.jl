@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, RobinBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -48,7 +49,7 @@ include("TestHelpers.jl")
         rad = P1Model(; a = 0.5)
         T_wall = 1000.0
         bc = marshak_wall_bc(rad, T_wall)
-        @test bc isa ParabolicRobin
+        @test bc isa RobinBC
         @test bc.a == 1.0
         @test bc.b ≈ 2.0 / (3.0 * 0.5)
         @test bc.c ≈ 4.0 * STEFAN_BOLTZMANN * 1000.0^4
@@ -58,7 +59,7 @@ include("TestHelpers.jl")
     @testset "radiation_inlet_bc" begin
         T_inlet = 500.0
         bc = radiation_inlet_bc(T_inlet)
-        @test bc isa ParabolicDirichlet
+        @test bc isa DirichletBC
         @test bc.value ≈ 4.0 * STEFAN_BOLTZMANN * 500.0^4
     end
 
@@ -69,10 +70,10 @@ include("TestHelpers.jl")
         rad = P1Model(; a = 0.2)
         T_field = CollocatedScalarField(:T, mesh; value = 300.0)
         bcs_G = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(0.0),
-            :right => ParabolicDirichlet(0.0),
-            :bottom => ParabolicDirichlet(0.0),
-            :top => ParabolicDirichlet(0.0),
+            :left => DirichletBC(0.0),
+            :right => DirichletBC(0.0),
+            :bottom => DirichletBC(0.0),
+            :top => DirichletBC(0.0),
         )
 
         eq = CollocatedEquation(mesh)

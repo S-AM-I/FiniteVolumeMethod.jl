@@ -265,7 +265,7 @@ function _assemble_alpha_mules!(
             if F_f < zero(T)
                 tag = _face_tag(mesh, f)
                 bc = get(bcs_alpha, tag, nothing)
-                if bc isa ParabolicDirichlet
+                if bc isa DirichletBC
                     alpha_b = T(bc.value)
                 elseif bc isa ParabolicDirichletFunc
                     alpha_b = T(bc.func(face_center(mesh, f)))

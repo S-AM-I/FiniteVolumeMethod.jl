@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -51,10 +52,10 @@ include("TestHelpers.jl")
         # Dirichlet BCs: intensity = sigma*T^4/pi on all walls
         I_bc_val = STEFAN_BOLTZMANN * T_val^4 / pi
         bcs_G = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(I_bc_val),
-            :right => ParabolicDirichlet(I_bc_val),
-            :bottom => ParabolicDirichlet(I_bc_val),
-            :top => ParabolicDirichlet(I_bc_val),
+            :left => DirichletBC(I_bc_val),
+            :right => DirichletBC(I_bc_val),
+            :bottom => DirichletBC(I_bc_val),
+            :top => DirichletBC(I_bc_val),
         )
 
         rad_state = solve_fvdom_radiation(model, T_field, mesh, bcs_G)

@@ -2,8 +2,8 @@
 #
 # Solves `div(gamma * grad(d_component)) = 0` per spatial dimension using
 # the Phase 0 Laplacian assembly.  Boundary conditions prescribe
-# displacement on moving boundaries (ParabolicDirichlet(value)) and
-# zero displacement on fixed boundaries (ParabolicDirichlet(0)).
+# displacement on moving boundaries (DirichletBC(value)) and
+# zero displacement on fixed boundaries (DirichletBC(0)).
 
 @doc """
     compute_displacement!(
@@ -22,8 +22,8 @@ a Laplace equation per spatial dimension.
 For each dimension `d`, the method assembles `div(gamma * grad(d_d)) = 0`
 with boundary conditions from `bcs_displacement`, then solves the resulting
 linear system.  Moving boundaries should prescribe
-`ParabolicDirichlet(displacement_value)` and fixed boundaries should use
-`ParabolicDirichlet(0)`.
+`DirichletBC(displacement_value)` and fixed boundaries should use
+`DirichletBC(0)`.
 
 # Arguments
 - `motion_state` — mutable motion state (modified in-place)

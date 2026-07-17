@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearAlgebra
 
 # Method of manufactured solutions for the 2D axisymmetric (r-z) diffusion
@@ -36,10 +37,10 @@ using LinearAlgebra
         mesh = generate_mesh_2d_nonuniform(nx, ny, r_outer - r_inner, L, x_nodes, y_nodes)
 
         bcs = (
-            ParabolicDirichlet(0.0),
-            ParabolicDirichlet(0.0),
-            ParabolicDirichlet(0.0),
-            ParabolicDirichlet(0.0),
+            DirichletBC(0.0),
+            DirichletBC(0.0),
+            DirichletBC(0.0),
+            DirichletBC(0.0),
         )
 
         A, b = assemble_system(

@@ -1,12 +1,13 @@
 # sciml_audit.jl — Verification tests for the SciML overlap audit
 # Validates:
 # 1. Limiter unification (ParabolicLimiters → schemes/limiters.jl)
-# 2. k-epsilon interop (ParabolicKEpsilon ↔ StandardKEpsilon)
-# 3. SciML bridge (parabolic_to_odefunction, parabolic_to_linearproblem)
+# 2. k-epsilon interop (KEpsilon ↔ StandardKEpsilon)
+# 3. SciML bridge (to_odefunction, to_linearproblem)
 # 4. Engine removal (no engine symbols exported)
 # 5. VTK backward compatibility
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: KEpsilon, to_odefunction, to_linearproblem
 using Test
 using LinearAlgebra
 using SparseArrays
@@ -52,10 +53,10 @@ using SciMLBase
     # ------------------------------------------------------------------
     # 2. k-epsilon interop
     # ------------------------------------------------------------------
-    @testset "k-epsilon interop — StandardKEpsilon ↔ ParabolicKEpsilon" begin
+    @testset "k-epsilon interop — StandardKEpsilon ↔ KEpsilon" begin
         # Default construction
         ske = StandardKEpsilon()
-        pke = ParabolicKEpsilon()
+        pke = KEpsilon()
 
         @test ske.C_mu == pke.C_mu == 0.09
         @test ske.sigma_k == pke.sigma_k == 1.0
@@ -63,25 +64,25 @@ using SciMLBase
         @test ske.C1_epsilon == pke.C1_epsilon == 1.44
         @test ske.C2_epsilon == pke.C2_epsilon == 1.92
 
-        # Conversion: StandardKEpsilon → ParabolicKEpsilon
-        pke2 = ParabolicKEpsilon(ske)
+        # Conversion: StandardKEpsilon → KEpsilon
+        pke2 = KEpsilon(ske)
         @test pke2.C_mu == ske.C_mu
         @test pke2.sigma_k == ske.sigma_k
         @test pke2.sigma_epsilon == ske.sigma_epsilon
 
-        # Conversion: ParabolicKEpsilon → StandardKEpsilon
+        # Conversion: KEpsilon → StandardKEpsilon
         ske2 = StandardKEpsilon(pke)
         @test ske2.C_mu == pke.C_mu
         @test ske2.kappa == 0.41  # default kappa added
 
         # Custom coefficients round-trip
         custom_ske = StandardKEpsilon(; C_mu = 0.1, C1_epsilon = 1.5)
-        custom_pke = ParabolicKEpsilon(custom_ske)
+        custom_pke = KEpsilon(custom_ske)
         @test custom_pke.C_mu == 0.1
         @test custom_pke.C1_epsilon == 1.5
 
-        # ParabolicKEpsilon keyword constructor
-        pke_kw = ParabolicKEpsilon(; C_mu = 0.1, sigma_k = 0.8)
+        # KEpsilon keyword constructor
+        pke_kw = KEpsilon(; C_mu = 0.1, sigma_k = 0.8)
         @test pke_kw.C_mu == 0.1
         @test pke_kw.sigma_k == 0.8
     end
@@ -89,14 +90,14 @@ using SciMLBase
     # ------------------------------------------------------------------
     # 3. SciML bridge
     # ------------------------------------------------------------------
-    @testset "SciML bridge — parabolic_to_odefunction" begin
+    @testset "SciML bridge — to_odefunction" begin
         # Create a simple 3x3 system: du/dt = b - A*u
         A = sparse([2.0 -1.0 0.0; -1.0 2.0 -1.0; 0.0 -1.0 2.0])
         b = [1.0, 0.0, 1.0]
         u0 = zeros(3)
 
         # Without mass matrix
-        f = parabolic_to_odefunction(A, b)
+        f = to_odefunction(A, b)
         @test f isa SciMLBase.ODEFunction
         du = similar(u0)
         f(du, u0, nothing, 0.0)
@@ -104,17 +105,17 @@ using SciMLBase
 
         # With mass matrix
         M = sparse(2.0 * I(3))
-        f2 = parabolic_to_odefunction(A, M, b)
+        f2 = to_odefunction(A, M, b)
         @test f2 isa SciMLBase.ODEFunction
         du2 = similar(u0)
         f2(du2, u0, nothing, 0.0)
         @test du2 ≈ b / 2  # M^{-1} * b = b/2
     end
 
-    @testset "SciML bridge — parabolic_to_linearproblem" begin
+    @testset "SciML bridge — to_linearproblem" begin
         A = sparse([2.0 -1.0; -1.0 2.0])
         b = [1.0, 2.0]
-        prob = parabolic_to_linearproblem(A, b)
+        prob = to_linearproblem(A, b)
         @test prob isa SciMLBase.LinearProblem
         @test prob.A === A
         @test prob.b === b

@@ -26,6 +26,7 @@
 # Runs only when ENV["FVM_RUN_BENCHMARKS"] == "true".
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using StaticArrays: SVector
 using Test
@@ -86,10 +87,10 @@ function solve_martin_moyce(;
         :top => FixedPressureBC(0.0),
     )
     bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicNeumann(0.0),
-        :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => NeumannBC(0.0),
+        :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     )
 
     dt = T_end / n_steps

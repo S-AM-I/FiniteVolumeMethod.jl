@@ -1,6 +1,7 @@
 # test/v_and_v_p1_solver.jl — P1 radiation solver invariants V&V (v3.92)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test
 
@@ -41,10 +42,10 @@ end
     rad_model = P1Model(; a = 1.0)
     T_field = CollocatedScalarField(:T, mesh; value = 0.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
     G = solve_p1_radiation(
         rad_model, T_field, mesh, bcs; linear_solver = LUFactorization(),
@@ -65,10 +66,10 @@ end
     rad_model = P1Model(; a = 1.0)
     T_field = CollocatedScalarField(:T, mesh; value = T0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(G_eq),
-        :right => ParabolicDirichlet(G_eq),
-        :bottom => ParabolicDirichlet(G_eq),
-        :top => ParabolicDirichlet(G_eq),
+        :left => DirichletBC(G_eq),
+        :right => DirichletBC(G_eq),
+        :bottom => DirichletBC(G_eq),
+        :top => DirichletBC(G_eq),
     )
     G = solve_p1_radiation(
         rad_model, T_field, mesh, bcs; linear_solver = LUFactorization(),
@@ -94,10 +95,10 @@ end
         end
     end
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
     G = solve_p1_radiation(
         rad_model, T_field, mesh, bcs; linear_solver = LUFactorization(),
@@ -130,16 +131,16 @@ end
     G_eq1 = 4.0 * STEFAN_BOLTZMANN * T1^4
     rad_model = P1Model(; a = 1.0)
     bcs0 = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(G_eq0),
-        :right => ParabolicDirichlet(G_eq0),
-        :bottom => ParabolicDirichlet(G_eq0),
-        :top => ParabolicDirichlet(G_eq0),
+        :left => DirichletBC(G_eq0),
+        :right => DirichletBC(G_eq0),
+        :bottom => DirichletBC(G_eq0),
+        :top => DirichletBC(G_eq0),
     )
     bcs1 = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(G_eq1),
-        :right => ParabolicDirichlet(G_eq1),
-        :bottom => ParabolicDirichlet(G_eq1),
-        :top => ParabolicDirichlet(G_eq1),
+        :left => DirichletBC(G_eq1),
+        :right => DirichletBC(G_eq1),
+        :bottom => DirichletBC(G_eq1),
+        :top => DirichletBC(G_eq1),
     )
     Tf0 = CollocatedScalarField(:T, mesh; value = T0)
     Tf1 = CollocatedScalarField(:T, mesh; value = T1)

@@ -19,6 +19,7 @@
 # source-term side.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using StaticArrays
 using Test
@@ -60,7 +61,7 @@ function run_dhit(n_steps::Int, dt::Float64)
     FiniteVolumeMethod.turbulent_viscosity!(turb_state.nu_t, model, turb_state, mesh)
 
     # Neumann(0) on all walls for both fields.
-    bc_neumann = ParabolicNeumann(0.0)
+    bc_neumann = NeumannBC(0.0)
     bcs_turb = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
         :k => Dict(
             :left => bc_neumann, :right => bc_neumann,

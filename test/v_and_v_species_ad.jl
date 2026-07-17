@@ -19,6 +19,7 @@
 # `convergence_verified` on the transport side.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using StaticArrays
 using Test
@@ -54,10 +55,10 @@ function solve_species_steady(Nx::Int, Ny::Int)
 
     # Dirichlet inflow/outflow, Neumann top/bottom for strict 1D.
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(AD_YL),
-        :right => ParabolicDirichlet(AD_YR),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(AD_YL),
+        :right => DirichletBC(AD_YR),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     )
 
     eq = CollocatedEquation(mesh)

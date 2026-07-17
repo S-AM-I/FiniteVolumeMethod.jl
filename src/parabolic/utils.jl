@@ -724,21 +724,21 @@ struct TimeDependentRobin <: AbstractBoundaryCondition
 end
 
 function evaluate_bc(bc::TimeDependentDirichlet, t::Float64)
-    return ParabolicDirichlet(bc.f(t))
+    return DirichletBC(bc.f(t))
 end
 
 function evaluate_bc(bc::TimeDependentNeumann, t::Float64)
-    return ParabolicNeumann(bc.f(t))
+    return NeumannBC(bc.f(t))
 end
 
 function evaluate_bc(bc::TimeDependentRobin, t::Float64)
-    return ParabolicRobin(bc.a(t), bc.b(t), bc.c(t))
+    return RobinBC(bc.a(t), bc.b(t), bc.c(t))
 end
 
 # For backward compatibility, constant BCs evaluate to themselves
-evaluate_bc(bc::ParabolicDirichlet, t::Float64) = bc
-evaluate_bc(bc::ParabolicNeumann, t::Float64) = bc
-evaluate_bc(bc::ParabolicRobin, t::Float64) = bc
+evaluate_bc(bc::DirichletBC, t::Float64) = bc
+evaluate_bc(bc::NeumannBC, t::Float64) = bc
+evaluate_bc(bc::RobinBC, t::Float64) = bc
 
 """
     add_entry!(I, J, V, i, j, val)

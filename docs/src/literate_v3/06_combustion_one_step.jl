@@ -23,6 +23,7 @@
 # `src/combustion/arrhenius.jl` and `src/combustion/fgm.jl`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using StaticArrays
 using Printf
@@ -55,22 +56,22 @@ bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
 
 bcs_species = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
     :fuel => Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(1.0),
-        :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(1.0),
+        :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     ),
     :oxidizer => Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.233),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.233),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     ),
     :product => Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(0.0),
+        :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     ),
 )
 

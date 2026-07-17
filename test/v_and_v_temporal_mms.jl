@@ -15,6 +15,7 @@
 # at rate p in Δt where p = 1 for Euler and p = 2 for BDF2.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using StaticArrays: SVector
 using Test
@@ -28,10 +29,10 @@ function solve_heat_euler(N::Int, dt::Float64, T::Float64)
     mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
 
     # Initial condition.
@@ -69,10 +70,10 @@ function solve_heat_bdf2(N::Int, dt::Float64, T::Float64)
     mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
 
     phi_old_old = zeros(nc)

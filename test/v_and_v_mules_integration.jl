@@ -15,6 +15,7 @@
 # Shipped alongside the Wave-1 MULES default switch.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearAlgebra
 using SparseArrays
 using StaticArrays
@@ -38,10 +39,10 @@ function _step_alpha_explicit!(
         use_mules::Bool = true,
     )
     bcs = Dict{Symbol, FiniteVolumeMethod.AbstractBoundaryCondition}(
-        :left => FiniteVolumeMethod.ParabolicNeumann(0.0),
-        :right => FiniteVolumeMethod.ParabolicNeumann(0.0),
-        :top => FiniteVolumeMethod.ParabolicNeumann(0.0),
-        :bottom => FiniteVolumeMethod.ParabolicNeumann(0.0),
+        :left => FiniteVolumeMethod.NeumannBC(0.0),
+        :right => FiniteVolumeMethod.NeumannBC(0.0),
+        :top => FiniteVolumeMethod.NeumannBC(0.0),
+        :bottom => FiniteVolumeMethod.NeumannBC(0.0),
     )
     eq = FiniteVolumeMethod.CollocatedEquation(mesh)
     FiniteVolumeMethod.assemble_alpha!(

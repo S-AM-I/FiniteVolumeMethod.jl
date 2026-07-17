@@ -29,6 +29,7 @@
 # for constant-coefficient advection).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using Test
 
@@ -74,10 +75,10 @@ function run_planewave(Nx::Int, n_steps::Int, t_end::Float64)
     # ends — this lets the wave advect freely without artificial
     # inflow mismatch.
     bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicNeumann(0.0),
-        :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => NeumannBC(0.0),
+        :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     )
 
     for _ in 1:n_steps

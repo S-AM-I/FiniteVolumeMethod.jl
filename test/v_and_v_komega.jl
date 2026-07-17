@@ -19,6 +19,7 @@
 # convergence-verified benchmarks.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: NeumannBC
 using LinearSolve
 using StaticArrays
 using Test
@@ -38,7 +39,7 @@ function run_komega_decay(n_steps::Int, dt::Float64; k0 = 1.0, omega0 = 1.0)
     turb_state = RANSTurbulenceState(model, mesh; k = k0, omega = omega0)
     FiniteVolumeMethod.turbulent_viscosity!(turb_state.nu_t, model, turb_state, mesh)
 
-    bc = ParabolicNeumann(0.0)
+    bc = NeumannBC(0.0)
     bcs_turb = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
         :k => Dict(:left => bc, :right => bc, :bottom => bc, :top => bc),
         :omega => Dict(:left => bc, :right => bc, :bottom => bc, :top => bc),

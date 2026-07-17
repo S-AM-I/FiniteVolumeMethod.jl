@@ -17,6 +17,7 @@
 # All tests run on a small Cartesian mesh; the algebraic checks dominate.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 using LinearSolve
 using StaticArrays
 using Test
@@ -79,26 +80,26 @@ end
     T_ref = 310.0
     Cp = 1200.0
     bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(400.0),
-        :right => ParabolicNeumann(5.0),         # ∂T/∂n = 5 K/m
-        :top => ParabolicRobin(2.0, 0.5, 830.0), # 2T + 0.5·∂T/∂n = 830
+        :left => DirichletBC(400.0),
+        :right => NeumannBC(5.0),         # ∂T/∂n = 5 K/m
+        :top => RobinBC(2.0, 0.5, 830.0), # 2T + 0.5·∂T/∂n = 830
     )
     bcs_h = enthalpy_bcs_from_temperature(bcs_T, T_ref, Cp)
 
     # Dirichlet: value transforms via h = Cp·(T - T_ref)
     bc_left = bcs_h[:left]
-    @test bc_left isa ParabolicDirichlet
+    @test bc_left isa DirichletBC
     @test isapprox(bc_left.value, Cp * (400.0 - T_ref); rtol = 1.0e-14)
 
     # Neumann: ∂h/∂n = Cp · ∂T/∂n
     bc_right = bcs_h[:right]
-    @test bc_right isa ParabolicNeumann
+    @test bc_right isa NeumannBC
     @test isapprox(bc_right.value, Cp * 5.0; rtol = 1.0e-14)
 
     # Robin: substitute h = Cp·(T - T_ref) into a·T + b·∂T/∂n = c
     # ⇒ (a/Cp)·h + b·∂h/∂n = c - a·T_ref
     bc_top = bcs_h[:top]
-    @test bc_top isa ParabolicRobin
+    @test bc_top isa RobinBC
     @test isapprox(bc_top.a, 2.0 / Cp; rtol = 1.0e-14)
     @test isapprox(bc_top.b, 0.5; rtol = 1.0e-14)
     @test isapprox(bc_top.c, 830.0 - 2.0 * T_ref; rtol = 1.0e-14)
@@ -127,10 +128,10 @@ end
     )
 
     bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(400.0),
-        :right => ParabolicDirichlet(300.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(400.0),
+        :right => DirichletBC(300.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     )
 
     _, state_T = solve_simple_thermal(prob, props_T; bcs_T = bcs_T, T_init = 350.0)
@@ -166,8 +167,8 @@ end
         Cp = Cp, k = 0.5, beta = 0.0, T_ref = T_ref, use_enthalpy = true,
     )
     bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicNeumann(0.0), :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0), :top => ParabolicNeumann(0.0),
+        :left => NeumannBC(0.0), :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0), :top => NeumannBC(0.0),
     )
 
     T0 = 350.0
@@ -218,10 +219,10 @@ end
     )
 
     bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(310.0),
-        :right => ParabolicDirichlet(310.0),
-        :bottom => ParabolicDirichlet(310.0),
-        :top => ParabolicDirichlet(330.0),
+        :left => DirichletBC(310.0),
+        :right => DirichletBC(310.0),
+        :bottom => DirichletBC(310.0),
+        :top => DirichletBC(330.0),
     )
 
     _, state_T = solve_simple_thermal(prob, props_T; bcs_T = bcs_T, T_init = 310.0)

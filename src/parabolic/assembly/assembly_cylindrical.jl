@@ -737,7 +737,7 @@ end
 
 const _CylDiffusion1D = Union{CylindricalDiffusion1D, VariableCylindricalDiffusion1D}
 
-function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
+function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::DirichletBC, side, area, transient)
     dx = mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x)
     γ = _gamma_at_cell(model, mesh, i)
     flux_coeff = γ * area / abs(dx)
@@ -745,7 +745,7 @@ function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, me
     return b[i] += flux_coeff * bc.value
 end
 
-function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
+function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::NeumannBC, side, area, transient)
     # Neumann BC: flux = -gamma * dphi/dn.
     # Total flux = flux * area.
     # In b vector, we add the inward flux.
@@ -756,7 +756,7 @@ function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, me
     end
 end
 
-function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::ParabolicRobin, side, area, transient)
+function handle_cylindrical_boundary_condition!(A, b, model::_CylDiffusion1D, mesh, i, bc::RobinBC, side, area, transient)
     dx = abs(mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x))
     γ = _gamma_at_cell(model, mesh, i)
 
@@ -768,7 +768,7 @@ end
 
 const _CylDiffusion2D = Union{CylindricalDiffusion2D, VariableCylindricalDiffusion2D}
 
-function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
+function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::DirichletBC, side, area, dr_or_dz, transient)
     dist = dr_or_dz / 2.0
     γ = _gamma_at_cell(model, mesh, k)
     flux_coeff = γ * area / dist
@@ -776,7 +776,7 @@ function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D,
     return b[k] += flux_coeff * bc.value
 end
 
-function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::ParabolicNeumann, side, area, dr_or_dz, transient)
+function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::NeumannBC, side, area, dr_or_dz, transient)
     return if side == :left || side == :bottom
         b[k] -= bc.value * area
     else
@@ -784,7 +784,7 @@ function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D,
     end
 end
 
-function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::ParabolicRobin, side, area, dr_or_dz, transient)
+function handle_cylindrical_boundary_condition_2d!(A, b, model::_CylDiffusion2D, mesh, k, bc::RobinBC, side, area, dr_or_dz, transient)
     dist = dr_or_dz / 2.0
     γ = _gamma_at_cell(model, mesh, k)
     denominator = bc.a * dist + bc.b * γ
@@ -795,7 +795,7 @@ end
 
 # --- Cylindrical Advection Boundary Condition Handlers ---
 
-function handle_cylindrical_advection_bc!(A, b, model::CylindricalAdvection1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
+function handle_cylindrical_advection_bc!(A, b, model::CylindricalAdvection1D, mesh, i, bc::DirichletBC, side, area, transient)
     v = model.v
     return if side == :left
         if v >= 0
@@ -816,7 +816,7 @@ function handle_cylindrical_advection_bc!(A, b, model::CylindricalAdvection1D, m
     end
 end
 
-function handle_cylindrical_advection_bc!(A, b, model::CylindricalAdvection1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
+function handle_cylindrical_advection_bc!(A, b, model::CylindricalAdvection1D, mesh, i, bc::NeumannBC, side, area, transient)
     v = model.v
     return if side == :left
         if v >= 0
@@ -846,7 +846,7 @@ function handle_cylindrical_advection_bc!(A, b, model::CylindricalAdvection1D, m
     end
 end
 
-function handle_cylindrical_advection_bc_2d!(A, b, model::CylindricalAdvection2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
+function handle_cylindrical_advection_bc_2d!(A, b, model::CylindricalAdvection2D, mesh, k, bc::DirichletBC, side, area, dr_or_dz, transient)
     if side == :left || side == :right
         v = model.vr
     else
@@ -883,7 +883,7 @@ function handle_cylindrical_advection_bc_2d!(A, b, model::CylindricalAdvection2D
     end
 end
 
-function handle_cylindrical_advection_bc_2d!(A, b, model::CylindricalAdvection2D, mesh, k, bc::ParabolicNeumann, side, area, dr_or_dz, transient)
+function handle_cylindrical_advection_bc_2d!(A, b, model::CylindricalAdvection2D, mesh, k, bc::NeumannBC, side, area, dr_or_dz, transient)
     if side == :left || side == :right
         v = model.vr
     else
@@ -907,7 +907,7 @@ end
 
 # --- Cylindrical Advection-Diffusion Boundary Condition Handlers ---
 
-function handle_cylindrical_advection_diffusion_bc!(A, b, model::CylindricalAdvectionDiffusion1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
+function handle_cylindrical_advection_diffusion_bc!(A, b, model::CylindricalAdvectionDiffusion1D, mesh, i, bc::DirichletBC, side, area, transient)
     v = model.advection.v
     gamma = model.diffusion.gamma
     dx = abs(mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x))
@@ -931,7 +931,7 @@ function handle_cylindrical_advection_diffusion_bc!(A, b, model::CylindricalAdve
     end
 end
 
-function handle_cylindrical_advection_diffusion_bc!(A, b, model::CylindricalAdvectionDiffusion1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
+function handle_cylindrical_advection_diffusion_bc!(A, b, model::CylindricalAdvectionDiffusion1D, mesh, i, bc::NeumannBC, side, area, transient)
     v = model.advection.v
     if side == :left
         b[i] -= bc.value * area
@@ -991,7 +991,7 @@ end
     return _gamma_at_face_2d(model.diffusion, mesh, i, j, side)
 end
 
-function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2D, mesh, k, bc::ParabolicDirichlet, side, area, dr_or_dz, transient)
+function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2D, mesh, k, bc::DirichletBC, side, area, dr_or_dz, transient)
     v = _adv_diff_vel_at_face(model, mesh, k, side)
     gamma = _adv_diff_gamma_at_face(model, mesh, k, side)
     dist = dr_or_dz / 2.0
@@ -1015,7 +1015,7 @@ function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2
     end
 end
 
-function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2D, mesh, k, bc::ParabolicNeumann, side, area, dr_or_dz, transient)
+function handle_cylindrical_advection_diffusion_bc_2d!(A, b, model::_CylAdvDiff2D, mesh, k, bc::NeumannBC, side, area, dr_or_dz, transient)
     # Diffusion: prescribed flux contribution to RHS. Sign convention matches
     # the pure-diffusion handler (inward flux at left/bottom; outward at
     # right/top).

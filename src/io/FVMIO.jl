@@ -23,8 +23,8 @@ using ..Geometry: CurvilinearFVMMesh, FVMGeometry, Mesh1D, Mesh2D, Mesh3D,
     UnstructuredFVMMesh, UnstructuredHyperbolicMesh, UnstructuredMesh3D,
     ncells
 using ..Parabolic: AbstractConfig, AbstractOutputManager,
-    AdvectionDiffusion3D, Diffusion3D, ParabolicDirichlet, ParabolicNeumann,
-    ParabolicRobin, VariableDiffusion3D
+    AdvectionDiffusion3D, Diffusion3D, DirichletBC, NeumannBC,
+    RobinBC, VariableDiffusion3D
 # Read-only: FVMIO calls these Hyperbolic generics, it never extends them.
 using ..Hyperbolic: nvariables, variable_names
 

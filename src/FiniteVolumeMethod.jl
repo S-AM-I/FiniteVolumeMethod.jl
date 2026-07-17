@@ -54,6 +54,21 @@ using .VertexConditions
 include("parabolic/Parabolic.jl")
 using .Parabolic
 
+# Stage-4b prefix resolution: the Simu.jl-migration names lost their interim
+# `Parabolic` prefix (canonical access is module-qualified, e.g.
+# `Parabolic.DirichletBC`). The old names remain as deprecated top-level
+# aliases until Stage 8. NOT renamed (their bare names are taken by the
+# upstream ConditionType enum / VertexConditions twins): ParabolicPeriodicBC,
+# ParabolicNonlinearDirichlet, ParabolicNonlinearNeumann, ParabolicCoupledBC,
+# parabolic_sound_speed, parabolic_compute_friction_velocity.
+Base.@deprecate_binding ParabolicDirichlet DirichletBC
+Base.@deprecate_binding ParabolicNeumann NeumannBC
+Base.@deprecate_binding ParabolicRobin RobinBC
+Base.@deprecate_binding ParabolicKEpsilon KEpsilon
+Base.@deprecate_binding ParabolicTurbulentWall TurbulentWall
+Base.@deprecate_binding parabolic_to_odefunction to_odefunction
+Base.@deprecate_binding parabolic_to_linearproblem to_linearproblem
+
 # The collocated (OpenFOAM-style) family: operators, incompressible
 # SIMPLE/PISO/PIMPLE, multiphase, DPM, dynamic mesh, collocated AMR,
 # post-processing, zone models, and nested Collocated.Physics
@@ -249,9 +264,6 @@ export
     AbstractBoundaryCondition,
     AbstractInitialCondition,
     UnsupportedBCError,
-    ParabolicDirichlet,
-    ParabolicNeumann,
-    ParabolicRobin,
     # Variables and Fields
     AbstractVariable,
     VariableRole,
@@ -393,14 +405,12 @@ export
     evaluate_source,
     # Turbulence (Parabolic)
     AbstractTurbulenceModel,
-    ParabolicKEpsilon,
     update_turbulent_viscosity!,
     compute_production_k,
     assemble_k_source,
     assemble_epsilon_source,
     parabolic_compute_friction_velocity,
     update_wall_bcs!,
-    ParabolicTurbulentWall,
     # Assembly
     assemble_system,
     assemble_mass_matrix,
@@ -1431,9 +1441,8 @@ export
     capability_matrix
 
 # --- SciML Bridge (parabolic assembly → SciMLBase) ---
-export
-    parabolic_to_odefunction,
-    parabolic_to_linearproblem
+# The bridge pair is module-qualified as of Stage 4b: Parabolic.to_odefunction
+# and Parabolic.to_linearproblem (deprecated top-level aliases above).
 
 # --- Wave 4 fast-path (v3.105) — mesh gen / AMR / adjoint / KA-GPU / unit + prop extensions ---
 export

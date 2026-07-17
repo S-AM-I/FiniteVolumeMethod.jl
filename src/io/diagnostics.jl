@@ -81,7 +81,7 @@ function boundary_fluxes(mesh::Mesh1D, field_values, model, bc_left, bc_right; f
 
     # Compute left boundary flux
     if length(field_values) > 0
-        if bc_left isa ParabolicDirichlet
+        if bc_left isa DirichletBC
             # Diffusive Flux = -gamma * (phi[1] - bc.value) / dx_half
             dx_half = mesh.cells[1].center - mesh.nodes[1].x
             flux_diff = (gamma !== nothing) ? -gamma * (field_values[1] - bc_left.value) / dx_half : 0.0
@@ -99,14 +99,14 @@ function boundary_fluxes(mesh::Mesh1D, field_values, model, bc_left, bc_right; f
 
             # Outward flux (normal -1)
             fluxes[(field_name, :left)] = -(flux_diff + flux_adv)
-        elseif bc_left isa ParabolicNeumann
+        elseif bc_left isa NeumannBC
             fluxes[(field_name, :left)] = bc_left.value
             if v !== nothing
                 if v < 0 # outflow
                     fluxes[(field_name, :left)] += abs(v) * field_values[1]
                 end
             end
-        elseif bc_left isa ParabolicRobin
+        elseif bc_left isa RobinBC
             dx_half = mesh.cells[1].center - mesh.nodes[1].x
             phi_bc = (gamma !== nothing) ? bc_left.c / (bc_left.a + bc_left.b * gamma / dx_half) : bc_left.c / bc_left.a
             flux_diff = (gamma !== nothing) ? -gamma * (field_values[1] - phi_bc) / dx_half : 0.0
@@ -123,7 +123,7 @@ function boundary_fluxes(mesh::Mesh1D, field_values, model, bc_left, bc_right; f
         end
 
         # Compute right boundary flux
-        if bc_right isa ParabolicDirichlet
+        if bc_right isa DirichletBC
             dx_half = mesh.nodes[end].x - mesh.cells[end].center
             flux_diff = (gamma !== nothing) ? -gamma * (bc_right.value - field_values[end]) / dx_half : 0.0
 
@@ -138,14 +138,14 @@ function boundary_fluxes(mesh::Mesh1D, field_values, model, bc_left, bc_right; f
 
             # Outward flux (normal +1)
             fluxes[(field_name, :right)] = (flux_diff + flux_adv)
-        elseif bc_right isa ParabolicNeumann
+        elseif bc_right isa NeumannBC
             fluxes[(field_name, :right)] = bc_right.value
             if v !== nothing
                 if v >= 0 # outflow
                     fluxes[(field_name, :right)] += v * field_values[end]
                 end
             end
-        elseif bc_right isa ParabolicRobin
+        elseif bc_right isa RobinBC
             dx_half = mesh.nodes[end].x - mesh.cells[end].center
             phi_bc = (gamma !== nothing) ? bc_right.c / (bc_right.a + bc_right.b * gamma / dx_half) : bc_right.c / bc_right.a
             flux_diff = (gamma !== nothing) ? -gamma * (phi_bc - field_values[end]) / dx_half : 0.0
@@ -203,7 +203,7 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
     end
 
     # Left boundary (x = 0)
-    if bc_left isa ParabolicDirichlet
+    if bc_left isa DirichletBC
         flux_sum = 0.0
         for j in 1:ny
             dx_half = dx / 2
@@ -224,13 +224,13 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
             flux_sum += flux_diff + flux_adv
         end
         fluxes[(field_name, :left)] = -flux_sum
-    elseif bc_left isa ParabolicNeumann
+    elseif bc_left isa NeumannBC
         if gamma !== nothing
             fluxes[(field_name, :left)] = bc_left.value * mesh.Ly
         else
             fluxes[(field_name, :left)] = 0.0
         end
-    elseif bc_left isa ParabolicRobin
+    elseif bc_left isa RobinBC
         flux_sum = 0.0
         for j in 1:ny
             dx_half = dx / 2
@@ -252,7 +252,7 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
     end
 
     # Right boundary (x = Lx)
-    if bc_right isa ParabolicDirichlet
+    if bc_right isa DirichletBC
         flux_sum = 0.0
         for j in 1:ny
             dx_half = dx / 2
@@ -271,13 +271,13 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
             flux_sum += flux_diff + flux_adv
         end
         fluxes[(field_name, :right)] = flux_sum
-    elseif bc_right isa ParabolicNeumann
+    elseif bc_right isa NeumannBC
         if gamma !== nothing
             fluxes[(field_name, :right)] = bc_right.value * mesh.Ly
         else
             fluxes[(field_name, :right)] = 0.0
         end
-    elseif bc_right isa ParabolicRobin
+    elseif bc_right isa RobinBC
         flux_sum = 0.0
         for j in 1:ny
             dx_half = dx / 2
@@ -297,7 +297,7 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
     end
 
     # Bottom boundary (y = 0)
-    if bc_bottom isa ParabolicDirichlet
+    if bc_bottom isa DirichletBC
         flux_sum = 0.0
         for i in 1:nx
             dy_half = dy / 2
@@ -318,13 +318,13 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
             flux_sum += flux_diff + flux_adv
         end
         fluxes[(field_name, :bottom)] = -flux_sum
-    elseif bc_bottom isa ParabolicNeumann
+    elseif bc_bottom isa NeumannBC
         if gamma !== nothing
             fluxes[(field_name, :bottom)] = bc_bottom.value * mesh.Lx
         else
             fluxes[(field_name, :bottom)] = 0.0
         end
-    elseif bc_bottom isa ParabolicRobin
+    elseif bc_bottom isa RobinBC
         flux_sum = 0.0
         for i in 1:nx
             dy_half = dy / 2
@@ -346,7 +346,7 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
     end
 
     # Top boundary (y = Ly)
-    if bc_top isa ParabolicDirichlet
+    if bc_top isa DirichletBC
         flux_sum = 0.0
         for i in 1:nx
             dy_half = dy / 2
@@ -367,13 +367,13 @@ function boundary_fluxes(mesh::Mesh2D, field_values, model, bcs; field_name = :p
             flux_sum += flux_diff + flux_adv
         end
         fluxes[(field_name, :top)] = flux_sum
-    elseif bc_top isa ParabolicNeumann
+    elseif bc_top isa NeumannBC
         if gamma !== nothing
             fluxes[(field_name, :top)] = bc_top.value * mesh.Lx
         else
             fluxes[(field_name, :top)] = 0.0
         end
-    elseif bc_top isa ParabolicRobin
+    elseif bc_top isa RobinBC
         flux_sum = 0.0
         for i in 1:nx
             dy_half = dy / 2
@@ -453,16 +453,16 @@ function boundary_fluxes(mesh::Mesh3D, field_values, model, bcs; field_name = :p
         vx = _get_vel(model, :x)
 
         flux_diff = 0.0
-        if bc_left isa ParabolicDirichlet
+        if bc_left isa DirichletBC
             flux_diff = -gamma * (field_values[idx] - bc_left.value) / (dx_val / 2) * area
-        elseif bc_left isa ParabolicNeumann
+        elseif bc_left isa NeumannBC
             flux_diff = bc_left.value * area
         end
 
         flux_adv = 0.0
         if vx != 0.0
-            val = (bc_left isa ParabolicDirichlet && vx >= 0) ? bc_left.value : field_values[idx]
-            if bc_left isa ParabolicDirichlet || (bc_left isa ParabolicNeumann && vx < 0)
+            val = (bc_left isa DirichletBC && vx >= 0) ? bc_left.value : field_values[idx]
+            if bc_left isa DirichletBC || (bc_left isa NeumannBC && vx < 0)
                 flux_adv = vx * val * area
             end
         end
@@ -479,16 +479,16 @@ function boundary_fluxes(mesh::Mesh3D, field_values, model, bcs; field_name = :p
         vx = _get_vel(model, :x)
 
         flux_diff = 0.0
-        if bc_right isa ParabolicDirichlet
+        if bc_right isa DirichletBC
             flux_diff = -gamma * (bc_right.value - field_values[idx]) / (dx_val / 2) * area
-        elseif bc_right isa ParabolicNeumann
+        elseif bc_right isa NeumannBC
             flux_diff = bc_right.value * area
         end
 
         flux_adv = 0.0
         if vx != 0.0
-            val = (bc_right isa ParabolicDirichlet && vx < 0) ? bc_right.value : field_values[idx]
-            if bc_right isa ParabolicDirichlet || (bc_right isa ParabolicNeumann && vx >= 0)
+            val = (bc_right isa DirichletBC && vx < 0) ? bc_right.value : field_values[idx]
+            if bc_right isa DirichletBC || (bc_right isa NeumannBC && vx >= 0)
                 flux_adv = vx * val * area
             end
         end
@@ -505,16 +505,16 @@ function boundary_fluxes(mesh::Mesh3D, field_values, model, bcs; field_name = :p
         vy = _get_vel(model, :y)
 
         flux_diff = 0.0
-        if bc_bottom isa ParabolicDirichlet
+        if bc_bottom isa DirichletBC
             flux_diff = -gamma * (field_values[idx] - bc_bottom.value) / (dy_val / 2) * area
-        elseif bc_bottom isa ParabolicNeumann
+        elseif bc_bottom isa NeumannBC
             flux_diff = bc_bottom.value * area
         end
 
         flux_adv = 0.0
         if vy != 0.0
-            val = (bc_bottom isa ParabolicDirichlet && vy >= 0) ? bc_bottom.value : field_values[idx]
-            if bc_bottom isa ParabolicDirichlet || (bc_bottom isa ParabolicNeumann && vy < 0)
+            val = (bc_bottom isa DirichletBC && vy >= 0) ? bc_bottom.value : field_values[idx]
+            if bc_bottom isa DirichletBC || (bc_bottom isa NeumannBC && vy < 0)
                 flux_adv = vy * val * area
             end
         end
@@ -531,16 +531,16 @@ function boundary_fluxes(mesh::Mesh3D, field_values, model, bcs; field_name = :p
         vy = _get_vel(model, :y)
 
         flux_diff = 0.0
-        if bc_top isa ParabolicDirichlet
+        if bc_top isa DirichletBC
             flux_diff = -gamma * (bc_top.value - field_values[idx]) / (dy_val / 2) * area
-        elseif bc_top isa ParabolicNeumann
+        elseif bc_top isa NeumannBC
             flux_diff = bc_top.value * area
         end
 
         flux_adv = 0.0
         if vy != 0.0
-            val = (bc_top isa ParabolicDirichlet && vy < 0) ? bc_top.value : field_values[idx]
-            if bc_top isa ParabolicDirichlet || (bc_top isa ParabolicNeumann && vy >= 0)
+            val = (bc_top isa DirichletBC && vy < 0) ? bc_top.value : field_values[idx]
+            if bc_top isa DirichletBC || (bc_top isa NeumannBC && vy >= 0)
                 flux_adv = vy * val * area
             end
         end
@@ -557,16 +557,16 @@ function boundary_fluxes(mesh::Mesh3D, field_values, model, bcs; field_name = :p
         vz = _get_vel(model, :z)
 
         flux_diff = 0.0
-        if bc_front isa ParabolicDirichlet
+        if bc_front isa DirichletBC
             flux_diff = -gamma * (field_values[idx] - bc_front.value) / (dz_val / 2) * area
-        elseif bc_front isa ParabolicNeumann
+        elseif bc_front isa NeumannBC
             flux_diff = bc_front.value * area
         end
 
         flux_adv = 0.0
         if vz != 0.0
-            val = (bc_front isa ParabolicDirichlet && vz >= 0) ? bc_front.value : field_values[idx]
-            if bc_front isa ParabolicDirichlet || (bc_front isa ParabolicNeumann && vz < 0)
+            val = (bc_front isa DirichletBC && vz >= 0) ? bc_front.value : field_values[idx]
+            if bc_front isa DirichletBC || (bc_front isa NeumannBC && vz < 0)
                 flux_adv = vz * val * area
             end
         end
@@ -583,16 +583,16 @@ function boundary_fluxes(mesh::Mesh3D, field_values, model, bcs; field_name = :p
         vz = _get_vel(model, :z)
 
         flux_diff = 0.0
-        if bc_back isa ParabolicDirichlet
+        if bc_back isa DirichletBC
             flux_diff = -gamma * (bc_back.value - field_values[idx]) / (dz_val / 2) * area
-        elseif bc_back isa ParabolicNeumann
+        elseif bc_back isa NeumannBC
             flux_diff = bc_back.value * area
         end
 
         flux_adv = 0.0
         if vz != 0.0
-            val = (bc_back isa ParabolicDirichlet && vz < 0) ? bc_back.value : field_values[idx]
-            if bc_back isa ParabolicDirichlet || (bc_back isa ParabolicNeumann && vz >= 0)
+            val = (bc_back isa DirichletBC && vz < 0) ? bc_back.value : field_values[idx]
+            if bc_back isa DirichletBC || (bc_back isa NeumannBC && vz >= 0)
                 flux_adv = vz * val * area
             end
         end

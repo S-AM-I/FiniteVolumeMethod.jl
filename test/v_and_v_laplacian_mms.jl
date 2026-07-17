@@ -15,6 +15,7 @@
 # as O(h²) on a uniform refinement sequence.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using StaticArrays: SVector
 using LinearAlgebra: norm
@@ -29,10 +30,10 @@ f_forcing(x, y) = 2π^2 * sin(π * x) * sin(π * y)
 function solve_laplacian_mms(N::Int)
     mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
     eq = CollocatedEquation(mesh)
     assemble_laplacian!(eq, 1.0, mesh, bcs)

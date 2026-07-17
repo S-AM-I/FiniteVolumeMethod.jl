@@ -478,7 +478,7 @@ loop degenerates trivially.
 - `T_field::CollocatedScalarField{T}` --- temperature field [K]
 - `mesh::UnstructuredFVMMesh{Dim, T}` --- mesh
 - `bcs_G::Dict{Symbol, <:AbstractBoundaryCondition}` --- BCs applied to each
-  intensity equation (typically `ParabolicDirichlet(sigma*T_wall^4/pi)`)
+  intensity equation (typically `DirichletBC(sigma*T_wall^4/pi)`)
 - `linear_solver` --- optional linear solver algorithm
 - `solver_config` --- optional solver configuration
 - `scattering_iterations` --- lagged-source sweeps for the in-scattering

@@ -1,7 +1,7 @@
 # # Tutorial 03 — k-ε Turbulent Channel
 #
 # Demonstrates the v3 RANS turbulence stack on a small driven channel.
-# We use the standard k-ε model with `ParabolicDirichlet` inlet
+# We use the standard k-ε model with `DirichletBC` inlet
 # turbulence values and zero-gradient outflow.
 #
 # Runtime budget: ~5–10 s on a laptop (16×8 mesh, 30 outer iterations).
@@ -26,6 +26,7 @@
 # (`test/turbulence_rans.jl`).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using LinearAlgebra: norm
 using StaticArrays
@@ -60,16 +61,16 @@ const ε_in = Cμ^(3 / 4) * k_in^(3 / 2) / ℓ
 
 turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
     :k => Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(k_in),
-        :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(k_in),
+        :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     ),
     :epsilon => Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(ε_in),
-        :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(ε_in),
+        :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     ),
 )
 

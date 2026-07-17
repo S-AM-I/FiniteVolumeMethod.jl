@@ -322,7 +322,7 @@ function solve_conjugate_ht(
         T_bc_scalar = isempty(T_interface_perface) ?
             T_interface_scalar :
             sum(values(T_interface_perface)) / length(T_interface_perface)
-        fluid_bcs_T[cht_prob.interface_fluid_patch] = ParabolicDirichlet(T_bc_scalar)
+        fluid_bcs_T[cht_prob.interface_fluid_patch] = DirichletBC(T_bc_scalar)
 
         fluid_result, thermal_state = solve_simple_thermal(
             fluid_prob, cht_prob.fluid_thermal;
@@ -360,7 +360,7 @@ function solve_conjugate_ht(
         else
             q_avg = zero(T)
         end
-        solid_bcs_T[cht_prob.interface_solid_patch] = ParabolicNeumann(-q_avg)
+        solid_bcs_T[cht_prob.interface_solid_patch] = NeumannBC(-q_avg)
 
         solid_T = solve_solid_conduction(
             solid_mesh, cht_prob.solid_thermal, solid_bcs_T;
@@ -471,7 +471,7 @@ function _apply_perface_neumann_correction!(
         d_s = max(d_s, T(1.0e-15))
 
         # Solid-side BC uses outward flux -q_f (matches the sign used for
-        # the scalar ParabolicNeumann(-q_avg) above).
+        # the scalar NeumannBC(-q_avg) above).
         delta_q = (-q_f) - (-q_avg)
         solid_T.boundary[pbmap_s[f_s]] += delta_q * d_s / k_s
     end

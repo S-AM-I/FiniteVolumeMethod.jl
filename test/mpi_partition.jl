@@ -13,6 +13,7 @@
 # and is not part of the default `runtests.jl` loop.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 
 include("TestHelpers.jl")
@@ -147,10 +148,10 @@ end
 
     mesh = build_cartesian_unstructured_mesh(6, 4, 1.5, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(1.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(1.0),
     )
 
     # Global reference assembly.

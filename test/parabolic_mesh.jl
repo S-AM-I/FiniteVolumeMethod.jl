@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 
 @testset "Parabolic Mesh" begin
     @testset "1D Mesh Generation" begin
@@ -22,11 +23,11 @@ using FiniteVolumeMethod
     end
 
     @testset "Parabolic BC Types" begin
-        d = ParabolicDirichlet(1.0)
+        d = DirichletBC(1.0)
         @test d.value == 1.0
-        n = ParabolicNeumann(0.0)
+        n = NeumannBC(0.0)
         @test n.value == 0.0
-        r = ParabolicRobin(1.0, 2.0, 3.0)
+        r = RobinBC(1.0, 2.0, 3.0)
         @test r.a == 1.0
     end
 

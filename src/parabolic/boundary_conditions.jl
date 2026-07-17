@@ -119,15 +119,15 @@ struct RegionBC <: AbstractBoundaryCondition
 end
 
 """
-    ParabolicTurbulentWall(; roughness=0.0)
+    TurbulentWall(; roughness=0.0)
 
 Wall boundary condition for turbulence-model equations.  Applies standard
 wall-function treatment; `roughness` (in mesh length units) activates the
 rough-wall log-law when positive.
 """
-struct ParabolicTurbulentWall <: AbstractBoundaryCondition
+struct TurbulentWall <: AbstractBoundaryCondition
     roughness::Float64
-    ParabolicTurbulentWall(; roughness = 0.0) = new(roughness)
+    TurbulentWall(; roughness = 0.0) = new(roughness)
 end
 
 # ==============================================================================
@@ -138,7 +138,7 @@ end
 # The discrete diffusion flux at a boundary face is  q_f = γ (u_b - u_i) / Δx,
 # which contributes +γ/Δx to A[i,i] (diagonal) and +γ/Δx · g to b[i] (RHS).
 
-function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::ParabolicDirichlet, side, transient)
+function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::DirichletBC, side, transient)
     # Dirichlet u = g:  flux = γ/Δx · (g - u_i), so A[i,i] += γ/Δx, b[i] += γ/Δx · g
     dx = (side == :left) ? mesh.cells[i].center - mesh.nodes[1].x : mesh.nodes[end].x - mesh.cells[i].center
     gamma = get_diffusion_coefficient(diffusion, mesh, i)
@@ -147,12 +147,12 @@ function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::Parabo
     return b[i] += flux_coeff * bc.value
 end
 
-function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::ParabolicNeumann, side, transient)
+function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::NeumannBC, side, transient)
     # Neumann ∂u/∂n = g:  prescribed flux enters RHS directly (sign convention: outward normal)
     return b[i] += (side == :left ? -1 : 1) * bc.value
 end
 
-function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::ParabolicRobin, side, transient)
+function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::RobinBC, side, transient)
     # Robin  a·u + b·∂u/∂n = c:  eliminate ghost value using the BC to get
     # a combined diagonal and RHS contribution.
     dx = (side == :left) ? mesh.cells[i].center - mesh.nodes[1].x : mesh.nodes[end].x - mesh.cells[i].center
@@ -163,7 +163,7 @@ function handle_boundary_condition!(A, b, diffusion, mesh::Mesh1D, i, bc::Parabo
     return b[i] += (side == :left ? 1 : -1) * gamma * bc.c / denominator
 end
 
-function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, bc::ParabolicDirichlet, side, transient)
+function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, bc::DirichletBC, side, transient)
     v = get_velocity(advection, mesh, i, side)
     return if side == :left
         if v >= 0
@@ -180,7 +180,7 @@ function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, 
     end
 end
 
-function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, bc::ParabolicNeumann, side, transient)
+function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, bc::NeumannBC, side, transient)
     v = get_velocity(advection, mesh, i, side)
     return if (side == :left && v >= 0) || (side == :right && v < 0)
         b[i] += bc.value
@@ -189,7 +189,7 @@ function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, 
     end
 end
 
-function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, bc::ParabolicRobin, side, transient)
+function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, bc::RobinBC, side, transient)
     v = get_velocity(advection, mesh, i, side)
     return if (side == :left && v >= 0) || (side == :right && v < 0)
         phi_bc = bc.c / (bc.a + bc.b * abs(v))
@@ -206,7 +206,7 @@ function handle_advection_boundary_condition!(A, b, advection, mesh::Mesh1D, i, 
     end
 end
 
-function handle_advection_diffusion_boundary_condition!(A, b, model, mesh::Mesh1D, i, bc::ParabolicDirichlet, side, transient)
+function handle_advection_diffusion_boundary_condition!(A, b, model, mesh::Mesh1D, i, bc::DirichletBC, side, transient)
     v = get_velocity(model.advection, mesh, i, side)
     gamma = get_diffusion_coefficient(model.diffusion, mesh, i)
     dx = (side == :left) ? mesh.cells[i].center - mesh.nodes[1].x : mesh.nodes[end].x - mesh.cells[i].center
@@ -227,7 +227,7 @@ end
 
 # --- 3D Triplet Handlers ---
 
-function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::Mesh3D, idx, bc::ParabolicDirichlet, side, transient, dx, dy, dz)
+function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::Mesh3D, idx, bc::DirichletBC, side, transient, dx, dy, dz)
     gamma = get_diffusion_coefficient(diffusion, mesh, div(idx - 1, mesh.ny * mesh.nz) + 1, div(mod(idx - 1, mesh.ny * mesh.nz), mesh.nz) + 1, mod(idx - 1, mesh.nz) + 1)
     dist = (side == :left || side == :right) ? dx : ((side == :bottom || side == :top) ? dy : dz)
     area = (side == :left || side == :right) ? dy * dz : ((side == :bottom || side == :top) ? dx * dz : dx * dy)
@@ -236,12 +236,12 @@ function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::M
     return b[idx] += flux_coeff * bc.value
 end
 
-function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::Mesh3D, idx, bc::ParabolicNeumann, side, transient, dx, dy, dz)
+function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::Mesh3D, idx, bc::NeumannBC, side, transient, dx, dy, dz)
     area = (side == :left || side == :right) ? dy * dz : (side == :bottom || side == :top ? dx * dz : dx * dy)
     return b[idx] += (side == :left || side == :bottom || side == :front ? -1 : 1) * bc.value * area
 end
 
-function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::Mesh3D, idx, bc::ParabolicRobin, side, transient, dx, dy, dz)
+function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::Mesh3D, idx, bc::RobinBC, side, transient, dx, dy, dz)
     gamma = get_diffusion_coefficient(diffusion, mesh, div(idx - 1, mesh.ny * mesh.nz) + 1, div(mod(idx - 1, mesh.ny * mesh.nz), mesh.nz) + 1, mod(idx - 1, mesh.nz) + 1)
     dist = (side == :left || side == :right) ? dx : ((side == :bottom || side == :top) ? dy : dz)
     area = (side == :left || side == :right) ? dy * dz : ((side == :bottom || side == :top) ? dx * dz : dx * dy)
@@ -251,7 +251,7 @@ function handle_boundary_condition_3d_triplet!(Is, Js, Vs, b, diffusion, mesh::M
     return b[idx] += (side == :left || side == :bottom || side == :front ? 1 : -1) * gamma * bc.c * area / denominator
 end
 
-function handle_advection_boundary_condition_3d_triplet!(Is, Js, Vs, b, advection, mesh::Mesh3D, idx, bc::ParabolicDirichlet, side, transient, dx, dy, dz, v_face)
+function handle_advection_boundary_condition_3d_triplet!(Is, Js, Vs, b, advection, mesh::Mesh3D, idx, bc::DirichletBC, side, transient, dx, dy, dz, v_face)
     area = (side == :left || side == :right) ? dy * dz : ((side == :bottom || side == :top) ? dx * dz : dx * dy)
     return if (side == :left && v_face >= 0) || (side == :bottom && v_face >= 0) || (side == :front && v_face >= 0)
         b[idx] += v_face * area * bc.value
@@ -262,7 +262,7 @@ function handle_advection_boundary_condition_3d_triplet!(Is, Js, Vs, b, advectio
     end
 end
 
-function handle_advection_boundary_condition_3d_triplet!(Is, Js, Vs, b, advection, mesh::Mesh3D, idx, bc::ParabolicNeumann, side, transient, dx, dy, dz, v_face)
+function handle_advection_boundary_condition_3d_triplet!(Is, Js, Vs, b, advection, mesh::Mesh3D, idx, bc::NeumannBC, side, transient, dx, dy, dz, v_face)
     area = (side == :left || side == :right) ? dy * dz : ((side == :bottom || side == :top) ? dx * dz : dx * dy)
     return if (side == :left && v_face >= 0) || (side == :bottom && v_face >= 0) || (side == :front && v_face >= 0)
         b[idx] += bc.value * area
@@ -282,7 +282,7 @@ function handle_advection_boundary_condition_3d_triplet!(Is, Js, Vs, b, advectio
     end
 end
 
-function handle_advection_diffusion_boundary_condition_3d_triplet!(Is, Js, Vs, b, model, mesh::Mesh3D, idx, bc::ParabolicDirichlet, side, transient, dx, dy, dz, v_face)
+function handle_advection_diffusion_boundary_condition_3d_triplet!(Is, Js, Vs, b, model, mesh::Mesh3D, idx, bc::DirichletBC, side, transient, dx, dy, dz, v_face)
     gamma = model.diffusion.gamma
     dist = (side == :left || side == :right) ? dx : ((side == :bottom || side == :top) ? dy : dz)
     area = (side == :left || side == :right) ? dy * dz : ((side == :bottom || side == :top) ? dx * dz : dx * dy)
@@ -306,7 +306,7 @@ end
 
 # --- 2D Triplet Handlers ---
 
-function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicDirichlet, side, transient, dx, dy)
+function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::DirichletBC, side, transient, dx, dy)
     ny = mesh.ny; i = div(k - 1, ny) + 1; j = mod(k - 1, ny) + 1
     gamma = get_diffusion_coefficient(diffusion, mesh, i, j)
     dist = (side == :left || side == :right) ? dx : dy
@@ -316,12 +316,12 @@ function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D
     return b[k] += flux_coeff * bc.value
 end
 
-function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicNeumann, side, transient, dx, dy)
+function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::NeumannBC, side, transient, dx, dy)
     area = (side == :left || side == :right) ? dy : dx
     return b[k] += (side == :left || side == :bottom ? -1 : 1) * bc.value * area
 end
 
-function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicRobin, side, transient, dx, dy)
+function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::RobinBC, side, transient, dx, dy)
     ny = mesh.ny; i = div(k - 1, ny) + 1; j = mod(k - 1, ny) + 1
     gamma = get_diffusion_coefficient(diffusion, mesh, i, j)
     dist = (side == :left || side == :right) ? dx : dy
@@ -332,7 +332,7 @@ function handle_boundary_condition_2d!(I, J, V, b, diffusion, mesh::Union{Mesh2D
     return b[k] += (side == :left || side == :bottom ? 1 : -1) * gamma * bc.c * area / denominator
 end
 
-function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicDirichlet, side, transient, dx, dy, v_face)
+function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::DirichletBC, side, transient, dx, dy, v_face)
     area = (side == :left || side == :right) ? dy : dx
     return if (side == :left && v_face >= 0) || (side == :bottom && v_face >= 0)
         b[k] += v_face * area * bc.value
@@ -350,7 +350,7 @@ function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Un
     end
 end
 
-function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicNeumann, side, transient, dx, dy, v_face)
+function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::NeumannBC, side, transient, dx, dy, v_face)
     area = (side == :left || side == :right) ? dy : dx
     return if (side == :left && v_face >= 0) || (side == :bottom && v_face >= 0)
         b[k] += bc.value * area
@@ -359,7 +359,7 @@ function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Un
     end
 end
 
-function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicRobin, side, transient, dx, dy, v_face)
+function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::RobinBC, side, transient, dx, dy, v_face)
     area = (side == :left || side == :right) ? dy : dx
     return if (side == :left && v_face >= 0) || (side == :bottom && v_face >= 0)
         phi_bc = bc.c / (bc.a + bc.b * v_face)
@@ -369,7 +369,7 @@ function handle_advection_boundary_condition_2d!(I, J, V, b, advection, mesh::Un
     end
 end
 
-function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicDirichlet, side, transient, dx, dy, v_face)
+function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::DirichletBC, side, transient, dx, dy, v_face)
     ny = mesh.ny; i = div(k - 1, ny) + 1; j = mod(k - 1, ny) + 1
     gamma = get_diffusion_coefficient(model.diffusion, mesh, i, j)
     dist = (side == :left || side == :right) ? dx : dy
@@ -385,7 +385,7 @@ function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, me
     end
 end
 
-function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicNeumann, side, transient, dx, dy, v_face)
+function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::NeumannBC, side, transient, dx, dy, v_face)
     area = (side == :left || side == :right) ? dy : dx
     b[k] += (side == :left || side == :bottom ? -1 : 1) * bc.value * area
     return if (side == :left && v_face < 0) || (side == :right && v_face >= 0) || (side == :bottom && v_face < 0) || (side == :top && v_face >= 0)
@@ -393,7 +393,7 @@ function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, me
     end
 end
 
-function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::ParabolicRobin, side, transient, dx, dy, v_face)
+function handle_advection_diffusion_boundary_condition_2d!(I, J, V, b, model, mesh::Union{Mesh2D, CurvilinearMesh2D}, k, bc::RobinBC, side, transient, dx, dy, v_face)
     ny = mesh.ny; i = div(k - 1, ny) + 1; j = mod(k - 1, ny) + 1
     gamma = get_diffusion_coefficient(model.diffusion, mesh, i, j)
     dist = (side == :left || side == :right) ? dx : dy
@@ -439,14 +439,14 @@ function Base.showerror(io::IO, e::UnsupportedBCError)
     print(io, ". ")
     print(io, "Either (a) add a method dispatching on this concrete type, ")
     print(io, "or (b) use one of the BC types with implemented evaluators: ")
-    print(io, "ParabolicDirichlet, ParabolicNeumann, TimeDependentDirichlet.")
+    print(io, "DirichletBC, NeumannBC, TimeDependentDirichlet.")
     return
 end
 
 function evaluate_bc(bc::AbstractBoundaryCondition, solution, mesh, cell_idx, side, t = 0.0)
-    if bc isa ParabolicDirichlet
+    if bc isa DirichletBC
         return bc.value
-    elseif bc isa ParabolicNeumann
+    elseif bc isa NeumannBC
         return bc.value
     elseif bc isa TimeDependentDirichlet
         return evaluate_bc(bc, t).value
@@ -549,18 +549,18 @@ function linearize_nonlinear_bc(bc::ParabolicNonlinearDirichlet, phi::Float64, g
     f_pert = bc.f(phi + eps, grad_phi, x, t)
     df_dphi = (f_pert - f_val) / eps
     if abs(df_dphi) > 1.0e-12
-        return ParabolicDirichlet(phi - f_val / df_dphi)
+        return DirichletBC(phi - f_val / df_dphi)
     else
-        return ParabolicDirichlet(phi)
+        return DirichletBC(phi)
     end
 end
 
 function linearize_nonlinear_bc(bc::ParabolicNonlinearNeumann, phi::Float64, grad_phi::Float64, x::Float64, t::Float64)
     flux_val = bc.f(phi, grad_phi, x, t)
-    return ParabolicNeumann(flux_val)
+    return NeumannBC(flux_val)
 end
 
 function linearize_nonlinear_bc(bc::ParabolicNonlinearRobin, phi::Float64, grad_phi::Float64, x::Float64, t::Float64)
     a, b, c = bc.f(phi, grad_phi, x, t)
-    return ParabolicRobin(a, b, c)
+    return RobinBC(a, b, c)
 end

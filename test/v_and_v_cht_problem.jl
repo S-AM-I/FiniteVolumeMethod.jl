@@ -1,6 +1,7 @@
 # test/v_and_v_cht_problem.jl — ConjugateHeatTransferProblem V&V (v3.76)
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using StaticArrays
 using Test
 
@@ -22,19 +23,19 @@ function build_cht(; max_iter = 50, tol = 1.0e-4)
         beta = 0.0, T_ref = 300.0, g = SVector(0.0, -9.81),
     )
     fluid_bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(300.0),
-        :right => ParabolicDirichlet(300.0),
-        :bottom => ParabolicDirichlet(400.0),
-        :top => ParabolicDirichlet(300.0),
+        :left => DirichletBC(300.0),
+        :right => DirichletBC(300.0),
+        :bottom => DirichletBC(400.0),
+        :top => DirichletBC(300.0),
     )
 
     solid_mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
     solid_thermal = SolidThermalProperties(; rho = 8000.0, Cp = 500.0, k = 15.0)
     solid_bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(300.0),
-        :right => ParabolicDirichlet(300.0),
-        :bottom => ParabolicDirichlet(300.0),
-        :top => ParabolicDirichlet(400.0),
+        :left => DirichletBC(300.0),
+        :right => DirichletBC(300.0),
+        :bottom => DirichletBC(300.0),
+        :top => DirichletBC(400.0),
     )
 
     return ConjugateHeatTransferProblem(

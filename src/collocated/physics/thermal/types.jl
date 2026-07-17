@@ -183,13 +183,13 @@ end
 # ── BC convenience constructors ──────────────────────────────────────
 
 """Fixed temperature BC (wall, inlet)."""
-thermal_inlet_bc(T_val::Real) = ParabolicDirichlet(Float64(T_val))
+thermal_inlet_bc(T_val::Real) = DirichletBC(Float64(T_val))
 
 """Insulated (zero heat flux) BC."""
-thermal_insulated_bc() = ParabolicNeumann(0.0)
+thermal_insulated_bc() = NeumannBC(0.0)
 
 """Fixed heat flux BC (heated/cooled wall)."""
-thermal_heated_wall_bc(q::Real) = ParabolicNeumann(Float64(q))
+thermal_heated_wall_bc(q::Real) = NeumannBC(Float64(q))
 
 """Convective BC: h·(T - T_inf)."""
-thermal_convective_bc(h::Real, T_inf::Real) = ParabolicRobin(Float64(h), 1.0, Float64(h * T_inf))
+thermal_convective_bc(h::Real, T_inf::Real) = RobinBC(Float64(h), 1.0, Float64(h * T_inf))

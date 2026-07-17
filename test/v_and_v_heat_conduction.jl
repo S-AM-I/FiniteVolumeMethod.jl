@@ -14,6 +14,7 @@
 # `experimental` to `provisional`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test
 
@@ -31,10 +32,10 @@ function conduction_err(N::Int)
     mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
     solid = SolidThermalProperties(; rho = 1.0, Cp = 1.0, k = 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(1.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(1.0),
     )
     Tf = solve_solid_conduction(mesh, solid, bcs)
 
@@ -80,10 +81,10 @@ end
     mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
     solid = SolidThermalProperties(; rho = 1.0, Cp = 1.0, k = 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(1.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(1.0),
     )
     Tf = solve_solid_conduction(mesh, solid, bcs)
 

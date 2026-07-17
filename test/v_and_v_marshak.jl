@@ -9,22 +9,23 @@
 # Six invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, RobinBC
 using Test
 
 include("TestHelpers.jl")
 
 const SIGMA_SB = 5.670374419e-8
 
-@testset "V&V: Marshak BC — ParabolicRobin(a=1, b=2/(3a), c=4σT⁴)" begin
+@testset "V&V: Marshak BC — RobinBC(a=1, b=2/(3a), c=4σT⁴)" begin
     # For P1 with absorption a_val, marshak BC is
     # G + (2/(3a)) · ∂G/∂n = 4σT⁴.
-    # This maps to ParabolicRobin(1, 2/(3a), 4σT⁴).
+    # This maps to RobinBC(1, 2/(3a), 4σT⁴).
     rad = P1Model(; a = 0.5)
     T_wall = 500.0
 
     bc = marshak_wall_bc(rad, T_wall)
 
-    @test bc isa ParabolicRobin
+    @test bc isa RobinBC
     @test bc.a == 1.0
     @test isapprox(bc.b, 2.0 / (3 * 0.5); rtol = 1.0e-14)
     @test isapprox(bc.c, 4 * SIGMA_SB * T_wall^4; rtol = 1.0e-14)
@@ -51,7 +52,7 @@ end
 @testset "V&V: radiation_inlet_bc — G = 4σT⁴ Dirichlet" begin
     T_inlet = 400.0
     bc = radiation_inlet_bc(T_inlet)
-    @test bc isa ParabolicDirichlet
+    @test bc isa DirichletBC
     @test isapprox(bc.value, 4 * SIGMA_SB * T_inlet^4; rtol = 1.0e-14)
 end
 

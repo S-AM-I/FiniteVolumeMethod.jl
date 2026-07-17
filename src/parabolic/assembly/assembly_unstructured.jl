@@ -79,7 +79,7 @@ function assemble_system(model::Union{Diffusion2D, Diffusion3D}, mesh::Union{Uns
     return A, b
 end
 
-function handle_unstructured_bc!(A, b, model::Union{Diffusion2D, Diffusion3D}, bc::ParabolicDirichlet, cell_idx, f_idx, area, dist)
+function handle_unstructured_bc!(A, b, model::Union{Diffusion2D, Diffusion3D}, bc::DirichletBC, cell_idx, f_idx, area, dist)
     # Flux leaving cell: coeff * (phi_Cell - phi_BC)
     # A[c,c] += coeff
     # RHS += coeff * phi_BC
@@ -89,7 +89,7 @@ function handle_unstructured_bc!(A, b, model::Union{Diffusion2D, Diffusion3D}, b
     return b[cell_idx] += flux_coeff * bc.value
 end
 
-function handle_unstructured_bc!(A, b, model::Union{Diffusion2D, Diffusion3D}, bc::ParabolicNeumann, cell_idx, f_idx, area, dist)
+function handle_unstructured_bc!(A, b, model::Union{Diffusion2D, Diffusion3D}, bc::NeumannBC, cell_idx, f_idx, area, dist)
     # Prescribed Outward Flux: q = bc.value
     # Flux_Out = bc.value * area
     # b -= bc.value * area
@@ -156,7 +156,7 @@ function assemble_deferred_correction(model::Diffusion2D, mesh::UnstructuredMesh
             # Boundary face
             if haskey(bcs, f_idx)
                 bc = bcs[f_idx]
-                if bc isa ParabolicDirichlet
+                if bc isa DirichletBC
                     c_owner = mesh.cells[owner].center
                     c_face = face.center
 
@@ -244,7 +244,7 @@ function assemble_deferred_correction(model::Diffusion3D, mesh::UnstructuredMesh
             # Boundary face
             if haskey(bcs, f_idx)
                 bc = bcs[f_idx]
-                if bc isa ParabolicDirichlet
+                if bc isa DirichletBC
                     c_owner = mesh.cells[owner].center
                     c_face = face.center
                     d_vec = c_face .- c_owner

@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -62,19 +63,19 @@ include("TestHelpers.jl")
     # ── 2. BC convenience constructors ─────────────────────────────────
     @testset "BC convenience constructors" begin
         bc_inlet = thermal_inlet_bc(400.0)
-        @test bc_inlet isa ParabolicDirichlet
+        @test bc_inlet isa DirichletBC
         @test bc_inlet.value == 400.0
 
         bc_insulated = thermal_insulated_bc()
-        @test bc_insulated isa ParabolicNeumann
+        @test bc_insulated isa NeumannBC
         @test bc_insulated.value == 0.0
 
         bc_heated = thermal_heated_wall_bc(5000.0)
-        @test bc_heated isa ParabolicNeumann
+        @test bc_heated isa NeumannBC
         @test bc_heated.value == 5000.0
 
         bc_conv = thermal_convective_bc(10.0, 300.0)
-        @test bc_conv isa ParabolicRobin
+        @test bc_conv isa RobinBC
         @test bc_conv.a == 10.0
         @test bc_conv.b == 1.0
         @test bc_conv.c == 10.0 * 300.0
@@ -176,8 +177,8 @@ include("TestHelpers.jl")
 
         solid = SolidThermalProperties(; rho = 7800.0, Cp = 500.0, k = 50.0)
         bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(400.0),
-            :right => ParabolicDirichlet(300.0),
+            :left => DirichletBC(400.0),
+            :right => DirichletBC(300.0),
             :bottom => thermal_insulated_bc(),
             :top => thermal_insulated_bc(),
         )
@@ -330,10 +331,10 @@ include("TestHelpers.jl")
             :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
         )
         bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(310.0),
-            :right => ParabolicDirichlet(290.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :left => DirichletBC(310.0),
+            :right => DirichletBC(290.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
         # tolerance = 0 forces all iterations: the initial state (U = 0,
         # uniform T) has identically zero residuals, so any positive

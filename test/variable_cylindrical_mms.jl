@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 using LinearAlgebra
 
 # MMS for VariableCylindricalDiffusion2D. Manufactured solution
@@ -55,7 +56,7 @@ using LinearAlgebra
         y_nodes = collect(range(0.0, L; length = ny + 1))
         mesh = generate_mesh_2d_nonuniform(nx, ny, r_outer - r_inner, L, x_nodes, y_nodes)
 
-        bcs = ntuple(_ -> ParabolicDirichlet(0.0), 4)
+        bcs = ntuple(_ -> DirichletBC(0.0), 4)
         model = VariableCylindricalDiffusion2D(γ_fn)
         A, b = assemble_system(model, mesh, bcs; source = FunctionSource(Q_exact))
         T = A \ Vector(b)
@@ -93,10 +94,10 @@ end
     Q_const(r, z) = 1.0e8
 
     bcs = (
-        ParabolicNeumann(-1.0e6),
-        ParabolicRobin(4.0e4, 1.0, 4.0e4 * 600.0),
-        ParabolicNeumann(0.0),
-        ParabolicNeumann(0.0),
+        NeumannBC(-1.0e6),
+        RobinBC(4.0e4, 1.0, 4.0e4 * 600.0),
+        NeumannBC(0.0),
+        NeumannBC(0.0),
     )
 
     A_const, b_const = assemble_system(
@@ -118,8 +119,8 @@ end
     n_cells = 80
     nodes = collect(range(r_inner, r_outer; length = n_cells + 1))
     mesh = generate_mesh_1d_nonuniform(nodes)
-    bc_inner = ParabolicNeumann(-1.0e6)
-    bc_outer = ParabolicRobin(4.0e4, 1.0, 4.0e4 * 600.0)
+    bc_inner = NeumannBC(-1.0e6)
+    bc_outer = RobinBC(4.0e4, 1.0, 4.0e4 * 600.0)
 
     A_const, b_const = assemble_system(CylindricalDiffusion1D(γ₀), mesh, bc_inner, bc_outer)
     A_var, b_var = assemble_system(VariableCylindricalDiffusion1D(r -> γ₀), mesh, bc_inner, bc_outer)

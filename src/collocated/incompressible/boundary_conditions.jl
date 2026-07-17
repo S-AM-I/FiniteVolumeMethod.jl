@@ -1,8 +1,8 @@
 # incompressible/boundary_conditions.jl — Boundary condition types for incompressible NS
 #
 # Defines high-level BC types (FixedVelocityBC, NoSlipWallBC, etc.) and
-# expansion functions that convert them into the primitive ParabolicDirichlet /
-# ParabolicNeumann conditions consumed by the collocated operators.
+# expansion functions that convert them into the primitive DirichletBC /
+# NeumannBC conditions consumed by the collocated operators.
 
 # ── Boundary condition types ────────────────────────────────────────
 
@@ -388,8 +388,8 @@ PorousJumpBC(; D::Real = 0.0, I_coeff::Real = 0.0, power::Real = 0.0) =
 @doc """
     expand_velocity_bc(bc, component::Int[, t]) -> AbstractBoundaryCondition
 
-Convert an incompressible BC into the primitive `ParabolicDirichlet`,
-`ParabolicDirichletFunc`, or `ParabolicNeumann` for the given velocity
+Convert an incompressible BC into the primitive `DirichletBC`,
+`ParabolicDirichletFunc`, or `NeumannBC` for the given velocity
 component equation.  The 3-argument form evaluates time-dependent BCs
 at simulation time `t`; time-independent BCs fall back to the
 2-argument method.
@@ -401,11 +401,11 @@ expand_velocity_bc(bc::AbstractBoundaryCondition, component::Int, t) =
     expand_velocity_bc(bc, component)
 
 function expand_velocity_bc(bc::TimeDependentVelocityBC, component::Int, t)
-    return ParabolicDirichlet(bc.func(t)[component])
+    return DirichletBC(bc.func(t)[component])
 end
 
 function expand_velocity_bc(bc::UniformFixedValueBC, component::Int, t)
-    return ParabolicDirichlet(bc.func(t)[component])
+    return DirichletBC(bc.func(t)[component])
 end
 
 function expand_velocity_bc(bc::CodedFixedValueBC, ::Int, t)
@@ -415,43 +415,43 @@ function expand_velocity_bc(bc::CodedFixedValueBC, ::Int, t)
 end
 
 function expand_velocity_bc(bc::FixedVelocityBC, component::Int)
-    return ParabolicDirichlet(bc.value[component])
+    return DirichletBC(bc.value[component])
 end
 
 function expand_velocity_bc(::NoSlipWallBC, ::Int)
-    return ParabolicDirichlet(0.0)
+    return DirichletBC(0.0)
 end
 
 function expand_velocity_bc(::SlipWallBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(bc::FixedPressureBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(bc::InletOutletBC, component::Int)
-    return ParabolicDirichlet(bc.inlet_value[component])
+    return DirichletBC(bc.inlet_value[component])
 end
 
 function expand_velocity_bc(::ZeroGradientBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(::TotalPressureBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(::SymmetryBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(bc::FlowRateInletBC, component::Int)
-    return ParabolicDirichlet(bc.velocity[component])
+    return DirichletBC(bc.velocity[component])
 end
 
 function expand_velocity_bc(bc::TimeDependentVelocityBC, component::Int)
-    return ParabolicDirichlet(bc.func(bc.t_ref)[component])
+    return DirichletBC(bc.func(bc.t_ref)[component])
 end
 
 function expand_velocity_bc(bc::SpatialVelocityBC, component::Int)
@@ -469,33 +469,33 @@ function expand_velocity_bc(::WallFunctionBC, ::Int)
     # (`apply_wall_functions!`) sets that nu_t from the log law, so the
     # effective wall stress matches tau_w = u_tau^2.  The previous
     # Neumann(0) expansion produced a stress-free (free-slip) wall.
-    return ParabolicDirichlet(0.0)
+    return DirichletBC(0.0)
 end
 
 function expand_velocity_bc(::ConvectiveOutletBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(::PressureInletVelocityBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(::CyclicBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(bc::CustomBC, ::Int)
     if bc.velocity_type === :dirichlet
-        return ParabolicDirichlet(bc.velocity_value)
+        return DirichletBC(bc.velocity_value)
     else
-        return ParabolicNeumann(bc.velocity_value)
+        return NeumannBC(bc.velocity_value)
     end
 end
 
 function expand_velocity_bc(bc::UniformFixedValueBC{Dim, T}, component::Int) where {Dim, T}
     # 2-arg form: evaluate at t = 0.  The solver loops use the 3-arg form
     # with the actual simulation time.
-    return ParabolicDirichlet(bc.func(zero(T))[component])
+    return DirichletBC(bc.func(zero(T))[component])
 end
 
 function expand_velocity_bc(bc::CodedFixedValueBC, ::Int)
@@ -505,17 +505,17 @@ function expand_velocity_bc(bc::CodedFixedValueBC, ::Int)
 end
 
 function expand_velocity_bc(::WaveTransmissiveBC, ::Int)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_velocity_bc(bc::AtmosphericBLProfileBC{Dim, T}, component::Int) where {Dim, T}
     # Use a mid-height reference value for expansion
     u_ref = bc.u_star / T(0.41) * log(T(10) / bc.z0)  # approximate at z=10m
-    return ParabolicDirichlet(u_ref * bc.flow_direction[component])
+    return DirichletBC(u_ref * bc.flow_direction[component])
 end
 
 function expand_velocity_bc(::PorousJumpBC, ::Int)
-    return ParabolicNeumann(0.0)  # velocity passes through; pressure jump applied separately
+    return NeumannBC(0.0)  # velocity passes through; pressure jump applied separately
 end
 
 # ── Pressure BC expansion ──────────────────────────────────────────
@@ -523,93 +523,93 @@ end
 @doc """
     expand_pressure_bc(bc) -> AbstractBoundaryCondition
 
-Convert an incompressible BC into the primitive `ParabolicDirichlet` or
-`ParabolicNeumann` for the pressure equation.
+Convert an incompressible BC into the primitive `DirichletBC` or
+`NeumannBC` for the pressure equation.
 """
 function expand_pressure_bc end
 
 function expand_pressure_bc(bc::FixedPressureBC)
-    return ParabolicDirichlet(bc.value)
+    return DirichletBC(bc.value)
 end
 
 function expand_pressure_bc(::FixedVelocityBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::NoSlipWallBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::SlipWallBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::InletOutletBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::ZeroGradientBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(bc::TotalPressureBC)
-    return ParabolicDirichlet(bc.p0)
+    return DirichletBC(bc.p0)
 end
 
 function expand_pressure_bc(::SymmetryBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::FlowRateInletBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::TimeDependentVelocityBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::SpatialVelocityBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::WallFunctionBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::ConvectiveOutletBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(bc::PressureInletVelocityBC)
-    return ParabolicDirichlet(bc.p_value)
+    return DirichletBC(bc.p_value)
 end
 
 function expand_pressure_bc(::CyclicBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(bc::CustomBC)
     if bc.pressure_type === :dirichlet
-        return ParabolicDirichlet(bc.pressure_value)
+        return DirichletBC(bc.pressure_value)
     else
-        return ParabolicNeumann(bc.pressure_value)
+        return NeumannBC(bc.pressure_value)
     end
 end
 
 function expand_pressure_bc(::UniformFixedValueBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::CodedFixedValueBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::WaveTransmissiveBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(::AtmosphericBLProfileBC)
-    return ParabolicNeumann(0.0)
+    return NeumannBC(0.0)
 end
 
 function expand_pressure_bc(bc::PorousJumpBC)

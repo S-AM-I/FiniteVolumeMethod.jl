@@ -135,7 +135,7 @@ function reconstruct_gradient_green_gauss_2d(mesh::UnstructuredMesh2D, phi, cell
         else
             if bcs !== nothing && haskey(bcs, f_idx)
                 bc = bcs[f_idx]
-                phi_f = bc isa ParabolicDirichlet ? bc.value : phi[face.owner]
+                phi_f = bc isa DirichletBC ? bc.value : phi[face.owner]
             else
                 phi_f = phi[face.owner]
             end
@@ -165,7 +165,7 @@ function reconstruct_gradient_green_gauss_3d(mesh::UnstructuredMesh3D, phi, cell
         else
             if bcs !== nothing && haskey(bcs, f_idx)
                 bc = bcs[f_idx]
-                phi_f = bc isa ParabolicDirichlet ? bc.value : phi[face.owner]
+                phi_f = bc isa DirichletBC ? bc.value : phi[face.owner]
             else
                 phi_f = phi[face.owner]
             end

@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -133,38 +134,38 @@ end
     @testset "New BC types (C1)" begin
         # ZeroGradientBC
         zg = ZeroGradientBC()
-        @test FiniteVolumeMethod.expand_velocity_bc(zg, 1) isa ParabolicNeumann
-        @test FiniteVolumeMethod.expand_velocity_bc(zg, 2) isa ParabolicNeumann
-        @test FiniteVolumeMethod.expand_pressure_bc(zg) isa ParabolicNeumann
+        @test FiniteVolumeMethod.expand_velocity_bc(zg, 1) isa NeumannBC
+        @test FiniteVolumeMethod.expand_velocity_bc(zg, 2) isa NeumannBC
+        @test FiniteVolumeMethod.expand_pressure_bc(zg) isa NeumannBC
 
         # TotalPressureBC
         tp = TotalPressureBC(101325.0)
-        @test FiniteVolumeMethod.expand_pressure_bc(tp) isa ParabolicDirichlet
+        @test FiniteVolumeMethod.expand_pressure_bc(tp) isa DirichletBC
         @test FiniteVolumeMethod.expand_pressure_bc(tp).value ≈ 101325.0
-        @test FiniteVolumeMethod.expand_velocity_bc(tp, 1) isa ParabolicNeumann
+        @test FiniteVolumeMethod.expand_velocity_bc(tp, 1) isa NeumannBC
 
         # SymmetryBC
         sym = SymmetryBC()
-        @test FiniteVolumeMethod.expand_velocity_bc(sym, 1) isa ParabolicNeumann
-        @test FiniteVolumeMethod.expand_velocity_bc(sym, 2) isa ParabolicNeumann
-        @test FiniteVolumeMethod.expand_pressure_bc(sym) isa ParabolicNeumann
+        @test FiniteVolumeMethod.expand_velocity_bc(sym, 1) isa NeumannBC
+        @test FiniteVolumeMethod.expand_velocity_bc(sym, 2) isa NeumannBC
+        @test FiniteVolumeMethod.expand_pressure_bc(sym) isa NeumannBC
 
         # FlowRateInletBC
         fr = FlowRateInletBC((0.5, 0.0))
         vel_bc = FiniteVolumeMethod.expand_velocity_bc(fr, 1)
-        @test vel_bc isa ParabolicDirichlet
+        @test vel_bc isa DirichletBC
         @test vel_bc.value ≈ 0.5
         vel_bc_y = FiniteVolumeMethod.expand_velocity_bc(fr, 2)
         @test vel_bc_y.value ≈ 0.0
-        @test FiniteVolumeMethod.expand_pressure_bc(fr) isa ParabolicNeumann
+        @test FiniteVolumeMethod.expand_pressure_bc(fr) isa NeumannBC
 
         # TimeDependentVelocityBC
         td = TimeDependentVelocityBC{2, Float64}(t -> SVector(t, 0.0))
         vel_td = FiniteVolumeMethod.expand_velocity_bc(td, 1)
-        @test vel_td isa ParabolicDirichlet
+        @test vel_td isa DirichletBC
         @test vel_td.value ≈ 0.0  # t_ref = 0
         vel_td_y = FiniteVolumeMethod.expand_velocity_bc(td, 2)
         @test vel_td_y.value ≈ 0.0
-        @test FiniteVolumeMethod.expand_pressure_bc(td) isa ParabolicNeumann
+        @test FiniteVolumeMethod.expand_pressure_bc(td) isa NeumannBC
     end
 end

@@ -678,10 +678,10 @@ function assemble_phasic_alpha!(
     # a BC entry for every boundary face's patch.
     bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}()
     for name in keys(prob.bcs_Ul)
-        bcs_alpha[name] = ParabolicNeumann(0.0)
+        bcs_alpha[name] = NeumannBC(0.0)
     end
     for name in keys(prob.bcs_alpha_g)
-        bcs_alpha[name] = ParabolicNeumann(0.0)
+        bcs_alpha[name] = NeumannBC(0.0)
     end
 
     assemble_convection!(eq, phi, mesh, bcs_alpha; scheme = CONV_UPWIND)

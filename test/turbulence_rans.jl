@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -174,16 +175,16 @@ include("TestHelpers.jl")
 
         bcs_turb = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
             :k => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(1.0e-4),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(1.0e-4),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
             :epsilon => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(1.0e-5),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(1.0e-5),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
         )
 
@@ -210,16 +211,16 @@ include("TestHelpers.jl")
         ke = StandardKEpsilon()
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
             :k => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(1.0e-4),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(1.0e-4),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
             :epsilon => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicDirichlet(1.0e-5),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => DirichletBC(1.0e-5),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
         )
         result, turb_state = solve_simple_turbulent(
@@ -261,8 +262,8 @@ include("TestHelpers.jl")
         bc_ke = turbulence_inlet_bc(ke, U_mag, intensity, length_scale)
         @test haskey(bc_ke, :k)
         @test haskey(bc_ke, :epsilon)
-        @test bc_ke[:k] isa ParabolicDirichlet
-        @test bc_ke[:epsilon] isa ParabolicDirichlet
+        @test bc_ke[:k] isa DirichletBC
+        @test bc_ke[:epsilon] isa DirichletBC
         @test bc_ke[:k].value > 0
         @test bc_ke[:epsilon].value > 0
 
@@ -271,8 +272,8 @@ include("TestHelpers.jl")
         bc_kw = turbulence_inlet_bc(kw, U_mag, intensity, length_scale)
         @test haskey(bc_kw, :k)
         @test haskey(bc_kw, :omega)
-        @test bc_kw[:k] isa ParabolicDirichlet
-        @test bc_kw[:omega] isa ParabolicDirichlet
+        @test bc_kw[:k] isa DirichletBC
+        @test bc_kw[:omega] isa DirichletBC
         @test bc_kw[:k].value > 0
         @test bc_kw[:omega].value > 0
 
@@ -282,14 +283,14 @@ include("TestHelpers.jl")
         bc_sst = turbulence_inlet_bc(sst, U_mag, intensity, length_scale)
         @test haskey(bc_sst, :k)
         @test haskey(bc_sst, :omega)
-        @test bc_sst[:k] isa ParabolicDirichlet
-        @test bc_sst[:omega] isa ParabolicDirichlet
+        @test bc_sst[:k] isa DirichletBC
+        @test bc_sst[:omega] isa DirichletBC
 
         # SA
         sa = SpalartAllmaras(mesh, [:bottom])
         bc_sa = turbulence_inlet_bc(sa, U_mag, intensity, length_scale)
         @test haskey(bc_sa, :nu_tilde)
-        @test bc_sa[:nu_tilde] isa ParabolicDirichlet
+        @test bc_sa[:nu_tilde] isa DirichletBC
         @test bc_sa[:nu_tilde].value > 0
     end
 
@@ -300,16 +301,16 @@ include("TestHelpers.jl")
         wbc_ke = turbulence_wall_bc(ke)
         @test haskey(wbc_ke, :k)
         @test haskey(wbc_ke, :epsilon)
-        @test wbc_ke[:k] isa ParabolicNeumann
-        @test wbc_ke[:epsilon] isa ParabolicNeumann
+        @test wbc_ke[:k] isa NeumannBC
+        @test wbc_ke[:epsilon] isa NeumannBC
 
         # k-ω
         kw = KOmega()
         wbc_kw = turbulence_wall_bc(kw)
         @test haskey(wbc_kw, :k)
         @test haskey(wbc_kw, :omega)
-        @test wbc_kw[:k] isa ParabolicNeumann
-        @test wbc_kw[:omega] isa ParabolicNeumann
+        @test wbc_kw[:k] isa NeumannBC
+        @test wbc_kw[:omega] isa NeumannBC
 
         # SST (dispatches via Union{KOmega, KOmegaSSTModel})
         mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
@@ -322,17 +323,17 @@ include("TestHelpers.jl")
         sa = SpalartAllmaras(mesh, [:bottom])
         wbc_sa = turbulence_wall_bc(sa)
         @test haskey(wbc_sa, :nu_tilde)
-        @test wbc_sa[:nu_tilde] isa ParabolicDirichlet
+        @test wbc_sa[:nu_tilde] isa DirichletBC
         @test wbc_sa[:nu_tilde].value == 0.0
     end
 
     # Shared helper for the new regression testsets below
     function _full_ke_bcs()
         inner(v_k, v_e) = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(v_k),
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :left => DirichletBC(v_k),
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
         return Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
             :k => inner(1.0e-4, 0.0),
@@ -409,13 +410,13 @@ include("TestHelpers.jl")
         # Partially missing patches: message must name the patches
         partial = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
             :k => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicNeumann(0.0),
+                :left => NeumannBC(0.0),
             ),
             :epsilon => Dict{Symbol, AbstractBoundaryCondition}(
-                :left => ParabolicNeumann(0.0),
-                :right => ParabolicNeumann(0.0),
-                :bottom => ParabolicNeumann(0.0),
-                :top => ParabolicNeumann(0.0),
+                :left => NeumannBC(0.0),
+                :right => NeumannBC(0.0),
+                :bottom => NeumannBC(0.0),
+                :top => NeumannBC(0.0),
             ),
         )
         err2 = try
@@ -439,7 +440,7 @@ include("TestHelpers.jl")
         # Channel with wall-function walls: velocity expansion must be
         # no-slip Dirichlet so the boundary diffusion term produces drag.
         @test FiniteVolumeMethod.expand_velocity_bc(WallFunctionBC(), 1) isa
-            ParabolicDirichlet
+            DirichletBC
         @test FiniteVolumeMethod.expand_velocity_bc(WallFunctionBC(), 1).value == 0.0
 
         bcs_wf = Dict{Symbol, AbstractBoundaryCondition}(

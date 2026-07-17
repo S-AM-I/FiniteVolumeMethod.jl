@@ -20,6 +20,7 @@
 # `smoke_tested` to `provisional`/`convergence_verified`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearAlgebra: norm
 using LinearSolve
 using StaticArrays
@@ -90,10 +91,10 @@ function run_translation(Nx::Int, Ny::Int, n_steps::Int)
     # Inflow-left: α=0 (no material enters). Outflow-right and
     # tangential top/bottom: zero-gradient.
     bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicNeumann(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(0.0),
+        :right => NeumannBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     )
 
     mass0 = total_mass(alpha, mesh)

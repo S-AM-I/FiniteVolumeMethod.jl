@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra
 using LinearSolve
@@ -131,10 +132,10 @@ include("TestHelpers.jl")
         vof = VOFState(mesh; alpha_init = 0.5)
         state = IncompressibleState(mesh)
         bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicNeumann(0.0),
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :left => NeumannBC(0.0),
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
 
         eq = FiniteVolumeMethod.CollocatedEquation(mesh)
@@ -210,16 +211,16 @@ include("TestHelpers.jl")
             :top => NoSlipWallBC(),
         )
         bcs_p = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicNeumann(0.0),
+            :left => NeumannBC(0.0),
             :right => FixedPressureBC(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
         bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicNeumann(0.0),
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :left => NeumannBC(0.0),
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
 
         alpha_init_func = x -> x[1] < 0.5 ? 1.0 : 0.0
@@ -263,10 +264,10 @@ include("TestHelpers.jl")
 
         alpha = FiniteVolumeMethod.CollocatedScalarField(:alpha, mesh; value = 0.0)
         bcs_alpha = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(1.0),   # water injected at inlet
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :left => DirichletBC(1.0),   # water injected at inlet
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
 
         eq = FiniteVolumeMethod.CollocatedEquation(mesh)
@@ -294,10 +295,10 @@ include("TestHelpers.jl")
 
         # Regression guard: with a zero-Dirichlet inlet BC nothing enters
         bcs_zero = Dict{Symbol, AbstractBoundaryCondition}(
-            :left => ParabolicDirichlet(0.0),
-            :right => ParabolicNeumann(0.0),
-            :bottom => ParabolicNeumann(0.0),
-            :top => ParabolicNeumann(0.0),
+            :left => DirichletBC(0.0),
+            :right => NeumannBC(0.0),
+            :bottom => NeumannBC(0.0),
+            :top => NeumannBC(0.0),
         )
         eq0 = FiniteVolumeMethod.CollocatedEquation(mesh)
         assemble_alpha!(

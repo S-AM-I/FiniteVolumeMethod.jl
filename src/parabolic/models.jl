@@ -432,17 +432,17 @@ end
 abstract type AbstractTurbulenceModel <: AbstractEquationModel end
 
 """
-    ParabolicKEpsilon
+    KEpsilon
 
 Standard k-ε turbulence model for the parabolic (cell-centered) solver.
 Renamed from StandardKEpsilon to avoid conflict with the vertex-centered
 turbulence model in `src/physics/turbulence/k_epsilon.jl`.
 
 The same physical constants are used by both types. Convert between them via:
-- `ParabolicKEpsilon(model::StandardKEpsilon)`
-- `StandardKEpsilon(model::ParabolicKEpsilon)`
+- `KEpsilon(model::StandardKEpsilon)`
+- `StandardKEpsilon(model::KEpsilon)`
 """
-struct ParabolicKEpsilon <: AbstractTurbulenceModel
+struct KEpsilon <: AbstractTurbulenceModel
     C_mu::Float64
     sigma_k::Float64
     sigma_epsilon::Float64
@@ -450,11 +450,11 @@ struct ParabolicKEpsilon <: AbstractTurbulenceModel
     C2_epsilon::Float64
 end
 
-function ParabolicKEpsilon(;
+function KEpsilon(;
         C_mu = 0.09, sigma_k = 1.0, sigma_epsilon = 1.3,
         C1_epsilon = 1.44, C2_epsilon = 1.92
     )
-    return ParabolicKEpsilon(C_mu, sigma_k, sigma_epsilon, C1_epsilon, C2_epsilon)
+    return KEpsilon(C_mu, sigma_k, sigma_epsilon, C1_epsilon, C2_epsilon)
 end
 
 # --- Linearized Source Term ---

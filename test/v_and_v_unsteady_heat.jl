@@ -17,6 +17,7 @@
 # contributing toward future `stable` promotion.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using Test
 
@@ -46,10 +47,10 @@ function run_unsteady(Nx::Int, Ny::Int, n_steps::Int, t_end::Float64)
     solid = SolidThermalProperties(; rho = 1.0, Cp = 1.0, k = UH_ALPHA)
 
     bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     )
 
     Tf = init_T_sin(mesh)

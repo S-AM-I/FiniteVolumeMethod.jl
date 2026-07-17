@@ -18,8 +18,8 @@ function turbulence_inlet_bc(
     k_inlet = T(1.5) * (U_mag * intensity)^2
     eps_inlet = model.C_mu^T(0.75) * k_inlet^T(1.5) / length_scale
     return Dict{Symbol, AbstractBoundaryCondition}(
-        :k => ParabolicDirichlet(k_inlet),
-        :epsilon => ParabolicDirichlet(eps_inlet),
+        :k => DirichletBC(k_inlet),
+        :epsilon => DirichletBC(eps_inlet),
     )
 end
 
@@ -37,8 +37,8 @@ function turbulence_inlet_bc(
     k_inlet = T(1.5) * (U_mag * intensity)^2
     omega_inlet = sqrt(k_inlet) / (T(0.09)^T(0.25) * length_scale)
     return Dict{Symbol, AbstractBoundaryCondition}(
-        :k => ParabolicDirichlet(k_inlet),
-        :omega => ParabolicDirichlet(omega_inlet),
+        :k => DirichletBC(k_inlet),
+        :omega => DirichletBC(omega_inlet),
     )
 end
 
@@ -53,8 +53,8 @@ function turbulence_inlet_bc(
     k_inlet = T(1.5) * (U_mag * intensity)^2
     omega_inlet = sqrt(k_inlet) / (model.coeffs.beta_star^T(0.25) * length_scale)
     return Dict{Symbol, AbstractBoundaryCondition}(
-        :k => ParabolicDirichlet(k_inlet),
-        :omega => ParabolicDirichlet(omega_inlet),
+        :k => DirichletBC(k_inlet),
+        :omega => DirichletBC(omega_inlet),
     )
 end
 
@@ -70,7 +70,7 @@ function turbulence_inlet_bc(
     # Use intensity to scale: higher TI → higher nu_tilde
     nu_tilde_inlet = T(3) * intensity * U_mag * length_scale
     return Dict{Symbol, AbstractBoundaryCondition}(
-        :nu_tilde => ParabolicDirichlet(nu_tilde_inlet),
+        :nu_tilde => DirichletBC(nu_tilde_inlet),
     )
 end
 
@@ -83,21 +83,21 @@ set dynamically during the solve.
 """
 function turbulence_wall_bc(::StandardKEpsilon)
     return Dict{Symbol, AbstractBoundaryCondition}(
-        :k => ParabolicNeumann(0.0),
-        :epsilon => ParabolicNeumann(0.0),
+        :k => NeumannBC(0.0),
+        :epsilon => NeumannBC(0.0),
     )
 end
 
 function turbulence_wall_bc(::Union{KOmega, KOmegaSSTModel})
     return Dict{Symbol, AbstractBoundaryCondition}(
-        :k => ParabolicNeumann(0.0),
-        :omega => ParabolicNeumann(0.0),
+        :k => NeumannBC(0.0),
+        :omega => NeumannBC(0.0),
     )
 end
 
 function turbulence_wall_bc(::SpalartAllmaras)
     return Dict{Symbol, AbstractBoundaryCondition}(
-        :nu_tilde => ParabolicDirichlet(0.0),
+        :nu_tilde => DirichletBC(0.0),
     )
 end
 

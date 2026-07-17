@@ -1,5 +1,6 @@
 using Test
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, to_odefunction
 
 # Integration test: exercises the exact FVM code paths that CRUD.jl uses.
 # Each @testset maps to one CRUD use-case so failures are easy to locate.
@@ -21,8 +22,8 @@ using FiniteVolumeMethod
         model = Diffusion1D(1.0)
         @test model isa AbstractDiffusion
 
-        bc_left = ParabolicDirichlet(0.0)
-        bc_right = ParabolicNeumann(0.0)
+        bc_left = DirichletBC(0.0)
+        bc_right = NeumannBC(0.0)
 
         A, b = assemble_system(model, mesh, bc_left, bc_right)
         @test size(A) == (10, 10)
@@ -57,10 +58,10 @@ using FiniteVolumeMethod
         @test model isa AbstractDiffusion
 
         # 2D assemble_system takes a 4-tuple of BCs: (left, right, bottom, top)
-        bc_left = ParabolicDirichlet(1.0)
-        bc_right = ParabolicDirichlet(0.0)
-        bc_bottom = ParabolicNeumann(0.0)
-        bc_top = ParabolicNeumann(0.0)
+        bc_left = DirichletBC(1.0)
+        bc_right = DirichletBC(0.0)
+        bc_bottom = NeumannBC(0.0)
+        bc_top = NeumannBC(0.0)
         bcs = (bc_left, bc_right, bc_bottom, bc_top)
 
         A, b = assemble_system(model, mesh, bcs)
@@ -145,14 +146,14 @@ using FiniteVolumeMethod
         u0 = fill(560.0, length(mesh.cells))
         prob = SciMLBase.ODEProblem(
             Diffusion1D(2.0e-7), mesh,
-            ParabolicDirichlet(600.0), ParabolicNeumann(0.0);
+            DirichletBC(600.0), NeumannBC(0.0);
             tspan = (0.0, 10.0), u0 = u0,
         )
         @test prob isa SciMLBase.ODEProblem
         @test prob.tspan == (0.0, 10.0)
         @test length(prob.u0) == length(mesh.cells)
 
-        # NOTE: autodiff=false because parabolic_to_odefunction's preallocated
+        # NOTE: autodiff=false because to_odefunction's preallocated
         # `_tmp = similar(b)` buffer is Float64-typed and breaks ForwardDiff's
         # Dual-number propagation. Tracked as a separate FVM issue (DiffCache
         # refactor); not blocking for the convenience method's correctness.

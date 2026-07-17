@@ -210,7 +210,7 @@ function assemble_mass_matrix(mesh::Mesh1D, model::SphericalDiffusion1D)
     return M
 end
 
-function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
+function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D, mesh, i, bc::DirichletBC, side, area, transient)
     dx = abs(mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x))
     return if dx > 1.0e-12 && area > 1.0e-12
         flux_coeff = model.gamma * area / dx
@@ -219,7 +219,7 @@ function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D,
     end
 end
 
-function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
+function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D, mesh, i, bc::NeumannBC, side, area, transient)
     return if side == :left
         b[i] -= bc.value * area
     else
@@ -227,7 +227,7 @@ function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D,
     end
 end
 
-function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D, mesh, i, bc::ParabolicRobin, side, area, transient)
+function handle_spherical_boundary_condition!(A, b, model::SphericalDiffusion1D, mesh, i, bc::RobinBC, side, area, transient)
     dx = abs(mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x))
     gamma = model.gamma
 
@@ -245,7 +245,7 @@ end
 
 # --- Spherical Advection Boundary Condition Handlers ---
 
-function handle_spherical_advection_bc!(A, b, model::SphericalAdvection1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
+function handle_spherical_advection_bc!(A, b, model::SphericalAdvection1D, mesh, i, bc::DirichletBC, side, area, transient)
     v = model.v
     return if side == :left
         if v >= 0
@@ -266,7 +266,7 @@ function handle_spherical_advection_bc!(A, b, model::SphericalAdvection1D, mesh,
     end
 end
 
-function handle_spherical_advection_bc!(A, b, model::SphericalAdvection1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
+function handle_spherical_advection_bc!(A, b, model::SphericalAdvection1D, mesh, i, bc::NeumannBC, side, area, transient)
     v = model.v
     return if side == :left
         if v >= 0
@@ -298,7 +298,7 @@ end
 
 # --- Spherical Advection-Diffusion Boundary Condition Handlers ---
 
-function handle_spherical_advection_diffusion_bc!(A, b, model::SphericalAdvectionDiffusion1D, mesh, i, bc::ParabolicDirichlet, side, area, transient)
+function handle_spherical_advection_diffusion_bc!(A, b, model::SphericalAdvectionDiffusion1D, mesh, i, bc::DirichletBC, side, area, transient)
     v = model.advection.v
     gamma = model.diffusion.gamma
     dx = abs(mesh.cells[i].center - (side == :left ? mesh.nodes[i].x : mesh.nodes[i + 1].x))
@@ -322,7 +322,7 @@ function handle_spherical_advection_diffusion_bc!(A, b, model::SphericalAdvectio
     end
 end
 
-function handle_spherical_advection_diffusion_bc!(A, b, model::SphericalAdvectionDiffusion1D, mesh, i, bc::ParabolicNeumann, side, area, transient)
+function handle_spherical_advection_diffusion_bc!(A, b, model::SphericalAdvectionDiffusion1D, mesh, i, bc::NeumannBC, side, area, transient)
     v = model.advection.v
     if side == :left
         b[i] -= bc.value * area

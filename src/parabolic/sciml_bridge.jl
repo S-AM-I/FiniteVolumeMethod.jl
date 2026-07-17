@@ -5,7 +5,7 @@
 # use of OrdinaryDiffEq.jl, LinearSolve.jl, and NonlinearSolve.jl.
 
 """
-    parabolic_to_odefunction(A, M, b)
+    to_odefunction(A, M, b)
 
 Convert assembled parabolic system matrices into a SciMLBase `ODEFunction`.
 
@@ -24,12 +24,12 @@ An `ODEFunction` suitable for `ODEProblem(f, u0, tspan)`.
 ```julia
 A, b = assemble_system(Diffusion1D(1.0), mesh, bc_left, bc_right)
 M = assemble_mass_matrix(mesh)
-f = parabolic_to_odefunction(A, M, b)
+f = to_odefunction(A, M, b)
 prob = ODEProblem(f, u0, (0.0, 1.0))
 sol = solve(prob, TRBDF2())  # or any OrdinaryDiffEq algorithm
 ```
 """
-function parabolic_to_odefunction(A, M, b)
+function to_odefunction(A, M, b)
     # Precompute factorization of M for efficiency
     M_fact = LinearAlgebra.factorize(M)
     _tmp = similar(b)
@@ -47,19 +47,19 @@ function parabolic_to_odefunction(A, M, b)
 end
 
 """
-    parabolic_to_odefunction(A, b)
+    to_odefunction(A, b)
 
 Simplified version assuming mass matrix `M = I`.
 
 # Example
 ```julia
 A, b = assemble_system(Diffusion1D(1.0), mesh, bc_left, bc_right)
-f = parabolic_to_odefunction(A, b)
+f = to_odefunction(A, b)
 prob = ODEProblem(f, u0, (0.0, 1.0))
 sol = solve(prob, Tsit5())
 ```
 """
-function parabolic_to_odefunction(A, b)
+function to_odefunction(A, b)
     _tmp = similar(b)
     f = ODEFunction(
         function (du, u, p, t)
@@ -74,7 +74,7 @@ function parabolic_to_odefunction(A, b)
 end
 
 """
-    parabolic_to_linearproblem(A, b)
+    to_linearproblem(A, b)
 
 Convert assembled steady-state system into a SciMLBase `LinearProblem`.
 
@@ -83,7 +83,7 @@ The assembled system `A u = b` maps directly to `LinearProblem(A, b)`.
 # Example
 ```julia
 A, b = assemble_system(Diffusion1D(1.0), mesh, bc_left, bc_right)
-prob = parabolic_to_linearproblem(A, b)
+prob = to_linearproblem(A, b)
 
 # Using LinearSolve.jl:
 using LinearSolve
@@ -91,7 +91,7 @@ sol = solve(prob)                    # direct solver
 sol = solve(prob, KrylovJL_GMRES()) # true GMRES with Krylov
 ```
 """
-function parabolic_to_linearproblem(A, b)
+function to_linearproblem(A, b)
     return LinearProblem(A, b)
 end
 
@@ -101,14 +101,14 @@ end
 
 Convenience constructor for the structured-parabolic stack: assembles the
 `(A, b)` system from `(model, mesh, bcs...)`, takes the mass matrix from
-`assemble_mass_matrix(mesh)`, wraps them with `parabolic_to_odefunction`, and
+`assemble_mass_matrix(mesh)`, wraps them with `to_odefunction`, and
 returns an `SciMLBase.ODEProblem` ready for `solve`.
 
 Equivalent (long-form) to:
 ```julia
 A, b = assemble_system(model, mesh, bcs...; source = source, transient = transient)
 M = assemble_mass_matrix(mesh)
-f = parabolic_to_odefunction(A, M, b)
+f = to_odefunction(A, M, b)
 prob = ODEProblem(f, u0, tspan)
 ```
 
@@ -121,7 +121,7 @@ single tuple of face BCs).
 ```julia
 mesh = generate_mesh_1d(50, 1.0)
 prob = ODEProblem(Diffusion1D(2.0e-7), mesh,
-                  ParabolicDirichlet(600.0), ParabolicNeumann(0.0);
+                  DirichletBC(600.0), NeumannBC(0.0);
                   tspan = (0.0, 10.0), u0 = fill(560.0, length(mesh.cells)))
 sol = solve(prob, ImplicitEuler(); adaptive = false, dt = 0.01)
 ```
@@ -135,6 +135,6 @@ function SciMLBase.ODEProblem(
     )
     A, b = assemble_system(model, mesh, bcs...; source = source, transient = transient)
     M = assemble_mass_matrix(mesh)
-    f = parabolic_to_odefunction(A, M, b)
+    f = to_odefunction(A, M, b)
     return ODEProblem(f, u0, tspan)
 end

@@ -18,6 +18,7 @@
 # v3.4 of the V&V suite.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test
 
@@ -30,10 +31,10 @@ function solve_poisson_mms(linear_solver, N::Int = 32)
     nc = length(mesh.cell_volumes)
 
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
 
     eq = CollocatedEquation(mesh)

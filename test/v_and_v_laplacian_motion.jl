@@ -12,6 +12,7 @@
 # invariants verified.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearAlgebra: norm
 using LinearSolve
 using StaticArrays
@@ -27,10 +28,10 @@ include("TestHelpers.jl")
     solver = LaplacianMotion(; gamma = 1.0)
 
     bcs_zero = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
 
     compute_displacement!(
@@ -53,10 +54,10 @@ end
 
     d0 = 0.1
     bcs_uniform = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(d0),
-        :right => ParabolicDirichlet(d0),
-        :bottom => ParabolicDirichlet(d0),
-        :top => ParabolicDirichlet(d0),
+        :left => DirichletBC(d0),
+        :right => DirichletBC(d0),
+        :bottom => DirichletBC(d0),
+        :top => DirichletBC(d0),
     )
 
     compute_displacement!(
@@ -84,10 +85,10 @@ end
     ms_10 = MeshMotionState(mesh)
 
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.05),  # moving top
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.05),  # moving top
     )
 
     compute_displacement!(
@@ -122,10 +123,10 @@ end
     d_top = 0.05
     d_bot = 0.0
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(d_bot),
-        :right => ParabolicDirichlet(d_bot),
-        :bottom => ParabolicDirichlet(d_bot),
-        :top => ParabolicDirichlet(d_top),
+        :left => DirichletBC(d_bot),
+        :right => DirichletBC(d_bot),
+        :bottom => DirichletBC(d_bot),
+        :top => DirichletBC(d_top),
     )
 
     compute_displacement!(

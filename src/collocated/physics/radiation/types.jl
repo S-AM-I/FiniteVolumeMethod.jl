@@ -192,14 +192,14 @@ end
 Marshak boundary condition for an opaque wall at temperature `T_wall`:
 `G + (2/(3a)) * dG/dn = 4 * sigma * T_wall^4`
 
-Implemented as `ParabolicRobin(1, 2/(3a), 4 * sigma * T^4)`.
+Implemented as `RobinBC(1, 2/(3a), 4 * sigma * T^4)`.
 """
 function marshak_wall_bc(rad_model::P1Model, T_wall::Real)
     a_val = rad_model.a isa AbstractVector ? sum(rad_model.a) / length(rad_model.a) : rad_model.a
     T_fl = typeof(Float64(a_val))
     b_coeff = T_fl(2) / (T_fl(3) * a_val)
     c_val = T_fl(4) * T_fl(STEFAN_BOLTZMANN) * T_fl(T_wall)^4
-    return ParabolicRobin(one(T_fl), b_coeff, c_val)
+    return RobinBC(one(T_fl), b_coeff, c_val)
 end
 
 """
@@ -210,5 +210,5 @@ Fixed incident radiation BC from a known temperature:
 """
 function radiation_inlet_bc(T_inlet::Real)
     G_val = 4.0 * STEFAN_BOLTZMANN * Float64(T_inlet)^4
-    return ParabolicDirichlet(G_val)
+    return DirichletBC(G_val)
 end

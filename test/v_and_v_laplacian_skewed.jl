@@ -23,6 +23,7 @@
 # levels of skewness that make minimum-correction blow up.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using StaticArrays: SVector
 using Test
@@ -73,10 +74,10 @@ function solve_skewed_mms(
     )
     mesh = build_skewed_mesh(N, skew)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
     nc = length(mesh.cell_volumes)
 

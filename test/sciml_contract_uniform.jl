@@ -9,6 +9,7 @@
 # when dispatching across parabolic, hyperbolic, and collocated families.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC, RobinBC
 using Test
 using DelaunayTriangulation
 
@@ -41,9 +42,9 @@ end
 
 @testset "Stage 1d: AbstractFVMBoundaryCondition umbrella" begin
     # Parabolic BCs
-    @test ParabolicDirichlet(1.0) isa AbstractFVMBoundaryCondition
-    @test ParabolicNeumann(0.0) isa AbstractFVMBoundaryCondition
-    @test ParabolicRobin(1.0, 2.0, 3.0) isa AbstractFVMBoundaryCondition
+    @test DirichletBC(1.0) isa AbstractFVMBoundaryCondition
+    @test NeumannBC(0.0) isa AbstractFVMBoundaryCondition
+    @test RobinBC(1.0, 2.0, 3.0) isa AbstractFVMBoundaryCondition
 
     # Collocated BCs (subtype AbstractBoundaryCondition which subtypes the umbrella)
     @test NoSlipWallBC() isa AbstractFVMBoundaryCondition

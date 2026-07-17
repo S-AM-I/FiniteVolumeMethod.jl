@@ -15,6 +15,7 @@
 # `smoke_tested` to `provisional`/`convergence_verified`.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using Test
 
@@ -36,10 +37,10 @@ function solve_slab(Nx::Int, Ny::Int)
     T_field = CollocatedScalarField(:T, mesh; value = 0.0)
 
     bcs_G = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(SLAB_G0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicNeumann(0.0),
-        :top => ParabolicNeumann(0.0),
+        :left => DirichletBC(SLAB_G0),
+        :right => DirichletBC(0.0),
+        :bottom => NeumannBC(0.0),
+        :top => NeumannBC(0.0),
     )
 
     return mesh, solve_p1_radiation(rad, T_field, mesh, bcs_G)

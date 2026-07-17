@@ -242,7 +242,7 @@ function assemble_two_fluid_pressure!(
     bcs_p_explicit = expand_bcs_pressure(prob.bcs_p)
     bcs_p = Dict{Symbol, AbstractBoundaryCondition}()
     for name in keys(prob.bcs_Ul)
-        bcs_p[name] = get(bcs_p_explicit, name, ParabolicNeumann(0.0))
+        bcs_p[name] = get(bcs_p_explicit, name, NeumannBC(0.0))
     end
     for (name, bc) in bcs_p_explicit
         bcs_p[name] = bc

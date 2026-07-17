@@ -14,9 +14,9 @@ using ...Geometry
 using ...Numerics
 using ...Parabolic
 # physics/turbulence/k_epsilon.jl defines the converting constructor
-# ParabolicKEpsilon(::StandardKEpsilon) — import so it extends the
+# KEpsilon(::StandardKEpsilon) — import so it extends the
 # Parabolic type's constructor instead of shadowing the type name.
-import ...Parabolic: ParabolicKEpsilon
+import ...Parabolic: KEpsilon
 using ..Collocated: add_diag!, CollocatedEquation,
     CollocatedScalarField,
     CollocatedVectorField,

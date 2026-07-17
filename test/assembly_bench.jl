@@ -13,6 +13,7 @@
 #      drift from floating-point noise due to insertion order).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using Test
 using BenchmarkTools
 using SparseArrays
@@ -23,10 +24,10 @@ include("TestHelpers.jl")
 @testset "Stage 1a: CollocatedEquation sparsity pattern reuse" begin
     mesh = build_cartesian_unstructured_mesh(100, 100, 1.0, 1.0)  # 10_000 cells
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(1.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(1.0),
     )
     eq = CollocatedEquation(mesh)
 

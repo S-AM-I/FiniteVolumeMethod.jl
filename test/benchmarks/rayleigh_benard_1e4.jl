@@ -29,6 +29,7 @@
 # treatment, so 10% is fair here).
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using LinearSolve
 using StaticArrays: SVector
 using Test
@@ -82,10 +83,10 @@ function solve_rayleigh_benard_1e4(; N::Int = 80)
     )
 
     bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(1.0),     # hot
-        :right => ParabolicDirichlet(0.0),    # cold
-        :bottom => ParabolicNeumann(0.0),     # adiabatic
-        :top => ParabolicNeumann(0.0),        # adiabatic
+        :left => DirichletBC(1.0),     # hot
+        :right => DirichletBC(0.0),    # cold
+        :bottom => NeumannBC(0.0),     # adiabatic
+        :top => NeumannBC(0.0),        # adiabatic
     )
 
     result, thermal_state = solve_simple_thermal(

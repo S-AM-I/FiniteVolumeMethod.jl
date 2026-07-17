@@ -16,6 +16,7 @@
 #      for the OVER_RELAXED mode.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearAlgebra: dot, norm
 using LinearSolve
 using StaticArrays: SVector
@@ -66,10 +67,10 @@ end
     N = 16
     mesh = build_cartesian_unstructured_mesh(N, N, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
 
     function assemble_matrix(mode)
@@ -252,10 +253,10 @@ f_forcing(x, y) = 2π^2 * sin(π * x) * sin(π * y)
 function solve_mms_over_relaxed(N::Int, skew::Float64)
     mesh = build_skewed_mesh(N, skew)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
     nc = length(mesh.cell_volumes)
 
@@ -362,10 +363,10 @@ sheared_forcing(x, y, lam) =
 function solve_sheared_mms(N::Int, lam::Float64, sweeps::Int)
     mesh = build_sheared_mesh(N, lam)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
     )
     nc = length(mesh.cell_volumes)
     phi_num = zeros(nc)

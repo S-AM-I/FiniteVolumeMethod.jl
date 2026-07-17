@@ -212,14 +212,14 @@ function _apply_convection_bc!(
     bc = get(bcs, tag, nothing)
     bc === nothing && error("No boundary condition for patch :$tag at face $f")
 
-    if bc isa ParabolicDirichlet
+    if bc isa DirichletBC
         # Known boundary value: explicit contribution to RHS
         eq.b[P] -= F_f * bc.value
     elseif bc isa ParabolicDirichletFunc
         # Spatially-varying boundary value: evaluate at the face center
         x_f = face_center(mesh, f)
         eq.b[P] -= F_f * T(bc.func(x_f))
-    elseif bc isa ParabolicNeumann
+    elseif bc isa NeumannBC
         # Fixed gradient: φ_f = φ_P + g·d_n where g = bc.value and d_n is
         # the cell-center-to-face distance.  Implicit part on the diagonal,
         # explicit gradient contribution to the RHS.  (A nonzero gradient

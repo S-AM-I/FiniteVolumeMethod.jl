@@ -16,6 +16,7 @@
 #   8. solve_wsggm_radiation dispatches cleanly onto the :p1 grey solver.
 
 using FiniteVolumeMethod
+using FiniteVolumeMethod.Parabolic: DirichletBC
 using LinearSolve
 using Test
 
@@ -136,10 +137,10 @@ end
     mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
     T_field = CollocatedScalarField(:T, mesh; value = 1500.0)
     bcs = Dict{Symbol, FiniteVolumeMethod.AbstractBoundaryCondition}(
-        :left => ParabolicDirichlet(0.0),
-        :right => ParabolicDirichlet(0.0),
-        :top => ParabolicDirichlet(0.0),
-        :bottom => ParabolicDirichlet(0.0),
+        :left => DirichletBC(0.0),
+        :right => DirichletBC(0.0),
+        :top => DirichletBC(0.0),
+        :bottom => DirichletBC(0.0),
     )
     m = FiniteVolumeMethod.WSGGMModel()
     G = FiniteVolumeMethod.solve_wsggm_radiation(
