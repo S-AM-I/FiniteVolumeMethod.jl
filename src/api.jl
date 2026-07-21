@@ -64,10 +64,15 @@ export BoundaryConditions,
     Neumann,
     Robin
 
-# --- Parabolic cell-vertex solver (9) ---
+# --- Parabolic cell-vertex solver (14) ---
 export AbstractBoundaryCondition,
+    AbstractFVMTemplate,
+    DiffusionEquation,
     FVMProblem,
     FVMSystem,
+    LaplacesEquation,
+    LinearReactionDiffusionEquation,
+    MeanExitTimeProblem,
     ParticleTracker,
     PoissonsEquation,
     SteadyFVMProblem,

@@ -23,12 +23,12 @@ The flux is given by:
 3. **Fiber-reinforced materials**: Higher diffusion along fiber direction
 4. **Image processing**: Perona-Malik style anisotropic smoothing
 
-You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+You can solve this problem using [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 !!! warning
 
     The solution to this problem will have an extra component added to it. The original solution will be inside
-    `sol[begin:end-1, :]`, where `sol` is the solution returned by [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+    `sol[begin:end-1, :]`, where `sol` is the solution returned by [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 # Constructor
 

@@ -183,7 +183,7 @@ end
     BoundaryConditions(mesh::FVMGeometry, functions, conditions; parameters=nothing)
 
 This is a constructor for the [`BoundaryConditions`](@ref) struct, which holds the boundary conditions for the PDE.
-See also [`Conditions`](@ref) (which [`FVMProblem`](@ref) wraps this into), [`ConditionType`](@ref), and [`InternalConditions`](@ref).
+See also [`Conditions`](@ref) (which [`FVMProblem`](@ref FiniteVolumeMethod.Parabolic.FVMProblem) wraps this into), [`ConditionType`](@ref), and [`InternalConditions`](@ref).
 
 # Arguments
 
@@ -236,7 +236,7 @@ end
         parameters::Tuple=ntuple(_ -> nothing, length(functions)))
 
 This is a constructor for the [`InternalConditions`](@ref) struct, which holds the internal conditions for the PDE.
-See also [`Conditions`](@ref) (which [`FVMProblem`](@ref) wraps this into), [`ConditionType`](@ref), and [`BoundaryConditions`](@ref).
+See also [`Conditions`](@ref) (which [`FVMProblem`](@ref FiniteVolumeMethod.Parabolic.FVMProblem) wraps this into), [`ConditionType`](@ref), and [`BoundaryConditions`](@ref).
 
 # Arguments
 

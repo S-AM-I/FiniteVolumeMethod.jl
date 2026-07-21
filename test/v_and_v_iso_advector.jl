@@ -16,7 +16,6 @@
 #      upward by a uniform U = (0, v), stays sharp (α remains in [0, 1]).
 
 using FiniteVolumeMethod
-using FiniteVolumeMethod: face_normal_area, is_internal_face
 using LinearAlgebra
 using StaticArrays
 using Test

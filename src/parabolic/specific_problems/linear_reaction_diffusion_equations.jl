@@ -7,12 +7,12 @@ A struct for defining a problem representing a linear reaction-diffusion equatio
 ```
 inside a domain $\Omega$. 
 
-You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+You can solve this problem using [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 !!! warning 
 
     The solution to this problem will have an extra component added to it. The original solution will be inside 
-    `sol[begin:end-1, :]`, where `sol` is the solution returned by [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+    `sol[begin:end-1, :]`, where `sol` is the solution returned by [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 # Constructor 
 
@@ -48,7 +48,7 @@ The struct has extra fields in addition to the arguments above:
 - `A`: This is a sparse matrix `A` so that `du/dt = Au + b`.
 - `b`: The `b` above.
 - `Aop`: The `MatrixOperator` that represents the system so that `du/dt = Aop*u` (with `u` padded with an extra component since `A` is now inside `Aop`).
-- `problem`: The `ODEProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
+- `problem`: The `ODEProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
 """
 struct LinearReactionDiffusionEquation{M, C, D, DP, S, SP, IC, FT, A, B, OP, ODE} <:
     AbstractFVMTemplate

@@ -94,6 +94,7 @@ for entry in VALIDATION_MANIFEST.generated_pages
 end
 
 using FiniteVolumeMethod
+using CommonSolve  # `solve` is CommonSolve.solve; makes the canonical name resolvable for @ref targets
 using Documenter
 using DocumenterVitepress
 using Literate

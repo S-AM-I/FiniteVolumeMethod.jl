@@ -36,7 +36,6 @@
 #    observers at r and 2r is exactly r/c within one Δt.
 
 using StaticArrays
-using FiniteVolumeMethod.Experimental: CurleSurface, FWHObserver, FWHSurface, fwh_farassat1a
 using LinearAlgebra: norm
 using Test
 

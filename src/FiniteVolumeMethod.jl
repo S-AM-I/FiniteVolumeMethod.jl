@@ -54,12 +54,20 @@ import .Numerics: total_energy, _solve_linear, _unsupported_backend,
 
 include("vertex_conditions/VertexConditions.jl")
 using .VertexConditions
+# `ParametrisedFunction` is documented public API (docs/src/interface.md) but
+# unexported by VertexConditions; the guard keeps `FiniteVolumeMethod.ParametrisedFunction`
+# resolving for the docs `@docs`/`@ref` machinery.
+import .VertexConditions: ParametrisedFunction
 
 include("parabolic/Parabolic.jl")
 using .Parabolic
 # sciml/solve.jl (flat) and qualified test access use these Parabolic
 # internals, unexported as of Stage 4c.
 import .Parabolic: _neqs, _get_boundary_flux
+# WYOS ("writing your own solver") helpers: documented public API referenced as
+# `FiniteVolumeMethod.X` in docs/src/wyos/overview.md, unexported by Parabolic.
+import .Parabolic: create_rhs_b, two_point_interpolant,
+    neumann_boundary_edge_contributions!, non_neumann_boundary_edge_contributions!
 
 # Stage-4b prefix resolution: the Simu.jl-migration names lost their interim
 # `Parabolic` prefix (canonical access is module-qualified, e.g.

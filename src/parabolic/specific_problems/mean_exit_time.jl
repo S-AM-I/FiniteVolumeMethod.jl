@@ -9,7 +9,7 @@ inside a domain $\Omega$. This problem is a special case of [`PoissonsEquation`]
 but is defined separately since it is common enough to warrant its own definition;
 `MeanExitTimeProblem` is constructed using [`PoissonsEquation`](@ref).
 
-You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+You can solve this problem using [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 # Constructor 
 
@@ -38,7 +38,7 @@ conditions are [`Dudt`](@ref) or [`Constrained`](@ref) types, then an error is t
 The struct has extra fields in addition to the arguments above:
 - `A`: This is a sparse matrix `A` so that `AT = b`.
 - `b`: The `b` above.
-- `problem`: The `LinearProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
+- `problem`: The `LinearProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
 """
 struct MeanExitTimeProblem{M, C, D, DP, A, B, LP} <: AbstractFVMTemplate
     mesh::M

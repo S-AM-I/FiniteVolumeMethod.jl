@@ -17,7 +17,7 @@ where the total flux is:
 \vb q = \vb v u - D \grad u
 ```
 
-You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+You can solve this problem using [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 # Constructor
 

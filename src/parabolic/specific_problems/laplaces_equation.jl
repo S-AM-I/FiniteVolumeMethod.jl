@@ -7,7 +7,7 @@ A struct for defining a problem representing a (generalised) Laplace's equation:
 ```
 inside a domain $\Omega$. See also [`PoissonsEquation`](@ref).
 
-You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+You can solve this problem using [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 # Constructor 
 
@@ -32,7 +32,7 @@ You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, arg
 The struct has extra fields in addition to the arguments above:
 - `A`: This is a sparse matrix `A` so that `Au = b`.    
 - `b`: The `b` above.
-- `problem`: The `LinearProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
+- `problem`: The `LinearProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
 """
 struct LaplacesEquation{M, C, D, DP, A, B, ODE} <: AbstractFVMTemplate
     mesh::M

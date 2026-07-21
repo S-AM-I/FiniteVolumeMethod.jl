@@ -13,7 +13,7 @@
 # Full coupled-solver verification is deferred to v3.1.
 
 using FiniteVolumeMethod
-using FiniteVolumeMethod: AbstractDragClosure, TwoFluidState, density_ratio, enforce_volume_fraction_sum!, interphase_drag
+using FiniteVolumeMethod: TwoFluidState, density_ratio, enforce_volume_fraction_sum!, interphase_drag
 using StaticArrays
 using Logging
 using Test

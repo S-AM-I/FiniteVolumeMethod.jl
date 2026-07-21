@@ -15,7 +15,6 @@
 # `experimental` to `smoke_tested`.
 
 using FiniteVolumeMethod
-using FiniteVolumeMethod: AbstractDragClosure, GibilaroDrag, IshiiZuberDrag, bubble_reynolds, drag_coefficient, drag_force_density, stokes_limit_drag
 using StaticArrays
 using Test
 

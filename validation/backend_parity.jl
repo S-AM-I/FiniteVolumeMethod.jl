@@ -35,8 +35,8 @@ function _cuda_hyperbolic_2d_parity()
     end
 
     prob = _supported_cuda_problem()
-    coords_cpu, U_cpu, t_cpu = FiniteVolumeMethod.solve_hyperbolic(prob; method = :ssprk3, backend = CPUBackend())
-    coords_gpu, U_gpu, t_gpu = FiniteVolumeMethod.solve_hyperbolic(prob; method = :ssprk3, backend = CUDASolverBackend())
+    coords_cpu, U_cpu, t_cpu = FiniteVolumeMethod.solve_hyperbolic(prob; method = :ssprk3, backend = FiniteVolumeMethod.CPUBackend())
+    coords_gpu, U_gpu, t_gpu = FiniteVolumeMethod.solve_hyperbolic(prob; method = :ssprk3, backend = FiniteVolumeMethod.CUDASolverBackend())
 
     max_abs_diff = maximum(maximum(abs.(U_cpu[ix, iy] - U_gpu[ix, iy])) for iy in axes(U_cpu, 2), ix in axes(U_cpu, 1))
     time_diff = abs(t_cpu - t_gpu)

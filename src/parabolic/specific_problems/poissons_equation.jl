@@ -8,7 +8,7 @@ A struct for defining a problem representing a (generalised) Poisson's equation:
 inside a domain $\Omega$. See also [`LaplacesEquation`](@ref), a special case of this 
 problem with $f(\vb x) = 0$.
 
-You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)).
+You can solve this problem using [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)).
 
 # Constructor 
 
@@ -37,7 +37,7 @@ You can solve this problem using [`solve`](@ref solve(::AbstractFVMTemplate, arg
 The struct has extra fields in addition to the arguments above:
 - `A`: This is a sparse matrix `A` so that `Au = b`.    
 - `b`: The `b` above.
-- `problem`: The `LinearProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
+- `problem`: The `LinearProblem` that represents the problem. This is the problem that is solved when you call [`solve`](@ref CommonSolve.solve(::AbstractFVMTemplate, args...; kwargs...)) on the struct.
 """
 struct PoissonsEquation{M, C, D, DP, S, SP, A, B, ODE} <: AbstractFVMTemplate
     mesh::M
