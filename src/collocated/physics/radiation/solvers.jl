@@ -60,6 +60,10 @@ function solve_simple_thermal_radiation(
     # Radiation source (initialized to zero, updated after first G solve)
     S_rad = zeros(T, nc)
 
+    # Cyclic (periodic) support + reusable equation workspace, allocated once.
+    cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+    eqs, p_eq = _make_incompressible_workspace(prob, cyclic_pairs)
+
     # Residuals
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
@@ -81,51 +85,14 @@ function solve_simple_thermal_radiation(
         # Buoyancy
         body_force = compute_buoyancy_source(thermal_state.T_field, thermal_props, prob.density)
 
-        # -- Momentum ------------------------------------------------------
-        eqs = CollocatedEquation{T}[]
-        for d in 1:Dim
-            eq = CollocatedEquation(mesh)
-            assemble_momentum!(
-                eq, state, prob, d;
-                nu_eff = nu_eff, body_force = body_force
-            )
-            push!(eqs, eq)
-        end
-
-        for d in 1:Dim
-            U_old_d = _extract_component(state.U, d)
-            under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
-            sol = _dispatch_solve(
-                to_linear_problem(eqs[d]), linear_solver, solver_config,
-                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
-            )
-            _set_component!(state.U, d, sol.u)
-        end
-        update_boundary_velocity!(state, prob.bcs, mesh)
-
-        # Extract A_P/H(U) from the RELAXED, solved momentum equations —
-        # standard SIMPLE ordering, so that D = V/A_P in the pressure
-        # equation (and in the Rhie-Chow face flux, which shares the same
-        # face D_f) is consistent with the velocity the momentum solve
-        # actually produced.
-        extract_momentum_operators!(state, eqs, mesh)
-
-        # -- Pressure ------------------------------------------------------
-        p_eq = CollocatedEquation(mesh)
-        assemble_pressure!(p_eq, state, prob)
-        if _needs_pressure_reference(prob.bcs)
-            fix_pressure_reference!(p_eq, 1, zero(T))
-        end
-        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
-
-        for c in 1:nc
-            state.p.internal[c] += algo.alpha_p * (p_sol.u[c] - state.p.internal[c])
-        end
-        update_boundary_pressure!(state, prob.bcs, mesh)
-
-        correct_velocity!(state, mesh)
-        update_boundary_velocity!(state, prob.bcs, mesh)
-        correct_fluxes!(state, mesh)
+        # Momentum/pressure via the shared SIMPLE core. The recorded residuals
+        # depend only on the frozen momentum equations and corrected velocity,
+        # which the turbulence, energy and radiation solves below do not touch.
+        max_res = _simple_outer_step!(
+            state, prob, eqs, p_eq, cyclic_pairs, residuals, component_labels;
+            nu_eff = nu_eff, body_force = body_force,
+            linear_solver = linear_solver, solver_config = solver_config,
+        )
 
         # -- Turbulence (optional) -----------------------------------------
         if turb_model !== nothing
@@ -157,18 +124,6 @@ function solve_simple_thermal_radiation(
             wsggm_path_length = wsggm_path_length,
         )
         S_rad = compute_radiation_source(source_model, rad_state.G, thermal_state.T_field)
-
-        # -- Convergence ---------------------------------------------------
-        max_res = zero(T)
-        for d in 1:Dim
-            u_d = _extract_component(state.U, d)
-            r = momentum_residual(eqs[d], u_d)
-            push!(residuals[component_labels[d]], r)
-            max_res = max(max_res, r)
-        end
-        r_cont = continuity_residual(state, mesh)
-        push!(residuals[:continuity], r_cont)
-        max_res = max(max_res, r_cont)
 
         if verbose
             _print_simple_residuals(iter, residuals, component_labels)

@@ -359,4 +359,43 @@ include("TestHelpers.jl")
             @test tsa.T_field.internal[c] ≈ tsb.T_field.internal[c] rtol = 1.0e-10
         end
     end
+
+    # ── 15. Cyclic BCs reach the thermal path (Stage 5e) ───────────────
+    #
+    # Before the loop consolidation the thermal SIMPLE loop applied no
+    # cyclic cross-boundary coupling: a `CyclicBC` degenerated to its
+    # `Neumann(0)` expansion, i.e. it behaved exactly like a
+    # `ZeroGradientBC`. Consolidating momentum/pressure onto the shared
+    # `_simple_outer_step!` core made the thermal path apply the same
+    # cyclic coupling as the plain solver, so a periodic and a
+    # zero-gradient problem must now give different velocity fields.
+    @testset "Cyclic BCs reach the thermal path" begin
+        function solve_lid(lr_bc)
+            mesh = build_cartesian_unstructured_mesh(8, 8, 1.0, 1.0)
+            bcs = Dict{Symbol, AbstractBoundaryCondition}(
+                :top => FixedVelocityBC((0.5, 0.0)),
+                :bottom => NoSlipWallBC(),
+                :left => lr_bc(:left),
+                :right => lr_bc(:right),
+            )
+            algo = SIMPLE(; max_iterations = 40, tolerance = 1.0e-10)
+            prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.05)
+            bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
+                :top => thermal_inlet_bc(350.0),
+                :bottom => thermal_inlet_bc(300.0),
+                :left => thermal_insulated_bc(),
+                :right => thermal_insulated_bc(),
+            )
+            r, _ = solve_simple_thermal(
+                prob, FluidThermalProperties{2}(; k = 0.6, Cp = 4000.0); bcs_T = bcs_T,
+            )
+            return [u[1] for u in r.state.U.internal]
+        end
+
+        cyclic = solve_lid(p -> p === :left ? CyclicBC(:right) : CyclicBC(:left))
+        zerograd = solve_lid(_ -> ZeroGradientBC())
+        @test all(isfinite, cyclic)
+        rel = maximum(abs.(cyclic .- zerograd)) / maximum(abs.(zerograd))
+        @test rel > 0.01
+    end
 end

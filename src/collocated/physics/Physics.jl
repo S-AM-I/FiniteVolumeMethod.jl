@@ -64,7 +64,10 @@ using ..Collocated: add_diag!, CollocatedEquation,
     under_relax_momentum!,
     update_boundary_cyclic!,
     update_boundary_pressure!,
-    update_boundary_velocity!
+    update_boundary_velocity!,
+    _piso_step!,
+    _pimple_step!,
+    _simple_outer_step!
 using LinearAlgebra: LinearAlgebra, dot, norm
 using Printf: @sprintf
 using StaticArrays: SVector

@@ -46,8 +46,12 @@ function _piso_step!(
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
         t::T = zero(T),
         ws = nothing,
-        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
-        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
+        nu_eff::Union{T, Vector{T}} = prob.nu,
+        body_force::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
+        scheme::ConvectionScheme = CONV_UPWIND,
+        blend::T = T(0.5),
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = prob.model.porous_zones,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = prob.model.mrf_zones,
     ) where {Dim, T}
     mesh = prob.mesh
 
@@ -64,6 +68,8 @@ function _piso_step!(
         reset!(eqs[d])
         assemble_momentum!(
             eqs[d], state, prob, d; dt = dt, t = t,
+            nu_eff = nu_eff, body_force = body_force,
+            scheme = scheme, blend = blend,
             porous_zones = porous_zones, mrf_zones = mrf_zones,
         )
         # Apply cyclic coupling to momentum
@@ -125,6 +131,8 @@ function _piso_step!(
                 reset!(eqs[d])
                 assemble_momentum!(
                     eqs[d], state, prob, d; dt = dt, t = t,
+                    nu_eff = nu_eff, body_force = body_force,
+                    scheme = scheme, blend = blend,
                     porous_zones = porous_zones, mrf_zones = mrf_zones,
                 )
                 apply_cyclic_to_equation!(

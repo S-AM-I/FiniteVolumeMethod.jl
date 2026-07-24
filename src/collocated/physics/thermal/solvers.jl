@@ -63,6 +63,10 @@ function solve_simple_thermal(
         turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
     end
 
+    # Cyclic (periodic) support + reusable equation workspace, allocated once.
+    cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+    eqs, p_eq = _make_incompressible_workspace(prob, cyclic_pairs)
+
     # Residual tracking
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
@@ -84,53 +88,19 @@ function solve_simple_thermal(
         # ── Buoyancy ────────────────────────────────────────────
         body_force = compute_buoyancy_source(thermal_state.T_field, thermal_props, prob.density)
 
-        # ── Momentum ────────────────────────────────────────────
-        eqs = CollocatedEquation{T}[]
-        for d in 1:Dim
-            eq = CollocatedEquation(mesh)
-            assemble_momentum!(
-                eq, state, prob, d;
-                nu_eff = nu_eff, body_force = body_force,
-                porous_zones = porous_zones, mrf_zones = mrf_zones,
-            )
-            push!(eqs, eq)
-        end
+        # Momentum/pressure via the shared SIMPLE core, coupled through the
+        # effective viscosity and buoyancy body force. The recorded residuals
+        # depend only on the frozen momentum equations and corrected velocity,
+        # which the turbulence and energy solves below do not touch, so
+        # computing them here matches the previous ordering.
+        max_res = _simple_outer_step!(
+            state, prob, eqs, p_eq, cyclic_pairs, residuals, component_labels;
+            nu_eff = nu_eff, body_force = body_force,
+            linear_solver = linear_solver, solver_config = solver_config,
+            porous_zones = porous_zones, mrf_zones = mrf_zones,
+        )
 
-        for d in 1:Dim
-            U_old_d = _extract_component(state.U, d)
-            under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
-            sol = _dispatch_solve(
-                to_linear_problem(eqs[d]), linear_solver, solver_config,
-                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
-            )
-            _set_component!(state.U, d, sol.u)
-        end
-        update_boundary_velocity!(state, prob.bcs, mesh)
-
-        # Extract A_P/H(U) from the relaxed, solved equations
-        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
-
-        # ── Pressure ────────────────────────────────────────────
-        p_eq = CollocatedEquation(mesh)
-        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
-        if _needs_pressure_reference(prob.bcs)
-            fix_pressure_reference!(p_eq, 1, zero(T))
-        end
-        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
-
-        for c in 1:nc
-            state.p.internal[c] += algo.alpha_p * (p_sol.u[c] - state.p.internal[c])
-        end
-        update_boundary_pressure!(state, prob.bcs, mesh)
-
-        correct_velocity!(state, mesh; porous_zones = porous_zones)
-        update_boundary_velocity!(state, prob.bcs, mesh)
-        correct_fluxes!(state, mesh; porous_zones = porous_zones)
-        if mrf_zones !== nothing
-            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
-        end
-
-        # ── Turbulence (optional) ───────────────────────────────
+        # ── Turbulence transport (optional) ─────────────────────
         if turb_model !== nothing
             solve_turbulence!(
                 turb_state, turb_model, state.U, state.phi, prob.nu, mesh, turb_bcs;
@@ -155,18 +125,6 @@ function solve_simple_thermal(
                 thermal_state.T_field.internal[c] = T_sol.u[c]
             end
         end
-
-        # ── Convergence ─────────────────────────────────────────
-        max_res = zero(T)
-        for d in 1:Dim
-            u_d = _extract_component(state.U, d)
-            r = momentum_residual(eqs[d], u_d)
-            push!(residuals[component_labels[d]], r)
-            max_res = max(max_res, r)
-        end
-        r_cont = continuity_residual(state, mesh)
-        push!(residuals[:continuity], r_cont)
-        max_res = max(max_res, r_cont)
 
         if verbose
             _print_simple_residuals(iter, residuals, component_labels)
@@ -225,6 +183,10 @@ function solve_incompressible_thermal(
         turbulent_viscosity!(turb_state.nu_t, turb_model, turb_state, mesh)
     end
 
+    # Cyclic (periodic) support + reusable equation workspace, allocated once.
+    cyclic_pairs = collect_cyclic_pairs(prob.bcs, mesh)
+    ws = _make_incompressible_workspace(prob, cyclic_pairs)
+
     component_labels = _velocity_labels(Val(Dim))
     residuals = Dict{Symbol, Vector{T}}(
         label => T[] for label in [component_labels..., :continuity]
@@ -244,17 +206,21 @@ function solve_incompressible_thermal(
         alpha_eff = compute_alpha_eff(thermal_state.k_eff, prob.density, thermal_props.Cp)
         body_force = compute_buoyancy_source(thermal_state.T_field, thermal_props, prob.density)
 
-        # Flow step with thermal coupling
+        # Flow step with thermal coupling — the buoyancy body force and the
+        # turbulent effective viscosity enter the shared momentum core.
         if prob.algorithm isa PISO
-            _thermal_piso_step!(
-                state, prob, dt_actual, prob.algorithm.n_correctors,
-                nu_eff, body_force;
+            _piso_step!(
+                state, prob, dt_actual, prob.algorithm.n_correctors;
+                nu_eff = nu_eff, body_force = body_force,
+                cyclic_pairs = cyclic_pairs, ws = ws,
                 linear_solver = linear_solver, solver_config = solver_config,
                 porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
         elseif prob.algorithm isa PIMPLE
-            _thermal_pimple_step!(
-                state, prob, dt_actual, nu_eff, body_force;
+            _pimple_step!(
+                state, prob, dt_actual;
+                nu_eff = nu_eff, body_force = body_force,
+                cyclic_pairs = cyclic_pairs, ws = ws,
                 linear_solver = linear_solver, solver_config = solver_config,
                 porous_zones = porous_zones, mrf_zones = mrf_zones,
             )
@@ -310,165 +276,6 @@ function solve_incompressible_thermal(
 
     result = SolveResult{Dim, T}(converged, n_steps, residuals, state)
     return (result, thermal_state)
-end
-
-# ── Thermal PISO step ────────────────────────────────────────────────
-
-function _thermal_piso_step!(
-        state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
-        dt::T, n_correctors::Int,
-        nu_eff::Union{T, Vector{T}},
-        body_force::Union{Nothing, Vector{SVector{Dim, T}}};
-        linear_solver = nothing,
-        solver_config = nothing,
-        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = prob.model.porous_zones,
-        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = prob.model.mrf_zones,
-    ) where {Dim, T}
-    mesh = prob.mesh
-
-    # Old-time snapshot for the ddt term (once per time step)
-    _snapshot_old_time!(state)
-
-    eqs = CollocatedEquation{T}[]
-    for d in 1:Dim
-        eq = CollocatedEquation(mesh)
-        assemble_momentum!(
-            eq, state, prob, d;
-            dt = dt, nu_eff = nu_eff, body_force = body_force,
-            porous_zones = porous_zones, mrf_zones = mrf_zones,
-        )
-        push!(eqs, eq)
-    end
-
-    for d in 1:Dim
-        sol = _dispatch_solve(
-            to_linear_problem(eqs[d]), linear_solver, solver_config,
-            d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
-        )
-        _set_component!(state.U, d, sol.u)
-    end
-    update_boundary_velocity!(state, prob.bcs, mesh)
-
-    # Extract A_P/H(U) from the solved equations
-    extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
-
-    for k in 1:n_correctors
-        p_eq = CollocatedEquation(mesh)
-        assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
-        if _needs_pressure_reference(prob.bcs)
-            fix_pressure_reference!(p_eq, 1, zero(T))
-        end
-        p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
-
-        nc = length(mesh.cell_volumes)
-        for c in 1:nc
-            state.p.internal[c] = p_sol.u[c]
-        end
-        update_boundary_pressure!(state, prob.bcs, mesh)
-        correct_velocity!(state, mesh; porous_zones = porous_zones)
-        update_boundary_velocity!(state, prob.bcs, mesh)
-        correct_fluxes!(state, mesh; porous_zones = porous_zones)
-        if mrf_zones !== nothing
-            mrf_make_relative!(state.phi.values, mesh, mrf_zones)
-        end
-
-        if k < n_correctors
-            eqs_k = CollocatedEquation{T}[]
-            for d in 1:Dim
-                eq = CollocatedEquation(mesh)
-                assemble_momentum!(
-                    eq, state, prob, d;
-                    dt = dt, nu_eff = nu_eff, body_force = body_force,
-                    porous_zones = porous_zones, mrf_zones = mrf_zones,
-                )
-                push!(eqs_k, eq)
-            end
-            extract_momentum_operators!(state, eqs_k, mesh; porous_zones = porous_zones)
-        end
-    end
-
-    return nothing
-end
-
-# ── Thermal PIMPLE step ──────────────────────────────────────────────
-
-function _thermal_pimple_step!(
-        state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
-        dt::T,
-        nu_eff::Union{T, Vector{T}},
-        body_force::Union{Nothing, Vector{SVector{Dim, T}}};
-        linear_solver = nothing,
-        solver_config = nothing,
-        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = prob.model.porous_zones,
-        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = prob.model.mrf_zones,
-    ) where {Dim, T}
-    algo = prob.algorithm::PIMPLE{T}
-    mesh = prob.mesh
-
-    # Old-time snapshot for the ddt term (shared by all outer iterations)
-    _snapshot_old_time!(state)
-
-    for outer in 1:algo.n_outer
-        is_final = (outer == algo.n_outer)
-
-        eqs = CollocatedEquation{T}[]
-        for d in 1:Dim
-            eq = CollocatedEquation(mesh)
-            assemble_momentum!(
-                eq, state, prob, d;
-                dt = dt, nu_eff = nu_eff, body_force = body_force,
-                porous_zones = porous_zones, mrf_zones = mrf_zones,
-            )
-            push!(eqs, eq)
-        end
-
-        for d in 1:Dim
-            if !is_final
-                U_old_d = _extract_component(state.U, d)
-                under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
-            end
-            sol = _dispatch_solve(
-                to_linear_problem(eqs[d]), linear_solver, solver_config,
-                d == 1 ? :Ux : (d == 2 ? :Uy : :Uz),
-            )
-            _set_component!(state.U, d, sol.u)
-        end
-        update_boundary_velocity!(state, prob.bcs, mesh)
-
-        # Extract A_P/H(U) from the (relaxed) solved equations
-        extract_momentum_operators!(state, eqs, mesh; porous_zones = porous_zones)
-
-        nc = length(mesh.cell_volumes)
-        for k in 1:algo.n_correctors
-            p_eq = CollocatedEquation(mesh)
-            assemble_pressure!(p_eq, state, prob; mrf_zones = mrf_zones)
-            if _needs_pressure_reference(prob.bcs)
-                fix_pressure_reference!(p_eq, 1, zero(T))
-            end
-            p_sol = _dispatch_solve(to_linear_problem(p_eq), linear_solver, solver_config, :p)
-
-            if !is_final
-                for c in 1:nc
-                    state.p.internal[c] += algo.alpha_p * (p_sol.u[c] - state.p.internal[c])
-                end
-            else
-                for c in 1:nc
-                    state.p.internal[c] = p_sol.u[c]
-                end
-            end
-            update_boundary_pressure!(state, prob.bcs, mesh)
-            correct_velocity!(state, mesh; porous_zones = porous_zones)
-            update_boundary_velocity!(state, prob.bcs, mesh)
-            correct_fluxes!(state, mesh; porous_zones = porous_zones)
-            if mrf_zones !== nothing
-                mrf_make_relative!(state.phi.values, mesh, mrf_zones)
-            end
-        end
-    end
-
-    return nothing
 end
 
 # ── Enthalpy advance helper ──────────────────────────────────────────
