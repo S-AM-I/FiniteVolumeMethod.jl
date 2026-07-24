@@ -59,7 +59,6 @@ Each time step:
 - `cavitation_props` — `CavitationProperties(rho_l, rho_v, p_sat)`;
   required when `cavitation_model` is given.  `rho_l`/`rho_v` should
   match `props.rho1`/`props.rho2`.
-- `save_every` — save interval
 - `verbose` — print progress
 
 # Returns
@@ -85,7 +84,6 @@ function solve_vof(
         wall_patches::Vector{Symbol} = Symbol[],
         cavitation_model::Union{Nothing, AbstractCavitationVaporModel{T}} = nothing,
         cavitation_props::Union{Nothing, CavitationProperties{T}} = nothing,
-        save_every::Int = 1,
         verbose::Bool = false,
     ) where {Dim, T}
     nc = length(mesh.cell_volumes)
@@ -256,7 +254,12 @@ function solve_vof(
         end
     end
 
-    result = SolveResult{Dim, T}(true, n_steps, residuals, state)
+    # A transient run "converged" iff it completed with finite residuals
+    # (converged used to be hardcoded true, masking NaN/Inf blow-ups).
+    r_hist = residuals[:continuity]
+    converged = isempty(r_hist) || isfinite(r_hist[end])
+
+    result = SolveResult{Dim, T}(converged, n_steps, residuals, state)
     return (result, vof_state)
 end
 

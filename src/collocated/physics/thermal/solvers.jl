@@ -204,7 +204,6 @@ function solve_incompressible_thermal(
         turb_model = nothing,
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
         T_init::Real = thermal_props.T_ref,
-        save_every::Int = 1,
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
@@ -304,7 +303,12 @@ function solve_incompressible_thermal(
         end
     end
 
-    result = SolveResult{Dim, T}(true, n_steps, residuals, state)
+    # A transient run "converged" iff it completed with finite residuals
+    # (converged used to be hardcoded true, masking NaN/Inf blow-ups).
+    r_hist = residuals[:continuity]
+    converged = isempty(r_hist) || isfinite(r_hist[end])
+
+    result = SolveResult{Dim, T}(converged, n_steps, residuals, state)
     return (result, thermal_state)
 end
 

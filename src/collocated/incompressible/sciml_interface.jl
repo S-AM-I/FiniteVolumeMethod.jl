@@ -197,7 +197,10 @@ function CommonSolve.solve(
         alg::Union{PISO, PIMPLE};
         tspan::Tuple{T, T},
         dt::T,
-        save_every::Int = 1,
+        # `nothing` distinguishes "not requested" from an explicit `1`: only the
+        # plain incompressible path can produce snapshots, and the physics paths
+        # reject the kwarg rather than accept and ignore it.
+        save_every::Union{Nothing, Int} = nothing,
         # Base kwargs
         linear_solver = nothing,
         solver_config = nothing,
@@ -225,13 +228,19 @@ function CommonSolve.solve(
                 "thermal_props requires bcs_T"
             )
         )
+        save_every === nothing || throw(
+            ArgumentError(
+                "save_every is not supported on the thermal path: SolveResult.snapshots " *
+                    "holds IncompressibleState only, so a snapshot would silently omit the " *
+                    "temperature field. Drop the kwarg, or use the plain incompressible path."
+            )
+        )
         actual_T_init = T_init === nothing ? thermal_props.T_ref : T_init
         result, _thermal_state = solve_incompressible_thermal(
             actual_prob, thermal_props, tspan, dt;
             bcs_T = bcs_T,
             turb_model = turb_model, turb_bcs = turb_bcs,
             T_init = actual_T_init,
-            save_every = save_every,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
             porous_zones = porous_zones, mrf_zones = mrf_zones,
@@ -239,10 +248,16 @@ function CommonSolve.solve(
         return IncompressibleSolution(result, actual_prob)
     elseif turb_model !== nothing
         # ── Turbulence only ────────────────────────────────────
+        save_every === nothing || throw(
+            ArgumentError(
+                "save_every is not supported on the turbulent path: SolveResult.snapshots " *
+                    "holds IncompressibleState only, so a snapshot would silently omit the " *
+                    "turbulence state. Drop the kwarg, or use the plain incompressible path."
+            )
+        )
         result, _turb_state = solve_incompressible_turbulent(
             actual_prob, turb_model, tspan, dt;
             turb_bcs = turb_bcs,
-            save_every = save_every,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
             porous_zones = porous_zones, mrf_zones = mrf_zones,
@@ -252,7 +267,7 @@ function CommonSolve.solve(
         # ── Plain incompressible ───────────────────────────────
         result = solve_incompressible(
             actual_prob, tspan, dt;
-            save_every = save_every, linear_solver = linear_solver,
+            save_every = something(save_every, 1), linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
             U0 = U0, p0 = p0,
             porous_zones = porous_zones, mrf_zones = mrf_zones,

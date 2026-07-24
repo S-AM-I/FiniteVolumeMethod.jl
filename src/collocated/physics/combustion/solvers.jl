@@ -113,8 +113,6 @@ function solve_simple_reacting(
             push!(eqs, eq)
         end
 
-        extract_momentum_operators!(state, eqs, mesh)
-
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
@@ -125,6 +123,13 @@ function solve_simple_reacting(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+
+        # Extract A_P/H(U) from the RELAXED, solved momentum equations —
+        # standard SIMPLE ordering, so that D = V/A_P in the pressure
+        # equation (and in the Rhie-Chow face flux, which shares the same
+        # face D_f) is consistent with the velocity the momentum solve
+        # actually produced.
+        extract_momentum_operators!(state, eqs, mesh)
 
         # ── Pressure ────────────────────────────────────────────
         p_eq = CollocatedEquation(mesh)
@@ -208,7 +213,11 @@ function solve_simple_reacting(
             _print_simple_residuals(iter, residuals, component_labels)
         end
 
-        if max_res < algo.tolerance
+        # Never declare convergence on the FIRST outer iteration: the startup
+        # iterate's residuals are degenerate when the initial fields solve the
+        # momentum equations trivially (U = 0, uniform T ⇒ zero body force),
+        # and temperature/species have not yet fed back into momentum.
+        if iter > 1 && max_res < algo.tolerance
             converged = true
             break
         end
@@ -296,8 +305,6 @@ function solve_simple_reacting(
             push!(eqs, eq)
         end
 
-        extract_momentum_operators!(state, eqs, mesh)
-
         for d in 1:Dim
             U_old_d = _extract_component(state.U, d)
             under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
@@ -308,6 +315,13 @@ function solve_simple_reacting(
             _set_component!(state.U, d, sol.u)
         end
         update_boundary_velocity!(state, prob.bcs, mesh)
+
+        # Extract A_P/H(U) from the RELAXED, solved momentum equations —
+        # standard SIMPLE ordering, so that D = V/A_P in the pressure
+        # equation (and in the Rhie-Chow face flux, which shares the same
+        # face D_f) is consistent with the velocity the momentum solve
+        # actually produced.
+        extract_momentum_operators!(state, eqs, mesh)
 
         p_eq = CollocatedEquation(mesh)
         assemble_pressure!(p_eq, state, prob)
@@ -376,7 +390,11 @@ function solve_simple_reacting(
             _print_simple_residuals(iter, residuals, component_labels)
         end
 
-        if max_res < algo.tolerance
+        # Never declare convergence on the FIRST outer iteration: the startup
+        # iterate's residuals are degenerate when the initial fields solve the
+        # momentum equations trivially (U = 0, uniform T ⇒ zero body force),
+        # and temperature/species have not yet fed back into momentum.
+        if iter > 1 && max_res < algo.tolerance
             converged = true
             break
         end

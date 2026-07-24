@@ -160,7 +160,12 @@ function solve_ale(
         end
     end
 
-    return SolveResult{Dim, T}(true, n_steps, residuals, state)
+    # A transient run "converged" iff it completed with finite residuals
+    # (converged used to be hardcoded true, masking NaN/Inf blow-ups).
+    r_hist = residuals[:continuity]
+    converged = isempty(r_hist) || isfinite(r_hist[end])
+
+    return SolveResult{Dim, T}(converged, n_steps, residuals, state)
 end
 
 # ── Internal helpers ────────────────────────────────────────────────

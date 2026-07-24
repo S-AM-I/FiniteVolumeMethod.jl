@@ -140,10 +140,11 @@ returns the current value; `setter(prob, v) -> prob'` returns a new problem
 with the scalar updated. Used by Stage 1e's named-partition schema for
 `SciMLStructures.Tunable`.
 """
-struct TunableEntry{F, G}
+struct TunableEntry{F, G, P}
     name::Symbol
     getter::F
     setter::G
+    applies::P
 end
 
 # Registry: keyed on concrete problem type. Declared as a `Dict{DataType, …}`
@@ -151,20 +152,35 @@ end
 # `IncompressibleProblem` schema. Test helpers may register new entries.
 const _TUNABLE_REGISTRY = Dict{Type, Vector{TunableEntry}}()
 
+# Registration order of the registry keys. `tunable_schema` walks this rather
+# than the `Dict`, whose iteration order is unspecified: once more than one
+# key matches a problem (a concrete type and its abstract supertype, say) the
+# canonical vector layout would otherwise vary between sessions, silently
+# misaligning any sensitivity vector built against it.
+const _TUNABLE_KEY_ORDER = Type[]
+
 """
-    register_tunable!(PType, name, getter, setter)
+    register_tunable!(PType, name, getter, setter; applies = _ -> true)
 
 Register a new tunable scalar on problem type `PType`. Appended to the
 named Tunable schema; order determines the position in the flat
 canonical vector. Stage 1e extension hook — downstream solver extensions
 (turbulence closures, thermal models, rheology) should use this to
 advertise their own tunables without editing this file.
+
+`applies(prob)` gates whether the entry appears for a given problem. Use it
+when a tunable exists only for some configurations — the algorithm-relaxation
+tunables below are absent for `PISO`, which has no relaxation factors. An
+entry that is advertised but cannot be written back is worse than an absent
+one: `SciMLStructures.replace` would silently discard the value.
 """
 function register_tunable!(
-        PType::Type, name::Symbol, getter::Function, setter::Function,
+        PType::Type, name::Symbol, getter::Function, setter::Function;
+        applies = _ -> true,
     )
     entries = get!(Vector{TunableEntry}, _TUNABLE_REGISTRY, PType)
-    push!(entries, TunableEntry(name, getter, setter))
+    PType in _TUNABLE_KEY_ORDER || push!(_TUNABLE_KEY_ORDER, PType)
+    push!(entries, TunableEntry(name, getter, setter, applies))
     return nothing
 end
 
@@ -174,13 +190,15 @@ end
 Return the ordered list of tunable entries for this problem type. Empty
 if the problem is not registered. Matches the concrete problem type
 against every registered type (concrete DataType or parametric UnionAll)
-via `prob isa key`.
+via `prob isa key`, in registration order, keeping only entries whose
+`applies(prob)` predicate holds.
 """
 function tunable_schema(prob)
     entries = TunableEntry[]
-    for (key, list) in _TUNABLE_REGISTRY
-        if prob isa key
-            append!(entries, list)
+    for key in _TUNABLE_KEY_ORDER
+        prob isa key || continue
+        for entry in _TUNABLE_REGISTRY[key]
+            entry.applies(prob) && push!(entries, entry)
         end
     end
     return entries
@@ -237,31 +255,18 @@ _register_builtin_incomp_tunables() = let
         prob -> prob.density,
         (prob, v) -> remake(prob; density = v),
     )
-    register_tunable!(
-        IncompressibleProblem, :alpha_U,
-        prob -> _algo_field(prob.algorithm, :alpha_U, prob.nu),
-        (prob, v) -> remake(prob; algorithm = _with_algo_field(prob.algorithm, :alpha_U, v)),
-    )
-    register_tunable!(
-        IncompressibleProblem, :alpha_p,
-        prob -> _algo_field(prob.algorithm, :alpha_p, prob.nu),
-        (prob, v) -> remake(prob; algorithm = _with_algo_field(prob.algorithm, :alpha_p, v)),
-    )
-    register_tunable!(
-        IncompressibleProblem, :tolerance,
-        prob -> _algo_field(prob.algorithm, :tolerance, prob.nu),
-        (prob, v) -> remake(prob; algorithm = _with_algo_field(prob.algorithm, :tolerance, v)),
-    )
+    for name in (:alpha_U, :alpha_p, :tolerance)
+        register_tunable!(
+            IncompressibleProblem, name,
+            prob -> getfield(prob.algorithm, name),
+            (prob, v) -> remake(prob; algorithm = _with_algo_field(prob.algorithm, name, v));
+            applies = prob -> hasfield(typeof(prob.algorithm), name),
+        )
+    end
     return nothing
 end
 
-# Algorithm-field accessors tolerant of absent fields (PISO has no alpha_U, etc.)
-@inline function _algo_field(algo, name::Symbol, fallback)
-    return hasfield(typeof(algo), name) ? getfield(algo, name) : fallback
-end
-
-# Return a new algorithm of the same type with `name` set to `v`; no-op for
-# algorithm types that don't have that field (e.g. PISO has no alpha_U).
+# Return a new algorithm of the same type with `name` set to `v`.
 function _with_algo_field(algo::SIMPLE{T}, name::Symbol, v) where {T}
     name === :alpha_U && return SIMPLE{T}(T(v), algo.alpha_p, algo.max_iterations, algo.tolerance)
     name === :alpha_p && return SIMPLE{T}(algo.alpha_U, T(v), algo.max_iterations, algo.tolerance)
@@ -274,7 +279,17 @@ function _with_algo_field(algo::PIMPLE{T}, name::Symbol, v) where {T}
     name === :tolerance && return PIMPLE{T}(algo.n_outer, algo.n_correctors, algo.alpha_U, algo.alpha_p, T(v))
     return algo
 end
-_with_algo_field(algo, ::Symbol, _) = algo
+# Generic fallback for algorithm types with no specialised method above.
+# Rebuilding rather than returning `algo` unchanged is deliberate: the schema
+# predicate only advertises a tunable when the field exists, so a silent
+# no-op here would accept the write and discard it.
+function _with_algo_field(algo, name::Symbol, v)
+    A = typeof(algo)
+    names = fieldnames(A)
+    name in names || return algo
+    vals = map(f -> f === name ? convert(fieldtype(A, f), v) : getfield(algo, f), names)
+    return A(vals...)
+end
 
 # Call registration once when this module is loaded.
 _register_builtin_incomp_tunables()
