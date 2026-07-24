@@ -20,6 +20,11 @@ using ...Parabolic
 # KEpsilon(::StandardKEpsilon) — import so it extends the
 # Parabolic type's constructor instead of shadowing the type name.
 import ...Parabolic: KEpsilon
+# The momentum/pressure operators (assemble_momentum!, correct_*, etc.) are no
+# longer imported here: Stage 5e moved those calls into the shared solver cores
+# (`_simple_outer_step!`, `_piso_step!`, `_pimple_step!`), which live in the
+# parent `Collocated` module. The physics loops now call the cores, so only the
+# setup/residual/transport helpers below remain in use.
 using ..Collocated: add_diag!, CollocatedEquation,
     CollocatedScalarField,
     CollocatedVectorField,
@@ -37,32 +42,16 @@ using ..Collocated: add_diag!, CollocatedEquation,
     assemble_convection!,
     assemble_ddt_euler!,
     assemble_laplacian!,
-    assemble_momentum!,
-    assemble_pressure!,
     build_boundary_map,
     continuity_residual,
-    correct_fluxes!,
-    correct_velocity!,
-    extract_momentum_operators!,
     gradient,
-    momentum_residual,
-    mrf_make_relative!,
     reset!,
     to_linear_problem,
-    _extract_component,
     _face_tag,
     _make_incompressible_workspace,
-    _make_scalar_field,
-    _needs_pressure_reference,
     _print_simple_residuals,
-    _set_component!,
-    _snapshot_old_time!,
     _velocity_labels,
-    apply_cyclic_to_equation!,
     collect_cyclic_pairs,
-    fix_pressure_reference!,
-    under_relax_momentum!,
-    update_boundary_cyclic!,
     update_boundary_pressure!,
     update_boundary_velocity!,
     _piso_step!,
