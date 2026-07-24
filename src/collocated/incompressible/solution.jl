@@ -16,20 +16,27 @@ families without forcing `SciMLBase.ODESolution` under this supertype
 abstract type AbstractFVMSolution end
 
 """
-    IncompressibleSolution{Dim, T}
+    IncompressibleSolution{Dim, T, P}
 
 SciML-compatible solution for incompressible flow problems.
 Supports symbolic field access: `sol[:U]`, `sol[:p]`, `sol[:Ux]`, etc.
+
+`retcode` is a `SciMLBase.ReturnCode.T` (Stage 5c; it was a bare `Symbol`), so
+`SciMLBase.successful_retcode(sol)` and the rest of the SciML return-code
+machinery apply. `P` records the concrete problem type — the field used to be
+declared as the unparameterised `IncompressibleProblem`, which made it
+abstractly typed.
 """
-struct IncompressibleSolution{Dim, T} <: AbstractFVMSolution
+struct IncompressibleSolution{Dim, T, P} <: AbstractFVMSolution
     result::SolveResult{Dim, T}
-    prob::IncompressibleProblem
-    retcode::Symbol
+    prob::P
+    retcode::SciMLBase.ReturnCode.T
 end
 
 function IncompressibleSolution(result::SolveResult{Dim, T}, prob) where {Dim, T}
-    retcode = result.converged ? :Success : :MaxIters
-    return IncompressibleSolution{Dim, T}(result, prob, retcode)
+    retcode = result.converged ? SciMLBase.ReturnCode.Success :
+        SciMLBase.ReturnCode.MaxIters
+    return IncompressibleSolution{Dim, T, typeof(prob)}(result, prob, retcode)
 end
 
 # Field access
@@ -76,7 +83,7 @@ end
 function Base.show(
         io::IO, ::MIME"text/plain", sol::IncompressibleSolution{Dim, T},
     ) where {Dim, T}
-    status = sol.retcode === :Success ? "converged" : "not converged"
+    status = SciMLBase.successful_retcode(sol.retcode) ? "converged" : "not converged"
     print(io, "IncompressibleSolution{$Dim, $T} ($status in $(sol.iterations) iterations)")
     return nothing
 end

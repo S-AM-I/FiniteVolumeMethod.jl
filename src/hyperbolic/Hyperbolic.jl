@@ -34,7 +34,8 @@ using ..Parabolic: FVMProblem, FVMSystem, SteadyFVMProblem, AbstractFVMTemplate
 
 using CommonSolve: CommonSolve
 using SciMLBase: SciMLBase, ODEProblem, ODEFunction, SplitODEProblem,
-    SteadyStateProblem, DiscreteCallback, CallbackSet, set_proposed_dt!
+    SteadyStateProblem, DiscreteCallback, CallbackSet, set_proposed_dt!,
+    AbstractSciMLProblem
 using StaticArrays: StaticArrays, SVector
 using PreallocationTools: PreallocationTools, DiffCache
 using DelaunayTriangulation: DelaunayTriangulation, get_point
@@ -48,6 +49,21 @@ function fvm_symbolic_index end
 function _amr_symbolic_index end
 function _mhd_ct_2d_symbolic_index end
 function _mhd_ct_3d_symbolic_index end
+
+"""
+    AbstractHyperbolicProblem <: SciMLBase.AbstractSciMLProblem
+
+Root type for the cell-centred hyperbolic problem family: the 1D/2D/3D
+structured problems, the unstructured problem, and the AMR problem.
+
+Rooted at `AbstractSciMLProblem` rather than `AbstractODEProblem` on purpose.
+`AbstractODEProblem`'s inherited generic methods read `prob.f`, `prob.u0` and
+`prob.p`; these problems carry none of those, describing the semidiscretisation
+instead and building an `ODEProblem` on demand through `sciml_problem`.
+`AbstractSciMLProblem` imposes no field contract, so subtyping it advertises
+only what the family actually provides.
+"""
+abstract type AbstractHyperbolicProblem <: AbstractSciMLProblem end
 
 include("conservation_laws.jl")
 include("euler.jl")
@@ -174,6 +190,7 @@ export
     AbstractHyperbolicBC, TransmissiveBC, ReflectiveBC, InflowBC,
     PeriodicHyperbolicBC, DirichletHyperbolicBC, NoSlipBC,
     # Problems and solver interface
+    AbstractHyperbolicProblem,
     HyperbolicProblem, HyperbolicProblem2D, HyperbolicProblem3D,
     initialize_2d, compute_dt, compute_dt_2d, compute_dt_3d,
     hyperbolic_rhs!, hyperbolic_rhs_2d!, hyperbolic_rhs_3d!, to_primitive,

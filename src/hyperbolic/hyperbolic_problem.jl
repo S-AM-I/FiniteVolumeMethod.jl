@@ -17,7 +17,7 @@ A cell-centered finite volume problem for hyperbolic conservation laws.
 - `final_time::FT`: End time.
 - `cfl::FT`: CFL number for time step control.
 """
-struct HyperbolicProblem{Law, Mesh, RS, Rec, BCL, BCR, IC, FT}
+struct HyperbolicProblem{Law, Mesh, RS, Rec, BCL, BCR, IC, FT} <: AbstractHyperbolicProblem
     law::Law
     mesh::Mesh
     riemann_solver::RS

@@ -20,7 +20,7 @@ Hyperbolic conservation law problem on an unstructured triangular mesh.
 - `initial_condition`: Function `(x, y) → SVector{N}` of primitive variables.
 - `initial_time`, `final_time`, `cfl`: Simulation parameters.
 """
-struct UnstructuredHyperbolicProblem{Law, Mesh, RS, Recon, BCs, DBC, IC, FT}
+struct UnstructuredHyperbolicProblem{Law, Mesh, RS, Recon, BCs, DBC, IC, FT} <: AbstractHyperbolicProblem
     law::Law
     mesh::Mesh
     riemann_solver::RS

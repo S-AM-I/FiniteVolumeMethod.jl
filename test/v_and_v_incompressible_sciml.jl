@@ -13,11 +13,12 @@
 #      underlying state fields.
 #   3. `sol[:Ux]`, `sol[:Uy]` extract velocity components.
 #   4. `keys(sol)` lists the accessible symbolic fields.
-#   5. `sol.retcode ∈ {:Success, :MaxIters}` reflects convergence.
+#   5. `sol.retcode ∈ {ReturnCode.Success, ReturnCode.MaxIters}` reflects convergence.
 #   6. `is_fvm_solution(sol)` returns true.
 
 using FiniteVolumeMethod
 using FiniteVolumeMethod: is_fvm_solution
+using SciMLBase: ReturnCode
 using LinearSolve
 using StaticArrays: SVector
 using Test
@@ -101,14 +102,14 @@ end
 @testset "V&V: Incompressible SciML — retcode reflects convergence" begin
     prob, algo, _ = build_simple_cavity(; N = 6)
     sol = solve(prob, algo; linear_solver = LUFactorization())
-    @test sol.retcode in (:Success, :MaxIters)
+    @test sol.retcode in (ReturnCode.Success, ReturnCode.MaxIters)
     @test sol.iterations > 0
 
     # retcode consistency with converged flag.
     if sol.converged
-        @test sol.retcode === :Success
+        @test sol.retcode === ReturnCode.Success
     else
-        @test sol.retcode === :MaxIters
+        @test sol.retcode === ReturnCode.MaxIters
     end
 end
 

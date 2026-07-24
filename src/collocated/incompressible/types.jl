@@ -194,6 +194,13 @@ pressure-velocity coupling loop.
   time step (PISO correctors, PIMPLE outer iterations) all discretize
   `(Uⁿ⁺¹ - Uⁿ)/Δt` rather than drifting toward the previous iterate.
 """
+# The first three fields are abstractly typed: the concrete types carry a
+# trailing container parameter (`CollocatedVectorField{Dim,T,A}` and friends)
+# that is not fixed here. Adding it would cascade — `SolveResult` declares
+# `state::IncompressibleState{Dim,T}` and `snapshots::Vector{...}`, which would
+# become UnionAll fields in turn — and Stage 5f replaces this storage with a
+# flat vector of views, changing these declarations anyway. Left alone
+# deliberately so the types are reworked once rather than twice.
 mutable struct IncompressibleState{Dim, T}
     U::CollocatedVectorField{Dim, T}
     p::CollocatedScalarField{T}

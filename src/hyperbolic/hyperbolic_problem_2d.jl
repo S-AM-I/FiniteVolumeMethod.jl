@@ -14,7 +14,7 @@ on structured Cartesian meshes.
 - `initial_time::FT`, `final_time::FT`: Time span.
 - `cfl::FT`: CFL number for time step control.
 """
-struct HyperbolicProblem2D{Law, Mesh, RS, Rec, BC_L, BC_R, BC_B, BC_T, IC, FT}
+struct HyperbolicProblem2D{Law, Mesh, RS, Rec, BC_L, BC_R, BC_B, BC_T, IC, FT} <: AbstractHyperbolicProblem
     law::Law
     mesh::Mesh
     riemann_solver::RS

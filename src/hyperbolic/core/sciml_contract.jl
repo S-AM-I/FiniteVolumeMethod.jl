@@ -11,14 +11,14 @@
 # type-specific `ODEProblem` / `SteadyStateProblem` constructors
 # remain available as convenience wrappers.
 
-const _SemidiscreteSciMLProblem = Union{
-    HyperbolicProblem,
-    HyperbolicProblem2D,
-    HyperbolicProblem3D,
-    UnstructuredHyperbolicProblem,
-    AMRProblem,
-}
-
+# The semidiscrete SciML entry points dispatch on the family root. This was a
+# hand-maintained Union of the five concrete problem types until Stage 5c; an
+# abstract root means a new problem type joins by subtyping rather than by
+# being added here.
+#
+# The split (IMEX) entry points stay a Union: only the 1D and 2D problems have
+# a SplitODEProblem formulation, so this is a genuine subset rather than the
+# whole family.
 const _SplitSemidiscreteSciMLProblem = Union{
     HyperbolicProblem,
     HyperbolicProblem2D,
@@ -34,7 +34,7 @@ code, tests, or reproducibility scripts.
 """
 sciml_problem(prob::Union{FVMProblem, FVMSystem}; kwargs...) = ODEProblem(prob; kwargs...)
 sciml_problem(prob::SteadyFVMProblem; kwargs...) = SteadyStateProblem(prob; kwargs...)
-sciml_problem(prob::_SemidiscreteSciMLProblem; kwargs...) = ODEProblem(prob; kwargs...)
+sciml_problem(prob::AbstractHyperbolicProblem; kwargs...) = ODEProblem(prob; kwargs...)
 
 function sciml_problem(prob::AbstractFVMTemplate; kwargs...)
     if isempty(kwargs)
@@ -55,7 +55,7 @@ sciml_problem(
     kwargs...,
 ) = SplitODEProblem(prob, stiff_source; kwargs...)
 
-function CommonSolve.init(prob::_SemidiscreteSciMLProblem, args...; callback = nothing, kwargs...)
+function CommonSolve.init(prob::AbstractHyperbolicProblem, args...; callback = nothing, kwargs...)
     ode_prob = sciml_problem(prob; kwargs...)
     merged_callback = _merge_problem_callbacks(_problem_callback(ode_prob), callback)
     if merged_callback === nothing
@@ -64,7 +64,7 @@ function CommonSolve.init(prob::_SemidiscreteSciMLProblem, args...; callback = n
     return CommonSolve.init(ode_prob, args...; callback = merged_callback, kwargs...)
 end
 
-function CommonSolve.solve(prob::_SemidiscreteSciMLProblem, args...; callback = nothing, kwargs...)
+function CommonSolve.solve(prob::AbstractHyperbolicProblem, args...; callback = nothing, kwargs...)
     ode_prob = sciml_problem(prob; kwargs...)
     merged_callback = _merge_problem_callbacks(_problem_callback(ode_prob), callback)
     if merged_callback === nothing

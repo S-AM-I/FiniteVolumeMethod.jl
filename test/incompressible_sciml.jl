@@ -35,12 +35,12 @@ end
         sol = solve(prob, SIMPLE(; max_iterations = 5, tolerance = 1.0e-10))
         @test sol isa IncompressibleSolution
         @test sol.iterations > 0
-        @test sol.retcode in (:Success, :MaxIters)
+        @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.MaxIters)
 
         sol2 = solve(prob)
         @test sol2 isa IncompressibleSolution
         @test sol2.iterations > 0
-        @test sol2.retcode in (:Success, :MaxIters)
+        @test sol2.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.MaxIters)
     end
 
     # ── 2. Symbolic indexing (B3) ─────────────────────────────────────
@@ -87,7 +87,7 @@ end
         @test haskey(sol.residuals, :Ux)
         @test haskey(sol.residuals, :Uy)
         @test haskey(sol.residuals, :continuity)
-        @test sol.retcode isa Symbol
+        @test sol.retcode isa SciMLBase.ReturnCode.T
     end
 
     # ── 4. remake (B1) ────────────────────────────────────────────────

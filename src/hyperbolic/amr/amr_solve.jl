@@ -45,7 +45,7 @@ An AMR problem definition wrapping the grid, solver settings, and boundary condi
 - `cfl::FT`: CFL number.
 - `regrid_interval::Int`: Number of coarse steps between regrids.
 """
-struct AMRProblem{Grid, RS, Rec, BCs, FT}
+struct AMRProblem{Grid, RS, Rec, BCs, FT} <: AbstractHyperbolicProblem
     grid::Grid
     riemann_solver::RS
     reconstruction::Rec
