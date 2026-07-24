@@ -72,10 +72,16 @@ import .Parabolic: create_rhs_b, two_point_interpolant,
 # Stage-4b prefix resolution: the Simu.jl-migration names lost their interim
 # `Parabolic` prefix (canonical access is module-qualified, e.g.
 # `Parabolic.DirichletBC`). The old names remain as deprecated top-level
-# aliases until Stage 8. NOT renamed (their bare names are taken by the
-# upstream ConditionType enum / VertexConditions twins): ParabolicPeriodicBC,
-# ParabolicNonlinearDirichlet, ParabolicNonlinearNeumann, ParabolicCoupledBC,
-# parabolic_sound_speed, parabolic_compute_friction_velocity.
+# aliases until Stage 8. Stage 5b cleared the six holdouts that kept the
+# prefix: ParabolicNonlinear{Dirichlet,Neumann,Robin} and ParabolicCoupledBC
+# were deleted outright — they were unreachable stubs whose only consumers
+# (linearize_nonlinear_bc) were themselves never called, and VertexConditions
+# owns the working implementations. ParabolicPeriodicBC became
+# StructuredPeriodicBC: it pairs structured-mesh face symbols, so it was never
+# a twin of the unstructured segment-index PeriodicBC. parabolic_sound_speed
+# folded into Numerics.sound_speed, and parabolic_compute_friction_velocity
+# became rough_wall_friction_velocity (its roughness argument is genuinely
+# absent from the collocated compute_friction_velocity).
 Base.@deprecate_binding ParabolicDirichlet DirichletBC
 Base.@deprecate_binding ParabolicNeumann NeumannBC
 Base.@deprecate_binding ParabolicRobin RobinBC

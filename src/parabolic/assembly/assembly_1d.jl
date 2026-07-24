@@ -1,6 +1,6 @@
 # Assembly routines for 1D problems
 # Migrated from Simu.jl SimuFVM/assembly/assembly_1d.jl
-# PeriodicBC -> ParabolicPeriodicBC
+# PeriodicBC -> StructuredPeriodicBC
 
 """
     calculate_flux(diffusion, phi_L, phi_R, dx)
@@ -64,7 +64,7 @@ function assemble_system(diffusion::Union{Diffusion1D, VariableDiffusion1D}, mes
     b = zeros(nx)
 
     use_periodic = false
-    if periodic !== nothing && periodic isa ParabolicPeriodicBC
+    if periodic !== nothing && periodic isa StructuredPeriodicBC
         use_periodic = (periodic.pair == (:left, :right) || periodic.pair == (:right, :left))
     end
 
@@ -170,7 +170,7 @@ function assemble_system_upwind(advection::Union{Advection1D, VariableAdvection1
     b = zeros(nx)
 
     use_periodic = false
-    if periodic !== nothing && periodic isa ParabolicPeriodicBC
+    if periodic !== nothing && periodic isa StructuredPeriodicBC
         use_periodic = (periodic.pair == (:left, :right) || periodic.pair == (:right, :left))
     end
 
@@ -239,7 +239,7 @@ function assemble_system_higher_order(advection::Union{Advection1D, VariableAdve
     b = zeros(nx)
 
     use_periodic = false
-    if periodic !== nothing && periodic isa ParabolicPeriodicBC
+    if periodic !== nothing && periodic isa StructuredPeriodicBC
         use_periodic = (periodic.pair == (:left, :right) || periodic.pair == (:right, :left))
     end
 

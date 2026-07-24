@@ -7,8 +7,8 @@
 #   Neumann    ∂u/∂n = g   →  prescribed flux  g  added to RHS of row P
 #   Robin      �� u + β ∂u/∂n = g  →  combined diagonal + RHS modification
 #
-# Types are prefixed "Parabolic" to avoid name collisions with the
-# hyperbolic solver's boundary condition enums.
+# These types live inside the `Parabolic` submodule, so they need no name
+# prefix to stay clear of the hyperbolic solver's boundary conditions.
 
 # ==============================================================================
 # 1. Advanced Boundary Condition Types
@@ -30,65 +30,22 @@ InterfaceBC(; value_continuity = true, flux_continuity = true, jump_value = 0.0,
     InterfaceBC(value_continuity, flux_continuity, jump_value, interface_tag)
 
 """
-    ParabolicPeriodicBC(pair::Tuple{Symbol,Symbol}, shift=0.0)
+    StructuredPeriodicBC(pair::Tuple{Symbol,Symbol}, shift=0.0)
 
-Periodic boundary condition that identifies two opposite boundary faces (e.g.
-`(:left, :right)`).  An optional constant `shift` is added when mapping values
-across the period.
+Periodic boundary condition for the structured parabolic meshes, identifying
+two opposite boundary faces by name (e.g. `(:left, :right)`).  An optional
+constant `shift` is added when mapping values across the period.
+
+Not interchangeable with `VertexConditions.PeriodicBC`, which pairs *segment
+indices* on an unstructured triangulation: same physical idea, different mesh
+representation.
 """
-struct ParabolicPeriodicBC <: AbstractBoundaryCondition
+struct StructuredPeriodicBC <: AbstractBoundaryCondition
     pair::Tuple{Symbol, Symbol}
     shift::Float64
 end
-ParabolicPeriodicBC(pair::Tuple{Symbol, Symbol}) = ParabolicPeriodicBC(pair, 0.0)
-ParabolicPeriodicBC(left::Symbol, right::Symbol) = ParabolicPeriodicBC((left, right), 0.0)
-
-"""
-    ParabolicNonlinearDirichlet(f)
-
-Nonlinear Dirichlet boundary condition.  `f(phi, grad_phi, x, t)` returns the
-prescribed boundary value as a function of the current solution, its gradient,
-position, and time.  Linearised via Newton at each assembly step.
-"""
-struct ParabolicNonlinearDirichlet <: AbstractBoundaryCondition
-    f::Function
-end
-
-"""
-    ParabolicNonlinearNeumann(f)
-
-Nonlinear Neumann boundary condition.  `f(phi, grad_phi, x, t)` returns the
-prescribed normal flux as a function of the current solution, its gradient,
-position, and time.
-"""
-struct ParabolicNonlinearNeumann <: AbstractBoundaryCondition
-    f::Function
-end
-
-"""
-    ParabolicNonlinearRobin(f)
-
-Nonlinear Robin boundary condition.  `f(phi, grad_phi, x, t)` returns a tuple
-`(a, b, c)` defining the Robin relation `a u + b du/dn = c`, where the
-coefficients may depend on the current solution state.
-"""
-struct ParabolicNonlinearRobin <: AbstractBoundaryCondition
-    f::Function
-end
-
-"""
-    ParabolicCoupledBC(fields, coefficients, value)
-
-Coupled multi-field boundary condition.  Prescribes a linear combination of
-field values at the boundary: `sum(coefficients .* fields) = value`.
-Used in multi-physics `FVMSystem` problems where boundary constraints span
-more than one unknown.
-"""
-struct ParabolicCoupledBC <: AbstractBoundaryCondition
-    fields::Vector{Symbol}
-    coefficients::Vector{Float64}
-    value::Float64
-end
+StructuredPeriodicBC(pair::Tuple{Symbol, Symbol}) = StructuredPeriodicBC(pair, 0.0)
+StructuredPeriodicBC(left::Symbol, right::Symbol) = StructuredPeriodicBC((left, right), 0.0)
 
 """
     OutflowBC(; type=:zero_gradient, pressure=0.0, backflow_prevention=true)
@@ -457,54 +414,6 @@ end
 
 # --- Advanced BC implementations ---
 
-function apply_periodic_bc!(A, b, mesh::Mesh1D, bc::ParabolicPeriodicBC)
-    nx = length(mesh.cells)
-    return if bc.pair == (:left, :right) || bc.pair == (:right, :left)
-        A[1, nx] += 1.0; A[1, 1] -= 1.0; b[1] += bc.shift
-        A[nx, 1] += 1.0; A[nx, nx] -= 1.0; b[nx] -= bc.shift
-    end
-end
-
-function apply_periodic_bc!(A, b, mesh::Mesh2D, bc::ParabolicPeriodicBC)
-    nx, ny = mesh.nx, mesh.ny
-    return if bc.pair == (:left, :right) || bc.pair == (:right, :left)
-        for j in 1:ny
-            k_left = j; k_right = (nx - 1) * ny + j
-            A[k_left, k_right] += 1.0; A[k_left, k_left] -= 1.0; b[k_left] += bc.shift
-            A[k_right, k_left] += 1.0; A[k_right, k_right] -= 1.0; b[k_right] -= bc.shift
-        end
-    elseif bc.pair == (:bottom, :top) || bc.pair == (:top, :bottom)
-        for i in 1:nx
-            k_bottom = (i - 1) * ny + 1; k_top = (i - 1) * ny + ny
-            A[k_bottom, k_top] += 1.0; A[k_bottom, k_bottom] -= 1.0; b[k_bottom] += bc.shift
-            A[k_top, k_bottom] += 1.0; A[k_top, k_top] -= 1.0; b[k_top] -= bc.shift
-        end
-    end
-end
-
-function apply_periodic_bc!(A, b, mesh::Mesh3D, bc::ParabolicPeriodicBC)
-    nx, ny, nz = mesh.nx, mesh.ny, mesh.nz
-    return if bc.pair == (:left, :right) || bc.pair == (:right, :left)
-        for j in 1:ny, k in 1:nz
-            idx_left = (j - 1) * nz + k; idx_right = (nx - 1) * ny * nz + (j - 1) * nz + k
-            A[idx_left, idx_right] += 1.0; A[idx_left, idx_left] -= 1.0; b[idx_left] += bc.shift
-            A[idx_right, idx_left] += 1.0; A[idx_right, idx_right] -= 1.0; b[idx_right] -= bc.shift
-        end
-    elseif bc.pair == (:bottom, :top) || bc.pair == (:top, :bottom)
-        for i in 1:nx, k in 1:nz
-            idx_bottom = (i - 1) * ny * nz + k; idx_top = (i - 1) * ny * nz + (ny - 1) * nz + k
-            A[idx_bottom, idx_top] += 1.0; A[idx_bottom, idx_bottom] -= 1.0; b[idx_bottom] += bc.shift
-            A[idx_top, idx_bottom] += 1.0; A[idx_top, idx_top] -= 1.0; b[idx_top] -= bc.shift
-        end
-    elseif bc.pair == (:front, :back) || bc.pair == (:back, :front)
-        for i in 1:nx, j in 1:ny
-            idx_front = (i - 1) * ny * nz + (j - 1) * nz + 1; idx_back = (i - 1) * ny * nz + (j - 1) * nz + nz
-            A[idx_front, idx_back] += 1.0; A[idx_front, idx_front] -= 1.0; b[idx_front] += bc.shift
-            A[idx_back, idx_front] += 1.0; A[idx_back, idx_back] -= 1.0; b[idx_back] -= bc.shift
-        end
-    end
-end
-
 function apply_interface_bc!(A, b, model, mesh, bc::InterfaceBC, cell_left_idx, cell_right_idx)
     if bc.value_continuity
         weight = 1.0e12
@@ -541,26 +450,4 @@ function apply_interface_bc!(A, b, model, mesh, bc::InterfaceBC, cell_left_idx, 
             end
         end
     end
-end
-
-function linearize_nonlinear_bc(bc::ParabolicNonlinearDirichlet, phi::Float64, grad_phi::Float64, x::Float64, t::Float64)
-    f_val = bc.f(phi, grad_phi, x, t)
-    eps = 1.0e-6
-    f_pert = bc.f(phi + eps, grad_phi, x, t)
-    df_dphi = (f_pert - f_val) / eps
-    if abs(df_dphi) > 1.0e-12
-        return DirichletBC(phi - f_val / df_dphi)
-    else
-        return DirichletBC(phi)
-    end
-end
-
-function linearize_nonlinear_bc(bc::ParabolicNonlinearNeumann, phi::Float64, grad_phi::Float64, x::Float64, t::Float64)
-    flux_val = bc.f(phi, grad_phi, x, t)
-    return NeumannBC(flux_val)
-end
-
-function linearize_nonlinear_bc(bc::ParabolicNonlinearRobin, phi::Float64, grad_phi::Float64, x::Float64, t::Float64)
-    a, b, c = bc.f(phi, grad_phi, x, t)
-    return RobinBC(a, b, c)
 end

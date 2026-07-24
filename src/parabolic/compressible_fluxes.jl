@@ -13,16 +13,6 @@ function ideal_gas_pressure(rho, E, u, gamma)
 end
 
 """
-    parabolic_sound_speed(rho, p, gamma)
-
-Compute speed of sound for ideal gas.
-Named parabolic_sound_speed to avoid collision with existing sound_speed export.
-"""
-function parabolic_sound_speed(rho, p, gamma)
-    return sqrt(gamma * p / rho)
-end
-
-"""
     hllc_flux_1d(U_L, U_R, gamma)
 
 Compute HLLC flux for 1D Euler equations.
@@ -36,7 +26,7 @@ function hllc_flux_1d(U_L::Vector{Float64}, U_R::Vector{Float64}, gamma::Float64
     rhoE_L = U_L[3]
     u_L = rhou_L / rho_L
     p_L = ideal_gas_pressure(rho_L, rhoE_L / rho_L, u_L, gamma)
-    a_L = parabolic_sound_speed(rho_L, p_L, gamma)
+    a_L = sound_speed(IdealGasEOS(gamma), rho_L, p_L)
     H_L = (rhoE_L + p_L) / rho_L
 
     rho_R = U_R[1]
@@ -44,7 +34,7 @@ function hllc_flux_1d(U_L::Vector{Float64}, U_R::Vector{Float64}, gamma::Float64
     rhoE_R = U_R[3]
     u_R = rhou_R / rho_R
     p_R = ideal_gas_pressure(rho_R, rhoE_R / rho_R, u_R, gamma)
-    a_R = parabolic_sound_speed(rho_R, p_R, gamma)
+    a_R = sound_speed(IdealGasEOS(gamma), rho_R, p_R)
     H_R = (rhoE_R + p_R) / rho_R
 
     # Roe-averaged state

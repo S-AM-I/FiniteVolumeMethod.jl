@@ -203,11 +203,11 @@ function assemble_epsilon_source(model::KEpsilon, rho::Vector{Float64}, k::Vecto
 end
 
 """
-    compute_friction_velocity(u_tan, y, nu, roughness)
+    rough_wall_friction_velocity(u_tan, y, nu, roughness)
 
 Compute friction velocity u_tau using the Law of the Wall.
 """
-function parabolic_compute_friction_velocity(u_tan, y, nu, roughness)
+function rough_wall_friction_velocity(u_tan, y, nu, roughness)
     kappa = 0.41
     E = 9.8
 
@@ -256,7 +256,7 @@ function update_wall_bcs!(bcs::Dict, mesh::UnstructuredMesh2D, u, v, k, epsilon,
             v_val = v[owner]
             u_tan = sqrt(u_val^2 + v_val^2)
 
-            u_tau = parabolic_compute_friction_velocity(u_tan, dist, nu, bc.roughness)
+            u_tau = rough_wall_friction_velocity(u_tan, dist, nu, bc.roughness)
 
             if equation == :k
                 bcs[f_idx] = NeumannBC(0.0)
@@ -300,7 +300,7 @@ function update_wall_bcs!(bcs::Dict, mesh::UnstructuredMesh3D, u, v, w, k, epsil
             w_val = w[owner]
             u_tan = sqrt(u_val^2 + v_val^2 + w_val^2)
 
-            u_tau = parabolic_compute_friction_velocity(u_tan, dist, nu, bc.roughness)
+            u_tau = rough_wall_friction_velocity(u_tan, dist, nu, bc.roughness)
 
             if equation == :k
                 bcs[f_idx] = NeumannBC(0.0)
