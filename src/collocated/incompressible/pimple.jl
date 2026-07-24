@@ -158,22 +158,28 @@ function _copy_state(
         state::IncompressibleState{Dim, T},
         mesh::UnstructuredFVMMesh{Dim, T},
     ) where {Dim, T}
+    # Deep-copy the flat backing vector and rebuild the U/p views into the copy,
+    # so the snapshot is an independent, identically-typed flat-backed state.
+    nc = length(mesh.cell_volumes)
+    u = copy(state.u)
+    U_internal = reinterpret(SVector{Dim, T}, view(u, 1:(nc * Dim)))
+    p_internal = view(u, (nc * Dim + 1):(nc * Dim + nc))
     U = CollocatedVectorField{Dim, T}(
         state.U.name,
-        copy(state.U.internal),
+        U_internal,
         copy(state.U.boundary),
         copy(state.U.boundary_face_indices),
     )
     p = CollocatedScalarField{T}(
         state.p.name,
-        copy(state.p.internal),
+        p_internal,
         copy(state.p.boundary),
         copy(state.p.boundary_face_indices),
     )
     phi = FaceFluxField{T}(state.phi.name, copy(state.phi.values))
-    A_P = copy(state.A_P)
-    H_U = copy(state.H_U)
-    return IncompressibleState{Dim, T}(U, p, phi, A_P, H_U, copy(state.U_old))
+    return IncompressibleState{Dim, T, typeof(U), typeof(p), typeof(phi)}(
+        u, U, p, phi, copy(state.A_P), copy(state.H_U), copy(state.U_old),
+    )
 end
 
 # ── Unified transient solver ───────────────────────────────────────

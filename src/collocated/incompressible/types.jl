@@ -193,15 +193,26 @@ is_plain_flow(prob::IncompressibleProblem) = is_plain_flow(prob.model)
 # ── Solver state ────────────────────────────────────────────────────
 
 @doc """
-    IncompressibleState{Dim, T}
+    IncompressibleState{Dim, T, UF, PF, FF}
 
 Mutable solver state carrying all field data needed by the
 pressure-velocity coupling loop.
 
+The primary unknowns — cell velocity `U` and cell pressure `p` — are backed
+by a single flat solution vector `u = [U-block; p-block]` (Stage 5f). `U.internal`
+and `p.internal` are views into `u`, so the segregated momentum and pressure
+solves write their blocks in place without repacking, and `u` is the vector the
+SciML integrator time-steps. `phi`, `A_P`, `H_U` and `U_old` are derived / cache
+state and are NOT part of `u`.
+
+The field types are captured concretely as `UF`/`PF`/`FF`, so field access on a
+`state::IncompressibleState` local (the solver-loop hot path) is type-stable.
+
 # Fields
-- `U::CollocatedVectorField{Dim, T}` — cell-centered velocity
-- `p::CollocatedScalarField{T}` — cell-centered pressure
-- `phi::FaceFluxField{T}` — volumetric face flux
+- `u::Vector{T}` — flat solution vector, layout `[U (nc·Dim) ; p (nc)]`
+- `U::UF` — cell-centered velocity ([`CollocatedVectorField`](@ref), `internal` a view into `u`)
+- `p::PF` — cell-centered pressure ([`CollocatedScalarField`](@ref), `internal` a view into `u`)
+- `phi::FF` — volumetric face flux (derived)
 - `A_P::Vector{T}` — diagonal momentum coefficients (per cell)
 - `H_U::Vector{SVector{Dim, T}}` — momentum H-operator values (per cell)
 - `U_old::Vector{SVector{Dim, T}}` — old-time-level velocity (per cell),
@@ -211,36 +222,31 @@ pressure-velocity coupling loop.
   time step (PISO correctors, PIMPLE outer iterations) all discretize
   `(Uⁿ⁺¹ - Uⁿ)/Δt` rather than drifting toward the previous iterate.
 """
-# The first three fields are abstractly typed: the concrete types carry a
-# trailing container parameter (`CollocatedVectorField{Dim,T,A}` and friends)
-# that is not fixed here. Adding it would cascade — `SolveResult` declares
-# `state::IncompressibleState{Dim,T}` and `snapshots::Vector{...}`, which would
-# become UnionAll fields in turn — and Stage 5f replaces this storage with a
-# flat vector of views, changing these declarations anyway. Left alone
-# deliberately so the types are reworked once rather than twice.
-mutable struct IncompressibleState{Dim, T}
-    U::CollocatedVectorField{Dim, T}
-    p::CollocatedScalarField{T}
-    phi::FaceFluxField{T}
+mutable struct IncompressibleState{Dim, T, UF, PF, FF}
+    u::Vector{T}
+    U::UF
+    p::PF
+    phi::FF
     A_P::Vector{T}
     H_U::Vector{SVector{Dim, T}}
     U_old::Vector{SVector{Dim, T}}
 end
 
-@doc """
-    IncompressibleState{Dim, T}(U, p, phi, A_P, H_U)
-
-Backward-compatible 5-argument constructor: initializes `U_old` as a copy
-of `U.internal`.
-"""
-function IncompressibleState{Dim, T}(
-        U::CollocatedVectorField{Dim, T},
-        p::CollocatedScalarField{T},
-        phi::FaceFluxField{T},
-        A_P::Vector{T},
-        H_U::Vector{SVector{Dim, T}},
-    ) where {Dim, T}
-    return IncompressibleState{Dim, T}(U, p, phi, A_P, H_U, copy(U.internal))
+# Build velocity/pressure fields backed by views into the flat vector `u`.
+# `u` is laid out as [U-block (nc·Dim, reinterpreted as SVector) ; p-block (nc)].
+function _flat_state_fields(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+    bface_idxs = [f for f in 1:nf if mesh.face_cells[2, f] == 0]
+    nb = length(bface_idxs)
+    u = zeros(T, nc * Dim + nc)
+    U_internal = reinterpret(SVector{Dim, T}, view(u, 1:(nc * Dim)))
+    p_internal = view(u, (nc * Dim + 1):(nc * Dim + nc))
+    U = CollocatedVectorField{Dim, T}(
+        :U, U_internal, fill(zero(SVector{Dim, T}), nb), bface_idxs,
+    )
+    p = CollocatedScalarField{T}(:p, p_internal, zeros(T, nb), copy(bface_idxs))
+    return u, U, p
 end
 
 @doc """
@@ -264,12 +270,14 @@ momentum solve.
 """
 function IncompressibleState(mesh::UnstructuredFVMMesh{Dim, T}) where {Dim, T}
     nc = length(mesh.cell_volumes)
-    U = CollocatedVectorField(:U, mesh)
-    p = CollocatedScalarField(:p, mesh)
+    u, U, p = _flat_state_fields(mesh)
     phi = FaceFluxField(:phi, mesh)
     A_P = ones(T, nc)
     H_U = fill(zero(SVector{Dim, T}), nc)
-    return IncompressibleState{Dim, T}(U, p, phi, A_P, H_U)
+    U_old = fill(zero(SVector{Dim, T}), nc)
+    return IncompressibleState{Dim, T, typeof(U), typeof(p), typeof(phi)}(
+        u, U, p, phi, A_P, H_U, U_old,
+    )
 end
 
 # ── Solve result ────────────────────────────────────────────────────

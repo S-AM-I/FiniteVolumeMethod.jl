@@ -10,7 +10,7 @@ via `Isend`, waits for receives, unpacks into ghost positions, then
 waits for sends to complete.
 """
 function FiniteVolumeMethod.halo_exchange!(
-        values::Vector{T}, dmesh::DistributedFVMMesh,
+        values::AbstractVector{T}, dmesh::DistributedFVMMesh,
     ) where {T}
     halo = dmesh.halo
 
@@ -53,9 +53,13 @@ end
     ) where {Dim, T}
 
 Vector field version: exchange each spatial component independently.
+
+`values` is an `AbstractVector` so the flat-state velocity view (a reinterpret
+of the solution vector `u`, Stage 5f) dispatches here rather than to the scalar
+method.
 """
 function FiniteVolumeMethod.halo_exchange!(
-        values::Vector{SVector{Dim, T}}, dmesh::DistributedFVMMesh{Dim},
+        values::AbstractVector{<:SVector{Dim, T}}, dmesh::DistributedFVMMesh{Dim},
     ) where {Dim, T}
     n = length(values)
     for d in 1:Dim

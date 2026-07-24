@@ -46,7 +46,7 @@ enthalpy equation assembly.
 function enthalpy_field_from_temperature(
         T_field::CollocatedScalarField{T}, T_ref::Real, Cp::Real,
     ) where {T}
-    h_field = CollocatedScalarField{T, typeof(T_field.internal)}(
+    h_field = CollocatedScalarField{T}(
         :h,
         similar(T_field.internal),
         similar(T_field.boundary),

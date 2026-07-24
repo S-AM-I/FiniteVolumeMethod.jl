@@ -85,25 +85,29 @@ dispatch (Stage 1g).
 - `boundary::A` — values at boundary faces, length `n_boundary_faces`
 - `boundary_face_indices::Vector{Int}` — mesh face index for each boundary entry
 """
-struct CollocatedScalarField{T, A <: AbstractVector{T}} <: AbstractCollocatedField
+# `internal` and `boundary` carry independent container parameters `A` and `B`:
+# the flat-state solver (Stage 5f) backs `internal` with a view into the single
+# solution vector `u`, while `boundary` stays a small owned `Vector`. Method
+# signatures written `CollocatedScalarField{T}` still match any container pair
+# via UnionAll dispatch.
+struct CollocatedScalarField{T, A <: AbstractVector{T}, B <: AbstractVector{T}} <: AbstractCollocatedField
     name::Symbol
     internal::A
-    boundary::A
+    boundary::B
     boundary_face_indices::Vector{Int}
 end
 
-# Preserve the old 1-parameter constructor form by inferring A from
-# the supplied arrays. Existing code like
-# `CollocatedScalarField{T}(name, internal, boundary, bface_idxs)` continues
-# to work.
+# Preserve the old 1-parameter constructor form by inferring `A`/`B` from the
+# supplied arrays. Existing code like
+# `CollocatedScalarField{T}(name, internal, boundary, bface_idxs)` continues to
+# work, now with independent internal/boundary container types.
 function CollocatedScalarField{T}(
         name::Symbol, internal::AbstractVector{T}, boundary::AbstractVector{T},
         boundary_face_indices::Vector{Int},
     ) where {T}
-    A = typeof(internal)
-    typeof(boundary) === A ||
-        error("CollocatedScalarField: internal and boundary must have same container type")
-    return CollocatedScalarField{T, A}(name, internal, boundary, boundary_face_indices)
+    return CollocatedScalarField{T, typeof(internal), typeof(boundary)}(
+        name, internal, boundary, boundary_face_indices,
+    )
 end
 
 """
@@ -119,7 +123,9 @@ function CollocatedScalarField(
     bface_idxs = [f for f in 1:nf if mesh.face_cells[2, f] == 0]
     internal = fill(value, ncells)
     boundary = fill(value, length(bface_idxs))
-    return CollocatedScalarField{T, typeof(internal)}(name, internal, boundary, bface_idxs)
+    return CollocatedScalarField{T, typeof(internal), typeof(boundary)}(
+        name, internal, boundary, bface_idxs,
+    )
 end
 
 """Number of interior cells."""
@@ -144,10 +150,10 @@ container via Julia's UnionAll dispatch.
 - `boundary::A` — boundary face values
 - `boundary_face_indices::Vector{Int}`
 """
-struct CollocatedVectorField{Dim, T, A <: AbstractVector{<:SVector{Dim, T}}} <: AbstractCollocatedField
+struct CollocatedVectorField{Dim, T, A <: AbstractVector{<:SVector{Dim, T}}, B <: AbstractVector{<:SVector{Dim, T}}} <: AbstractCollocatedField
     name::Symbol
     internal::A
-    boundary::A
+    boundary::B
     boundary_face_indices::Vector{Int}
 end
 
@@ -156,10 +162,9 @@ function CollocatedVectorField{Dim, T}(
         boundary::AbstractVector{<:SVector{Dim, T}},
         boundary_face_indices::Vector{Int},
     ) where {Dim, T}
-    A = typeof(internal)
-    typeof(boundary) === A ||
-        error("CollocatedVectorField: internal and boundary must have same container type")
-    return CollocatedVectorField{Dim, T, A}(name, internal, boundary, boundary_face_indices)
+    return CollocatedVectorField{Dim, T, typeof(internal), typeof(boundary)}(
+        name, internal, boundary, boundary_face_indices,
+    )
 end
 
 """
@@ -176,7 +181,9 @@ function CollocatedVectorField(
     bface_idxs = [f for f in 1:nf if mesh.face_cells[2, f] == 0]
     internal = fill(value, ncells_val)
     boundary = fill(value, length(bface_idxs))
-    return CollocatedVectorField{Dim, T, typeof(internal)}(name, internal, boundary, bface_idxs)
+    return CollocatedVectorField{Dim, T, typeof(internal), typeof(boundary)}(
+        name, internal, boundary, bface_idxs,
+    )
 end
 
 ncells(field::CollocatedVectorField) = length(field.internal)

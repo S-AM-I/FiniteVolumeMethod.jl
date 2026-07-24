@@ -39,6 +39,38 @@ end
     end
 end
 
+@testset "V&V: IncompressibleState — flat backing store (Stage 5f)" begin
+    mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
+    state = IncompressibleState(mesh)
+    nc = length(mesh.cell_volumes)
+
+    # Flat vector holds the velocity block then the pressure block.
+    @test length(state.u) == nc * 2 + nc
+
+    # The fields are VIEWS into `u`: writing a field mutates the backing vector.
+    state.U.internal[1] = SVector(7.0, 9.0)
+    @test state.u[1] == 7.0
+    @test state.u[2] == 9.0
+    state.p.internal[1] = 3.5
+    @test state.u[nc * 2 + 1] == 3.5
+
+    # ...and writing the backing vector shows through the field view.
+    state.u[3] = -2.0
+    @test state.U.internal[2][1] == -2.0
+
+    # The state and its primary-field containers are concretely typed, so
+    # solver-loop field access is type-stable (fixes the pre-5f instability).
+    @test isconcretetype(typeof(state))
+    @test isconcretetype(typeof(state.U.internal))
+    @test isconcretetype(typeof(state.p.internal))
+
+    # A deep copy is independent and identically typed (view-backed).
+    copy_state = FiniteVolumeMethod.Collocated._copy_state(state, mesh)
+    @test typeof(copy_state) === typeof(state)
+    copy_state.U.internal[1] = SVector(0.0, 0.0)
+    @test state.U.internal[1] == SVector(7.0, 9.0)  # original untouched
+end
+
 @testset "V&V: IncompressibleProblem — kwargs round-trip" begin
     mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
     bcs = Dict{Symbol, AbstractBoundaryCondition}(

@@ -58,9 +58,12 @@ end
 # Symbolic indexing: sol[:U], sol[:p], sol[:Ux], sol[:Uy], sol[:Uz], sol[:phi]
 function Base.getindex(sol::IncompressibleSolution{Dim, T}, sym::Symbol) where {Dim, T}
     state = getfield(sol, :result).state
-    sym === :U && return state.U.internal
-    sym === :p && return state.p.internal
-    sym === :phi && return state.phi.values
+    # Return independent Vector snapshots, not the live views into the flat
+    # solution vector `u` (Stage 5f): a solution's fields must not be mutable
+    # aliases of solver state, and `sol[:U]` is a cold post-processing path.
+    sym === :U && return collect(state.U.internal)
+    sym === :p && return collect(state.p.internal)
+    sym === :phi && return copy(state.phi.values)
     sym === :Ux && return _extract_component(state.U, 1)
     sym === :Uy && return Dim >= 2 ? _extract_component(state.U, 2) :
         error("No Uy in $(Dim)D")
