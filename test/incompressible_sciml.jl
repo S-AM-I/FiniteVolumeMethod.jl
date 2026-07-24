@@ -1,4 +1,5 @@
 using FiniteVolumeMethod
+using FiniteVolumeMethod: PorousZone
 using FiniteVolumeMethod.Parabolic: DirichletBC, NeumannBC
 using Test
 using LinearAlgebra
@@ -167,5 +168,119 @@ end
         vel_td_y = FiniteVolumeMethod.expand_velocity_bc(td, 2)
         @test vel_td_y.value ≈ 0.0
         @test FiniteVolumeMethod.expand_pressure_bc(td) isa NeumannBC
+    end
+
+    # ── 8. IncompressibleModel physics composition (Stage 5d) ─────────
+    #
+    # The physics dispatch in sciml_interface.jl had no coverage before
+    # 5d: every consumer called the solve_simple_* internals directly, so
+    # none of the branches or dependency checks were ever exercised.
+    @testset "IncompressibleModel composition (5d)" begin
+        @testset "default model is plain flow" begin
+            prob = build_channel_problem()
+            @test prob.model isa IncompressibleModel
+            @test is_plain_flow(prob)
+            @test !has_thermal(prob)
+            @test !has_turbulence(prob)
+            @test !has_radiation(prob)
+            @test !has_combustion(prob)
+            @test !has_porous_zones(prob)
+            @test !has_mrf_zones(prob)
+        end
+
+        @testset "components require their boundary conditions" begin
+            props = FluidThermalProperties{2}()
+            @test_throws UndefKeywordError ThermalComponent(props)
+            @test_throws UndefKeywordError RadiationComponent(P1Model())
+
+            thermal = ThermalComponent(props; bcs = Dict{Symbol, Any}())
+            @test thermal.T_init == props.T_ref
+            @test ThermalComponent(
+                props; bcs = Dict{Symbol, Any}(), T_init = 350.0,
+            ).T_init == 350.0
+        end
+
+        @testset "model validates component dependencies" begin
+            props = FluidThermalProperties{2}()
+            thermal = ThermalComponent(props; bcs = Dict{Symbol, Any}())
+            rad = RadiationComponent(P1Model(); bcs = Dict{Symbol, Any}())
+            comb = CombustionComponent(1, 2; bcs = Dict{Symbol, Any}())
+
+            # Radiation and combustion both enter the energy equation.
+            @test_throws ArgumentError IncompressibleModel(radiation = rad)
+            @test_throws ArgumentError IncompressibleModel(combustion = comb)
+
+            # No reacting-flow solver accepts a radiation model, so this
+            # combination used to drop radiation silently.
+            @test_throws ArgumentError IncompressibleModel(
+                thermal = thermal, radiation = rad, combustion = comb,
+            )
+
+            # Zones are threaded through the plain/turbulent/thermal paths only.
+            @test_throws ArgumentError IncompressibleModel(
+                thermal = thermal, radiation = rad,
+                porous_zones = PorousZone{Float64}[],
+            )
+
+            model = IncompressibleModel(thermal = thermal, radiation = rad)
+            @test has_thermal(model)
+            @test has_radiation(model)
+            @test !is_plain_flow(model)
+        end
+
+        @testset "transient solve rejects steady-only physics" begin
+            props = FluidThermalProperties{2}()
+            model = IncompressibleModel(
+                thermal = ThermalComponent(props; bcs = Dict{Symbol, Any}()),
+                radiation = RadiationComponent(P1Model(); bcs = Dict{Symbol, Any}()),
+            )
+            mesh = build_cartesian_unstructured_mesh(8, 4, 1.0, 1.0)
+            bcs = Dict{Symbol, AbstractBoundaryCondition}(
+                :left => FixedVelocityBC((0.1, 0.0)),
+                :right => FixedPressureBC(0.0),
+                :bottom => NoSlipWallBC(),
+                :top => NoSlipWallBC(),
+            )
+            prob = IncompressibleProblem(mesh, bcs, PISO(); nu = 0.1, model = model)
+            @test_throws ArgumentError solve(
+                prob, PISO(); tspan = (0.0, 0.01), dt = 0.01,
+            )
+        end
+
+        @testset "model survives remake and the tunable round-trip" begin
+            zone = PorousZone(collect(1:4); K = 1.0e-4, F = 0.0)
+            prob = build_channel_problem()
+            prob = remake(prob; model = IncompressibleModel(porous_zones = [zone]))
+            @test has_porous_zones(prob)
+
+            prob_nu = remake(prob; nu = 0.2)
+            @test prob_nu.nu == 0.2
+            @test has_porous_zones(prob_nu)
+
+            vals, repack, _ = SS.canonicalize(SS.Tunable(), prob)
+            @test has_porous_zones(repack(vals))
+        end
+
+        @testset "zones in the model reach the internal entry point" begin
+            zone = PorousZone(collect(1:4); K = 1.0e-4, F = 0.0)
+            prob = build_channel_problem(; max_iterations = 2)
+            prob = remake(prob; model = IncompressibleModel(porous_zones = [zone]))
+            result = FiniteVolumeMethod.solve_simple(
+                prob; linear_solver = LUFactorization(),
+            )
+            @test all(isfinite, result.state.p.internal)
+        end
+
+        @testset "solve-time model override is recorded in the solution" begin
+            zone = PorousZone(collect(1:4); K = 1.0e-4, F = 0.0)
+            prob = build_channel_problem()
+            sol = solve(
+                prob, SIMPLE(; max_iterations = 2);
+                model = IncompressibleModel(porous_zones = [zone]),
+                linear_solver = LUFactorization(),
+            )
+            @test has_porous_zones(sol.prob)
+            @test !has_porous_zones(prob)
+        end
     end
 end

@@ -156,7 +156,8 @@ To add a new test file, create it in `test/` and add a `safe_include("filename.j
 - `test/KNOWN_FAILURES.md` — Documents known broken/skipped/demoted tests
 
 ### Collocated Solver Key Types
-- `IncompressibleProblem{Dim, T}` — problem definition (mesh, BCs, algorithm, nu, density)
+- `IncompressibleProblem{Dim, T}` — problem definition (mesh, BCs, algorithm, nu, density, model)
+- `IncompressibleModel` — physics composition carried by the problem: `TurbulenceComponent`, `ThermalComponent`, `RadiationComponent`, `CombustionComponent`, `porous_zones`, `mrf_zones`. Component dependencies are validated on construction; query with `has_turbulence`/`has_thermal`/`has_radiation`/`has_combustion`/`has_porous_zones`/`has_mrf_zones`/`is_plain_flow`
 - `IncompressibleState{Dim, T}` — mutable flow state (U, p, phi, A_P, H_U)
 - `IncompressibleSolution{Dim, T}` — SciML-compatible result with `sol[:U]`, `sol[:p]` access
 - `SolveResult{Dim, T}` — raw result with converged, iterations, residuals
@@ -170,8 +171,8 @@ To add a new test file, create it in `test/` and add a `safe_include("filename.j
 - `CommonSolve.solve(prob, SIMPLE())` / `solve(prob, PISO(); tspan, dt)` — standard SciML dispatch
 - `sol[:U]`, `sol[:p]`, `sol[:Ux]`, `sol[:Uy]`, `sol[:phi]` — symbolic field access
 - `SciMLBase.remake(prob; nu=1e-4, density=2.0)` — immutable problem modification
-- `SciMLStructures.Tunable` — parameter extraction `[nu, density, alpha_U, alpha_p, tolerance]`
-- Optional physics via keyword args: `solve(prob, SIMPLE(); turb_model=StandardKEpsilon(), thermal_props=..., bcs_T=..., rad_model=P1Model(), ...)`
+- `SciMLStructures.Tunable` — parameter extraction `[nu, density, alpha_U, alpha_p, tolerance]` (the algorithm-dependent entries are filtered by an `applies` predicate, so `PISO` exposes only `[nu, density]`)
+- Optional physics comes from `prob.model`, not keyword arguments (Stage 5d): build an `IncompressibleModel` and pass it to `IncompressibleProblem(...; model = ...)`, or override per-solve with `solve(prob, alg; model = ...)`. `solve` itself carries numerics only (`linear_solver`, `solver_config`, `scheme`, `blend`, `tspan`, `dt`, `save_every`, `U0`, `p0`, `verbose`)
 
 ## Known Issues
 

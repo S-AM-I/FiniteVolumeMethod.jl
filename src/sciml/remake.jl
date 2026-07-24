@@ -602,13 +602,17 @@ function SciMLBase.remake(
         algorithm = _unset,
         nu = _unset,
         density = _unset,
+        model = _unset,
     ) where {Dim, T, Mesh, BC, Algo}
     new_mesh = _replace(mesh, prob.mesh)
     new_bcs = _replace(bcs, prob.bcs)
     new_algo = _replace(algorithm, prob.algorithm)
     new_nu = nu === _unset ? prob.nu : T(nu)
     new_density = density === _unset ? prob.density : T(density)
-    return IncompressibleProblem{Dim, T, typeof(new_mesh), typeof(new_bcs), typeof(new_algo)}(
-        new_mesh, new_bcs, new_algo, new_nu, new_density,
+    new_model = _replace(model, prob.model)
+    return IncompressibleProblem{
+        Dim, T, typeof(new_mesh), typeof(new_bcs), typeof(new_algo), typeof(new_model),
+    }(
+        new_mesh, new_bcs, new_algo, new_nu, new_density, new_model,
     )
 end

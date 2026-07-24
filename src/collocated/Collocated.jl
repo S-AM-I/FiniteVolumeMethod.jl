@@ -67,6 +67,8 @@ include("amr/error_indicators.jl")
 include("amr/refinement.jl")
 include("amr/coarsening.jl")
 
+# Defines IncompressibleModel, which IncompressibleProblem carries as a field.
+include("incompressible/model.jl")
 include("incompressible/types.jl")
 include("incompressible/boundary_conditions.jl")
 include("incompressible/momentum.jl")
@@ -142,6 +144,9 @@ export
     CollocatedScalarField, CollocatedVectorField, ConvectiveOutletBC, CustomBC, CyclicBC,
     DarcyForchheimerPorous, DarcyPorous, ExpressionBC, FaceFluxField, FieldStatistics,
     FixedPressureBC, FixedVelocityBC, FlowRateInletBC, ForceProbe, GibilaroDrag,
+    CombustionComponent, IncompressibleModel, RadiationComponent, ThermalComponent,
+    TurbulenceComponent, has_combustion, has_mrf_zones, has_porous_zones, has_radiation,
+    has_thermal, has_turbulence, is_plain_flow,
     IncompressibleProblem, IncompressibleSolution, IncompressibleState, InletOutletBC,
     IshiiZuberDrag, KHRTBreakup, KunzCavitation, KunzModel, LaplacianMotion, MRFZone,
     MerkleCavitation, MerkleModel, MeshMotionState, MultiMRF, NoSlipWallBC,

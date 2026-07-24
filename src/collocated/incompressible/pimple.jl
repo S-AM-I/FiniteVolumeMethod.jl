@@ -43,8 +43,8 @@ function _pimple_step!(
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}} = Vector{Vector{Tuple{Int, Int}}}(),
         t::T = zero(T),
         ws = nothing,
-        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
-        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = prob.model.porous_zones,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = prob.model.mrf_zones,
     ) where {Dim, T}
     algo = prob.algorithm::PIMPLE{T}
     mesh = prob.mesh
@@ -222,8 +222,8 @@ function solve_incompressible(
         cfl_max::Union{Nothing, T} = nothing,
         U0::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
         p0::Union{Nothing, Vector{T}} = nothing,
-        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
-        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = prob.model.porous_zones,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = prob.model.mrf_zones,
     ) where {Dim, T}
     mesh = prob.mesh
     algo = prob.algorithm

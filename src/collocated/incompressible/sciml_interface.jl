@@ -1,11 +1,13 @@
 # incompressible/sciml_interface.jl — SciML CommonSolve dispatch
 #
-# Enables standard `solve(prob, alg; kwargs...)` pattern for
+# Enables the standard `solve(prob, alg; kwargs...)` pattern for
 # IncompressibleProblem, returning IncompressibleSolution.
 #
-# A single `solve` method per algorithm type accepts optional physics
-# kwargs (turbulence, thermal, radiation, combustion).  When all are
-# `nothing` the plain incompressible solver runs.
+# The physics to solve comes from `prob.model` (an `IncompressibleModel`), not
+# from keyword arguments: this façade only carries numerics (linear solver,
+# convection scheme, time-stepping controls).  Component dependencies are
+# validated when the model is constructed, so the dispatch below just reads
+# traits and unpacks.
 
 """
     solve(prob::IncompressibleProblem, alg::SIMPLE; kwargs...)
@@ -13,162 +15,80 @@
 Solve a steady-state incompressible problem using SIMPLE.
 Returns an [`IncompressibleSolution`](@ref) with symbolic field access.
 
-# Optional physics kwargs
-- `turb_model` — RANS turbulence model (e.g. `KEpsilonModel()`)
-- `turb_bcs` — turbulence boundary conditions
-- `thermal_props::FluidThermalProperties` — enables energy equation
-- `bcs_T` — temperature boundary conditions (required when `thermal_props` given)
-- `T_init` — initial temperature (defaults to `thermal_props.T_ref`)
-- `rad_model::P1Model` — radiation model (requires `thermal_props` and `bcs_G`)
-- `bcs_G` — incident radiation boundary conditions
-- `combustion_props::CombustionProperties` — enables reacting flow
-- `edm::EddyDissipationModel` — EDM reaction model (required with `combustion_props`)
-- `bcs_species` — species boundary conditions
-- `Y_init` — initial mass fractions `Dict{Symbol, T}`
-- `porous_zones::Vector{PorousZone}` — Darcy-Forchheimer porous zones
-  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
-- `mrf_zones::Vector{MRFZone}` — rotating reference-frame zones
-  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
-- `scheme::ConvectionScheme`, `blend` — momentum convection scheme for
-  the plain path (default first-order `CONV_UPWIND`; see
-  [`solve_simple`](@ref))
+The physics solved is whatever `prob.model` carries — see
+[`IncompressibleModel`](@ref).  Pass `model` here to override it for this
+solve; the returned solution records the problem actually solved.
+
+# Keyword arguments
+- `model` — override `prob.model` for this solve
+- `linear_solver`, `solver_config` — linear-solve selection and per-field configuration
+- `scheme::ConvectionScheme`, `blend` — momentum convection scheme (plain path;
+  see [`solve_simple`](@ref))
+- `verbose` — print residuals each iteration
 """
 function CommonSolve.solve(
         prob::IncompressibleProblem{Dim, T},
         alg::SIMPLE;
-        # Base kwargs
+        model = nothing,
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
-        # Zone kwargs
-        porous_zones = nothing,
-        mrf_zones = nothing,
-        # Convection scheme kwargs (plain path; see solve_simple)
         scheme::ConvectionScheme = CONV_UPWIND,
         blend::T = T(0.5),
-        # Turbulence kwargs
-        turb_model = nothing,
-        turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
-        # Thermal kwargs
-        thermal_props = nothing,
-        bcs_T = nothing,
-        T_init = nothing,
-        # Radiation kwargs
-        rad_model = nothing,
-        bcs_G = nothing,
-        # Combustion kwargs
-        combustion_props = nothing,
-        edm = nothing,
-        bcs_species = nothing,
-        Y_init = Dict{Symbol, Float64}(),
     ) where {Dim, T}
-    actual_prob = alg === prob.algorithm ? prob : remake(prob; algorithm = alg)
+    actual_prob = _with_solve_overrides(prob, alg, model)
+    physics = actual_prob.model
 
-    if (porous_zones !== nothing || mrf_zones !== nothing) &&
-            (combustion_props !== nothing || rad_model !== nothing)
-        throw(
-            ArgumentError(
-                "porous_zones/mrf_zones are supported on the plain, " *
-                    "turbulent, and thermal solve paths only (not with " *
-                    "combustion_props or rad_model)"
-            )
-        )
-    end
-
-    if combustion_props !== nothing
-        # ── Reacting flow ──────────────────────────────────────
-        thermal_props === nothing && throw(
-            ArgumentError(
-                "combustion_props requires thermal_props"
-            )
-        )
-        bcs_T === nothing && throw(
-            ArgumentError(
-                "combustion_props requires bcs_T"
-            )
-        )
-        edm === nothing && throw(
-            ArgumentError(
-                "combustion_props requires edm"
-            )
-        )
-        bcs_species === nothing && throw(
-            ArgumentError(
-                "combustion_props requires bcs_species"
-            )
-        )
-        actual_T_init = T_init === nothing ? thermal_props.T_ref : T_init
-        result, _thermal_state, _species_state = solve_simple_reacting(
-            actual_prob, thermal_props, combustion_props, edm;
-            bcs_T = bcs_T, bcs_species = bcs_species,
-            turb_model = turb_model, turb_bcs = turb_bcs,
-            Y_init = Y_init, T_init = actual_T_init,
-            linear_solver = linear_solver,
-            solver_config = solver_config, verbose = verbose,
+    if has_combustion(physics)
+        combustion = physics.combustion
+        thermal = physics.thermal
+        result, _thermal_state, _species_state = _solve_reacting(
+            actual_prob, thermal, combustion;
+            linear_solver = linear_solver, solver_config = solver_config,
+            verbose = verbose,
         )
         return IncompressibleSolution(result, actual_prob)
-    elseif rad_model !== nothing
-        # ── Thermal + radiation ────────────────────────────────
-        thermal_props === nothing && throw(
-            ArgumentError(
-                "rad_model requires thermal_props"
-            )
-        )
-        bcs_T === nothing && throw(
-            ArgumentError(
-                "rad_model requires bcs_T"
-            )
-        )
-        bcs_G === nothing && throw(
-            ArgumentError(
-                "rad_model requires bcs_G"
-            )
-        )
-        actual_T_init = T_init === nothing ? thermal_props.T_ref : T_init
+    elseif has_radiation(physics)
+        thermal = physics.thermal
+        radiation = physics.radiation
         result, _thermal_state, _rad_state = solve_simple_thermal_radiation(
-            actual_prob, thermal_props, rad_model;
-            bcs_T = bcs_T, bcs_G = bcs_G,
-            turb_model = turb_model, turb_bcs = turb_bcs,
-            T_init = actual_T_init,
+            actual_prob, thermal.properties, radiation.model;
+            bcs_T = thermal.bcs, bcs_G = radiation.bcs,
+            turb_model = turbulence_model(physics),
+            turb_bcs = turbulence_bcs(physics),
+            T_init = thermal.T_init,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
         )
         return IncompressibleSolution(result, actual_prob)
-    elseif thermal_props !== nothing
-        # ── Thermal (+ optional turbulence) ────────────────────
-        bcs_T === nothing && throw(
-            ArgumentError(
-                "thermal_props requires bcs_T"
-            )
-        )
-        actual_T_init = T_init === nothing ? thermal_props.T_ref : T_init
+    elseif has_thermal(physics)
+        thermal = physics.thermal
         result, _thermal_state = solve_simple_thermal(
-            actual_prob, thermal_props;
-            bcs_T = bcs_T,
-            turb_model = turb_model, turb_bcs = turb_bcs,
-            T_init = actual_T_init,
+            actual_prob, thermal.properties;
+            bcs_T = thermal.bcs,
+            turb_model = turbulence_model(physics),
+            turb_bcs = turbulence_bcs(physics),
+            T_init = thermal.T_init,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
-            porous_zones = porous_zones, mrf_zones = mrf_zones,
+            porous_zones = physics.porous_zones, mrf_zones = physics.mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
-    elseif turb_model !== nothing
-        # ── Turbulence only ────────────────────────────────────
+    elseif has_turbulence(physics)
         result, _turb_state = solve_simple_turbulent(
-            actual_prob, turb_model;
-            turb_bcs = turb_bcs,
+            actual_prob, turbulence_model(physics);
+            turb_bcs = turbulence_bcs(physics),
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
-            porous_zones = porous_zones, mrf_zones = mrf_zones,
+            porous_zones = physics.porous_zones, mrf_zones = physics.mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     else
-        # ── Plain incompressible ───────────────────────────────
         result = solve_simple(
             actual_prob;
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
-            porous_zones = porous_zones, mrf_zones = mrf_zones,
+            porous_zones = physics.porous_zones, mrf_zones = physics.mrf_zones,
             scheme = scheme, blend = blend,
         )
         return IncompressibleSolution(result, actual_prob)
@@ -181,96 +101,70 @@ end
 Solve a transient incompressible problem using PISO or PIMPLE.
 Returns an [`IncompressibleSolution`](@ref) with symbolic field access.
 
-# Optional physics kwargs
-- `turb_model` — RANS turbulence model
-- `turb_bcs` — turbulence boundary conditions
-- `thermal_props::FluidThermalProperties` — enables energy equation
-- `bcs_T` — temperature boundary conditions (required when `thermal_props` given)
-- `T_init` — initial temperature (defaults to `thermal_props.T_ref`)
-- `porous_zones::Vector{PorousZone}` — Darcy-Forchheimer porous zones
-  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
-- `mrf_zones::Vector{MRFZone}` — rotating reference-frame zones
-  (plain, turbulent, and thermal paths; see [`assemble_momentum!`](@ref))
+The physics solved is whatever `prob.model` carries — see
+[`IncompressibleModel`](@ref).  Radiation and combustion have no transient
+solve path and are rejected here.
+
+# Keyword arguments
+- `tspan`, `dt` — time interval and fixed step
+- `model` — override `prob.model` for this solve
+- `save_every` — snapshot interval (plain path only; the physics paths reject
+  it rather than accept and ignore it)
+- `U0`, `p0` — initial velocity and pressure (plain path only)
+- `linear_solver`, `solver_config`, `verbose`
 """
 function CommonSolve.solve(
         prob::IncompressibleProblem{Dim, T},
         alg::Union{PISO, PIMPLE};
         tspan::Tuple{T, T},
         dt::T,
+        model = nothing,
         # `nothing` distinguishes "not requested" from an explicit `1`: only the
         # plain incompressible path can produce snapshots, and the physics paths
         # reject the kwarg rather than accept and ignore it.
         save_every::Union{Nothing, Int} = nothing,
-        # Base kwargs
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
-        # Zone kwargs
-        porous_zones = nothing,
-        mrf_zones = nothing,
-        # Initial conditions (plain incompressible path only)
         U0::Union{Nothing, Vector{SVector{Dim, T}}} = nothing,
         p0::Union{Nothing, Vector{T}} = nothing,
-        # Turbulence kwargs
-        turb_model = nothing,
-        turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
-        # Thermal kwargs
-        thermal_props = nothing,
-        bcs_T = nothing,
-        T_init = nothing,
     ) where {Dim, T}
-    actual_prob = alg === prob.algorithm ? prob : remake(prob; algorithm = alg)
+    actual_prob = _with_solve_overrides(prob, alg, model)
+    physics = actual_prob.model
 
-    if thermal_props !== nothing
-        # ── Thermal (+ optional turbulence) ────────────────────
-        bcs_T === nothing && throw(
-            ArgumentError(
-                "thermal_props requires bcs_T"
-            )
-        )
-        save_every === nothing || throw(
-            ArgumentError(
-                "save_every is not supported on the thermal path: SolveResult.snapshots " *
-                    "holds IncompressibleState only, so a snapshot would silently omit the " *
-                    "temperature field. Drop the kwarg, or use the plain incompressible path."
-            )
-        )
-        actual_T_init = T_init === nothing ? thermal_props.T_ref : T_init
+    _reject_steady_only_physics(physics)
+
+    if has_thermal(physics)
+        _reject_save_every(save_every, "thermal", "the temperature field")
+        thermal = physics.thermal
         result, _thermal_state = solve_incompressible_thermal(
-            actual_prob, thermal_props, tspan, dt;
-            bcs_T = bcs_T,
-            turb_model = turb_model, turb_bcs = turb_bcs,
-            T_init = actual_T_init,
+            actual_prob, thermal.properties, tspan, dt;
+            bcs_T = thermal.bcs,
+            turb_model = turbulence_model(physics),
+            turb_bcs = turbulence_bcs(physics),
+            T_init = thermal.T_init,
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
-            porous_zones = porous_zones, mrf_zones = mrf_zones,
+            porous_zones = physics.porous_zones, mrf_zones = physics.mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
-    elseif turb_model !== nothing
-        # ── Turbulence only ────────────────────────────────────
-        save_every === nothing || throw(
-            ArgumentError(
-                "save_every is not supported on the turbulent path: SolveResult.snapshots " *
-                    "holds IncompressibleState only, so a snapshot would silently omit the " *
-                    "turbulence state. Drop the kwarg, or use the plain incompressible path."
-            )
-        )
+    elseif has_turbulence(physics)
+        _reject_save_every(save_every, "turbulent", "the turbulence state")
         result, _turb_state = solve_incompressible_turbulent(
-            actual_prob, turb_model, tspan, dt;
-            turb_bcs = turb_bcs,
+            actual_prob, turbulence_model(physics), tspan, dt;
+            turb_bcs = turbulence_bcs(physics),
             linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
-            porous_zones = porous_zones, mrf_zones = mrf_zones,
+            porous_zones = physics.porous_zones, mrf_zones = physics.mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     else
-        # ── Plain incompressible ───────────────────────────────
         result = solve_incompressible(
             actual_prob, tspan, dt;
             save_every = something(save_every, 1), linear_solver = linear_solver,
             solver_config = solver_config, verbose = verbose,
             U0 = U0, p0 = p0,
-            porous_zones = porous_zones, mrf_zones = mrf_zones,
+            porous_zones = physics.porous_zones, mrf_zones = physics.mrf_zones,
         )
         return IncompressibleSolution(result, actual_prob)
     end
@@ -286,4 +180,73 @@ function CommonSolve.solve(
         kwargs...,
     ) where {Dim, T}
     return CommonSolve.solve(prob, prob.algorithm; kwargs...)
+end
+
+# ── Façade helpers ──────────────────────────────────────────────────
+
+# Fold the solve-time algorithm and model overrides into the problem, so the
+# solution carries the problem that was actually solved rather than the one
+# originally constructed.
+function _with_solve_overrides(prob, alg, model)
+    out = alg === prob.algorithm ? prob : remake(prob; algorithm = alg)
+    model === nothing && return out
+    return remake(out; model = model)
+end
+
+# The reacting solvers take their rate closure positionally, and only the
+# multi-step (finite-rate Arrhenius) method accepts a variable-Lewis closure.
+function _solve_reacting(
+        prob, thermal, combustion;
+        linear_solver, solver_config, verbose,
+    )
+    shared = (
+        bcs_T = thermal.bcs, bcs_species = combustion.bcs,
+        turb_model = turbulence_model(prob.model),
+        turb_bcs = turbulence_bcs(prob.model),
+        Y_init = combustion.Y_init, T_init = thermal.T_init,
+        linear_solver = linear_solver, solver_config = solver_config,
+        verbose = verbose,
+    )
+    combustion.lewis === nothing && return solve_simple_reacting(
+        prob, thermal.properties, combustion.properties, combustion.reaction;
+        shared...,
+    )
+    combustion.reaction isa MultiStepMechanism || throw(
+        ArgumentError(
+            "CombustionComponent `lewis` requires a MultiStepMechanism reaction " *
+                "closure: variable-Lewis species transport is only implemented for " *
+                "the finite-rate Arrhenius path, not for $(typeof(combustion.reaction))."
+        )
+    )
+    return solve_simple_reacting(
+        prob, thermal.properties, combustion.properties, combustion.reaction;
+        shared..., lewis = combustion.lewis,
+    )
+end
+
+function _reject_steady_only_physics(physics)
+    has_radiation(physics) && throw(
+        ArgumentError(
+            "radiation has no transient solve path: RadiationComponent is supported " *
+                "with SIMPLE only. Solve the steady problem, or drop the component."
+        )
+    )
+    has_combustion(physics) && throw(
+        ArgumentError(
+            "combustion has no transient solve path: CombustionComponent is supported " *
+                "with SIMPLE only. Solve the steady problem, or drop the component."
+        )
+    )
+    return nothing
+end
+
+function _reject_save_every(save_every, path, omitted)
+    save_every === nothing && return nothing
+    throw(
+        ArgumentError(
+            "save_every is not supported on the $path path: SolveResult.snapshots holds " *
+                "IncompressibleState only, so a snapshot would silently omit $omitted. " *
+                "Drop the kwarg, or use the plain incompressible path."
+        )
+    )
 end

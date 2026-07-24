@@ -49,8 +49,8 @@ function solve_simple(
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,
-        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = nothing,
-        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
+        porous_zones::Union{Nothing, Vector{PorousZone{T}}} = prob.model.porous_zones,
+        mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = prob.model.mrf_zones,
         scheme::ConvectionScheme = CONV_UPWIND,
         blend::T = T(0.5),
     ) where {Dim, T}

@@ -128,7 +128,7 @@ end
 # ── Incompressible problem ──────────────────────────────────────────
 
 @doc """
-    IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling}
+    IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model}
 
 Complete specification of an incompressible Navier-Stokes problem on an
 unstructured mesh.
@@ -139,17 +139,20 @@ unstructured mesh.
 - `algorithm::Algo` — pressure-velocity coupling algorithm
 - `nu::T` — kinematic viscosity
 - `density::T` — fluid density (constant, incompressible)
+- `model::Model` — [`IncompressibleModel`](@ref) selecting the additional
+  physics (turbulence, thermal, radiation, combustion, zones)
 """
-struct IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling}
+struct IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model}
     mesh::Mesh
     bcs::BC
     algorithm::Algo
     nu::T
     density::T
+    model::Model
 end
 
 @doc """
-    IncompressibleProblem(mesh, bcs, algorithm; nu, density = 1.0)
+    IncompressibleProblem(mesh, bcs, algorithm; nu, density = 1.0, model = IncompressibleModel())
 
 Construct an [`IncompressibleProblem`](@ref) from a mesh, boundary conditions,
 and coupling algorithm.
@@ -160,6 +163,7 @@ and coupling algorithm.
 - `algorithm` — [`SIMPLE`](@ref), [`PISO`](@ref), or [`PIMPLE`](@ref)
 - `nu` — kinematic viscosity
 - `density` — fluid density (default `1.0`)
+- `model` — [`IncompressibleModel`](@ref) (default: plain incompressible flow)
 """
 function IncompressibleProblem(
         mesh::UnstructuredFVMMesh{Dim, T},
@@ -167,11 +171,24 @@ function IncompressibleProblem(
         algorithm::Algo;
         nu::T,
         density::T = one(T),
+        model = IncompressibleModel(),
     ) where {Dim, T, Algo <: AbstractPVCoupling}
-    return IncompressibleProblem{Dim, T, typeof(mesh), typeof(bcs), Algo}(
-        mesh, bcs, algorithm, nu, density,
+    return IncompressibleProblem{
+        Dim, T, typeof(mesh), typeof(bcs), Algo, typeof(model),
+    }(
+        mesh, bcs, algorithm, nu, density, model,
     )
 end
+
+# Problem-level forwarding of the model traits, so assembly hooks can ask the
+# problem directly instead of reaching through `prob.model` each time.
+has_turbulence(prob::IncompressibleProblem) = has_turbulence(prob.model)
+has_thermal(prob::IncompressibleProblem) = has_thermal(prob.model)
+has_radiation(prob::IncompressibleProblem) = has_radiation(prob.model)
+has_combustion(prob::IncompressibleProblem) = has_combustion(prob.model)
+has_porous_zones(prob::IncompressibleProblem) = has_porous_zones(prob.model)
+has_mrf_zones(prob::IncompressibleProblem) = has_mrf_zones(prob.model)
+is_plain_flow(prob::IncompressibleProblem) = is_plain_flow(prob.model)
 
 # ── Solver state ────────────────────────────────────────────────────
 
