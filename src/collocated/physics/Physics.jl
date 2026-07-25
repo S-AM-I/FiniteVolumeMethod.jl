@@ -29,9 +29,9 @@ using ..Collocated: add_diag!, CollocatedEquation,
     CollocatedScalarField,
     CollocatedVectorField,
     FaceFluxField,
+    # Only the union is imported: every Physics solver is agnostic to
+    # steady-vs-transient and dispatches on it (Stage 5f-2).
     AnyIncompressibleProblem,
-    IncompressibleProblem,
-    SteadyIncompressibleProblem,
     IncompressibleState,
     MRFZone,
     NoSlipWallBC,
