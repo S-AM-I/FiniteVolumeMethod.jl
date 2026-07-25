@@ -27,10 +27,10 @@ julia --project -e 'using Pkg; Pkg.test()'
 julia --project=test test/<filename>.jl
 
 # Single test file via Docker
-TEST_FILE=test/geometry.jl make ci-test-file
+TEST_FILE=test/geometry/geometry.jl make ci-test-file
 
 # Scientific evidence subset (used by CI scientific-smoke lane)
-julia --project=test test/scientific_evidence.jl
+julia --project=test test/governance/scientific_evidence.jl
 ```
 
 ### Formatting (Runic)
@@ -139,16 +139,24 @@ Defined in `Project.toml` under `[extensions]`:
 ### Test Organization
 `test/runtests.jl` orchestrates all tests via `safe_include()`, which runs each test file in its own anonymous module to prevent namespace pollution between tests. The test suite includes:
 
-- **Unit tests** — `test/geometry.jl`, `test/conditions.jl`, `test/hyperbolic.jl`, `test/mhd.jl`, `test/advanced_bcs.jl` (parabolic boundary gradient / segment utilities), `test/advanced_numerics.jl` (Phase 13: PPM, positivity-preserving limiter), `test/extended_physics.jl` (extended conservation laws), etc.
-- **Collocated solver tests** — `test/incompressible.jl` (94 tests), `test/incompressible_sciml.jl` (58 tests), `test/turbulence_rans.jl` (127), `test/turbulence_les.jl` (92), `test/thermal.jl` (132), `test/mesh_io.jl` (37), `test/linear_solvers.jl` (35), `test/multiphase_vof.jl` (57), `test/combustion.jl` (49), `test/radiation.jl` (71), `test/lagrangian_dpm.jl` (53), `test/dynamic_mesh.jl` (72), `test/postprocessing.jl` (100), `test/remaining_features.jl` (116)
+- **Unit tests** — `test/geometry/geometry.jl`, `test/parabolic/conditions.jl`, `test/hyperbolic/hyperbolic.jl`, `test/hyperbolic/mhd.jl`, `test/parabolic/advanced_bcs.jl` (parabolic boundary gradient / segment utilities), `test/hyperbolic/advanced_numerics.jl` (Phase 13: PPM, positivity-preserving limiter), `test/hyperbolic/extended_physics.jl` (extended conservation laws), etc.
+- **Collocated solver tests** — `test/collocated/incompressible.jl` (94 tests), `test/collocated/incompressible_sciml.jl` (58 tests), `test/collocated/turbulence_rans.jl` (127), `test/collocated/turbulence_les.jl` (92), `test/collocated/thermal.jl` (132), `test/geometry/mesh_io.jl` (37), `test/collocated/linear_solvers.jl` (35), `test/collocated/multiphase_vof.jl` (57), `test/collocated/combustion.jl` (49), `test/collocated/radiation.jl` (71), `test/collocated/lagrangian_dpm.jl` (53), `test/collocated/dynamic_mesh.jl` (72), `test/collocated/postprocessing.jl` (100), `test/collocated/remaining_features.jl` (116)
 - **Tutorials as tests** — Literate.jl scripts from `docs/src/literate_tutorials/` and `docs/src/literate_wyos/` are executed as testsets (docs are tested code)
 - **Verification cases** — driven by `validation/manifest.toml` via the `RepoValidationManifest` module; scripts from `docs/src/literate_verification/`
 - **Governance** — Aqua.jl quality, environment integrity, repository governance, reproducibility bundles, quality ledger
-- **MPI tests** — `test/mpi_test.jl` (NOT in runtests.jl — requires `mpiexec -n 2 julia --project=test test/mpi_test.jl`)
+- **MPI tests** — `test/experimental/mpi_test.jl` (NOT in runtests.jl — requires `mpiexec -n 2 julia --project=test test/experimental/mpi_test.jl`)
 
 Note: `keller_segel_chemotaxis.jl` is explicitly excluded from the tutorials testset. Collocated solver test files get `build_cartesian_unstructured_mesh` from `test/TestHelpers.jl` (each file `include`s it; centralized in v2.1.0).
 
-To add a new test file, create it in `test/` and add a `safe_include("filename.jl")` entry in `test/runtests.jl` under the appropriate testset. Test files NOT included in `runtests.jl` (run manually or by dedicated lanes): `test/cuda_hyperbolic_2d.jl` (requires CUDA), `test/mpi_test.jl` and `test/mpi_parity.jl` (require `mpiexec`), `test/test_jet.jl` (JET lane, `jet.yml`), `test/scientific_evidence.jl` (CI scientific-smoke lane), `test/performance_baselines.jl` and `test/release_audit.jl` (Makefile lanes), and the helpers `TestHelpers.jl`/`test_functions.jl`/`verification_utils.jl`. `test/parabolic_mesh.jl` and `test/io.jl` ARE included in `runtests.jl`.
+`test/` mirrors the module tree: `test/{geometry,parabolic,hyperbolic,collocated,sciml,experimental,governance}/`, with the shared helpers (`TestHelpers.jl`, `test_functions.jl`, `verification_utils.jl`) and `runtests.jl` at the root. Test files reach the helpers via `include(joinpath(@__DIR__, "..", "TestHelpers.jl"))` and the repo root via `dirname(dirname(@__DIR__))`.
+
+`runtests.jl` is a thin dispatcher over a `TESTS` table of `(group, name, path)` rows. `FVM_TEST_GROUP` selects which groups run — `all` (default), or a comma-separated subset:
+```bash
+FVM_TEST_GROUP=collocated,sciml julia --project -e 'using Pkg; Pkg.test()'
+```
+Groups: `geometry`, `parabolic`, `hyperbolic`, `collocated`, `sciml`, `experimental`, `governance`, `tutorials`, `verification`.
+
+To add a new test file, create it in the family directory it belongs to and add a row to the `TESTS` table in `test/runtests.jl`. Test files NOT included in `runtests.jl` (run manually or by dedicated lanes): `test/hyperbolic/cuda_hyperbolic_2d.jl` (requires CUDA), `test/experimental/mpi_test.jl` and `test/experimental/mpi_parity.jl` (require `mpiexec`), `test/governance/test_jet.jl` (JET lane, `jet.yml`), `test/governance/scientific_evidence.jl` (CI scientific-smoke lane), `test/governance/performance_baselines.jl` and `test/governance/release_audit.jl` (Makefile lanes), and the helpers `TestHelpers.jl`/`test_functions.jl`/`verification_utils.jl`. `test/parabolic/parabolic_mesh.jl` and `test/parabolic/io.jl` ARE included in `runtests.jl`.
 
 ### Validation Infrastructure
 - `validation/manifest.toml` — Machine-readable source of truth for feature maturity, V&V status, and CI inclusion. Features are `stable`, `provisional`, or `experimental`.
@@ -184,7 +192,7 @@ Hyperbolic/core: HLLD uses signed `Bn` in star states and has a real `dir=3` bra
 Collocated: transient ddt assembles against a `state.U_old` time-level snapshot (PISO/PIMPLE are now consistent transient schemes); `SymmetryBC`/`SlipWallBC` project out the wall-normal velocity (no boundary mass leak); non-orthogonal explicit correction sign fixed and wired through momentum/pressure assembly; Rhie-Chow uses the same harmonic face `D_f` as the pressure operator; `H`/`A_P` extracted after the relaxed momentum solve with `∇p` removed from `H` (fixed a double pressure application that made reordered PISO blow up); kinematic-form consistency — solutions are density-invariant at fixed ν, buoyancy is per unit mass; the Durbin cap survives to the momentum-visible `ν_t`; `WallFunctionBC` is no-slip + Spalding wall `ν_t` (nonzero drag); time/space-varying velocity BCs are evaluated each step into the matrix (`ParabolicDirichletFunc`); MULES honors inflow alpha BCs; the pressure-reference fix is a symmetric elimination (matrix stays SPD for CG/AMG); the continuity residual is flux-normalized; turbulent SIMPLE/PISO/PIMPLE loops regained cyclic-BC handling; equations/sparsity are allocated once per solve with pattern-indexed writes in hot loops.
 
 ### Fixed in v3.114 (backlog wave)
-- WENO5 1D ghost handling: the documented `nghost=3` bug no longer reproduces after the v3.112 ghost parameterization (96-config sweep in `test/weno.jl`); the last 2-ghost hardcode (positivity limiter) now takes `ng`
+- WENO5 1D ghost handling: the documented `nghost=3` bug no longer reproduces after the v3.112 ghost parameterization (96-config sweep in `test/hyperbolic/weno.jl`); the last 2-ghost hardcode (positivity limiter) now takes `ng`
 - AMR 2D inter-block ghost exchange is real: same-level copy, coarse→fine prolongation, conservative fine→coarse averaging, and conservative seam-flux replacement at single-level jumps (same-level multi-block matches a single-block reference bitwise). 3D multi-block still throws
 - GRMHD has a validated curved-spacetime path: densitized Valencia formulation with metric-aware con2prim, metric-aware source terms (two physics bugs fixed), Minkowski results bitwise unchanged, static Kerr-Schild atmosphere held with resolution-converging drift
 - Pressure-based compressible SIMPLE/PIMPLE solve a real compressible pressure equation (see per-module status above)
@@ -226,7 +234,7 @@ The following structural items previously listed here have been resolved during 
 - OpenFOAM binary polyMesh reader landed alongside Gmsh v4 reader
 
 ### Validation status (v3.112)
-- All collocated solver features in `validation/manifest.toml` are `experimental` (demoted from `provisional` in v3.112): their "Evidence #N" items are real `test/` files run by `Pkg.test()`, but none are machine-linked `[[scientific_evidence]]` entries, so the governance ladder gate — now enforced for `provisional` as well as `stable` in `test/repository_governance.jl` — is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by `validation/evidence_runner.jl`
+- All collocated solver features in `validation/manifest.toml` are `experimental` (demoted from `provisional` in v3.112): their "Evidence #N" items are real `test/` files run by `Pkg.test()`, but none are machine-linked `[[scientific_evidence]]` entries, so the governance ladder gate — now enforced for `provisional` as well as `stable` in `test/governance/repository_governance.jl` — is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by `validation/evidence_runner.jl`
 - Published-benchmark execution (≥3 per feature) remains the explicit gate for `stable` promotion; the 5-case suite now runs in CI (`published-benchmarks` job)
 - Outstanding deferrals to v3.2 / v3.3: layer addition + mesh extraction in the octree mesher, Enzyme full-solver AD, IDDES `h_max` from real edge lengths, Sandia Flame D combustion benchmark, all `stable`-tier promotions
 - `test/KNOWN_FAILURES.md` is the authoritative per-item status list (the historical `plans/` and `specs/` dev-planning directories were removed in v3.114 — see git history if you need the original phase plans)

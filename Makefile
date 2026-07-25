@@ -26,7 +26,7 @@ ci-build: ## Build base image (run after Project.toml changes)
 ci-test: ## Run full test suite (mirrors the unit-interop job in .github/workflows/CI.yml)
 	$(COMPOSE) run --rm test
 
-ci-test-file: ## Run single test file (TEST_FILE=test/geometry.jl make ci-test-file)
+ci-test-file: ## Run single test file (TEST_FILE=test/geometry/geometry.jl make ci-test-file)
 	$(COMPOSE) run --rm test-file
 
 ci-fast: ## Run the fast API/interop lane

@@ -43,7 +43,7 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
       - name: Check test project integrity
-        run: julia --project=test test/environment_integrity.jl
+        run: julia --project=test test/governance/environment_integrity.jl
       - name: Instantiate docs environment
         run: |
           julia --project=docs -e '
@@ -124,7 +124,7 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
       - name: Run scientific evidence suite
-        run: julia --project=test test/scientific_evidence.jl
+        run: julia --project=test test/governance/scientific_evidence.jl
       - name: Generate validation report
         if: always()
         run: |

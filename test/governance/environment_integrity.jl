@@ -1,0 +1,24 @@
+using Test
+
+include(joinpath(dirname(dirname(@__DIR__)), "validation", "project_integrity.jl"))
+using .RepoProjectIntegrity
+
+const REPO_ROOT = dirname(dirname(@__DIR__))
+
+@testset "Project environment integrity" begin
+    test_env = RepoProjectIntegrity.check_project_integrity(
+        joinpath(REPO_ROOT, "test", "Project.toml"),
+        ["test", "validation"];
+        repo_root = REPO_ROOT,
+        local_modules = [:RepoValidationManifest, :ValidationReport, :RepoProjectIntegrity],
+    )
+    @test isempty(test_env.missing)
+
+    docs_env = RepoProjectIntegrity.check_project_integrity(
+        joinpath(REPO_ROOT, "docs", "Project.toml"),
+        ["docs"];
+        repo_root = REPO_ROOT,
+        local_modules = [:RepoValidationManifest, :ValidationReport, :RepoProjectIntegrity],
+    )
+    @test isempty(docs_env.missing)
+end

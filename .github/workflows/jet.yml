@@ -24,4 +24,4 @@ jobs:
       - name: Install JET into the project env
         run: julia --project -e 'using Pkg; Pkg.add("JET")'
       - name: Run JET audit
-        run: julia --project -e 'include("test/test_jet.jl")'
+        run: julia --project -e 'include("test/governance/test_jet.jl")'

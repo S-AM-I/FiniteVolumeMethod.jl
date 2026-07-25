@@ -34,7 +34,7 @@ jobs:
       - uses: julia-actions/cache@v3
       - name: Check project environment integrity
         run: |
-          julia --project=test test/environment_integrity.jl
+          julia --project=test test/governance/environment_integrity.jl
           julia --project=docs docs/environment_integrity.jl
       - name: Instantiate test environment
         run: |
@@ -65,8 +65,8 @@ jobs:
         env:
           FVM_RUN_VANDV: "true"
         run: |
-          julia --project=test test/v_and_v_poiseuille_convergence.jl
-          julia --project=test test/v_and_v_ghia_cavity.jl
+          julia --project=test test/collocated/v_and_v_poiseuille_convergence.jl
+          julia --project=test test/collocated/v_and_v_ghia_cavity.jl
       - name: Generate nightly validation report
         if: always()
         run: |
