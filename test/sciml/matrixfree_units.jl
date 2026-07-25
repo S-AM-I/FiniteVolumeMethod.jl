@@ -1,4 +1,4 @@
-# test/stage9_sciml.jl — Stage 9 SciML deep-integration gates
+# test/sciml/matrixfree_units.jl — matrix-free linear operator interface and
 
 using FiniteVolumeMethod
 using FiniteVolumeMethod: AbstractLinearOperator, MatrixFreeError, MatrixFreeLinearOperator, SparseMatrixLinearOperator, as_si_density, as_si_temperature, as_si_velocity, as_si_viscosity, is_dimensionless, strip_units, underlying_matrix
@@ -6,7 +6,7 @@ using Test
 using LinearAlgebra
 using SparseArrays: sparse
 
-@testset "Stage 9e: MatrixFreeLinearOperator implements AbstractLinearOperator interface" begin
+@testset "MatrixFreeLinearOperator implements AbstractLinearOperator interface" begin
     # Wrap a simple diagonal matrix-vector product y_i = 2·x_i as a
     # matrix-free operator.
     n = 5
@@ -39,7 +39,7 @@ using SparseArrays: sparse
     @test_throws MatrixFreeError underlying_matrix(op)
 end
 
-@testset "Stage 9e: MatrixFreeLinearOperator equivalent to SparseMatrixLinearOperator" begin
+@testset "MatrixFreeLinearOperator equivalent to SparseMatrixLinearOperator" begin
     A = sparse([2.0 0.0 0.0; 0.0 3.0 0.0; 0.0 0.0 4.0])
     sparse_op = SparseMatrixLinearOperator(A)
     matfree_op = MatrixFreeLinearOperator{Float64}(
@@ -53,7 +53,7 @@ end
     @test y_sparse == y_free
 end
 
-@testset "Stage 9f: strip_units handles plain reals and dimensionless inputs" begin
+@testset "strip_units handles plain reals and dimensionless inputs" begin
     # Plain Real inputs pass through.
     @test strip_units(2.5, 1.0) ≈ 2.5
     @test strip_units(0.0, 1.0) == 0.0
@@ -66,7 +66,7 @@ end
     @test as_si_temperature(300.0) == 300.0
 end
 
-@testset "Stage 9f: is_dimensionless traits plain numbers correctly" begin
+@testset "is_dimensionless traits plain numbers correctly" begin
     @test is_dimensionless(1.0)
     @test is_dimensionless(42)
     @test is_dimensionless(1.5f0)

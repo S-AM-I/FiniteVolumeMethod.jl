@@ -1,60 +1,14 @@
-# test/stage8_meshing_amr.jl — Stage 8 octree meshing + collocated AMR gates
+# test/collocated/amr_markers.jl — AMR refinement markers, flux correction and
+# the Zienkiewicz-Zhu error indicator.
 
 using FiniteVolumeMethod
-using FiniteVolumeMethod.Experimental: Octree, build_octree, count_leaves, refine_near_sphere!, subdivide!
-using FiniteVolumeMethod: flux_correction_factor, is_leaf, mark_cells_by_gradient, zz_error_indicator
+using FiniteVolumeMethod: flux_correction_factor, mark_cells_by_gradient, zz_error_indicator
 using Test
 using StaticArrays: SVector
 
 include(joinpath(@__DIR__, "..", "TestHelpers.jl"))
 
-@testset "Stage 8a: Octree uniform refinement produces 2^(Dim·level) leaves" begin
-    # 3D level-0: single leaf.
-    tree0 = build_octree(SVector(0.0, 0.0, 0.0), SVector(1.0, 1.0, 1.0), 0)
-    @test count_leaves(tree0) == 1
-    @test is_leaf(tree0)
-
-    # 3D level-2: 8^2 = 64 leaves.
-    tree2 = build_octree(SVector(0.0, 0.0, 0.0), SVector(1.0, 1.0, 1.0), 2)
-    @test count_leaves(tree2) == 64
-
-    # 3D level-3: 8^3 = 512 leaves.
-    tree3 = build_octree(SVector(0.0, 0.0, 0.0), SVector(1.0, 1.0, 1.0), 3)
-    @test count_leaves(tree3) == 512
-
-    # 2D level-2: 4^2 = 16 leaves.
-    tree2d = build_octree(SVector(0.0, 0.0), SVector(1.0, 1.0), 2)
-    @test count_leaves(tree2d) == 16
-end
-
-@testset "Stage 8a: Subdivide is a no-op on non-leaves" begin
-    tree = build_octree(SVector(0.0, 0.0, 0.0), SVector(1.0, 1.0, 1.0), 1)
-    # already has children
-    @test !is_leaf(tree)
-    leaves_before = count_leaves(tree)
-    subdivide!(tree)   # no effect
-    @test count_leaves(tree) == leaves_before
-end
-
-@testset "Stage 8a: Sphere intersection drives surface refinement" begin
-    # Empty box (far from sphere): no refinement.
-    tree_far = Octree{3, Float64}(
-        SVector(10.0, 10.0, 10.0), SVector(11.0, 11.0, 11.0), 0,
-    )
-    refine_near_sphere!(tree_far, SVector(0.0, 0.0, 0.0), 0.1, 3)
-    @test count_leaves(tree_far) == 1   # unchanged
-
-    # Box containing the sphere: refined to target level.
-    tree_near = Octree{3, Float64}(
-        SVector(0.0, 0.0, 0.0), SVector(1.0, 1.0, 1.0), 0,
-    )
-    refine_near_sphere!(tree_near, SVector(0.5, 0.5, 0.5), 0.3, 3)
-    leaves = count_leaves(tree_near)
-    @test leaves > 1
-    @test leaves <= 512   # bounded by uniform level-3
-end
-
-@testset "Stage 8c: mark_cells_by_gradient produces expected markers" begin
+@testset "mark_cells_by_gradient produces expected markers" begin
     mesh = build_cartesian_unstructured_mesh(5, 5, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
 
@@ -71,7 +25,7 @@ end
     @test markers[2] === :coarsen  # zero gradient < coarsen threshold
 end
 
-@testset "Stage 8c: flux_correction_factor reports conservation ratio" begin
+@testset "flux_correction_factor reports conservation ratio" begin
     # Four children tile parent exactly (Cartesian 2:1 refinement in 2D).
     parent_area = 1.0
     child_areas = [0.25, 0.25, 0.25, 0.25]
@@ -83,7 +37,7 @@ end
     @test factor > 1.0   # missing area → scale correction factor > 1
 end
 
-@testset "Stage 8d: ZZ error indicator small in the interior for linear field" begin
+@testset "ZZ error indicator small in the interior for linear field" begin
     # A linear scalar field has a constant gradient in the interior. The
     # boundary-adjacent cells pick up discretization error from the
     # Green-Gauss boundary stencil (no explicit BC on this constructed
@@ -114,7 +68,7 @@ end
     @test maximum(indicator[interior_ids]) < 1.0e-8
 end
 
-@testset "Stage 8d: ZZ error indicator catches large-gradient contrast" begin
+@testset "ZZ error indicator catches large-gradient contrast" begin
     # A piecewise-constant step function: sharp transition → large
     # discrepancy between local and recovered gradients.
     #

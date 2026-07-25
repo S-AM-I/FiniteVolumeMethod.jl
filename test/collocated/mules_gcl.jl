@@ -1,4 +1,4 @@
-# test/stage5_correctness.jl — Stage 5 correctness gates
+# test/collocated/mules_gcl.jl — MULES flux limiter bounds and the geometric
 
 using FiniteVolumeMethod
 using FiniteVolumeMethod: mules_limit_flux!, verify_gcl
@@ -7,7 +7,7 @@ using StaticArrays: SVector
 
 include(joinpath(@__DIR__, "..", "TestHelpers.jl"))
 
-@testset "Stage 5b: MULES flux limiter bounds output between upwind/high-order" begin
+@testset "MULES flux limiter bounds output between upwind/high-order" begin
     mesh = build_cartesian_unstructured_mesh(8, 8, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
     nf = size(mesh.face_cells, 2)
@@ -36,7 +36,7 @@ include(joinpath(@__DIR__, "..", "TestHelpers.jl"))
     end
 end
 
-@testset "Stage 5b: MULES with identical inputs is identity" begin
+@testset "MULES with identical inputs is identity" begin
     # When phi_upwind == phi_high, MULES adds zero anti-diffusion → result
     # equals input regardless of alpha.
     mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
@@ -51,7 +51,7 @@ end
     @test all(limited.values .== phi_up.values)
 end
 
-@testset "Stage 5d: verify_gcl returns zero residual for a perfect GCL pair" begin
+@testset "verify_gcl returns zero residual for a perfect GCL pair" begin
     # Construct a GCL-consistent trio: phi_mesh, V_old, V_new.
     mesh = build_cartesian_unstructured_mesh(5, 5, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
@@ -83,7 +83,7 @@ end
     @test max_res ≈ 0.0 atol = 1.0e-12
 end
 
-@testset "Stage 5d: verify_gcl detects inconsistent mesh motion" begin
+@testset "verify_gcl detects inconsistent mesh motion" begin
     mesh = build_cartesian_unstructured_mesh(4, 4, 1.0, 1.0)
     nc = length(mesh.cell_volumes)
     nf = size(mesh.face_cells, 2)
