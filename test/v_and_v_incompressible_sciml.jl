@@ -34,7 +34,7 @@ function build_simple_cavity(; N = 12)
         :top => FixedVelocityBC(SVector(0.1, 0.0)),
     )
     algo = SIMPLE(0.5, 0.2, 100, 1.0e-5)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
     return prob, algo, mesh
 end
 

@@ -129,7 +129,7 @@ end
 # ── Conjugate heat transfer problem ──────────────────────────────────
 
 """
-    ConjugateHeatTransferProblem{Dim, T, FM, SM}
+    ConjugateHeatTransferProblem{Dim, T, FP, SM}
 
 Multi-region conjugate heat transfer problem coupling a fluid domain
 (incompressible NS + energy equation) with a solid conduction domain
@@ -147,8 +147,11 @@ via Dirichlet-Neumann iteration at their shared interface.
 - `max_coupling_iterations` — coupling loop iteration limit
 - `coupling_tolerance` — convergence threshold for interface temperature
 """
-struct ConjugateHeatTransferProblem{Dim, T, FM, SM}
-    fluid_prob::IncompressibleProblem{Dim, T, FM}
+struct ConjugateHeatTransferProblem{Dim, T, FP, SM}
+    # Parameterised on the concrete fluid-problem type: conjugate heat transfer
+    # is a steady coupling, so this is normally a `SteadyIncompressibleProblem`,
+    # but either member of `AnyIncompressibleProblem` is accepted (Stage 5f-2).
+    fluid_prob::FP
     fluid_thermal::FluidThermalProperties{Dim, T}
     fluid_bcs_T::Dict{Symbol, AbstractBoundaryCondition}
     solid_mesh::SM
@@ -161,7 +164,7 @@ struct ConjugateHeatTransferProblem{Dim, T, FM, SM}
 end
 
 function ConjugateHeatTransferProblem(
-        fluid_prob::IncompressibleProblem{Dim, T},
+        fluid_prob::AnyIncompressibleProblem{Dim, T},
         fluid_thermal::FluidThermalProperties{Dim, T},
         fluid_bcs_T,
         solid_mesh::UnstructuredFVMMesh{Dim, T},
@@ -172,7 +175,7 @@ function ConjugateHeatTransferProblem(
         max_coupling_iterations::Int = 50,
         coupling_tolerance::T = T(1.0e-4),
     ) where {Dim, T}
-    return ConjugateHeatTransferProblem{Dim, T, typeof(fluid_prob.mesh), typeof(solid_mesh)}(
+    return ConjugateHeatTransferProblem{Dim, T, typeof(fluid_prob), typeof(solid_mesh)}(
         fluid_prob, fluid_thermal, fluid_bcs_T,
         solid_mesh, solid_thermal, solid_bcs_T,
         interface_fluid_patch, interface_solid_patch,

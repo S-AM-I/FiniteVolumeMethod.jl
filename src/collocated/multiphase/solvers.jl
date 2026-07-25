@@ -384,7 +384,7 @@ end
 
 function _vof_piso_step!(
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         dt::T, n_correctors::Int,
         nu_eff::Vector{T},
         body_force::Vector{SVector{Dim, T}},
@@ -493,7 +493,7 @@ end
 
 function _vof_pimple_step!(
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         dt::T,
         nu_eff::Vector{T},
         body_force::Vector{SVector{Dim, T}},

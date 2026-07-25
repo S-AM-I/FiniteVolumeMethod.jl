@@ -150,7 +150,7 @@ model = IncompressibleModel(
     thermal = ThermalComponent(props; bcs = bcs_T, T_init = 300.0),
     turbulence = TurbulenceComponent(StandardKEpsilon(); bcs = turb_bcs),
 )
-prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, model = model)
+prob = SteadyIncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, model = model)
 ```
 """
 struct IncompressibleModel{Tu, Th, Ra, Co, PZ, MZ}

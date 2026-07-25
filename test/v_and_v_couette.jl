@@ -48,7 +48,7 @@ include("TestHelpers.jl")
     )
 
     algo = SIMPLE(0.5, 0.2, 500, 1.0e-6)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
     sol = solve(prob, algo)
 
     @test sol.result.iterations > 0
@@ -100,7 +100,7 @@ end
     )
 
     algo = SIMPLE(0.5, 0.2, 500, 1.0e-6)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
     sol = solve(prob, algo)
 
     # Analytical Couette has ∂p/∂x = 0, so the pressure field should
@@ -141,7 +141,7 @@ end
     )
 
     algo = SIMPLE(0.5, 0.2, 500, 1.0e-6)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1, density = 1.0)
     sol = solve(prob, algo)
 
     i_mid = 20

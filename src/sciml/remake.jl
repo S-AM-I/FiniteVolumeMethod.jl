@@ -591,28 +591,47 @@ end
 # ── Incompressible problem remake ────────────────────────────────────
 
 """
-    SciMLBase.remake(prob::IncompressibleProblem; kwargs...)
+    SciMLBase.remake(prob::AnyIncompressibleProblem; kwargs...)
 
-Create a copy of `prob` with specified fields replaced.
+Create a copy of `prob` with specified fields replaced. The steady-vs-transient
+concrete type ([`SteadyIncompressibleProblem`](@ref) or
+[`IncompressibleProblem`](@ref)) is preserved.
 """
 function SciMLBase.remake(
-        prob::IncompressibleProblem{Dim, T, Mesh, BC, Algo};
+        prob::AnyIncompressibleProblem{Dim, T};
         mesh = _unset,
         bcs = _unset,
         algorithm = _unset,
         nu = _unset,
         density = _unset,
         model = _unset,
-    ) where {Dim, T, Mesh, BC, Algo}
+    ) where {Dim, T}
     new_mesh = _replace(mesh, prob.mesh)
     new_bcs = _replace(bcs, prob.bcs)
     new_algo = _replace(algorithm, prob.algorithm)
     new_nu = nu === _unset ? prob.nu : T(nu)
     new_density = density === _unset ? prob.density : T(density)
     new_model = _replace(model, prob.model)
-    return IncompressibleProblem{
-        Dim, T, typeof(new_mesh), typeof(new_bcs), typeof(new_algo), typeof(new_model),
-    }(
-        new_mesh, new_bcs, new_algo, new_nu, new_density, new_model,
+    return _rebuild_incompressible(
+        prob, new_mesh, new_bcs, new_algo, new_nu, new_density, new_model,
     )
+end
+
+# Rebuild the same concrete problem type via its fully-parameterised inner
+# constructor (which, unlike the public constructors, accepts any algorithm —
+# `remake(prob; algorithm = ...)` may swap the coupling).
+function _rebuild_incompressible(
+        ::IncompressibleProblem{Dim, T}, mesh, bcs, algo, nu, density, model,
+    ) where {Dim, T}
+    return IncompressibleProblem{
+        Dim, T, typeof(mesh), typeof(bcs), typeof(algo), typeof(model),
+    }(mesh, bcs, algo, nu, density, model)
+end
+
+function _rebuild_incompressible(
+        ::SteadyIncompressibleProblem{Dim, T}, mesh, bcs, algo, nu, density, model,
+    ) where {Dim, T}
+    return SteadyIncompressibleProblem{
+        Dim, T, typeof(mesh), typeof(bcs), typeof(algo), typeof(model),
+    }(mesh, bcs, algo, nu, density, model)
 end

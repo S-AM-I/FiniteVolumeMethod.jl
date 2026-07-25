@@ -4,7 +4,7 @@
 
 """
     FiniteVolumeMethod.solve_simple_distributed(
-        prob::FiniteVolumeMethod.IncompressibleProblem{Dim, T},
+        prob::FiniteVolumeMethod.AnyIncompressibleProblem{Dim, T},
         dmesh::DistributedFVMMesh{Dim, T};
         linear_solver = nothing,
         solver_config = nothing,
@@ -21,7 +21,7 @@ Each rank assembles and solves on the full local mesh (initial
 implementation).  Only the residual check is globally synchronized.
 """
 function FiniteVolumeMethod.solve_simple_distributed(
-        prob::FiniteVolumeMethod.IncompressibleProblem{Dim, T},
+        prob::FiniteVolumeMethod.AnyIncompressibleProblem{Dim, T},
         dmesh::DistributedFVMMesh{Dim, T};
         linear_solver = nothing,
         solver_config = nothing,
@@ -135,7 +135,7 @@ end
 
 """
     FiniteVolumeMethod.solve_simple_distributed(
-        prob::FiniteVolumeMethod.IncompressibleProblem,
+        prob::FiniteVolumeMethod.AnyIncompressibleProblem,
         dmesh::DistributedFVMMesh,
         local_view::FiniteVolumeMethod.LocalFVMMesh;
         linear_solver = nothing,
@@ -158,7 +158,7 @@ row partition built here is metadata for a future distributed-solve
 upgrade.
 """
 function FiniteVolumeMethod.solve_simple_distributed(
-        prob::FiniteVolumeMethod.IncompressibleProblem{Dim, T},
+        prob::FiniteVolumeMethod.AnyIncompressibleProblem{Dim, T},
         dmesh::DistributedFVMMesh{Dim, T},
         local_view::FiniteVolumeMethod.LocalFVMMesh{Dim, T};
         linear_solver = nothing,

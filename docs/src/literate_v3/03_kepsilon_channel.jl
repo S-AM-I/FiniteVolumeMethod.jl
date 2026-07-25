@@ -49,7 +49,7 @@ bcs = Dict{Symbol, AbstractBoundaryCondition}(
 )
 
 algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 10, tolerance = 1.0e-7)
-prob = IncompressibleProblem(mesh, bcs, algo; nu = ν, density = 1.0)
+prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = ν, density = 1.0)
 
 # Inlet turbulence: assume 5% intensity, length scale ≈ 0.07·Ly.
 # k_in = 1.5 (U·I)², ε_in = Cμ^(3/4) k^(3/2) / ℓ

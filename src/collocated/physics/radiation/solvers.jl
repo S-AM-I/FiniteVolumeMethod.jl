@@ -25,7 +25,7 @@ Each SIMPLE iteration:
 7. Check convergence
 """
 function solve_simple_thermal_radiation(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         thermal_props::FluidThermalProperties{Dim, T},
         rad_model::AbstractRadiationModel;
         bcs_T::Dict{Symbol, <:AbstractBoundaryCondition},

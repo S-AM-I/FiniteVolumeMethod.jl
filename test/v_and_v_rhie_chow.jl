@@ -249,7 +249,7 @@ end
         :left => NoSlipWallBC(), :right => NoSlipWallBC(),
         :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
     )
-    prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 0.01)
+    prob = SteadyIncompressibleProblem(mesh, bcs, SIMPLE(); nu = 0.01)
     state = IncompressibleState(mesh)
     for c in 1:nc
         x = mesh.cell_centers[1, c]

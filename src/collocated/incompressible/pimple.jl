@@ -26,7 +26,7 @@ correctors:
 
 # Arguments
 - `state::IncompressibleState{Dim, T}` — solver state (modified in-place)
-- `prob::IncompressibleProblem{Dim, T}` — problem definition with [`PIMPLE`](@ref) algorithm
+- `prob::AnyIncompressibleProblem{Dim, T}` — problem definition with [`PIMPLE`](@ref) algorithm
 - `dt::T` — time step size
 
 # Keyword Arguments
@@ -36,7 +36,7 @@ correctors:
 """
 function _pimple_step!(
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         dt::T;
         linear_solver = nothing,
         solver_config = nothing,
@@ -197,7 +197,7 @@ State snapshots are stored every `save_every` time steps.  The returned
 [`SolveResult`](@ref) contains the final state and residual histories.
 
 # Arguments
-- `prob::IncompressibleProblem{Dim, T}` — problem with PISO or PIMPLE algorithm
+- `prob::AnyIncompressibleProblem{Dim, T}` — problem with PISO or PIMPLE algorithm
 - `tspan::Tuple{T, T}` — `(t_start, t_end)`
 - `dt::T` — time step size
 
@@ -224,7 +224,7 @@ A [`SolveResult`](@ref) with:
 - `snapshots` = state snapshots saved every `save_every` steps
 """
 function solve_incompressible(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         tspan::Tuple{T, T},
         dt::T;
         save_every::Int = 1,

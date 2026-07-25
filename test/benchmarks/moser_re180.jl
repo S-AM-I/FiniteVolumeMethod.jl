@@ -88,7 +88,7 @@ function solve_moser_re180(; Nx::Int = 32, Ny::Int = 64)
     )
 
     algo = SIMPLE(0.5, 0.2, 3000, 1.0e-5)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1.0)
 
     ke = StandardKEpsilon()
     # Turbulent inlet: 5% TI, length scale = 0.1·H.

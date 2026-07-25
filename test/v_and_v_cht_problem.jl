@@ -15,7 +15,7 @@ function build_cht(; max_iter = 50, tol = 1.0e-4)
         :bottom => NoSlipWallBC(),
         :top => FixedVelocityBC(SVector(0.1, 0.0)),
     )
-    fluid_prob = IncompressibleProblem(
+    fluid_prob = SteadyIncompressibleProblem(
         fluid_mesh, fluid_bcs, SIMPLE(0.5, 0.2, 10, 1.0e-5);
         nu = 0.1, density = 1.0,
     )

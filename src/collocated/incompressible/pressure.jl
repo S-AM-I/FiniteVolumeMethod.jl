@@ -75,7 +75,7 @@ reference is fixed at cell 1 to make the system non-singular.
 # Arguments
 - `eq::CollocatedEquation{T}` — equation (modified in-place)
 - `state::IncompressibleState` — current solver state
-- `prob::IncompressibleProblem` — problem definition
+- `prob::AnyIncompressibleProblem` — problem definition
 
 # Keyword Arguments
 - `mrf_zones` — optional `Vector{MRFZone{T}}`.  When given, the H/A flux
@@ -87,7 +87,7 @@ reference is fixed at cell 1 to make the system non-singular.
 function assemble_pressure!(
         eq::CollocatedEquation{T},
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T};
+        prob::AnyIncompressibleProblem{Dim, T};
         mrf_zones::Union{Nothing, Vector{MRFZone{T}}} = nothing,
     ) where {Dim, T}
     mesh = prob.mesh

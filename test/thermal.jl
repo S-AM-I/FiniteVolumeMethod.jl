@@ -215,7 +215,7 @@ include("TestHelpers.jl")
             :top => NoSlipWallBC(),
         )
         algo = SIMPLE(; max_iterations = 5, tolerance = 1.0e-12)
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.1)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1)
 
         bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
             :left => thermal_inlet_bc(350.0),
@@ -347,8 +347,8 @@ include("TestHelpers.jl")
         props_b = FluidThermalProperties{2}(;
             k = 600.0, Cp = 1.0, beta = 2.0e-4, T_ref = 300.0,
         )
-        prob_a = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
-        prob_b = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1000.0)
+        prob_a = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
+        prob_b = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1000.0)
         ra, tsa = solve_simple_thermal(prob_a, props_a; bcs_T = bcs_T)
         rb, tsb = solve_simple_thermal(prob_b, props_b; bcs_T = bcs_T)
         # Buoyancy must actually drive a flow...
@@ -379,7 +379,7 @@ include("TestHelpers.jl")
                 :right => lr_bc(:right),
             )
             algo = SIMPLE(; max_iterations = 40, tolerance = 1.0e-10)
-            prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.05)
+            prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.05)
             bcs_T = Dict{Symbol, AbstractBoundaryCondition}(
                 :top => thermal_inlet_bc(350.0),
                 :bottom => thermal_inlet_bc(300.0),

@@ -241,7 +241,7 @@ import .Experimental: solve_simple_distributed, distribute_mesh,
 # sciml_structures.jl and remake.jl define the SciMLStructures/remake
 # methods for IncompressibleProblem — import so they extend against the
 # Collocated-owned type.
-import .Collocated: IncompressibleProblem
+import .Collocated: IncompressibleProblem, SteadyIncompressibleProblem, AnyIncompressibleProblem
 include("sciml/symbolic_indexing.jl")
 include("sciml/sciml_structures.jl")
 include("sciml/remake.jl")

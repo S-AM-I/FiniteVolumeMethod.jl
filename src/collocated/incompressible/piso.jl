@@ -27,7 +27,7 @@ The algorithm proceeds as:
 
 # Arguments
 - `state::IncompressibleState{Dim, T}` — solver state (modified in-place)
-- `prob::IncompressibleProblem{Dim, T}` — problem definition
+- `prob::AnyIncompressibleProblem{Dim, T}` — problem definition
 - `dt::T` — time step size
 - `n_correctors::Int` — number of pressure correction steps (typically 2)
 
@@ -38,7 +38,7 @@ The algorithm proceeds as:
 """
 function _piso_step!(
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         dt::T,
         n_correctors::Int;
         linear_solver = nothing,
@@ -156,7 +156,7 @@ Allocate once per solve and pass to the step functions via `ws` to avoid
 rebuilding the sparsity pattern every iteration.
 """
 function _make_incompressible_workspace(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}},
     ) where {Dim, T}
     mesh = prob.mesh

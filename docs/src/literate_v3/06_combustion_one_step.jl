@@ -40,7 +40,7 @@ bcs = Dict{Symbol, AbstractBoundaryCondition}(
 )
 
 algo = SIMPLE(; max_iterations = 3, tolerance = 1.0e-12)
-prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.1)
+prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1)
 
 thermal_props = FluidThermalProperties{2}(; k = 0.6, Cp = 4000.0)
 combustion_props = CombustionProperties()

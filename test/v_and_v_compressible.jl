@@ -303,7 +303,7 @@ end
         alpha_U = 0.7, alpha_p = 0.3,
         max_iterations = 300, tolerance = 1.0e-10,
     )
-    inc_prob = IncompressibleProblem(
+    inc_prob = SteadyIncompressibleProblem(
         mesh, bcs, inc_alg;
         nu = 1.8e-5 / 1.176624, density = 1.176624
     )

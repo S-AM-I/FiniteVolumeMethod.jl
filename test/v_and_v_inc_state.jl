@@ -79,7 +79,7 @@ end
         :bottom => NoSlipWallBC(),
         :top => FixedVelocityBC(SVector(0.1, 0.0)),
     )
-    prob = IncompressibleProblem(
+    prob = SteadyIncompressibleProblem(
         mesh, bcs, SIMPLE(0.5, 0.2, 10, 1.0e-5);
         nu = 0.07, density = 2.5
     )

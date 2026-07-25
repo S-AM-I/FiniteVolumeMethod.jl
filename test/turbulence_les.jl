@@ -258,7 +258,7 @@ end
             :top => FixedVelocityBC((1.0, 0.0)),
         )
         algo = SIMPLE()
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01)
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}()
 
         # Before update, nu_t should be zero

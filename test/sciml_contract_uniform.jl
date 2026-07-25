@@ -68,7 +68,7 @@ end
         :bottom => NoSlipWallBC(),
         :top => NoSlipWallBC(),
     )
-    prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, density = 1.25)
+    prob = SteadyIncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, density = 1.25)
 
     # Named schema matches the canonical vector length.
     names = FiniteVolumeMethod.tunable_names(prob)
@@ -102,7 +102,7 @@ end
     # Use a dummy "roughness" tunable on a scratch scalar field of the problem.
     const_box = Ref(0.7)
     FiniteVolumeMethod.register_tunable!(
-        IncompressibleProblem, :demo_const,
+        FiniteVolumeMethod.AnyIncompressibleProblem, :demo_const,
         _ -> const_box[],
         (p, v) -> (const_box[] = v; p),
     )
@@ -111,7 +111,7 @@ end
     @test length(FiniteVolumeMethod.tunable_namedtuple(prob)) == length(names2)
 
     # Clean up the registry so the test is idempotent.
-    entries = FiniteVolumeMethod._TUNABLE_REGISTRY[IncompressibleProblem]
+    entries = FiniteVolumeMethod._TUNABLE_REGISTRY[FiniteVolumeMethod.AnyIncompressibleProblem]
     filter!(e -> e.name !== :demo_const, entries)
 end
 
@@ -197,7 +197,7 @@ end
         :bottom => NoSlipWallBC(),
         :top => NoSlipWallBC(),
     )
-    prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3, density = 1.0)
     sol = solve(prob, SIMPLE())
     @test sol isa IncompressibleSolution
     @test sol isa AbstractFVMSolution

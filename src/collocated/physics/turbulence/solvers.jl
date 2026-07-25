@@ -7,7 +7,7 @@ using Printf: @sprintf
 
 """
     solve_simple_turbulent(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         turb_model::AbstractRANSModel;
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
         linear_solver = nothing,
@@ -23,7 +23,7 @@ as [`solve_simple`](@ref) (Darcy-Forchheimer sinks use the MOLECULAR
 viscosity `prob.nu`, not `nu_eff`).
 """
 function solve_simple_turbulent(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         turb_model;
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(),
         linear_solver = nothing,
@@ -105,7 +105,7 @@ Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
 as [`solve_incompressible`](@ref).
 """
 function solve_incompressible_turbulent(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         turb_model,
         tspan::Tuple{T, T},
         dt::T;

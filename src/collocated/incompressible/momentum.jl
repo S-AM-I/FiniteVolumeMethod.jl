@@ -21,7 +21,7 @@ The assembled equation is:
 # Arguments
 - `eq::CollocatedEquation{T}` — equation (modified in-place)
 - `state::IncompressibleState` — current solver state (flux, velocity, pressure)
-- `prob::IncompressibleProblem` — problem definition (mesh, BCs, viscosity)
+- `prob::AnyIncompressibleProblem` — problem definition (mesh, BCs, viscosity)
 - `component::Int` — velocity component index (1 = x, 2 = y, ...)
 - `dt` — time step (if `nothing`, no temporal term is added).  The ddt term
   is assembled against `state.U_old` (the old-time-level snapshot), with
@@ -62,7 +62,7 @@ The assembled equation is:
 function assemble_momentum!(
         eq::CollocatedEquation{T},
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         component::Int;
         dt::Union{Nothing, T} = nothing,
         scheme::ConvectionScheme = CONV_UPWIND,

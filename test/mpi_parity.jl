@@ -47,7 +47,7 @@ function build_problem()
         :bottom => NoSlipWallBC(),
         :top => FixedVelocityBC(SVector(U_lid, 0.0)),
     )
-    prob = IncompressibleProblem(
+    prob = SteadyIncompressibleProblem(
         mesh, bcs, SIMPLE(; max_iterations = 50, tolerance = 1.0e-8);
         nu = 1.0e-2, density = 1.0,
     )

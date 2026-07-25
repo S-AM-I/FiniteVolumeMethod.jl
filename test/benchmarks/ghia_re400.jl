@@ -96,7 +96,7 @@ function solve_ghia_re400(; N::Int = 128)
     # stable here (cell Peclet ≈ 3 with alpha_U = 0.5; momentum
     # residuals converge monotonically to ~2e-8).
     algo = SIMPLE(0.5, 0.2, 4000, 1.0e-8)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 1.0 / 400.0, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 1.0 / 400.0, density = 1.0)
     return (
         solve(prob, algo; scheme = FiniteVolumeMethod.CONV_LINEAR),
         mesh, N,

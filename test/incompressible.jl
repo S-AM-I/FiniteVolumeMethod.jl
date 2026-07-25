@@ -87,7 +87,7 @@ include("TestHelpers.jl")
             :top => NoSlipWallBC(),
         )
         algo = SIMPLE()
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01)
         state = IncompressibleState(mesh)
         FiniteVolumeMethod.update_boundary_velocity!(state, bcs, mesh)
 
@@ -113,7 +113,7 @@ include("TestHelpers.jl")
             :top => NoSlipWallBC(),
         )
         algo = SIMPLE()
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01)
         state = IncompressibleState(mesh)
         FiniteVolumeMethod.update_boundary_velocity!(state, bcs, mesh)
         FiniteVolumeMethod.update_boundary_pressure!(state, bcs, mesh)
@@ -172,7 +172,7 @@ include("TestHelpers.jl")
             :top => NoSlipWallBC(),
         )
         algo = SIMPLE(; max_iterations = 100, tolerance = 1.0e-6)
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.1)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1)
 
         result = solve_simple(prob)
 
@@ -348,7 +348,7 @@ include("TestHelpers.jl")
             :top => FixedVelocityBC((0.5, 0.0)),
         )
         algo = SIMPLE(; max_iterations = 30, tolerance = 1.0e-10)
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.05)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.05)
         result = solve_simple(prob)
         state = result.state
 
@@ -378,8 +378,8 @@ include("TestHelpers.jl")
         )
         algo = SIMPLE(; max_iterations = 40, tolerance = 1.0e-12)
 
-        prob_1 = IncompressibleProblem(mesh, bcs, algo; nu = 0.02, density = 1.0)
-        prob_1000 = IncompressibleProblem(mesh, bcs, algo; nu = 0.02, density = 1000.0)
+        prob_1 = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.02, density = 1.0)
+        prob_1000 = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.02, density = 1000.0)
         r1 = solve_simple(prob_1)
         r1000 = solve_simple(prob_1000)
 
@@ -404,7 +404,7 @@ include("TestHelpers.jl")
             :left => NoSlipWallBC(), :right => NoSlipWallBC(),
             :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
         )
-        prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 0.1)
+        prob = SteadyIncompressibleProblem(mesh, bcs, SIMPLE(); nu = 0.1)
         state = IncompressibleState(mesh)
         nc = length(mesh.cell_volumes)
         for c in 1:nc
@@ -475,14 +475,14 @@ include("TestHelpers.jl")
             :left => NoSlipWallBC(), :right => NoSlipWallBC(),
             :bottom => NoSlipWallBC(), :top => sbc,
         )
-        prob_s = IncompressibleProblem(mesh, bcs_s, SIMPLE(); nu = 0.1)
+        prob_s = SteadyIncompressibleProblem(mesh, bcs_s, SIMPLE(); nu = 0.1)
         eq_s = FiniteVolumeMethod.CollocatedEquation(mesh)
         FiniteVolumeMethod.assemble_momentum!(eq_s, IncompressibleState(mesh), prob_s, 1)
         bcs_zero = Dict{Symbol, AbstractBoundaryCondition}(
             :left => NoSlipWallBC(), :right => NoSlipWallBC(),
             :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
         )
-        prob_z = IncompressibleProblem(mesh, bcs_zero, SIMPLE(); nu = 0.1)
+        prob_z = SteadyIncompressibleProblem(mesh, bcs_zero, SIMPLE(); nu = 0.1)
         eq_z = FiniteVolumeMethod.CollocatedEquation(mesh)
         FiniteVolumeMethod.assemble_momentum!(eq_z, IncompressibleState(mesh), prob_z, 1)
         @test !(eq_s.b ≈ eq_z.b)
@@ -554,7 +554,7 @@ include("TestHelpers.jl")
         @test maximum(u[1] for u in result.snapshots[1].U.internal) > 0.0
 
         # Steady results carry an empty snapshot vector
-        sprob = IncompressibleProblem(
+        sprob = SteadyIncompressibleProblem(
             mesh, bcs, SIMPLE(; max_iterations = 3); nu = 0.05,
         )
         sres = solve_simple(sprob)
@@ -578,7 +578,7 @@ end
         :top => SlipWallBC(),
     )
     algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 600, tolerance = 1.0e-8)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1.0)
     row = 3
     cell_at(i) = (row - 1) * nx + i
 
@@ -625,7 +625,7 @@ end
 
     @testset "Porous density invariance (kinematic form)" begin
         zone = PorousZone(zone_cells; K = 1.0e-4, F = 0.0)
-        prob_heavy = IncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1000.0)
+        prob_heavy = SteadyIncompressibleProblem(mesh, bcs, algo; nu = nu, density = 1000.0)
         res_1 = FiniteVolumeMethod.solve_simple(
             prob; linear_solver = LUFactorization(), porous_zones = [zone],
         )
@@ -660,7 +660,7 @@ end
         # 0/0-degenerate and never crosses the tolerance — gate on the
         # velocity error instead.
         algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 800, tolerance = 1.0e-9)
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.05, density = 1.0)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.05, density = 1.0)
         res = FiniteVolumeMethod.solve_simple(
             prob; linear_solver = LUFactorization(), mrf_zones = [zone],
         )
@@ -680,7 +680,7 @@ end
             :bottom => NoSlipWallBC(), :top => FixedVelocityBC(SVector(1.0, 0.0)),
         )
         algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 200, tolerance = 1.0e-8)
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
         zone0 = MRFZone{Float64}(SVector(0.0, 0.0, 0.0), origin, collect(1:nc))
         res_a = FiniteVolumeMethod.solve_simple(prob; linear_solver = LUFactorization())
         res_b = FiniteVolumeMethod.solve_simple(

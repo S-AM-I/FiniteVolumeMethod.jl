@@ -7,7 +7,7 @@ using Printf: @sprintf
 
 """
     solve_simple_thermal(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         thermal_props::FluidThermalProperties{Dim, T};
         bcs_T,
         turb_model = nothing,
@@ -32,7 +32,7 @@ Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
 as [`solve_simple`](@ref).
 """
 function solve_simple_thermal(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         thermal_props::FluidThermalProperties{Dim, T};
         bcs_T::Dict{Symbol, <:AbstractBoundaryCondition},
         turb_model = nothing,
@@ -154,7 +154,7 @@ Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
 as [`solve_incompressible`](@ref).
 """
 function solve_incompressible_thermal(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         thermal_props::FluidThermalProperties{Dim, T},
         tspan::Tuple{T, T},
         dt::T;

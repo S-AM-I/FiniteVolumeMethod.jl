@@ -58,7 +58,7 @@ bcs = Dict{Symbol, AbstractBoundaryCondition}(
 )
 
 algo = SIMPLE(; alpha_U = 0.5, alpha_p = 0.3, max_iterations = 50, tolerance = 1.0e-12)
-prob = IncompressibleProblem(mesh, bcs, algo; nu = ν, density = ρ)
+prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = ν, density = ρ)
 
 # Buoyancy is enabled by passing `beta != 0` and `g`. The Boussinesq
 # source uses `(T - T_ref)`.

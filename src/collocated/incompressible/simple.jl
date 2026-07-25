@@ -33,7 +33,7 @@ must feed back before convergence is meaningful.
 """
 function _simple_outer_step!(
         state::IncompressibleState{Dim, T},
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         eqs::Vector{CollocatedEquation{T}},
         p_eq::CollocatedEquation{T},
         cyclic_pairs::Vector{Vector{Tuple{Int, Int}}},
@@ -136,7 +136,7 @@ end
 # ── SIMPLE solver ──────────────────────────────────────────────────
 
 @doc """
-    solve_simple(prob::IncompressibleProblem{Dim, T}; kwargs...) -> SolveResult{Dim, T}
+    solve_simple(prob::AnyIncompressibleProblem{Dim, T}; kwargs...) -> SolveResult{Dim, T}
 
 Solve a steady-state incompressible Navier-Stokes problem using the
 [`SIMPLE`](@ref) pressure-velocity coupling algorithm.
@@ -171,7 +171,7 @@ A [`SolveResult`](@ref) containing convergence status, iteration count,
 residual history, and the final [`IncompressibleState`](@ref).
 """
 function solve_simple(
-        prob::IncompressibleProblem{Dim, T};
+        prob::AnyIncompressibleProblem{Dim, T};
         linear_solver = nothing,
         solver_config = nothing,
         verbose::Bool = false,

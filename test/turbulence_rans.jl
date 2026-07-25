@@ -207,7 +207,7 @@ include("TestHelpers.jl")
             :top => NoSlipWallBC(),
         )
         algo = SIMPLE(; max_iterations = 5, tolerance = 1.0e-12)
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01)
 
         ke = StandardKEpsilon()
         turb_bcs = Dict{Symbol, Dict{Symbol, AbstractBoundaryCondition}}(
@@ -356,7 +356,7 @@ include("TestHelpers.jl")
             :bottom => NoSlipWallBC(),
             :top => NoSlipWallBC(),
         )
-        prob = IncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3)
+        prob = SteadyIncompressibleProblem(mesh, bcs, SIMPLE(); nu = 1.0e-3)
         state = IncompressibleState(mesh)
         for c in 1:nc
             y = mesh.cell_centers[2, c]
@@ -456,8 +456,8 @@ include("TestHelpers.jl")
             :bottom => ZeroGradientBC(),  # stress-free comparison
             :top => ZeroGradientBC(),
         )
-        prob_wf = IncompressibleProblem(mesh, bcs_wf, SIMPLE(); nu = 1.0e-3)
-        prob_free = IncompressibleProblem(mesh, bcs_free, SIMPLE(); nu = 1.0e-3)
+        prob_wf = SteadyIncompressibleProblem(mesh, bcs_wf, SIMPLE(); nu = 1.0e-3)
+        prob_free = SteadyIncompressibleProblem(mesh, bcs_free, SIMPLE(); nu = 1.0e-3)
         state = IncompressibleState(mesh)
         for c in 1:nc
             state.U.internal[c] = SVector(0.5, 0.0)
@@ -495,7 +495,7 @@ include("TestHelpers.jl")
         # velocity DEFICIT at the walls relative to the centerline
         ke = StandardKEpsilon()
         result, turb_state = solve_simple_turbulent(
-            IncompressibleProblem(
+            SteadyIncompressibleProblem(
                 mesh, bcs_wf, SIMPLE(; max_iterations = 20); nu = 1.0e-3,
             ),
             ke; turb_bcs = _full_ke_bcs(),

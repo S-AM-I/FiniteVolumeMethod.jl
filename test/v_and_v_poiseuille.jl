@@ -47,7 +47,7 @@ include("TestHelpers.jl")
     )
 
     algo = SIMPLE(0.5, 0.2, 500, 1.0e-6)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = mu, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = mu, density = 1.0)
     sol = solve(prob, algo)
 
     # Solver either converged or hit iter cap — doesn't matter for this

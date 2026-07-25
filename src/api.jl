@@ -80,7 +80,7 @@ export AbstractBoundaryCondition,
     compute_flux,
     pl_interpolate
 
-# --- Collocated incompressible solver and physics (79) ---
+# --- Collocated incompressible solver and physics (80) ---
 export CollocatedArrheniusReaction,
     CollocatedScalarField,
     CollocatedVectorField,
@@ -103,6 +103,7 @@ export CollocatedArrheniusReaction,
     FvDOMModel,
     IncompressibleModel,
     IncompressibleProblem,
+    SteadyIncompressibleProblem,
     IncompressibleSolution,
     IncompressibleState,
     InletOutletBC,

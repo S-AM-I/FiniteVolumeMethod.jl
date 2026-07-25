@@ -148,8 +148,8 @@ struct TunableEntry{F, G, P}
 end
 
 # Registry: keyed on concrete problem type. Declared as a `Dict{DataType, …}`
-# so any concrete `IncompressibleProblem{Dim, T, …}` looks up the generic
-# `IncompressibleProblem` schema. Test helpers may register new entries.
+# so any concrete `AnyIncompressibleProblem{Dim, T, …}` looks up the generic
+# `AnyIncompressibleProblem` schema. Test helpers may register new entries.
 const _TUNABLE_REGISTRY = Dict{Type, Vector{TunableEntry}}()
 
 # Registration order of the registry keys. `tunable_schema` walks this rather
@@ -224,12 +224,12 @@ function tunable_namedtuple(prob)
     return NamedTuple{names}(vals)
 end
 
-function _schema_values(prob::IncompressibleProblem{Dim, T}) where {Dim, T}
+function _schema_values(prob::AnyIncompressibleProblem{Dim, T}) where {Dim, T}
     schema = tunable_schema(prob)
     return T[T(entry.getter(prob)) for entry in schema]
 end
 
-function _schema_repack(prob::IncompressibleProblem{Dim, T}, new_vals) where {Dim, T}
+function _schema_repack(prob::AnyIncompressibleProblem{Dim, T}, new_vals) where {Dim, T}
     schema = tunable_schema(prob)
     length(schema) == length(new_vals) || error(
         "Tunable schema has $(length(schema)) entries but new_vals has $(length(new_vals)); ",
@@ -242,22 +242,22 @@ function _schema_repack(prob::IncompressibleProblem{Dim, T}, new_vals) where {Di
     return out
 end
 
-# Register the built-in IncompressibleProblem tunables. Order here is the
+# Register the built-in AnyIncompressibleProblem tunables. Order here is the
 # canonical order in the flat SciMLStructures vector.
 _register_builtin_incomp_tunables() = let
     register_tunable!(
-        IncompressibleProblem, :nu,
+        AnyIncompressibleProblem, :nu,
         prob -> prob.nu,
         (prob, v) -> remake(prob; nu = v),
     )
     register_tunable!(
-        IncompressibleProblem, :density,
+        AnyIncompressibleProblem, :density,
         prob -> prob.density,
         (prob, v) -> remake(prob; density = v),
     )
     for name in (:alpha_U, :alpha_p, :tolerance)
         register_tunable!(
-            IncompressibleProblem, name,
+            AnyIncompressibleProblem, name,
             prob -> getfield(prob.algorithm, name),
             (prob, v) -> remake(prob; algorithm = _with_algo_field(prob.algorithm, name, v));
             applies = prob -> hasfield(typeof(prob.algorithm), name),
@@ -294,20 +294,20 @@ end
 # Call registration once when this module is loaded.
 _register_builtin_incomp_tunables()
 
-SS.isscimlstructure(::IncompressibleProblem) = true
-SS.ismutablescimlstructure(::IncompressibleProblem) = false
+SS.isscimlstructure(::AnyIncompressibleProblem) = true
+SS.ismutablescimlstructure(::AnyIncompressibleProblem) = false
 
-SS.hasportion(::SS.Tunable, ::IncompressibleProblem) = true
-SS.hasportion(::SS.Constants, ::IncompressibleProblem) = false
-SS.hasportion(::SS.Caches, ::IncompressibleProblem) = false
-SS.hasportion(::SS.Discrete, ::IncompressibleProblem) = false
+SS.hasportion(::SS.Tunable, ::AnyIncompressibleProblem) = true
+SS.hasportion(::SS.Constants, ::AnyIncompressibleProblem) = false
+SS.hasportion(::SS.Caches, ::AnyIncompressibleProblem) = false
+SS.hasportion(::SS.Discrete, ::AnyIncompressibleProblem) = false
 
-function SS.canonicalize(::SS.Tunable, prob::IncompressibleProblem)
+function SS.canonicalize(::SS.Tunable, prob::AnyIncompressibleProblem)
     vals = _schema_values(prob)
     repack = new_vals -> _schema_repack(prob, new_vals)
     return vals, repack, false
 end
 
-function SS.replace(::SS.Tunable, prob::IncompressibleProblem, new_vals)
+function SS.replace(::SS.Tunable, prob::AnyIncompressibleProblem, new_vals)
     return _schema_repack(prob, new_vals)
 end

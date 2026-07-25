@@ -23,7 +23,7 @@ function build_prob(; nu = 0.1, density = 1.0)
         :bottom => NoSlipWallBC(),
         :top => FixedVelocityBC(SVector(0.1, 0.0)),
     )
-    return IncompressibleProblem(
+    return SteadyIncompressibleProblem(
         mesh, bcs, SIMPLE(0.5, 0.2, 10, 1.0e-5);
         nu = nu, density = density
     )
@@ -87,5 +87,5 @@ end
     prob = build_prob(; nu = 0.1, density = 1.0)
     prob2 = remake(prob; nu = 0.05)
     @test typeof(prob2) === typeof(prob)
-    @test prob2 isa IncompressibleProblem
+    @test prob2 isa SteadyIncompressibleProblem  # build_prob uses SIMPLE (steady)
 end

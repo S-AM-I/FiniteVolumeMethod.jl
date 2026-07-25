@@ -41,7 +41,7 @@ include("TestHelpers.jl")
             :top => NoSlipWallBC(),
         )
         algo = SIMPLE(0.5, 0.2, 500, 1.0e-6)
-        prob = IncompressibleProblem(mesh, bcs, algo; nu = mu, density = 1.0)
+        prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = mu, density = 1.0)
         sol = solve(prob, algo)
 
         # L² error at the mid-channel column over the fully-developed

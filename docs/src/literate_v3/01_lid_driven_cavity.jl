@@ -49,7 +49,7 @@ bcs = Dict{Symbol, AbstractBoundaryCondition}(
 # A pressure reference is fixed automatically inside SIMPLE; we leave
 # the four wall patches as no-slip / moving wall.
 algo = SIMPLE(; alpha_U = 0.7, alpha_p = 0.3, max_iterations = 200, tolerance = 1.0e-7)
-prob = IncompressibleProblem(mesh, bcs, algo; nu = ν, density = 1.0)
+prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = ν, density = 1.0)
 
 # Solve — the SciML-style `solve(prob, alg)` returns an
 # `IncompressibleSolution` with symbolic field access.

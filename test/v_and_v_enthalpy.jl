@@ -117,7 +117,7 @@ end
         :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
     )
     algo = SIMPLE(; max_iterations = 1, tolerance = 1.0)  # one-shot
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 1.0, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 1.0, density = 1.0)
 
     T_ref = 300.0
     Cp = 1000.0
@@ -208,7 +208,7 @@ end
         :bottom => NoSlipWallBC(), :top => NoSlipWallBC(),
     )
     algo = SIMPLE(; max_iterations = 1, tolerance = 1.0)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 1.0, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 1.0, density = 1.0)
 
     T_ref = 295.0
     Cp = 1100.0

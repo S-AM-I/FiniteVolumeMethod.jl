@@ -40,7 +40,7 @@ const GHIA_U_RE100 = [
         :top => FixedVelocityBC(SVector(1.0, 0.0)),
     )
     algo = SIMPLE(; max_iterations = 2500, tolerance = 1.0e-5)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.01, density = 1.0)
     sol = solve(prob, algo)
 
     # The solver is not guaranteed to hit tolerance on this mesh (v3.0

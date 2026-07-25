@@ -129,9 +129,15 @@ end
 
 @doc """
     IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model}
+        <: SciMLBase.AbstractODEProblem
 
-Complete specification of an incompressible Navier-Stokes problem on an
-unstructured mesh.
+Transient incompressible Navier-Stokes problem on an unstructured mesh, solved
+with a time-stepping coupling ([`PISO`](@ref) / [`PIMPLE`](@ref)).
+
+Rooted at `SciMLBase.AbstractODEProblem` (Stage 5f): the state vector `u` is the
+flat velocity+pressure vector held by [`IncompressibleState`](@ref), and the
+transient solve advances it in time. The steady counterpart is
+[`SteadyIncompressibleProblem`](@ref).
 
 # Fields
 - `mesh::Mesh` — unstructured FVM mesh (typically `UnstructuredFVMMesh{Dim, T}`)
@@ -142,7 +148,8 @@ unstructured mesh.
 - `model::Model` — [`IncompressibleModel`](@ref) selecting the additional
   physics (turbulence, thermal, radiation, combustion, zones)
 """
-struct IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model}
+struct IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model} <:
+        SciMLBase.AbstractODEProblem{Vector{T}, Tuple{T, T}, true}
     mesh::Mesh
     bcs::BC
     algorithm::Algo
@@ -152,15 +159,51 @@ struct IncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model
 end
 
 @doc """
+    SteadyIncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model}
+        <: SciMLBase.AbstractNonlinearProblem
+
+Steady-state incompressible Navier-Stokes problem, solved by the [`SIMPLE`](@ref)
+outer-iteration coupling.
+
+Rooted at `SciMLBase.AbstractNonlinearProblem` (Stage 5f): the steady solve is a
+fixed-point iteration on the velocity/pressure field, not a time integration, so
+this is its honest SciML classification. The transient counterpart is
+[`IncompressibleProblem`](@ref). Fields are identical to it.
+"""
+struct SteadyIncompressibleProblem{Dim, T, Mesh, BC, Algo <: AbstractPVCoupling, Model} <:
+        SciMLBase.AbstractNonlinearProblem{Vector{T}, true}
+    mesh::Mesh
+    bcs::BC
+    algorithm::Algo
+    nu::T
+    density::T
+    model::Model
+end
+
+@doc """
+    AnyIncompressibleProblem{Dim, T}
+
+`Union` of [`IncompressibleProblem`](@ref) and [`SteadyIncompressibleProblem`](@ref).
+The two problem types root at different SciMLBase branches (`AbstractODEProblem`
+vs `AbstractNonlinearProblem`), so they cannot share a concrete supertype; the
+assembly operators and physics kernels that are agnostic to steady-vs-transient
+dispatch on this alias instead.
+"""
+const AnyIncompressibleProblem{Dim, T} = Union{
+    IncompressibleProblem{Dim, T}, SteadyIncompressibleProblem{Dim, T},
+}
+
+@doc """
     IncompressibleProblem(mesh, bcs, algorithm; nu, density = 1.0, model = IncompressibleModel())
 
-Construct an [`IncompressibleProblem`](@ref) from a mesh, boundary conditions,
-and coupling algorithm.
+Construct a transient [`IncompressibleProblem`](@ref). The algorithm is a
+transient coupling ([`PISO`](@ref) / [`PIMPLE`](@ref)); a [`SIMPLE`](@ref)
+algorithm is steady and throws, directing to [`SteadyIncompressibleProblem`](@ref).
 
 # Arguments
 - `mesh` — `UnstructuredFVMMesh{Dim, T}`
 - `bcs` — `Dict{Symbol, <:AbstractBoundaryCondition}` keyed by patch name
-- `algorithm` — [`SIMPLE`](@ref), [`PISO`](@ref), or [`PIMPLE`](@ref)
+- `algorithm` — [`PISO`](@ref) or [`PIMPLE`](@ref)
 - `nu` — kinematic viscosity
 - `density` — fluid density (default `1.0`)
 - `model` — [`IncompressibleModel`](@ref) (default: plain incompressible flow)
@@ -173,6 +216,13 @@ function IncompressibleProblem(
         density::T = one(T),
         model = IncompressibleModel(),
     ) where {Dim, T, Algo <: AbstractPVCoupling}
+    algorithm isa SIMPLE && throw(
+        ArgumentError(
+            "SIMPLE is a steady-state coupling — build a SteadyIncompressibleProblem " *
+                "instead of an IncompressibleProblem (which roots at AbstractODEProblem " *
+                "for transient PISO/PIMPLE solves)."
+        )
+    )
     return IncompressibleProblem{
         Dim, T, typeof(mesh), typeof(bcs), Algo, typeof(model),
     }(
@@ -180,15 +230,37 @@ function IncompressibleProblem(
     )
 end
 
+@doc """
+    SteadyIncompressibleProblem(mesh, bcs, algorithm::SIMPLE; nu, density = 1.0, model = IncompressibleModel())
+
+Construct a steady-state [`SteadyIncompressibleProblem`](@ref) solved with
+[`SIMPLE`](@ref). Arguments match [`IncompressibleProblem`](@ref).
+"""
+function SteadyIncompressibleProblem(
+        mesh::UnstructuredFVMMesh{Dim, T},
+        bcs,
+        algorithm::Algo;
+        nu::T,
+        density::T = one(T),
+        model = IncompressibleModel(),
+    ) where {Dim, T, Algo <: SIMPLE}
+    return SteadyIncompressibleProblem{
+        Dim, T, typeof(mesh), typeof(bcs), Algo, typeof(model),
+    }(
+        mesh, bcs, algorithm, nu, density, model,
+    )
+end
+
 # Problem-level forwarding of the model traits, so assembly hooks can ask the
-# problem directly instead of reaching through `prob.model` each time.
-has_turbulence(prob::IncompressibleProblem) = has_turbulence(prob.model)
-has_thermal(prob::IncompressibleProblem) = has_thermal(prob.model)
-has_radiation(prob::IncompressibleProblem) = has_radiation(prob.model)
-has_combustion(prob::IncompressibleProblem) = has_combustion(prob.model)
-has_porous_zones(prob::IncompressibleProblem) = has_porous_zones(prob.model)
-has_mrf_zones(prob::IncompressibleProblem) = has_mrf_zones(prob.model)
-is_plain_flow(prob::IncompressibleProblem) = is_plain_flow(prob.model)
+# problem directly instead of reaching through `prob.model` each time. Both
+# problem types carry a `model`, so these dispatch on the union.
+has_turbulence(prob::AnyIncompressibleProblem) = has_turbulence(prob.model)
+has_thermal(prob::AnyIncompressibleProblem) = has_thermal(prob.model)
+has_radiation(prob::AnyIncompressibleProblem) = has_radiation(prob.model)
+has_combustion(prob::AnyIncompressibleProblem) = has_combustion(prob.model)
+has_porous_zones(prob::AnyIncompressibleProblem) = has_porous_zones(prob.model)
+has_mrf_zones(prob::AnyIncompressibleProblem) = has_mrf_zones(prob.model)
+is_plain_flow(prob::AnyIncompressibleProblem) = is_plain_flow(prob.model)
 
 # ── Solver state ────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@
 # traits and unpacks.
 
 """
-    solve(prob::IncompressibleProblem, alg::SIMPLE; kwargs...)
+    solve(prob::SteadyIncompressibleProblem, alg::SIMPLE; kwargs...)
 
 Solve a steady-state incompressible problem using SIMPLE.
 Returns an [`IncompressibleSolution`](@ref) with symbolic field access.
@@ -27,7 +27,7 @@ solve; the returned solution records the problem actually solved.
 - `verbose` — print residuals each iteration
 """
 function CommonSolve.solve(
-        prob::IncompressibleProblem{Dim, T},
+        prob::SteadyIncompressibleProblem{Dim, T},
         alg::SIMPLE;
         model = nothing,
         linear_solver = nothing,
@@ -171,12 +171,14 @@ function CommonSolve.solve(
 end
 
 """
-    solve(prob::IncompressibleProblem; kwargs...)
+    solve(prob::AnyIncompressibleProblem; kwargs...)
 
-Solve using the algorithm stored in `prob.algorithm`.
+Solve using the algorithm stored in `prob.algorithm` (SIMPLE for a
+[`SteadyIncompressibleProblem`](@ref), PISO/PIMPLE for an
+[`IncompressibleProblem`](@ref)).
 """
 function CommonSolve.solve(
-        prob::IncompressibleProblem{Dim, T};
+        prob::AnyIncompressibleProblem{Dim, T};
         kwargs...,
     ) where {Dim, T}
     return CommonSolve.solve(prob, prob.algorithm; kwargs...)

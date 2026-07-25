@@ -22,7 +22,7 @@ function build_channel_problem(; max_iterations = 5, tolerance = 1.0e-10)
         :top => NoSlipWallBC(),
     )
     algo = SIMPLE(; max_iterations = max_iterations, tolerance = tolerance)
-    return IncompressibleProblem(mesh, bcs, algo; nu = 0.1)
+    return SteadyIncompressibleProblem(mesh, bcs, algo; nu = 0.1)
 end
 
 # ── Tests ─────────────────────────────────────────────────────────────

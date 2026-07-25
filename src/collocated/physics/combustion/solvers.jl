@@ -26,7 +26,7 @@ Each iteration:
 7. Check convergence
 
 # Arguments
-- `prob::IncompressibleProblem` — flow problem
+- `prob::SteadyIncompressibleProblem` — steady flow problem
 - `thermal_props::FluidThermalProperties` — thermal properties
 - `combustion_props::CombustionProperties` — thermochemical properties
 - `edm::EddyDissipationModel` — EDM constants
@@ -40,7 +40,7 @@ Each iteration:
 - `verbose` — print residuals each iteration
 """
 function solve_simple_reacting(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         thermal_props::FluidThermalProperties{Dim, T},
         combustion_props::CombustionProperties{NS, T},
         edm::EddyDissipationModel{T};
@@ -194,7 +194,7 @@ EDM dispatch. Pass `lewis` / `alpha_thermal` to enable variable Lewis
 species transport.
 """
 function solve_simple_reacting(
-        prob::IncompressibleProblem{Dim, T},
+        prob::AnyIncompressibleProblem{Dim, T},
         thermal_props::FluidThermalProperties{Dim, T},
         combustion_props::CombustionProperties{NS, T},
         mechanism::MultiStepMechanism{NR, NS, T};

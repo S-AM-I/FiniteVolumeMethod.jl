@@ -74,7 +74,7 @@ function solve_rayleigh_benard_1e4(; N::Int = 80)
     # `_needs_pressure_reference`.
 
     algo = SIMPLE(0.5, 0.2, 10000, 1.0e-5)
-    prob = IncompressibleProblem(mesh, bcs, algo; nu = nu, density = rho)
+    prob = SteadyIncompressibleProblem(mesh, bcs, algo; nu = nu, density = rho)
 
     thermal_props = FluidThermalProperties{2}(;
         Cp = Cp, k = k_lam, Pr_t = 0.85,
