@@ -11,14 +11,17 @@
 # (e.g. `Parabolic.DirichletBC`). Deprecated aliases (Stage 4b) live in
 # FiniteVolumeMethod.jl next to `using .Parabolic`, not here.
 
-# --- SciML entry points and solution accessors (7) ---
+# --- SciML entry points and solution accessors (10) ---
 export compute_initial_dt,
+    init,
     remake,
     sciml_problem,
     solution_accessor,
     solution_coordinates,
     solution_snapshot,
-    solve
+    solve,
+    solve!,
+    step!
 
 # --- Capability and validation-maturity API (9) ---
 export capability_matrix,
@@ -80,7 +83,7 @@ export AbstractBoundaryCondition,
     compute_flux,
     pl_interpolate
 
-# --- Collocated incompressible solver and physics (80) ---
+# --- Collocated incompressible solver and physics (81) ---
 export CollocatedArrheniusReaction,
     CollocatedScalarField,
     CollocatedVectorField,
@@ -101,9 +104,9 @@ export CollocatedArrheniusReaction,
     FlowRateInletBC,
     FluidThermalProperties,
     FvDOMModel,
+    IncompressibleIntegrator,
     IncompressibleModel,
     IncompressibleProblem,
-    SteadyIncompressibleProblem,
     IncompressibleSolution,
     IncompressibleState,
     InletOutletBC,
@@ -125,15 +128,16 @@ export CollocatedArrheniusReaction,
     SpalartAllmaras,
     SpeciesState,
     StandardKEpsilon,
+    SteadyIncompressibleProblem,
     StokesDrag,
     SymmetryBC,
     ThermalComponent,
     TimeDependentVelocityBC,
     TotalPressureBC,
+    TurbulenceComponent,
     TwoFluidProperties,
     TwoFluidSolver,
     TwoPhaseProperties,
-    TurbulenceComponent,
     VOFState,
     WALE,
     WallFunctionBC,

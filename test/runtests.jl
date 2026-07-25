@@ -658,6 +658,7 @@ end
     end
     @testset verbose = true "Incompressible SciML Compliance" begin
         safe_include("incompressible_sciml.jl")
+        safe_include("incompressible_integrator.jl")
     end
     @testset verbose = true "RANS Turbulence" begin
         safe_include("turbulence_rans.jl")

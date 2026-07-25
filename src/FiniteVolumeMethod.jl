@@ -1,7 +1,7 @@
 module FiniteVolumeMethod
 
 using ChunkSplitters: ChunkSplitters, index_chunks
-using CommonSolve: CommonSolve, solve
+using CommonSolve: CommonSolve, solve, init, solve!, step!
 using DelaunayTriangulation: DelaunayTriangulation, Triangulation,
     add_ghost_triangles!,
     convert_boundary_points_to_indices,
@@ -241,7 +241,8 @@ import .Experimental: solve_simple_distributed, distribute_mesh,
 # sciml_structures.jl and remake.jl define the SciMLStructures/remake
 # methods for IncompressibleProblem — import so they extend against the
 # Collocated-owned type.
-import .Collocated: IncompressibleProblem, SteadyIncompressibleProblem, AnyIncompressibleProblem
+import .Collocated: IncompressibleProblem, SteadyIncompressibleProblem, AnyIncompressibleProblem,
+    CollocatedSymbolicIndex
 include("sciml/symbolic_indexing.jl")
 include("sciml/sciml_structures.jl")
 include("sciml/remake.jl")

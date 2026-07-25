@@ -57,21 +57,21 @@ end
 
 # Symbolic indexing: sol[:U], sol[:p], sol[:Ux], sol[:Uy], sol[:Uz], sol[:phi]
 function Base.getindex(sol::IncompressibleSolution{Dim, T}, sym::Symbol) where {Dim, T}
-    state = getfield(sol, :result).state
-    # Return independent Vector snapshots, not the live views into the flat
-    # solution vector `u` (Stage 5f): a solution's fields must not be mutable
-    # aliases of solver state, and `sol[:U]` is a cold post-processing path.
-    sym === :U && return collect(state.U.internal)
-    sym === :p && return collect(state.p.internal)
-    sym === :phi && return copy(state.phi.values)
-    sym === :Ux && return _extract_component(state.U, 1)
-    sym === :Uy && return Dim >= 2 ? _extract_component(state.U, 2) :
-        error("No Uy in $(Dim)D")
-    sym === :Uz && return Dim >= 3 ? _extract_component(state.U, 3) :
-        error("No Uz in $(Dim)D")
-    return error(
-        "Unknown field :$sym. Available: :U, :p, :phi, :Ux, :Uy" *
-            (Dim >= 3 ? ", :Uz" : ""),
+    # `:phi` is derived face state, not part of the flat solution vector, so it
+    # is not an SII observable over `u`; serve it directly.
+    sym === :phi && return copy(getfield(sol, :result).state.phi.values)
+
+    # Everything else resolves through SymbolicIndexingInterface against the
+    # flat solution vector (Stage 5f-3) rather than a hand-written lookup.
+    sys = SII.symbolic_container(sol)
+    SII.is_observed(sys, sym) || return error(
+        "Unknown field :$sym. Available: :phi, " *
+            join(string.(':', SII.all_variable_symbols(sys)), ", "),
+    )
+    # Materialise: a solution's fields must not be mutable aliases of live
+    # solver state, and `sol[:U]` is a cold post-processing path.
+    return collect(
+        SII.observed(sys, sym)(SII.state_values(sol), SII.parameter_values(sol)),
     )
 end
 

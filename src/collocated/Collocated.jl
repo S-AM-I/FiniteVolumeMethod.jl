@@ -125,6 +125,10 @@ using .Physics
 # points, so it must load after `using .Physics`.
 include("incompressible/solution.jl")
 include("incompressible/sciml_interface.jl")
+# The integrator wraps the solution type; the SII glue describes both it and
+# the solution, so it loads last.
+include("incompressible/integrator.jl")
+include("incompressible/symbolic.jl")
 
 export
     ConvectionScheme, CONV_UPWIND, CONV_LINEAR, CONV_BLENDED,
@@ -148,7 +152,7 @@ export
     TurbulenceComponent, has_combustion, has_mrf_zones, has_porous_zones, has_radiation,
     has_thermal, has_turbulence, is_plain_flow,
     IncompressibleProblem, SteadyIncompressibleProblem, IncompressibleSolution,
-    IncompressibleState, InletOutletBC,
+    IncompressibleState, IncompressibleIntegrator, InletOutletBC,
     IshiiZuberDrag, KHRTBreakup, KunzCavitation, KunzModel, LaplacianMotion, MRFZone,
     MerkleCavitation, MerkleModel, MeshMotionState, MultiMRF, NoSlipWallBC,
     ORourkeCollision, OrthotropicPorous, PIMPLE, PISO, PointProbe, PorousJumpBC, PorousZone,
