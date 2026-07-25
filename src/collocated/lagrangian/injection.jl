@@ -22,7 +22,7 @@ using LinearAlgebra: norm
     AbstractInjector{Dim, T}
 
 Supertype for injector patterns. Concrete subtypes must implement
-[`inject_particles!`](@ref).
+`inject_particles!`.
 """
 abstract type AbstractInjector{Dim, T} end
 

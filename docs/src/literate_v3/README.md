@@ -1,11 +1,20 @@
-# v3 Collocated Stack — Runnable Tutorials
+# Collocated Incompressible Stack — Runnable Tutorials
 
-This directory contains twelve worked examples that exercise each major
-solver family in the v3 OpenFOAM-style collocated stack. Each tutorial
-is self-contained, uses a small mesh so it completes in under 30 s on a
-laptop, and prints a sanity-check value at the end. They are written
-as Literate.jl-style `.jl` files, so the same file doubles as a
-`julia` script and as the source for a generated Markdown page.
+Twelve worked examples exercising the OpenFOAM-style collocated stack.
+Nine cover the collocated solvers themselves and appear in this section;
+the remaining three exercise quarantined research scaffolds and are filed
+under [Experimental](../experimental/overview.md) — the compressible
+`CompressibleSIMPLE` channel, the linear-elasticity beam, and the
+Ffowcs Williams-Hawkings surface integration.
+
+Each tutorial is self-contained, uses a small mesh so it completes in
+under 30 s on a laptop, and prints a sanity-check value at the end. They
+are written as Literate.jl-style `.jl` files, so the same file doubles as
+a `julia` script and as the source for a generated Markdown page.
+
+Only the lid-driven cavity is executed during a CI documentation build;
+the rest are executed by a full local `make ci-docs`. That split is
+recorded per page in `validation/manifest.toml`.
 
 ## Running a single tutorial
 
@@ -13,7 +22,7 @@ as Literate.jl-style `.jl` files, so the same file doubles as a
 julia --project=docs docs/src/literate_v3/01_lid_driven_cavity.jl
 ```
 
-All twelve tutorials use the same top-level imports
+All tutorials use the same top-level imports
 (`FiniteVolumeMethod`, `LinearSolve`, `StaticArrays`, `Printf`) and
 pull the mesh builder `build_cartesian_unstructured_mesh` from
 `test/TestHelpers.jl`.

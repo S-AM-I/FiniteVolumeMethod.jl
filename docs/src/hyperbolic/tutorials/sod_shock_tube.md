@@ -33,7 +33,7 @@ law = EulerEquations{1}(eos)
 ````
 
 ````
-FiniteVolumeMethod.EulerEquations{1, FiniteVolumeMethod.IdealGasEOS{Float64}}(FiniteVolumeMethod.IdealGasEOS{Float64}(1.4))
+FiniteVolumeMethod.Hyperbolic.EulerEquations{1, FiniteVolumeMethod.Numerics.IdealGasEOS{Float64}}(FiniteVolumeMethod.Numerics.IdealGasEOS{Float64}(1.4))
 ````
 
 Define the left and right primitive states $(\rho, v, P)$:
@@ -60,7 +60,7 @@ bc_right = DirichletHyperbolicBC(wR)
 ````
 
 ````
-FiniteVolumeMethod.DirichletHyperbolicBC{3, Float64}([0.125, 0.0, 0.1])
+FiniteVolumeMethod.Hyperbolic.DirichletHyperbolicBC{3, Float64}([0.125, 0.0, 0.1])
 ````
 
 The initial condition places the diaphragm at $x = 0.5$:

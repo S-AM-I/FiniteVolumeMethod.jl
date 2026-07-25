@@ -251,6 +251,34 @@ function SteadyIncompressibleProblem(
     )
 end
 
+# Both problem types root at a SciMLBase problem supertype, whose generic
+# `show` reaches for `prob.u0` (via `state_values`) — a field these problems do
+# not store, because their initial state is built by the solver from the mesh.
+# Display them ourselves rather than letting that generic path run: it would
+# throw a `FieldError` on something as ordinary as typing `prob` at the REPL.
+function Base.show(
+        io::IO, ::MIME"text/plain", prob::AnyIncompressibleProblem{Dim, T},
+    ) where {Dim, T}
+    mesh = prob.mesh
+    kind = prob isa SteadyIncompressibleProblem ? "SteadyIncompressibleProblem" :
+        "IncompressibleProblem"
+    println(io, "$kind{$Dim, $T} with $(nameof(typeof(prob.algorithm)))")
+    println(
+        io, "  mesh: ", length(mesh.cell_volumes), " cells, ",
+        size(mesh.face_cells, 2), " faces",
+    )
+    println(io, "  nu = ", prob.nu, ", density = ", prob.density)
+    physics = String[]
+    has_turbulence(prob) && push!(physics, "turbulence")
+    has_thermal(prob) && push!(physics, "thermal")
+    has_radiation(prob) && push!(physics, "radiation")
+    has_combustion(prob) && push!(physics, "combustion")
+    has_porous_zones(prob) && push!(physics, "porous zones")
+    has_mrf_zones(prob) && push!(physics, "MRF zones")
+    print(io, "  physics: ", isempty(physics) ? "none (plain flow)" : join(physics, ", "))
+    return nothing
+end
+
 # Problem-level forwarding of the model traits, so assembly hooks can ask the
 # problem directly instead of reaching through `prob.model` each time. Both
 # problem types carry a `model`, so these dispatch on the union.

@@ -29,7 +29,10 @@ using Printf
 # builds a Cartesian unstructured mesh with patches `:left`, `:right`,
 # `:bottom`, `:top` and the face orientation conventions that the
 # collocated assembly expects.
-include(joinpath(@__DIR__, "..", "..", "..", "test", "TestHelpers.jl"))
+# Located relative to the installed package rather than to this file, so the
+# path resolves both when run as a script and when Literate executes it from
+# the generated-docs directory.
+include(joinpath(dirname(dirname(pathof(FiniteVolumeMethod))), "test", "TestHelpers.jl"))
 
 # Problem parameters: L = 1, U_lid = 1 → Re = U_lid · L / ν.
 const L = 1.0

@@ -70,7 +70,7 @@ Each time step proceeds as:
 - `nu` — kinematic viscosity (default `1e-3`)
 - `algorithm` — pressure-velocity coupling: [`PISO`](@ref) or [`PIMPLE`](@ref)
 - `linear_solver` — solver algorithm for `LinearProblem`
-- `solver_config` — [`FVMSolverConfig`](@ref)
+- `solver_config` — `FVMSolverConfig`
 - `verbose` — print progress each time step
 
 # Returns

@@ -123,7 +123,28 @@ _transient_prob() = IncompressibleProblem(
         @test_throws ArgumentError init(prob)
     end
 
-    # ── 6. SymbolicIndexingInterface traits ───────────────────────────
+    # ── 6. Displaying a problem must not throw ────────────────────────
+    #
+    # Both problem types root at a SciMLBase problem supertype whose generic
+    # `show` reaches for `prob.u0` via `state_values`. These problems build
+    # their initial state from the mesh instead of storing it, so without our
+    # own `show` even typing `prob` at the REPL threw a FieldError. No test
+    # displayed a problem, so only the docs build caught it.
+    @testset "problems display without error" begin
+        for prob in (_steady_prob(), _transient_prob())
+            str = sprint(show, MIME"text/plain"(), prob)
+            @test occursin("cells", str)
+            @test occursin("nu = ", str)
+            @test occursin("physics: ", str)
+        end
+        # A problem is also an SII value provider (generic ecosystem code asks).
+        prob = _steady_prob()
+        ncells = length(prob.mesh.cell_volumes)
+        @test length(SII.state_values(prob)) == ncells * 3
+        @test SII.parameter_values(prob) === prob
+    end
+
+    # ── 7. SymbolicIndexingInterface traits ───────────────────────────
     @testset "SII traits" begin
         sol = solve!(init(_steady_prob(); linear_solver = LS))
         ncells = length(sol.prob.mesh.cell_volumes)

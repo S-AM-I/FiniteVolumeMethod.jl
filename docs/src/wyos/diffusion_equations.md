@@ -116,6 +116,7 @@ Let us start by writing out the contribution from all the triangles.
 
 ````julia
 using FiniteVolumeMethod
+using FiniteVolumeMethod: DiffusionEquation
 const FVM = FiniteVolumeMethod
 function triangle_contributions!(
         A, mesh, conditions, diffusion_function, diffusion_parameters
@@ -505,6 +506,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod
+using FiniteVolumeMethod: DiffusionEquation
 const FVM = FiniteVolumeMethod
 function triangle_contributions!(
         A, mesh, conditions, diffusion_function, diffusion_parameters

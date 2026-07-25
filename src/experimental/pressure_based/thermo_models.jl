@@ -134,7 +134,7 @@ beta_at(m::SutherlandGas, T) = m.beta
 """
     specific_heat(model::AbstractThermoModel, T) -> T
 
-Alias for [`cp_at`](@ref). Returns specific heat at constant pressure.
+Alias for `cp_at`. Returns specific heat at constant pressure.
 Provided so `density`, `viscosity`, `specific_heat` can be used as a
 uniform OpenFOAM-style trio.
 """
@@ -150,7 +150,7 @@ density(m::AbstractThermoModel, p, T) = density_at(m, p, T)
 """
     viscosity(model::AbstractThermoModel, T) -> T
 
-Alias for [`viscosity_at`](@ref). Provided for OpenFOAM-style lookup.
+Alias for `viscosity_at`. Provided for OpenFOAM-style lookup.
 """
 viscosity(m::AbstractThermoModel, T) = viscosity_at(m, T)
 

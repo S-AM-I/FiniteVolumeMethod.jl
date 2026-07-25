@@ -29,7 +29,7 @@ Each iteration:
 7. Check convergence
 
 Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
-as [`solve_simple`](@ref).
+as `solve_simple`.
 """
 function solve_simple_thermal(
         prob::AnyIncompressibleProblem{Dim, T},
@@ -151,7 +151,7 @@ end
 
 Solve transient incompressible flow with energy equation using PISO or PIMPLE.
 Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
-as [`solve_incompressible`](@ref).
+as `solve_incompressible`.
 """
 function solve_incompressible_thermal(
         prob::AnyIncompressibleProblem{Dim, T},

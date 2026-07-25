@@ -1773,3 +1773,134 @@ limitations = [
   "No adapters to the package's PISO or solid-mechanics solvers exist; only exercised against a mock 1-DOF spring-damper.",
   "Interface transfer supports matching meshes only (1:1 copy); no conservative interpolation between non-matching interfaces.",
 ]
+
+[[features]]
+feature = "pressure_based_compressible"
+maturity = "experimental"
+validation = "smoke_tests"
+role = "experimental_sandbox"
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+backend_policy = "cpu_reference"
+summary = "Pressure-based compressible SIMPLE/PIMPLE (rhoSimpleFoam analogue): rho_f mass fluxes, an implicit psi = d(rho)/dp diagonal, and (1/rho) grad(p) momentum. Closed-box mass is conserved to machine precision, the low-Mach limit matches the incompressible solver, and acoustic propagation is finite."
+limitations = [
+  "Quarantined under `Experimental` — entry points warn once per session.",
+  "Subsonic only: there is no `div(phid, p)` shock treatment, so transonic and supersonic flow is out of scope.",
+  "The momentum time derivative neglects d(rho)/dt.",
+  "Added to this manifest in Stage 6: the module already existed but was absent from the feature contract while its sibling experimental scaffolds were listed.",
+]
+
+# ── Collocated / experimental tutorials (Stage 6): the v3 tutorial corpus
+# was previously absent from this manifest, so `docs/make.jl` never
+# processed it and the collocated solver family had no documentation
+# coverage at all. One canonical case runs in CI, matching the
+# one-page-per-family convention used by the other `docs_smoke` entries.
+
+[[generated_pages]]
+id = "collocated-lid-driven-cavity"
+page = "collocated/tutorials/01_lid_driven_cavity.md"
+source = "docs/src/literate_v3/01_lid_driven_cavity.jl"
+feature = "incompressible_ns"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+
+[[generated_pages]]
+id = "collocated-kepsilon-channel"
+page = "collocated/tutorials/03_kepsilon_channel.md"
+source = "docs/src/literate_v3/03_kepsilon_channel.jl"
+feature = "turbulence_rans"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "collocated-rayleigh-benard"
+page = "collocated/tutorials/04_rayleigh_benard.md"
+source = "docs/src/literate_v3/04_rayleigh_benard.jl"
+feature = "conjugate_heat_transfer"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "collocated-dam-break"
+page = "collocated/tutorials/05_dam_break.md"
+source = "docs/src/literate_v3/05_dam_break.jl"
+feature = "multiphase_vof"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "collocated-combustion-one-step"
+page = "collocated/tutorials/06_combustion_one_step.md"
+source = "docs/src/literate_v3/06_combustion_one_step.jl"
+feature = "combustion"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "collocated-radiation-p1"
+page = "collocated/tutorials/07_radiation_p1.md"
+source = "docs/src/literate_v3/07_radiation_p1.jl"
+feature = "radiation"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "collocated-dpm-stokes"
+page = "collocated/tutorials/08_dpm_stokes.md"
+source = "docs/src/literate_v3/08_dpm_stokes.jl"
+feature = "lagrangian_dpm"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "collocated-dynamic-mesh-oscillator"
+page = "collocated/tutorials/09_dynamic_mesh_oscillator.md"
+source = "docs/src/literate_v3/09_dynamic_mesh_oscillator.jl"
+feature = "dynamic_mesh"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "collocated-two-fluid-bubble-column"
+page = "collocated/tutorials/10_two_fluid_bubble_column.md"
+source = "docs/src/literate_v3/10_two_fluid_bubble_column.jl"
+feature = "eulerian_two_fluid"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "experimental-compressible-channel"
+page = "experimental/tutorials/02_compressible_channel.md"
+source = "docs/src/literate_v3/02_compressible_channel.jl"
+feature = "pressure_based_compressible"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "experimental-solid-mechanics-beam"
+page = "experimental/tutorials/11_solid_mechanics_beam.md"
+source = "docs/src/literate_v3/11_solid_mechanics_beam.jl"
+feature = "solid_mechanics"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+
+[[generated_pages]]
+id = "experimental-aeroacoustics-fwh"
+page = "experimental/tutorials/12_aeroacoustics_fwh.md"
+source = "docs/src/literate_v3/12_aeroacoustics_fwh.jl"
+feature = "aeroacoustics"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false

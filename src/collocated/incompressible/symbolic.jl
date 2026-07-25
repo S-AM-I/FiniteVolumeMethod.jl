@@ -91,6 +91,17 @@ end
 SII.state_values(sol::IncompressibleSolution) = getfield(sol, :result).state.u
 SII.parameter_values(sol::IncompressibleSolution) = getfield(sol, :prob)
 
+# A problem is an SII value provider too. These types root at SciMLBase problem
+# supertypes, so generic ecosystem code reaches for the problem's state; they do
+# not store a `u0` field, because the initial state is built from the mesh at
+# solve time, so report that initial state instead of throwing a `FieldError`.
+function SII.symbolic_container(prob::AnyIncompressibleProblem{Dim}) where {Dim}
+    return CollocatedSymbolicIndex(Dim, length(prob.mesh.cell_volumes))
+end
+
+SII.state_values(prob::AnyIncompressibleProblem) = IncompressibleState(prob.mesh).u
+SII.parameter_values(prob::AnyIncompressibleProblem) = prob
+
 function SII.symbolic_container(integrator::IncompressibleIntegrator)
     state = getfield(integrator, :state)
     return CollocatedSymbolicIndex(

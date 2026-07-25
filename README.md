@@ -11,10 +11,11 @@
 > this fork in the General registry it must be renamed, since the
 > `FiniteVolumeMethod` name and UUID belong to the upstream package.
 
-FiniteVolumeMethod.jl is a Julia package for solving partial differential equations (PDEs) with two main solver families:
+FiniteVolumeMethod.jl is a Julia package for solving partial differential equations (PDEs) with three solver families:
 
 - a cell-vertex parabolic/elliptic solver on unstructured triangular meshes
 - a cell-centered hyperbolic solver on structured 1D/2D/3D meshes
+- a collocated incompressible solver (SIMPLE/PISO/PIMPLE) on unstructured polyhedral meshes, with composable turbulence, thermal, radiation, combustion and multiphase physics
 
 The repository also contains more advanced capabilities such as constrained-transport MHD, relativistic solvers, AMR, coupling infrastructure, and research-support tooling. These capabilities do **not** all share the same scientific maturity.
 
@@ -40,13 +41,12 @@ See the documentation for the capability matrix, verification evidence, and deta
 
 This repository treats only the current Julia stable release and the current Julia LTS release as release-supported targets. Pre-release Julia versions may still be tested opportunistically, but they are not part of the scientific support contract.
 
-## v2 Transition
+## Maturity and scope
 
-The repository now follows an explicit research-grade `v2` contract.
-
-- Start with the [capability matrix](docs/src/capability_matrix.md) and the [v2 migration guide](docs/src/v2_migration.md) before treating a feature as publication-grade.
+- Start with the [capability matrix](docs/src/capability_matrix.md) before treating any feature as publication-grade. Most of the collocated stack is `experimental`; only features marked `stable` carry validation evidence sufficient for scientific claims.
+- The [v4.0 migration guide](docs/src/migration/v4.md) covers the breaking changes in this release, including the solver defects whose fixes change results.
 - CPU `Float64` runs remain the publication baseline. CUDA parity is currently audited only for the supported 2D hyperbolic extension path, so other GPU usage should be treated as experimental.
-- GitHub Actions CI is enabled with five lanes (environment-integrity, unit-interop, scientific-smoke, published-benchmarks, docs). For local iteration, use `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, `make ci-release-audit`, or `make ci-published-benchmarks`.
+- For local verification use `make ci-fast`, `make ci-smoke`, `make ci-full-evidence`, `make ci-performance`, `make ci-release-audit`, or `make ci-published-benchmarks`. GitHub Actions workflows are currently disabled for this fork, so the local lanes are the authoritative check.
 
 If this package doesn't suit what you need, you may like to review some of the other PDE packages shown [here](https://github.com/JuliaPDE/SurveyofPDEPackages).
 

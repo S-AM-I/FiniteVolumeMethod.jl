@@ -33,6 +33,7 @@ We can also reuse `apply_dirichlet_conditions!`, `apply_dudt_conditions`, and
 
 ````julia
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
+using FiniteVolumeMethod: LinearReactionDiffusionEquation
 using SciMLBase: MatrixOperator
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(
@@ -213,6 +214,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
+using FiniteVolumeMethod: LinearReactionDiffusionEquation
 using SciMLBase: MatrixOperator
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(

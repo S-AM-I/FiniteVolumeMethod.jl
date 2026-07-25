@@ -33,6 +33,7 @@ we don't need `create_rhs_b`.
 
 ````julia
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
+using FiniteVolumeMethod: LaplacesEquation
 const FVM = FiniteVolumeMethod
 function laplaces_equation(
         mesh::FVMGeometry,
@@ -259,6 +260,7 @@ You can view the source code for this file [here](https://github.com/cx-xd/Finit
 
 ```julia
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
+using FiniteVolumeMethod: LaplacesEquation
 const FVM = FiniteVolumeMethod
 function laplaces_equation(
         mesh::FVMGeometry,

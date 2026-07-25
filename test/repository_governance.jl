@@ -26,10 +26,16 @@ const RELEASE_OUTPUT_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_release_outp
 
     for entry in manifest.generated_pages
         @test isfile(joinpath(REPO_ROOT, entry.source))
+        # Generated pages live under one of the documentation areas the
+        # navigation defines. `collocated/` and `experimental/` were added in
+        # Stage 6, when the collocated tutorial corpus was first wired into the
+        # manifest (before that the docs build never processed it).
         @test startswith(entry.page, "tutorials/") ||
             startswith(entry.page, "wyos/") ||
             startswith(entry.page, "verification/") ||
-            startswith(entry.page, "hyperbolic/tutorials/")
+            startswith(entry.page, "hyperbolic/tutorials/") ||
+            startswith(entry.page, "collocated/tutorials/") ||
+            startswith(entry.page, "experimental/tutorials/")
     end
 
     for entry in manifest.scientific_evidence

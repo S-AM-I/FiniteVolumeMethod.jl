@@ -102,18 +102,15 @@ using Dates
 
 # All the pages to be included
 _PAGES = [
-    "Introduction" => "index.md",
-    "Verification & Validation" => [
-        "V&V Status" => "research_governance.md",
+    "Getting Started" => [
+        "Introduction" => "index.md",
         "Capability Matrix" => "capability_matrix.md",
-        "Algorithm Provenance" => "provenance.md",
-        "v2 Migration" => "v2_migration.md",
-        "v3 Migration" => "v3_migration.md",
-        "v3 Tutorials Overview" => "literate_v3/README.md",
     ],
-    "Tutorials" => [
-        "Parabolic and Elliptic PDEs" => [
+    "Solver Families" => [
+        "Parabolic (Cell-Vertex)" => [
             "Overview" => "tutorials/overview.md",
+            "Interface" => "interface.md",
+            "Mathematical Details" => "math.md",
             "Diffusion Equation on a Square Plate" => "tutorials/diffusion_equation_on_a_square_plate.md",
             "Diffusion Equation in a Wedge with Mixed Boundary Conditions" => "tutorials/diffusion_equation_in_a_wedge_with_mixed_boundary_conditions.md",
             "Reaction-Diffusion Equation with a Time-dependent Dirichlet Boundary Condition on a Disk" => "tutorials/reaction_diffusion_equation_with_a_time_dependent_dirichlet_boundary_condition_on_a_disk.md",
@@ -130,8 +127,10 @@ _PAGES = [
             "Solving Mazes with Laplace's Equation" => "tutorials/solving_mazes_with_laplaces_equation.md",
             "Keller-Segel Model of Chemotaxis" => "tutorials/keller_segel_chemotaxis.md",
         ],
-        "Hyperbolic Conservation Laws" => [
+        "Hyperbolic (Cell-Centered)" => [
             "Overview" => "hyperbolic/overview.md",
+            "Interface" => "hyperbolic/interface.md",
+            "Mathematical Details" => "hyperbolic/math.md",
             "Sod Shock Tube" => "hyperbolic/tutorials/sod_shock_tube.md",
             "Sedov Blast Wave" => "hyperbolic/tutorials/sedov_blast_wave.md",
             "Brio-Wu MHD Shock Tube" => "hyperbolic/tutorials/brio_wu_shock_tube.md",
@@ -154,6 +153,18 @@ _PAGES = [
             "Hall MHD Whistler Waves" => "hyperbolic/tutorials/hall_mhd_whistler.md",
             "Two-Fluid Plasma Sod" => "hyperbolic/tutorials/two_fluid_sod.md",
         ],
+        "Collocated Incompressible" => [
+            "Overview" => "literate_v3/README.md",
+            "Lid-Driven Cavity (SIMPLE)" => "collocated/tutorials/01_lid_driven_cavity.md",
+            "k-epsilon Turbulent Channel" => "collocated/tutorials/03_kepsilon_channel.md",
+            "Rayleigh-Benard Convection" => "collocated/tutorials/04_rayleigh_benard.md",
+            "Dam Break (VOF)" => "collocated/tutorials/05_dam_break.md",
+            "One-Step Combustion" => "collocated/tutorials/06_combustion_one_step.md",
+            "P1 Radiation" => "collocated/tutorials/07_radiation_p1.md",
+            "Lagrangian Particles (Stokes Drag)" => "collocated/tutorials/08_dpm_stokes.md",
+            "Dynamic Mesh Oscillator (ALE)" => "collocated/tutorials/09_dynamic_mesh_oscillator.md",
+            "Two-Fluid Bubble Column" => "collocated/tutorials/10_two_fluid_bubble_column.md",
+        ],
     ],
     "Solvers for Specific Problems, and Writing Your Own" => [
         "Section Overview" => "wyos/overview.md",
@@ -163,7 +174,9 @@ _PAGES = [
         "Poisson's Equation" => "wyos/poissons_equation.md",
         "Laplace's Equation" => "wyos/laplaces_equation.md",
     ],
-    "Verification & Validation" => [
+    "Validation & Evidence" => [
+        "V&V Status" => "research_governance.md",
+        "Algorithm Provenance" => "provenance.md",
         "Overview" => "verification/overview.md",
         "Code Verification" => [
             "MMS Convergence (Parabolic)" => "verification/mms_convergence.md",
@@ -199,14 +212,23 @@ _PAGES = [
             "GRMHD Convergence" => "verification/grmhd_convergence.md",
         ],
     ],
-    "Mathematical Details" => [
-        "General FVM Theory" => "finite-volume-method.md",
-        "Parabolic Solver (Cell-Vertex)" => "math.md",
-        "Hyperbolic Solver (Cell-Centered)" => "hyperbolic/math.md",
+    "Experimental" => [
+        "Scope and Caveats" => "experimental/overview.md",
+            "Low-Mach Compressible Channel" => "experimental/tutorials/02_compressible_channel.md",
+            "Linear Elasticity Beam" => "experimental/tutorials/11_solid_mechanics_beam.md",
+            "Ffowcs Williams-Hawkings" => "experimental/tutorials/12_aeroacoustics_fwh.md",
     ],
-    "Interface" => [
-        "Parabolic Solver" => "interface.md",
-        "Hyperbolic Solver" => "hyperbolic/interface.md",
+    "Mathematical Foundations" => [
+        "General FVM Theory" => "finite-volume-method.md",
+    ],
+    "API Reference" => [
+        "Overview" => "api/overview.md",
+        "Collocated" => "api/collocated.md",
+        "I/O and Session Tooling" => "api/io.md",
+        "Experimental" => "api/experimental.md",
+    ],
+    "Migration" => [
+        "v4.0" => "migration/v4.md",
     ],
     "Contributing" => [
         "Julia & dependency compat policy" => "contributing/compat.md",

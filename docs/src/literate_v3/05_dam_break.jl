@@ -29,7 +29,10 @@ using LinearSolve
 using StaticArrays
 using Printf
 
-include(joinpath(@__DIR__, "..", "..", "..", "test", "TestHelpers.jl"))
+# Located relative to the installed package rather than to this file, so the
+# path resolves both when run as a script and when Literate executes it from
+# the generated-docs directory.
+include(joinpath(dirname(dirname(pathof(FiniteVolumeMethod))), "test", "TestHelpers.jl"))
 
 const Lx = 2.0
 const Ly = 1.0

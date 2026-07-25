@@ -22,7 +22,7 @@ This repository publishes an explicit scientific contract:
 
 - the [Capability Matrix](capability_matrix.md) is the authoritative statement of feature maturity and claim policy
 - the [Verification & Validation](verification/overview.md) section is the authoritative statement of automated scientific evidence
-- the [v2 Migration](v2_migration.md) page summarizes the canonical SciML path, backend claim boundary, and local release workflow
+- the [v4.0 Migration](migration/v4.md) guide summarizes the breaking changes in this release, including the solver fixes that change results
 - only `stable` claim-bearing solver features should be treated as publication-grade
 - provisional and experimental features remain available for development and internal research, but they are not covered by the same scientific claim policy
 

@@ -1,17 +1,36 @@
 # Capability Matrix
 
-The table below summarises the verification and validation status of each
-solver capability in the package.
+The table below is generated directly from `validation/manifest.toml`, which is
+the authoritative contract. It uses that file's vocabulary, reproduced here.
 
-- **Stable** solvers have been verified (convergence studies, manufactured
-  solutions) and validated against published benchmarks. Suitable for
-  publication-grade results.
-- **Provisional** solvers have automated verification but incomplete V&V
-  coverage. Suitable for internal research and method development.
-- **Tooling** features (I/O, dashboards, checkpointing) support the research
-  workflow but are not part of the solver V&V.
-- The "V&V Coverage" column lists the verification stages that must be present
-  in the validation manifest for a feature to be considered fully verified.
+**Maturity** — how much validation evidence stands behind a capability:
+
+- `stable` — verified (convergence studies, manufactured solutions) *and*
+  validated against published benchmarks. Suitable for publication-grade
+  results.
+- `provisional` — automated verification exists, but V&V coverage is
+  incomplete. Suitable for internal research and method development.
+- `experimental` — available to develop against, but not covered by the
+  package's validation claims. Not suitable for scientific claims.
+
+Most of the package is `experimental`: of the capabilities listed below, only
+four are `stable`. In particular the entire collocated stack is currently
+`experimental` — its evidence items are real tests, but they are not yet
+machine-linked evidence entries, so the governance ladder is not satisfied at
+a higher maturity.
+
+**Role** — what kind of thing the capability is, independent of its maturity:
+
+- `claim_bearing_solver` — a solver whose results are intended to support
+  scientific claims once its maturity allows.
+- `experimental_sandbox` — research scaffolding; see the
+  [Experimental](experimental/overview.md) section for honest per-module scope.
+- `research_support_tooling` — I/O, dashboards, checkpointing and similar. These
+  support the research workflow and are not part of the solver V&V.
+
+The **V&V Coverage** column lists the verification stages that must be present
+in the validation manifest for a feature to be considered fully verified at its
+claimed maturity.
 
 ```@eval
 using FiniteVolumeMethod

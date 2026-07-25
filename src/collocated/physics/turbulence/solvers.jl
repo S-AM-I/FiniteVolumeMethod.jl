@@ -19,7 +19,7 @@ Solve steady incompressible flow with RANS turbulence using SIMPLE.
 Same algorithm as `solve_simple` but with turbulence equations solved
 after each velocity correction and `nu_eff = nu + nu_t` used in momentum.
 Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
-as [`solve_simple`](@ref) (Darcy-Forchheimer sinks use the MOLECULAR
+as `solve_simple` (Darcy-Forchheimer sinks use the MOLECULAR
 viscosity `prob.nu`, not `nu_eff`).
 """
 function solve_simple_turbulent(
@@ -102,7 +102,7 @@ end
 
 Solve transient incompressible flow with RANS turbulence using PISO or PIMPLE.
 Accepts the same optional `porous_zones` / `mrf_zones` keyword arguments
-as [`solve_incompressible`](@ref).
+as `solve_incompressible`.
 """
 function solve_incompressible_turbulent(
         prob::AnyIncompressibleProblem{Dim, T},

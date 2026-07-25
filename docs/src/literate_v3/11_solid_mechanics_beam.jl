@@ -26,7 +26,10 @@ using LinearSolve
 using StaticArrays
 using Printf
 
-include(joinpath(@__DIR__, "..", "..", "..", "test", "TestHelpers.jl"))
+# Located relative to the installed package rather than to this file, so the
+# path resolves both when run as a script and when Literate executes it from
+# the generated-docs directory.
+include(joinpath(dirname(dirname(pathof(FiniteVolumeMethod))), "test", "TestHelpers.jl"))
 
 # `solve_linear_elasticity` and `SolidProperties` are not exported.
 const solve_linear_elasticity = FiniteVolumeMethod.solve_linear_elasticity

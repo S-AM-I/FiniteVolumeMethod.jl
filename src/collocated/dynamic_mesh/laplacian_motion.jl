@@ -35,7 +35,7 @@ linear system.  Moving boundaries should prescribe
 
 # Keyword Arguments
 - `linear_solver` — algorithm for `LinearProblem` (default: `nothing`)
-- `solver_config` — [`FVMSolverConfig`](@ref) for per-field solver selection
+- `solver_config` — `FVMSolverConfig` for per-field solver selection
 """
 function compute_displacement!(
         motion_state::MeshMotionState{Dim, T},

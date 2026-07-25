@@ -73,6 +73,7 @@ return the problem as a `LinearProblem` from LinearSolve.jl.
 
 ````julia
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
+using FiniteVolumeMethod: MeanExitTimeProblem
 const FVM = FiniteVolumeMethod
 function met_problem(
         mesh::FVMGeometry,
@@ -282,6 +283,7 @@ function create_met_b!(A, mesh, conditions)
 end
 
 using FiniteVolumeMethod, SparseArrays, DelaunayTriangulation, LinearSolve
+using FiniteVolumeMethod: MeanExitTimeProblem
 const FVM = FiniteVolumeMethod
 function met_problem(
         mesh::FVMGeometry,
