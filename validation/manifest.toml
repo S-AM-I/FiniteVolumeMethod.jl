@@ -791,6 +791,34 @@ metric = "Centerline u(y) at x = 0.5 against tabulated reference stations, prima
 acceptance = "Interior stations within 8% relative, near-lid within 5%, zero crossings within 0.025 absolute; peak u in (-0.22, -0.18) at y in (0.4, 0.55); interior continuity residual below 1e-4."
 
 [[generated_pages]]
+id = "verification-kepsilon-dhit"
+page = "verification/kepsilon_dhit_decay.md"
+source = "docs/src/literate_verification/kepsilon_dhit_decay.jl"
+feature = "turbulence_rans"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form decaying-homogeneous-turbulence ODE solution (C_eps2 = 1.92)"
+metric = "Endpoint relative error of k and epsilon against the exact decay, and observed temporal convergence order"
+acceptance = "Realizable monotone decay; endpoint errors below 1% at dt/t = 1e-3; observed order in (0.8, 1.3)."
+
+[[generated_pages]]
+id = "verification-kepsilon-loglayer"
+page = "verification/kepsilon_loglayer_equilibrium.md"
+source = "docs/src/literate_verification/kepsilon_loglayer_equilibrium.jl"
+feature = "turbulence_rans"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Local-equilibrium log-layer solution of the standard k-epsilon closure (Launder & Spalding 1974 constants)"
+metric = "Cell-wise P_k/epsilon over the interior band, nu_t = kappa*y*u_tau algebraic invariant, Durbin cap activity"
+acceptance = "P_k/epsilon within (0.85, 1.15) on every interior cell; invariant to relative 1e-12; realizability cap inactive."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1310,6 +1338,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-kepsilon-dhit"
+path = "docs/src/literate_verification/kepsilon_dhit_decay.jl"
+entrypoint = "docs/src/literate_verification/kepsilon_dhit_decay.jl"
+feature = "turbulence_rans"
+rationale = "Exact-ODE decaying-homogeneous-turbulence solution verifies the k-epsilon source terms through solve_turbulence!: the verification ladder stage for turbulence_rans."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form decaying-homogeneous-turbulence ODE solution (C_eps2 = 1.92)"
+metric = "Endpoint relative error of k and epsilon against the exact decay, and observed temporal convergence order"
+acceptance = "Realizable monotone decay; endpoint errors below 1% at dt/t = 1e-3; observed order in (0.8, 1.3)."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-kepsilon-loglayer"
+path = "docs/src/literate_verification/kepsilon_loglayer_equilibrium.jl"
+entrypoint = "docs/src/literate_verification/kepsilon_loglayer_equilibrium.jl"
+feature = "turbulence_rans"
+rationale = "The P_k = epsilon log-layer equilibrium of the standard k-epsilon closure, with production from the discrete strain-rate operator: the benchmark ladder stage for turbulence_rans."
+runtime_tier = "ci"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Local-equilibrium log-layer solution of the standard k-epsilon closure (Launder & Spalding 1974 constants)"
+metric = "Cell-wise P_k/epsilon over the interior band, nu_t = kappa*y*u_tau algebraic invariant, Durbin cap activity"
+acceptance = "P_k/epsilon within (0.85, 1.15) on every interior cell; invariant to relative 1e-12; realizability cap inactive."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1427,7 +1493,7 @@ limitations = [
 
 [[features]]
 feature = "turbulence_rans"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1437,8 +1503,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "RANS turbulence models (k-epsilon, k-omega, k-omega SST, Spalart-Allmaras) for incompressible collocated solver. Standard k-ε source terms verified against analytical decaying-homogeneous-turbulence ODE solution (v3.18)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — only `StandardKEpsilon` is convergence-verified, and only the source-term ODE (k-ε decay) is matched. Shear production, wall functions, and full channel-flow profiles are smoke-tested only.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: machine-linked [[scientific_evidence]] entries now cover both required ladder stages and are executed by the evidence runner — evidence-kepsilon-dhit (verification: exact-ODE DHIT decay through solve_turbulence!) and evidence-kepsilon-loglayer (benchmark: P_k = epsilon log-layer equilibrium with production from the discrete strain-rate operator).",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — only `StandardKEpsilon` is convergence-verified: the source-term ODE (DHIT decay) and the equilibrium production/dissipation balance are matched. Wall functions and full channel-flow profiles are smoke-tested only.",
   "`KOmega`, `KOmegaSST`, `SpalartAllmaras` models carry only smoke tests; their transport terms have not been independently verified.",
   "Wall functions are simplified (Neumann/Dirichlet); dynamic wall function update not yet implemented.",
   "SST viscosity limiter uses simplified form without strain rate recomputation.",

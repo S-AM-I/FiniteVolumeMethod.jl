@@ -197,6 +197,7 @@ _PAGES = [
             "AMR Smooth-Pulse Convergence" => "verification/amr_convergence.md",
             "AMR Regridding Conservation" => "verification/amr_regridding_conservation.md",
             "Poiseuille Convergence (Collocated)" => "verification/poiseuille_convergence_collocated.md",
+            "DHIT Decay (Standard k-ε)" => "verification/kepsilon_dhit_decay.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
@@ -212,6 +213,7 @@ _PAGES = [
             "SRMHD Eigenmode Convergence" => "verification/srmhd_eigenmode_convergence.md",
             "GRMHD Convergence" => "verification/grmhd_convergence.md",
             "Ghia Lid-Driven Cavity (Re = 100)" => "verification/ghia_cavity_re100.md",
+            "Log-Layer Equilibrium (Standard k-ε)" => "verification/kepsilon_loglayer_equilibrium.md",
         ],
     ],
     "Experimental" => [
