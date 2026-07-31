@@ -199,6 +199,7 @@ _PAGES = [
             "Poiseuille Convergence (Collocated)" => "verification/poiseuille_convergence_collocated.md",
             "DHIT Decay (Standard k-ε)" => "verification/kepsilon_dhit_decay.md",
             "Solid Conduction Convergence" => "verification/solid_conduction_convergence.md",
+            "Smagorinsky Shear Verification" => "verification/smagorinsky_shear_verification.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
@@ -216,6 +217,7 @@ _PAGES = [
             "Ghia Lid-Driven Cavity (Re = 100)" => "verification/ghia_cavity_re100.md",
             "Log-Layer Equilibrium (Standard k-ε)" => "verification/kepsilon_loglayer_equilibrium.md",
             "Unsteady Heat Decay" => "verification/unsteady_heat_decay.md",
+            "WALE Operator Invariants" => "verification/wale_invariants.md",
         ],
     ],
     "Experimental" => [

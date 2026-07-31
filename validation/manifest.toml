@@ -847,6 +847,34 @@ metric = "Endpoint interior-band L2 error, y-invariance, and independent spatial
 acceptance = "Endpoint error < 5e-3; y-spread < 1e-10; spatial order in (1.55, 2.3); coarse-regime temporal rate > 0.6."
 
 [[generated_pages]]
+id = "verification-smagorinsky-shear"
+page = "verification/smagorinsky_shear_verification.md"
+source = "docs/src/literate_verification/smagorinsky_shear_verification.jl"
+feature = "turbulence_les"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Smagorinsky nu_t = (Cs*Delta)^2 |S| exact values on prescribed linear-shear fields"
+metric = "Cell-wise nu_t error under exact-gradient shear, and the Cs^2 and Delta^2 scaling invariants"
+acceptance = "Zero field to 1e-14; interior shear match to relative 1e-8; Cs-doubling ratio 4 to 1e-10; refinement ratio 1/4 to 1e-8."
+
+[[generated_pages]]
+id = "verification-wale-invariants"
+page = "verification/wale_invariants.md"
+source = "docs/src/literate_verification/wale_invariants.jl"
+feature = "turbulence_les"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "WALE operator invariants (Nicoud & Ducros 1999): S^d vanishes on 2D shear-only fields"
+metric = "Interior nu_t magnitude on pure shear and solid-body rotation, positivity and (Cw*Delta)^2 scaling on U = (xy, 0)"
+acceptance = "Shear/rotation nu_t below 1e-12/1e-10; xy-flow nu_t nonnegative and positive; refinement ratio 1/4 to 5%; Cw-doubling ratio 4 to 1e-10."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1442,6 +1470,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-smagorinsky-shear"
+path = "docs/src/literate_verification/smagorinsky_shear_verification.jl"
+entrypoint = "docs/src/literate_verification/smagorinsky_shear_verification.jl"
+feature = "turbulence_les"
+rationale = "Exact nu_t values on prescribed shear verify the Smagorinsky eddy-viscosity algebra and its scaling invariants: the verification ladder stage for turbulence_les."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Smagorinsky nu_t = (Cs*Delta)^2 |S| exact values on prescribed linear-shear fields"
+metric = "Cell-wise nu_t error under exact-gradient shear, and the Cs^2 and Delta^2 scaling invariants"
+acceptance = "Zero field to 1e-14; interior shear match to relative 1e-8; Cs-doubling ratio 4 to 1e-10; refinement ratio 1/4 to 1e-8."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-wale-invariants"
+path = "docs/src/literate_verification/wale_invariants.jl"
+entrypoint = "docs/src/literate_verification/wale_invariants.jl"
+feature = "turbulence_les"
+rationale = "The Nicoud-Ducros WALE operator invariants — vanishing on shear-only fields where Smagorinsky is maximal — benchmark the wall-adapted closure: the benchmark ladder stage for turbulence_les."
+runtime_tier = "ci"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "WALE operator invariants (Nicoud & Ducros 1999): S^d vanishes on 2D shear-only fields"
+metric = "Interior nu_t magnitude on pure shear and solid-body rotation, positivity and (Cw*Delta)^2 scaling on U = (xy, 0)"
+acceptance = "Shear/rotation nu_t below 1e-12/1e-10; xy-flow nu_t nonnegative and positive; refinement ratio 1/4 to 5%; Cw-doubling ratio 4 to 1e-10."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1695,7 +1761,7 @@ limitations = [
 
 [[features]]
 feature = "turbulence_les"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1705,8 +1771,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "LES (Smagorinsky, WALE, dynamic Smagorinsky) and hybrid (DDES) turbulence models for incompressible collocated solver. Smagorinsky ν_t formula verified against analytical values on prescribed velocity fields (v3.19)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — only `Smagorinsky` eddy-viscosity algebra ν_t = (C_s·Δ)²·|S| is convergence-verified against its analytical values under prescribed velocity fields. `WALE`, `DynamicSmagorinsky`, and `DDES` models remain smoke-tested.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: machine-linked [[scientific_evidence]] entries now cover both required ladder stages and are executed by the evidence runner — evidence-smagorinsky-shear (verification: exact nu_t algebra and scaling invariants on prescribed shear) and evidence-wale-invariants (benchmark: Nicoud-Ducros WALE operator invariants).",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — `Smagorinsky` eddy-viscosity algebra and the `WALE` operator invariants are verified on prescribed fields; no LES flow simulation is validated against reference turbulence data. `DynamicSmagorinsky` and `DDES` remain smoke-tested.",
   "Dynamic Smagorinsky uses simplified scalar Germano identity, not full tensor form.",
   "DDES only wraps Spalart-Allmaras; SST-based DDES deferred.",
   "Published benchmarks (DHIT decay vs. Comte-Bellot–Corrsin, periodic channel Reτ = 395 with WMLES/WRLES, periodic hills) are a v3.20+ follow-up.",
