@@ -917,6 +917,34 @@ metric = "Interior-band L2 error and observed convergence order, monotone-decay 
 acceptance = "Observed order in (1.8, 2.2), monotone error decrease, finest error < 1e-4; monotone positive profile; column spread < 1e-10."
 
 [[generated_pages]]
+id = "verification-laplacian-mms"
+page = "verification/laplacian_operator_mms.md"
+source = "docs/src/literate_verification/laplacian_operator_mms.jl"
+feature = "collocated_operators"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "manufactured_solution"
+reference_source = "Manufactured solution phi = sin(pi x) sin(pi y) with forcing 2 pi^2 sin(pi x) sin(pi y)"
+metric = "L2 and Linf error and observed convergence order of the assembled Laplacian solve"
+acceptance = "Finest-transition L2 order in (1.8, 2.2), Linf order > 1.7, monotone decrease in both norms, finest L2 < 1e-3."
+
+[[generated_pages]]
+id = "verification-gradient-divergence-mms"
+page = "verification/gradient_divergence_mms.md"
+source = "docs/src/literate_verification/gradient_divergence_mms.jl"
+feature = "collocated_operators"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "analytical_benchmark"
+reference_kind = "manufactured_solution"
+reference_source = "Manufactured gradient of sin(pi x) sin(pi y) and the analytically divergence-free field (sin cos, -cos sin)"
+metric = "Interior L2 gradient error with observed order, and interior RMS divergence of a divergence-free face flux"
+acceptance = "Gradient finest-transition order in (1.8, 2.2), monotone, finest error < 0.05; divergence RMS < 1e-10 at every N."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1607,6 +1635,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-laplacian-mms"
+path = "docs/src/literate_verification/laplacian_operator_mms.jl"
+entrypoint = "docs/src/literate_verification/laplacian_operator_mms.jl"
+feature = "collocated_operators"
+rationale = "Manufactured-solution O(h^2) convergence of the assembled Laplacian, independent of any solver loop: the verification ladder stage for collocated_operators."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "manufactured_solution"
+reference_source = "Manufactured solution phi = sin(pi x) sin(pi y) with forcing 2 pi^2 sin(pi x) sin(pi y)"
+metric = "L2 and Linf error and observed convergence order of the assembled Laplacian solve"
+acceptance = "Finest-transition L2 order in (1.8, 2.2), Linf order > 1.7, monotone decrease in both norms, finest L2 < 1e-3."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-gradient-divergence-mms"
+path = "docs/src/literate_verification/gradient_divergence_mms.jl"
+entrypoint = "docs/src/literate_verification/gradient_divergence_mms.jl"
+feature = "collocated_operators"
+rationale = "Green-Gauss gradient MMS convergence and machine-exact divergence on a divergence-free flux: the benchmark ladder stage for collocated_operators."
+runtime_tier = "ci"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "manufactured_solution"
+reference_source = "Manufactured gradient of sin(pi x) sin(pi y) and the analytically divergence-free field (sin cos, -cos sin)"
+metric = "Interior L2 gradient error with observed order, and interior RMS divergence of a divergence-free face flux"
+acceptance = "Gradient finest-transition order in (1.8, 2.2), monotone, finest error < 0.05; divergence RMS < 1e-10 at every N."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1667,7 +1733,7 @@ reason = "This tutorial remains excluded from automated CI and is not part of th
 
 [[features]]
 feature = "collocated_operators"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1677,7 +1743,8 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Collocated cell-centered FVM operators on unstructured polyhedral meshes: Laplacian, divergence, gradient, Rhie-Chow interpolation, temporal schemes. Machine-checked via MMS and analytical invariants across five independent benchmarks."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: machine-linked [[scientific_evidence]] entries now cover both required ladder stages and are executed by the evidence runner — evidence-laplacian-mms (verification: manufactured-solution O(h^2) Laplacian convergence) and evidence-gradient-divergence-mms (benchmark: gradient MMS + machine-exact divergence).",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
   "Promoted from experimental → provisional in v3.7.0 on the strength of five independent benchmark files landed across v3.4–v3.9 — the only 'provisional' feature shipping with ≥ 3 benchmarks (stable-promotion eligible by the 3-benchmark floor).",
   "Benchmark #1: `test/v_and_v_laplacian_mms.jl` (v3.4) — Laplacian MMS on uniform Cartesian mesh showing textbook O(h²) spatial rate with Dirichlet, Neumann, and Robin BCs.",
   "Benchmark #2: `test/v_and_v_operator_mms.jl` (v3.5) — gradient MMS with observed order ≈ 1.9 on Cartesian + divergence machine-exact on div-free inputs.",

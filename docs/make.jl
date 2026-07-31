@@ -202,6 +202,7 @@ _PAGES = [
             "Smagorinsky Shear Verification" => "verification/smagorinsky_shear_verification.md",
             "VOF Disc Translation" => "verification/vof_disc_translation.md",
             "P1 Slab Attenuation" => "verification/p1_slab_attenuation.md",
+            "Laplacian Operator MMS" => "verification/laplacian_operator_mms.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
@@ -221,6 +222,7 @@ _PAGES = [
             "Unsteady Heat Decay" => "verification/unsteady_heat_decay.md",
             "WALE Operator Invariants" => "verification/wale_invariants.md",
             "MULES Limiter Invariants" => "verification/mules_limiter_invariants.md",
+            "Gradient & Divergence MMS" => "verification/gradient_divergence_mms.md",
         ],
     ],
     "Experimental" => [
