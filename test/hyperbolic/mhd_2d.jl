@@ -708,3 +708,71 @@ end
     )
     @test build_mhd_ct_cache(prob_ok) isa FiniteVolumeMethod.MHDCTCache2D
 end
+
+@testset "MHD positivity floor — unit behaviour and rotor regression" begin
+    law = IdealMHDEquations{2}(IdealGasEOS(1.4))
+    B0 = 5.0 / sqrt(4.0 * π)
+
+    # Unit: a manufactured negative-pressure cell is floored exactly, with
+    # velocity and B preserved; positive cells are bitwise untouched.
+    mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 4, 4)
+    ic_ok(x, y) = SVector(1.0, 0.1, 0.0, 0.0, 1.0, B0, 0.0, 0.0)
+    prob = HyperbolicProblem2D(
+        law, mesh, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
+        TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC(),
+        ic_ok; final_time = 0.1
+    )
+    ode = sciml_problem(prob; vector_potential = (x, y) -> B0 * y)
+    u = copy(ode.u0)
+    u_before = copy(u)
+    limiter = FiniteVolumeMethod.Hyperbolic.PositivityLimiter()
+    FiniteVolumeMethod.Hyperbolic.apply_mhd_positivity_floor!(u, ode.p, limiter)
+    @test u == u_before   # all-positive state is bitwise unchanged
+
+    # Corrupt one cell: drive its energy below the magnetic + kinetic
+    # content so the EOS pressure is negative, then floor.
+    nvar = 8
+    u[5] = 0.5 * (u[2]^2 + u[3]^2 + u[4]^2) / u[1] +
+        0.5 * (u[6]^2 + u[7]^2 + u[8]^2) - 1.0
+    FiniteVolumeMethod.Hyperbolic.apply_mhd_positivity_floor!(u, ode.p, limiter)
+    w = conserved_to_primitive(law, SVector{nvar}(u[1:nvar]))
+    @test w[5] ≈ limiter.epsilon rtol = 1.0e-6   # pressure floored exactly
+    @test u[2] == u_before[2]                     # momentum preserved
+    @test u[6] == u_before[6]                     # B preserved
+
+    # Regression: the Balsara-Spicer rotor at N = 32 previously finished
+    # with pressure ≈ -83 (silently unphysical); with the floor in the
+    # default mhd_stage_limiter the final state is positive everywhere and
+    # div(B) stays at round-off. (N = 100 blew up to NaN entirely; the
+    # N = 32 run keeps this regression cheap.)
+    function rotor_ic(x, y)
+        dx, dy = x - 0.5, y - 0.5
+        r = sqrt(dx^2 + dy^2)
+        f = r < 0.1 ? 1.0 : (r < 0.115 ? (0.115 - r) / 0.015 : 0.0)
+        rho = 10.0 * f + 1.0 - f
+        vphi = 2.0 * f
+        vx = r > 1.0e-14 ? -vphi * dy / r : 0.0
+        vy = r > 1.0e-14 ? vphi * dx / r : 0.0
+        return SVector(rho, vx, vy, 0.0, 1.0, B0, 0.0, 0.0)
+    end
+    mesh32 = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, 32, 32)
+    prob32 = HyperbolicProblem2D(
+        law, mesh32, HLLDSolver(), CellCenteredMUSCL(MinmodLimiter()),
+        TransmissiveBC(), TransmissiveBC(), TransmissiveBC(), TransmissiveBC(),
+        rotor_ic; final_time = 0.15, cfl = 0.3
+    )
+    ode32 = sciml_problem(prob32; vector_potential = (x, y) -> B0 * y)
+    dt0 = compute_initial_dt(ode32.p, ode32.u0)
+    sol32 = solve(
+        ode32, SSPRK33(; stage_limiter! = mhd_stage_limiter(ode32.p));
+        adaptive = false, dt = dt0, save_everystep = false
+    )
+    acc = solution_accessor(prob32)
+    U = get_conserved(acc, sol32, length(sol32.t))
+    ct = get_ct_state(acc, sol32, length(sol32.t))
+    prims = [conserved_to_primitive(law, u_cell) for u_cell in U]
+    @test all(w_cell -> isfinite(w_cell[1]) && isfinite(w_cell[5]), prims)
+    @test all(w_cell -> w_cell[1] > 0, prims)
+    @test all(w_cell -> w_cell[5] > 0, prims)
+    @test max_divB(ct, mesh32) < 1.0e-10
+end

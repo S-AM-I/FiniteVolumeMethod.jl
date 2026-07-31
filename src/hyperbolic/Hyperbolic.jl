@@ -219,6 +219,7 @@ export
     IMEX_SSP3_433, IMEX_ARS222, IMEX_Midpoint, imex_tableau, imex_nstages,
     # Positivity limiter
     PositivityLimiter, apply_positivity_limiter!, apply_positivity_limiter_2d!,
+    apply_mhd_positivity_floor!,
     limit_reconstructed_states,
     # Constrained transport (2D)
     CTData2D, initialize_ct!, initialize_ct_from_potential!, face_to_cell_B!,

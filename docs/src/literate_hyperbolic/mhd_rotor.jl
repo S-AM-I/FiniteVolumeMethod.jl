@@ -59,6 +59,13 @@ end
 Az_rotor(x, y) = B0 * y
 
 # ## Solving
+# The stage limiter syncs cell-centred B from the constrained-transport
+# face fields after every RK stage and — by default — floors density and
+# pressure at `1e-13`. The floor matters here: the rarefaction at the
+# rotor edge drives the minimum pressure below `0.01`, and at this
+# resolution an unlimited MUSCL/HLLD update overshoots it negative
+# around `t ≈ 0.03`, after which the run is lost. The CFL callback that
+# `sciml_problem` attaches keeps `dt` tracking the shrinking stable step.
 N = 100
 mesh = StructuredMesh2D(0.0, 1.0, 0.0, 1.0, N, N)
 

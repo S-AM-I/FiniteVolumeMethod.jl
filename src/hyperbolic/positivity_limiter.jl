@@ -320,3 +320,61 @@ for general EOS, though it is for ideal gas in primitive variables).
     end
     return theta_lo
 end
+
+# ============================================================
+# MHD cell-average positivity floor (constrained-transport path)
+# ============================================================
+
+"""
+    apply_mhd_positivity_floor!(u, cache, limiter::PositivityLimiter)
+
+Floor density and pressure on the cell portion of a flat CT-augmented MHD
+state vector. Applies only to `IdealMHDEquations` laws — for any other law
+this is a no-op, since the conserved-variable layout and the meaning of the
+energy component differ.
+
+For each cell:
+1. If `ρ < epsilon`, set `ρ = epsilon`.
+2. If the EOS pressure is below `epsilon`, reset the total energy to
+   `ρ·e_int(ρ, epsilon) + KE + ME`, i.e. floor the pressure exactly while
+   preserving velocity and magnetic field. This injects internal energy in
+   cells that would otherwise carry unphysical state (a standard pressure
+   floor; the conservative Zhang-Shu blending route operates at the
+   reconstruction stage and is not available on the CT path).
+
+The face-magnetic-field portion of the state is untouched, so `div(B)`
+preservation is unaffected.
+"""
+function apply_mhd_positivity_floor!(
+        u::AbstractVector{FT}, cache, limiter::PositivityLimiter
+    ) where {FT}
+    law = cache.prob.law
+    law isa IdealMHDEquations || return nothing
+    eps = FT(limiter.epsilon)
+    nvar = nvariables(law)
+    n_cells = div(cache.n_cell_vars, nvar)
+    @inbounds for c in 1:n_cells
+        base = (c - 1) * nvar
+        rho = u[base + 1]
+        if rho < eps
+            rho = eps
+            u[base + 1] = rho
+        end
+        mx = u[base + 2]
+        my = u[base + 3]
+        mz = u[base + 4]
+        E = u[base + 5]
+        Bx = u[base + 6]
+        By = u[base + 7]
+        Bz = u[base + 8]
+        kinetic = (mx^2 + my^2 + mz^2) / (2 * rho)
+        magnetic = (Bx^2 + By^2 + Bz^2) / 2
+        w = conserved_to_primitive(
+            law, SVector{8, FT}(rho, mx, my, mz, E, Bx, By, Bz)
+        )
+        if w[5] < eps
+            u[base + 5] = rho * internal_energy(law.eos, rho, eps) + kinetic + magnetic
+        end
+    end
+    return nothing
+end

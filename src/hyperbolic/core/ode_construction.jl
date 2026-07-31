@@ -317,12 +317,19 @@ function SciMLBase.ODEProblem(
 end
 
 """
-    mhd_stage_limiter(cache) -> Function
+    mhd_stage_limiter(cache; positivity = PositivityLimiter()) -> Function
 
 Create a stage limiter function for MHD/CT constrained transport.
 
 The returned function enforces cell-centered B = avg(face-centered B)
-after each RK stage. Pass it to the ODE algorithm:
+after each RK stage, then — for `IdealMHDEquations` laws — floors density
+and pressure at `positivity.epsilon` via [`apply_mhd_positivity_floor!`](@ref).
+The floor only alters cells whose state is already unphysical
+(`ρ` or `P` below `epsilon`, default `1e-13`), so solutions that stay
+positive are bitwise unchanged. Pass `positivity = nothing` to disable.
+Non-ideal-MHD laws (SRMHD, GRMHD) receive the B-sync only.
+
+Pass it to the ODE algorithm:
 
 ```julia
 ode_prob = ODEProblem(prob)
@@ -330,8 +337,15 @@ limiter = mhd_stage_limiter(ode_prob.p)
 sol = solve(ode_prob, SSPRK33(; stage_limiter! = limiter); adaptive = false, dt = dt0)
 ```
 """
-function mhd_stage_limiter(cache)
-    return (u, integrator, p, t) -> _sync_cell_B_from_faces!(u, p)
+function mhd_stage_limiter(cache; positivity = PositivityLimiter())
+    if positivity === nothing
+        return (u, integrator, p, t) -> _sync_cell_B_from_faces!(u, p)
+    end
+    return function (u, integrator, p, t)
+        _sync_cell_B_from_faces!(u, p)
+        apply_mhd_positivity_floor!(u, p, positivity)
+        return nothing
+    end
 end
 
 # ============================================================

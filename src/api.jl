@@ -11,8 +11,9 @@
 # (e.g. `Parabolic.DirichletBC`). Deprecated aliases (Stage 4b) live in
 # FiniteVolumeMethod.jl next to `using .Parabolic`, not here.
 
-# --- SciML entry points and solution accessors (10) ---
-export compute_initial_dt,
+# --- SciML entry points and solution accessors (11) ---
+export cfl_stepsize_callback,
+    compute_initial_dt,
     init,
     remake,
     sciml_problem,
