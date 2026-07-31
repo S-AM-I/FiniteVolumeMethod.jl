@@ -1001,6 +1001,48 @@ metric = "Interior relative error of omega, Q, and enstrophy against exact value
 acceptance = "Uniform below 1e-10; shear omega = -A and Q = 0, rotation omega = 2*Omega, Q = Omega^2, enstrophy = 4*Omega^2, all to 1e-8."
 
 [[generated_pages]]
+id = "verification-polyhedral-volumes"
+page = "verification/polyhedral_volume_primitives.md"
+source = "docs/src/literate_verification/polyhedral_volume_primitives.jl"
+feature = "polyhedral_mesh_io"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form volumes of the unit tet (1/6), axis-aligned hex (Lx*Ly*Lz), square pyramid (h/3), and right-triangle prism (h/2)"
+metric = "Relative error of each primitive against its closed form, plus scaling, translation, and permutation invariances"
+acceptance = "All closed forms and invariances to 1e-13 or better; degenerate inputs give zero; wrong node counts throw."
+
+[[generated_pages]]
+id = "verification-arrhenius-kinetics"
+page = "verification/arrhenius_kinetics_invariants.md"
+source = "docs/src/literate_verification/arrhenius_kinetics_invariants.jl"
+feature = "combustion"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form Arrhenius rate k_f = A T^b exp(-E_a/(R T)) with power-law species dependence"
+metric = "Relative error of the rate identity, stoichiometric ratios, exponential T-sensitivity, A-linearity, and low-T clamp"
+acceptance = "All identities to relative 1e-12; zero-species cutoff exact; clamp behaviour exact."
+
+[[generated_pages]]
+id = "verification-edm-invariants"
+page = "verification/edm_reaction_invariants.md"
+source = "docs/src/literate_verification/edm_reaction_invariants.jl"
+feature = "combustion"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Magnussen & Hjertager (1977) Eddy Dissipation Model closed-form mixing-limited rates"
+metric = "Limiting-branch closed forms, stoichiometric mass balance, mixing-rate proportionality, and heat-release identity"
+acceptance = "Branches and identities to relative 1e-12; per-cell mass balance below 1e-14; heat release positive."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1805,6 +1847,63 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-polyhedral-volumes"
+path = "docs/src/literate_verification/polyhedral_volume_primitives.jl"
+entrypoint = "docs/src/literate_verification/polyhedral_volume_primitives.jl"
+feature = "polyhedral_mesh_io"
+rationale = "Closed-form geometry of the tet/hex/pyramid/prism volume primitives underpinning the polyMesh reader: the verification ladder stage for polyhedral_mesh_io."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form volumes of the unit tet (1/6), axis-aligned hex (Lx*Ly*Lz), square pyramid (h/3), and right-triangle prism (h/2)"
+metric = "Relative error of each primitive against its closed form, plus scaling, translation, and permutation invariances"
+acceptance = "All closed forms and invariances to 1e-13 or better; degenerate inputs give zero; wrong node counts throw."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-arrhenius-kinetics"
+path = "docs/src/literate_verification/arrhenius_kinetics_invariants.jl"
+entrypoint = "docs/src/literate_verification/arrhenius_kinetics_invariants.jl"
+feature = "combustion"
+rationale = "Exact algebra of the finite-rate Arrhenius closure, including its exponential temperature sensitivity: the verification ladder stage for combustion."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form Arrhenius rate k_f = A T^b exp(-E_a/(R T)) with power-law species dependence"
+metric = "Relative error of the rate identity, stoichiometric ratios, exponential T-sensitivity, A-linearity, and low-T clamp"
+acceptance = "All identities to relative 1e-12; zero-species cutoff exact; clamp behaviour exact."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-edm-invariants"
+path = "docs/src/literate_verification/edm_reaction_invariants.jl"
+entrypoint = "docs/src/literate_verification/edm_reaction_invariants.jl"
+feature = "combustion"
+rationale = "The Magnussen-Hjertager EDM closure satisfies its closed-form limiting branches, mass balance, and heat-release identity: the benchmark ladder stage for combustion."
+runtime_tier = "ci"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Magnussen & Hjertager (1977) Eddy Dissipation Model closed-form mixing-limited rates"
+metric = "Limiting-branch closed forms, stoichiometric mass balance, mixing-rate proportionality, and heat-release identity"
+acceptance = "Branches and identities to relative 1e-12; per-cell mass balance below 1e-14; heat release positive."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1983,7 +2082,7 @@ limitations = [
 
 [[features]]
 feature = "polyhedral_mesh_io"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
@@ -1993,7 +2092,8 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "OpenFOAM polyMesh reader, UnstructuredMesh3D converter, correct polyhedral volumes, and mesh quality metrics. Cartesian mesh-builder geometric invariants verified (v3.43)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: the machine-linked [[scientific_evidence]] entry evidence-polyhedral-volumes (verification: closed-form tet/hex/pyramid/prism volumes with scaling/translation/permutation invariances) covers the required ladder stage and is executed by the evidence runner.",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
   "Promoted from experimental → provisional in v3.43.0. Evidence: `test/v_and_v_mesh_geometry.jl` — 976 gates across five testsets: (1) total volume = Lx·Ly across three mesh configurations rtol 1e-14; (2) uniform cell volumes V_c = Lx·Ly/(Nx·Ny) at 456 cells; (3) closed-cell face-area identity Σ_f ε(c,f)·S_f = 0 per cell at N ∈ {8, 16, 32}; (4) every face area matches either Lx/Nx or Ly/Ny; (5) 512 cell centers lie strictly inside the domain.",
   "Evidence #2 (v3.98.0): `test/v_and_v_mesh_quality.jl` — `check_mesh_quality` OpenFOAM-style mesh-quality report (non-orthogonality, skewness, aspect ratio). Seven testsets, 3986 gates: (1) Cartesian mesh ⇒ max + avg non-orthogonality < 1e-10 across N ∈ {4, 8, 16} (axis-aligned faces); (2) Cartesian mesh ⇒ max + avg skewness < 1e-12 (face centers exactly on owner-neighbour line); (3) output shape — non_orthogonality + skewness arrays of length n_internal, aspect_ratio of length n_cells; (4) aspect_ratio > 0 + finite on every cell across N ∈ {4, 8, 16, 32}; (5) summary max/avg fields match array maxima/means rtol 1e-14; (6) anisotropic 10:1 Cartesian domain has larger max aspect_ratio than isotropic 1:1; (7) refinement N ∈ {4, 8, 16, 32, 64} preserves zero non-orthogonality.",
   "Evidence #3 (v3.101.0): `test/v_and_v_polyhedral_volumes.jl` — polyhedral volume primitives (tet, hex, prism, pyramid). Thirteen testsets, 25 gates: (1) volume_tet unit tetrahedron = 1/6 rtol 1e-14; (2) degenerate coplanar tet ⇒ volume = 0; (3) tet volume α³-scales under uniform scaling at α ∈ {0.5, 2, 3}; (4) translation invariance; (5) vertex-swap (flipped signed volume) preserves magnitude; (6) volume_hex unit hex = 1 rtol 1e-14; (7) Lx·Ly·Lz closed form at three aspect ratios; (8) hex α³ scaling; (9) wrong node count errors; (10) volume_pyramid unit pyramid = 1/3 rtol 1e-14 (correct 1/3·base·height law); (11) pyramid h-linear scaling at four heights; (12) pyramid + prism wrong node count errors; (13) volume_prism unit triangular prism = 0.5·h at three heights rtol 1e-14.",
@@ -2151,7 +2251,7 @@ limitations = [
 
 [[features]]
 feature = "combustion"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -2161,8 +2261,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Multi-species transport with EDM and EDC turbulence-chemistry interaction and heat release coupling. Species transport kernel verified against analytical 1D advection-diffusion solution (v3.17)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — only the species transport kernel (`assemble_species!`: convection + diffusion) is convergence-verified against its 1D steady analytical solution. EDM/EDC/Arrhenius reaction models, heat-release coupling, and turbulent-chemistry interaction are smoke-tested only.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: machine-linked [[scientific_evidence]] entries now cover both required ladder stages and are executed by the evidence runner — evidence-arrhenius-kinetics (verification: exact finite-rate closure algebra) and evidence-edm-invariants (benchmark: Magnussen-Hjertager EDM closed-form invariants).",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — species transport, the Arrhenius closure algebra, and the EDM closure invariants are verified; no flame simulation is validated against reference combustion data (Sandia Flame D remains the v3.2 deliverable for stable promotion). EDC and heat-release-coupled solves remain smoke-tested.",
   "Multi-step mechanisms land in v3.103.0 (`src/combustion/multi_step.jl`); FGM (Flamelet-Generated Manifold) lands in `src/combustion/fgm.jl` (callback-built tables only — the Cantera extension was removed in v3.113: Cantera.jl is not a registered Julia package, so the extension could never load). Both smoke-tested only — Sandia Flame D against published Raman/Rayleigh data is the v3.2 published-benchmark gate.",
   "Variable Lewis number (per-species) lands in v3.103.0 (`src/combustion/variable_lewis.jl`) and folds into `assemble_species!` diffusion term; Lewis-unity remains the default.",
   "Variable density combustion is reachable via the v3.102 pressure-based compressible PIMPLE + the v3.103 multi-step / EDC chemistry path; not yet validated end-to-end.",

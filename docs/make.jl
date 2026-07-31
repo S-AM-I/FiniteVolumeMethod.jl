@@ -207,6 +207,8 @@ _PAGES = [
             "ALE GCL Invariants" => "verification/ale_gcl_invariants.md",
             "Linear-Solver Backend Parity" => "verification/linear_solver_backend_parity.md",
             "Derived-Field Invariants" => "verification/derived_field_invariants.md",
+            "Polyhedral Volume Primitives" => "verification/polyhedral_volume_primitives.md",
+            "Arrhenius Kinetics Invariants" => "verification/arrhenius_kinetics_invariants.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
@@ -227,6 +229,7 @@ _PAGES = [
             "WALE Operator Invariants" => "verification/wale_invariants.md",
             "MULES Limiter Invariants" => "verification/mules_limiter_invariants.md",
             "Gradient & Divergence MMS" => "verification/gradient_divergence_mms.md",
+            "EDM Reaction Invariants" => "verification/edm_reaction_invariants.md",
         ],
     ],
     "Experimental" => [
