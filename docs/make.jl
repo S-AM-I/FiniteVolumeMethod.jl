@@ -205,6 +205,8 @@ _PAGES = [
             "Laplacian Operator MMS" => "verification/laplacian_operator_mms.md",
             "Stokes Terminal Velocity" => "verification/stokes_terminal_velocity.md",
             "ALE GCL Invariants" => "verification/ale_gcl_invariants.md",
+            "Linear-Solver Backend Parity" => "verification/linear_solver_backend_parity.md",
+            "Derived-Field Invariants" => "verification/derived_field_invariants.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",

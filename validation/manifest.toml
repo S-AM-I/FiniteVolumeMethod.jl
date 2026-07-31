@@ -973,6 +973,34 @@ metric = "GCL residual under zero motion, rigid translation, and isotropic scali
 acceptance = "Residuals at round-off (nondimensional < 1e-10) on all motion patterns and every refinement; volume ratio 1 + Dim*alpha to 5*alpha^2."
 
 [[generated_pages]]
+id = "verification-linear-solver-parity"
+page = "verification/linear_solver_backend_parity.md"
+source = "docs/src/literate_verification/linear_solver_backend_parity.jl"
+feature = "linear_solver_infra"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Reference Poisson problem with analytic solution sin(pi x) sin(pi y)"
+metric = "Direct-backend L2 error and O(h^2) refinement, and pointwise Krylov-vs-direct deviation"
+acceptance = "LU L2 < 5e-3 at N = 32; CG/GMRES within 1e-6 of LU; refinement orders in (1.7, 2.3), monotone."
+
+[[generated_pages]]
+id = "verification-derived-fields"
+page = "verification/derived_field_invariants.md"
+source = "docs/src/literate_verification/derived_field_invariants.jl"
+feature = "postprocessing"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form vorticity, Q-criterion, and enstrophy of uniform, simple-shear, and solid-body-rotation flows"
+metric = "Interior relative error of omega, Q, and enstrophy against exact values on linear flows"
+acceptance = "Uniform below 1e-10; shear omega = -A and Q = 0, rotation omega = 2*Omega, Q = Omega^2, enstrophy = 4*Omega^2, all to 1e-8."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1739,6 +1767,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-linear-solver-parity"
+path = "docs/src/literate_verification/linear_solver_backend_parity.jl"
+entrypoint = "docs/src/literate_verification/linear_solver_backend_parity.jl"
+feature = "linear_solver_infra"
+rationale = "Direct and Krylov backends agree on a reference Poisson problem and preserve O(h^2) discretization convergence: the verification ladder stage for linear_solver_infra."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Reference Poisson problem with analytic solution sin(pi x) sin(pi y)"
+metric = "Direct-backend L2 error and O(h^2) refinement, and pointwise Krylov-vs-direct deviation"
+acceptance = "LU L2 < 5e-3 at N = 32; CG/GMRES within 1e-6 of LU; refinement orders in (1.7, 2.3), monotone."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-derived-fields"
+path = "docs/src/literate_verification/derived_field_invariants.jl"
+entrypoint = "docs/src/literate_verification/derived_field_invariants.jl"
+feature = "postprocessing"
+rationale = "Vorticity, Q-criterion, and enstrophy match closed-form values on linear flows where the FVM gradient is exact: the verification ladder stage for postprocessing."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form vorticity, Q-criterion, and enstrophy of uniform, simple-shear, and solid-body-rotation flows"
+metric = "Interior relative error of omega, Q, and enstrophy against exact values on linear flows"
+acceptance = "Uniform below 1e-10; shear omega = -A and Q = 0, rotation omega = 2*Omega, Q = Omega^2, enstrophy = 4*Omega^2, all to 1e-8."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1941,7 +2007,7 @@ limitations = [
 
 [[features]]
 feature = "postprocessing"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
@@ -1951,8 +2017,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "Derived field operations (vorticity, Q-criterion), wall quantities (shear stress, y+, heat flux, Nusselt), force coefficients, and line sampling. Vorticity + Q-criterion + enstrophy verified against analytical values on canonical flows (v3.20)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — `compute_vorticity`, `compute_q_criterion`, and `compute_enstrophy` are verified against analytical values on uniform, simple-shear, and solid-body-rotation flows. Wall-quantity routines (shear stress, y+, Nusselt), force coefficients, and line sampling remain smoke-tested.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: the machine-linked [[scientific_evidence]] entry evidence-derived-fields (verification: closed-form vorticity/Q/enstrophy on linear flows) covers the required ladder stage and is executed by the evidence runner.",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — `compute_vorticity`, `compute_q_criterion`, and `compute_enstrophy` are verified against analytical values on uniform, simple-shear, and solid-body-rotation flows. Wall-quantity routines (shear stress, y+, Nusselt), force coefficients, and line sampling remain smoke-tested.",
   "Wall quantities use linear near-wall approximation; wall functions not integrated.",
   "Force coefficients assume rho = 1 for viscous contribution.",
   "Line sampling uses 0th-order nearest-cell interpolation; higher-order deferred.",
@@ -1969,7 +2036,7 @@ limitations = [
 
 [[features]]
 feature = "linear_solver_infra"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "research_support_tooling"
 solver_family = "collocated"
@@ -1979,7 +2046,8 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "Configurable iterative linear solvers with AMG and ILU preconditioners via package extensions for the incompressible collocated solver. Poisson MMS verified across LU, CG, and GMRES backends (v3.42)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: the machine-linked [[scientific_evidence]] entry evidence-linear-solver-parity (verification: backend parity + O(h^2) preservation on the reference Poisson problem) covers the required ladder stage and is executed by the evidence runner.",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
   "Evidence #1 (v3.42.0): `test/v_and_v_linear_solvers.jl` — four testsets, 6 gates. (1) LUFactorization gives L² < 5e-3 on Poisson MMS at N = 32; (2) CG matches LU within 1e-6; (3) GMRES matches LU within 1e-6; (4) O(h²) grid convergence across N ∈ {16, 32, 64}.",
   "Evidence #2 (v3.52.0): `test/v_and_v_solver_config.jl` — six testsets, 21 gates: (1) default pressure routing to :cg + :amg with rtol 1e-6; (2) default fallback to :bicgstab + :ilu with rtol 1e-5; (3) custom FieldSolverConfig overrides; (4) :direct resolves to nothing (backslash path); (5) unknown solver symbol errors; (6) non-Symbol arguments pass through unchanged. Second convergence-verified benchmark for the solver-infrastructure layer.",
   "Evidence #3 (v3.97.0): `test/v_and_v_linear_operator.jl` — AbstractLinearOperator wrapper + Stage 1h matrix-free interface. Nine testsets, 21 gates: (1) SparseMatrixLinearOperator forwards size + eltype; (2) mul! matches A·x; (3) underlying_matrix round-trips the wrapped sparse matrix by identity; (4) as_linear_operator(::SparseMatrixCSC) wraps; (5) as_linear_operator(::AbstractLinearOperator) passthrough (===); (6) MatrixFreeError fallback for custom matrix-free subtype without overridden underlying_matrix; (7) non-square (2×3) size + mul! correct; (8) eltype propagates T parameter for Float32/Float64 wrappers; (9) mul! linearity via superposition (op·(x+z) = op·x + op·z, op·(α·x) = α·op·x) rtol 1e-14.",
