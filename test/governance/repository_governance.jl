@@ -58,7 +58,7 @@ const RELEASE_OUTPUT_SCRIPT = joinpath(REPO_ROOT, "scripts", "build_release_outp
         @test !isempty(entry.reference_source)
         @test !isempty(entry.metric)
         @test !isempty(entry.acceptance)
-        @test entry.solver_family in (:parabolic, :hyperbolic, :mhd_ct, :relativistic, :amr, :coupling)
+        @test entry.solver_family in (:parabolic, :hyperbolic, :mhd_ct, :relativistic, :amr, :coupling, :collocated)
         @test entry.precision_policy in (:float64_cpu_reference, :not_applicable)
         @test entry.random_seed_policy in (:deterministic, :fixed_seed, :not_applicable)
         @test !isempty(entry.expected_artifacts)

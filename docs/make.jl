@@ -196,6 +196,7 @@ _PAGES = [
             "MHD div(B) Preservation" => "verification/mhd_divb_verification.md",
             "AMR Smooth-Pulse Convergence" => "verification/amr_convergence.md",
             "AMR Regridding Conservation" => "verification/amr_regridding_conservation.md",
+            "Poiseuille Convergence (Collocated)" => "verification/poiseuille_convergence_collocated.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
@@ -210,13 +211,14 @@ _PAGES = [
             "SRMHD Convergence" => "verification/srmhd_convergence.md",
             "SRMHD Eigenmode Convergence" => "verification/srmhd_eigenmode_convergence.md",
             "GRMHD Convergence" => "verification/grmhd_convergence.md",
+            "Ghia Lid-Driven Cavity (Re = 100)" => "verification/ghia_cavity_re100.md",
         ],
     ],
     "Experimental" => [
         "Scope and Caveats" => "experimental/overview.md",
-            "Low-Mach Compressible Channel" => "experimental/tutorials/02_compressible_channel.md",
-            "Linear Elasticity Beam" => "experimental/tutorials/11_solid_mechanics_beam.md",
-            "Ffowcs Williams-Hawkings" => "experimental/tutorials/12_aeroacoustics_fwh.md",
+        "Low-Mach Compressible Channel" => "experimental/tutorials/02_compressible_channel.md",
+        "Linear Elasticity Beam" => "experimental/tutorials/11_solid_mechanics_beam.md",
+        "Ffowcs Williams-Hawkings" => "experimental/tutorials/12_aeroacoustics_fwh.md",
     ],
     "Mathematical Foundations" => [
         "General FVM Theory" => "finite-volume-method.md",

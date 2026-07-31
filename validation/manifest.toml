@@ -763,6 +763,34 @@ metric = "Star-region pressure error in five standard Riemann problems"
 acceptance = "Each case satisfies the script's published pressure-error tolerance."
 
 [[generated_pages]]
+id = "verification-poiseuille-collocated"
+page = "verification/poiseuille_convergence_collocated.md"
+source = "docs/src/literate_verification/poiseuille_convergence_collocated.jl"
+feature = "incompressible_ns"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Plane Poiseuille exact parabolic profile"
+metric = "Volume-weighted L2 velocity error and observed convergence order over three uniform refinements"
+acceptance = "Errors decrease monotonically, each observed order lies in (1.7, 2.3), and the finest-grid error is below 1e-4."
+
+[[generated_pages]]
+id = "verification-ghia-cavity-re100"
+page = "verification/ghia_cavity_re100.md"
+source = "docs/src/literate_verification/ghia_cavity_re100.jl"
+feature = "incompressible_ns"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "literature_table"
+reference_source = "Ghia, Ghia & Shin (1982), J. Comput. Phys. 48:387-411, Table I (Re = 100)"
+metric = "Centerline u(y) at x = 0.5 against tabulated reference stations, primary-vortex peak, interior continuity residual"
+acceptance = "Interior stations within 8% relative, near-lid within 5%, zero crossings within 0.025 absolute; peak u in (-0.22, -0.18) at y in (0.4, 0.55); interior continuity residual below 1e-4."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1244,6 +1272,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-poiseuille-collocated"
+path = "docs/src/literate_verification/poiseuille_convergence_collocated.jl"
+entrypoint = "docs/src/literate_verification/poiseuille_convergence_collocated.jl"
+feature = "incompressible_ns"
+rationale = "Exact-solution grid convergence for the collocated SIMPLE pressure-velocity-coupled solver: the verification ladder stage for incompressible_ns."
+runtime_tier = "local_full"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Plane Poiseuille exact parabolic profile"
+metric = "Volume-weighted L2 velocity error and observed convergence order over three uniform refinements"
+acceptance = "Errors decrease monotonically, each observed order lies in (1.7, 2.3), and the finest-grid error is below 1e-4."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-ghia-cavity-re100"
+path = "docs/src/literate_verification/ghia_cavity_re100.jl"
+entrypoint = "docs/src/literate_verification/ghia_cavity_re100.jl"
+feature = "incompressible_ns"
+rationale = "Ghia, Ghia & Shin (1982) Re = 100 lid-driven-cavity centerline comparison: the benchmark ladder stage for incompressible_ns."
+runtime_tier = "local_full"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "literature_table"
+reference_source = "Ghia, Ghia & Shin (1982), J. Comput. Phys. 48:387-411, Table I (Re = 100)"
+metric = "Centerline u(y) at x = 0.5 against tabulated reference stations, primary-vortex peak, interior continuity residual"
+acceptance = "Interior stations within 8% relative, near-lid within 5%, zero crossings within 0.025 absolute; peak u in (-0.22, -0.18) at y in (0.4, 0.55); interior continuity residual below 1e-4."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1331,7 +1397,7 @@ limitations = [
 
 [[features]]
 feature = "incompressible_ns"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1341,7 +1407,8 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Incompressible Navier-Stokes with SIMPLE, PISO, and PIMPLE pressure-velocity coupling on unstructured meshes. Steady-flow verification against three independent benchmarks: Poiseuille parabolic, Ghia 1982 lid-driven cavity, and Couette shear-driven linear."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: machine-linked [[scientific_evidence]] entries now cover both required ladder stages and are executed by the evidence runner — evidence-poiseuille-collocated (verification: exact-solution O(h^2) grid convergence) and evidence-ghia-cavity-re100 (benchmark: Ghia 1982 Table I centerline comparison at Re = 100).",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
   "Promoted from experimental → provisional in v3.11.0 after Poiseuille grid-convergence study (test/v_and_v_poiseuille_convergence.jl) showed O(h²) spatial order on 3 successive refinements (observed rate ≈ 1.95) and Ghia Re=100 cavity (test/v_and_v_ghia_cavity.jl) matched 10 reference points to ≤8% interior / ≤5% near-lid.",
   "Third benchmark added in v3.22.0: plane Couette flow (test/v_and_v_couette.jl) — linear u(y) = U_top·y/H profile, slope and intercept matched to < 5% (least-squares fit), residual from linear fit < 0.02, no streamwise pressure drop.",
   "Fourth benchmark added in v3.41.0: transient PISO stability (test/v_and_v_piso_decay.jl) — addresses the prior stable-promotion blocker on transient coverage. Three testsets, 437 gates: (1) PISO solve iterates without error in closed box; (2) maximum-principle on moving-lid at Re = 1 — U_max ≤ U_lid + 0.05 discretization tolerance, near-wall velocities < 0.5·U_lid; (3) 20-step integration has no NaN/Inf in U or p; velocities bounded at 1.0 (high-ν regime).",
