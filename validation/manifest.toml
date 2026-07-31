@@ -945,6 +945,34 @@ metric = "Interior L2 gradient error with observed order, and interior RMS diver
 acceptance = "Gradient finest-transition order in (1.8, 2.2), monotone, finest error < 0.05; divergence RMS < 1e-10 at every N."
 
 [[generated_pages]]
+id = "verification-stokes-terminal"
+page = "verification/stokes_terminal_velocity.md"
+source = "docs/src/literate_verification/stokes_terminal_velocity.jl"
+feature = "lagrangian_dpm"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form Stokes settling ODE v(t) = g tau_p (1 - exp(-t/tau_p))"
+metric = "Asymptote and mid-transient relative error against the exact settling curve, and observed dt convergence order"
+acceptance = "Asymptote within 1%, mid-transient within 2%, dt orders in (0.8, 1.3), no lateral drift to 1e-14."
+
+[[generated_pages]]
+id = "verification-ale-gcl"
+page = "verification/ale_gcl_invariants.md"
+source = "docs/src/literate_verification/ale_gcl_invariants.jl"
+feature = "dynamic_mesh"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "ALE Geometric Conservation Law: (V_new - V_old)/dt equals the signed swept-face flux sum per cell"
+metric = "GCL residual under zero motion, rigid translation, and isotropic scaling; closed-cell net flux; volume-ratio agreement; refinement non-regression"
+acceptance = "Residuals at round-off (nondimensional < 1e-10) on all motion patterns and every refinement; volume ratio 1 + Dim*alpha to 5*alpha^2."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1673,6 +1701,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-stokes-terminal"
+path = "docs/src/literate_verification/stokes_terminal_velocity.jl"
+entrypoint = "docs/src/literate_verification/stokes_terminal_velocity.jl"
+feature = "lagrangian_dpm"
+rationale = "Closed-form Stokes settling ODE verifies advance_particles! with StokesDrag: the verification ladder stage for lagrangian_dpm."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form Stokes settling ODE v(t) = g tau_p (1 - exp(-t/tau_p))"
+metric = "Asymptote and mid-transient relative error against the exact settling curve, and observed dt convergence order"
+acceptance = "Asymptote within 1%, mid-transient within 2%, dt orders in (0.8, 1.3), no lateral drift to 1e-14."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-ale-gcl"
+path = "docs/src/literate_verification/ale_gcl_invariants.jl"
+entrypoint = "docs/src/literate_verification/ale_gcl_invariants.jl"
+feature = "dynamic_mesh"
+rationale = "The ALE Geometric Conservation Law holds to round-off on three analytic motion patterns: the verification ladder stage for dynamic_mesh."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "discrete_invariant"
+reference_source = "ALE Geometric Conservation Law: (V_new - V_old)/dt equals the signed swept-face flux sum per cell"
+metric = "GCL residual under zero motion, rigid translation, and isotropic scaling; closed-cell net flux; volume-ratio agreement; refinement non-regression"
+acceptance = "Residuals at round-off (nondimensional < 1e-10) on all motion patterns and every refinement; volume ratio 1 + Dim*alpha to 5*alpha^2."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -2046,7 +2112,7 @@ limitations = [
 
 [[features]]
 feature = "lagrangian_dpm"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -2056,8 +2122,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "Lagrangian particle tracking with drag models (Stokes, Schiller-Naumann), Ranz-Marshall heat transfer, two-way momentum/energy coupling, and TAB/KHRT spray breakup. Verified against analytical Stokes terminal-velocity solution (v3.13)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — verified only in the Stokes regime (Re_p ≪ 1). Schiller-Naumann and spray-breakup models still carry `smoke_tested` status.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: the machine-linked [[scientific_evidence]] entry evidence-stokes-terminal (verification: closed-form Stokes settling ODE) covers the required ladder stage and is executed by the evidence runner.",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — verified only in the Stokes regime (Re_p ≪ 1). Schiller-Naumann and spray-breakup models still carry `smoke_tested` status.",
   "Forward-Euler particle integration is first-order in Δt; RK2/RK4 variants exist but are not yet convergence-verified.",
   "No buoyancy correction is applied automatically — users must pass effective gravity g·(1 - ρ_f/ρ_p) if needed.",
   "PSI-cell coupling (volume-weighted); no particle-source smoothing.",
@@ -2076,7 +2143,7 @@ limitations = [
 
 [[features]]
 feature = "dynamic_mesh"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -2086,8 +2153,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "ALE mesh motion with solid-body and Laplacian displacement solvers, mesh geometry update, face sweep flux, and ALE-corrected transport for incompressible NS. Geometric Conservation Law verified to round-off under three analytical motion patterns (v3.14)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — GCL exactness verified for zero motion, rigid translation, and isotropic linear scaling; large-deformation and rotational motion remain smoke-tested.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: the machine-linked [[scientific_evidence]] entry evidence-ale-gcl (verification: GCL round-off exactness on three analytic motion patterns) covers the required ladder stage and is executed by the evidence runner.",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — GCL exactness verified for zero motion, rigid translation, and isotropic linear scaling; large-deformation and rotational motion remain smoke-tested.",
   "Laplacian motion solver is smoke-tested only; its GCL behaviour for a full fluid-coupled ALE run is not yet convergence-verified.",
   "`_approximate_volumes!` uses a first-order divergence-of-displacement approximation; exact for linear displacement fields, O(α²) for nonlinear fields.",
   "Laplacian motion uses uniform diffusivity; distance-based weighting deferred.",

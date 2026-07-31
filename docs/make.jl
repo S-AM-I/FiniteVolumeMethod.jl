@@ -203,6 +203,8 @@ _PAGES = [
             "VOF Disc Translation" => "verification/vof_disc_translation.md",
             "P1 Slab Attenuation" => "verification/p1_slab_attenuation.md",
             "Laplacian Operator MMS" => "verification/laplacian_operator_mms.md",
+            "Stokes Terminal Velocity" => "verification/stokes_terminal_velocity.md",
+            "ALE GCL Invariants" => "verification/ale_gcl_invariants.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
