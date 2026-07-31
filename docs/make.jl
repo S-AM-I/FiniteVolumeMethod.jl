@@ -200,6 +200,7 @@ _PAGES = [
             "DHIT Decay (Standard k-ε)" => "verification/kepsilon_dhit_decay.md",
             "Solid Conduction Convergence" => "verification/solid_conduction_convergence.md",
             "Smagorinsky Shear Verification" => "verification/smagorinsky_shear_verification.md",
+            "VOF Disc Translation" => "verification/vof_disc_translation.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",
@@ -218,6 +219,7 @@ _PAGES = [
             "Log-Layer Equilibrium (Standard k-ε)" => "verification/kepsilon_loglayer_equilibrium.md",
             "Unsteady Heat Decay" => "verification/unsteady_heat_decay.md",
             "WALE Operator Invariants" => "verification/wale_invariants.md",
+            "MULES Limiter Invariants" => "verification/mules_limiter_invariants.md",
         ],
     ],
     "Experimental" => [

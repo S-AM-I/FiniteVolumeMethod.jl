@@ -875,6 +875,34 @@ metric = "Interior nu_t magnitude on pure shear and solid-body rotation, positiv
 acceptance = "Shear/rotation nu_t below 1e-12/1e-10; xy-flow nu_t nonnegative and positive; refinement ratio 1/4 to 5%; Cw-doubling ratio 4 to 1e-10."
 
 [[generated_pages]]
+id = "verification-vof-translation"
+page = "verification/vof_disc_translation.md"
+source = "docs/src/literate_verification/vof_disc_translation.jl"
+feature = "multiphase_vof"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Kinematic advection invariants of divergence-free transport: exact mass conservation and first-moment translation"
+metric = "Relative mass drift, centre-of-mass displacement error, and alpha bounds over a 25-step disc translation"
+acceptance = "Mass drift < 1e-6 (first half < 1e-12); COM displacement within 2h of U*t; lateral drift < 1e-10; alpha in [0, 1]."
+
+[[generated_pages]]
+id = "verification-mules-invariants"
+page = "verification/mules_limiter_invariants.md"
+source = "docs/src/literate_verification/mules_limiter_invariants.jl"
+feature = "multiphase_vof"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "MULES/FCT limiter guarantees (Zalesak 1979; Weller 2006)"
+metric = "Upwind reduction, safe saturation, segment property, and post-step alpha bounds of mules_limit_flux!"
+acceptance = "Reduction bitwise; saturation to 1e-12; segment property to 1e-12; post-step alpha in [0, 1] to 1e-10; finite output at dt -> 0."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1508,6 +1536,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-vof-translation"
+path = "docs/src/literate_verification/vof_disc_translation.jl"
+entrypoint = "docs/src/literate_verification/vof_disc_translation.jl"
+feature = "multiphase_vof"
+rationale = "Exact kinematic-advection invariants (mass, first moment, bounds) verify the alpha-transport operator: the verification ladder stage for multiphase_vof."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Kinematic advection invariants of divergence-free transport: exact mass conservation and first-moment translation"
+metric = "Relative mass drift, centre-of-mass displacement error, and alpha bounds over a 25-step disc translation"
+acceptance = "Mass drift < 1e-6 (first half < 1e-12); COM displacement within 2h of U*t; lateral drift < 1e-10; alpha in [0, 1]."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-mules-invariants"
+path = "docs/src/literate_verification/mules_limiter_invariants.jl"
+entrypoint = "docs/src/literate_verification/mules_limiter_invariants.jl"
+feature = "multiphase_vof"
+rationale = "The exact FCT guarantees of the MULES face-flux limiter benchmark the boundedness machinery: the benchmark ladder stage for multiphase_vof."
+runtime_tier = "ci"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "MULES/FCT limiter guarantees (Zalesak 1979; Weller 2006)"
+metric = "Upwind reduction, safe saturation, segment property, and post-step alpha bounds of mules_limit_flux!"
+acceptance = "Reduction bitwise; saturation to 1e-12; segment property to 1e-12; post-step alpha in [0, 1] to 1e-10; finite output at dt -> 0."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1791,7 +1857,7 @@ limitations = [
 
 [[features]]
 feature = "multiphase_vof"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1801,8 +1867,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Volume of Fluid two-phase flow with alpha transport, interface compression, CSF surface tension, and mixture property blending. Alpha transport verified against analytical mass-conservation and center-of-mass translation invariants (v3.16)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — only pure-kinematic alpha transport under a prescribed divergence-free velocity field is convergence-verified. Two-phase PISO/PIMPLE with variable density, interface compression (C_α > 0), CSF surface tension, and contact-angle coupling remain smoke-tested only.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: machine-linked [[scientific_evidence]] entries now cover both required ladder stages and are executed by the evidence runner — evidence-vof-translation (verification: kinematic advection invariants of the alpha-transport operator) and evidence-mules-invariants (benchmark: exact FCT guarantees of the MULES limiter).",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — pure-kinematic alpha transport and the MULES limiter guarantees are verified. Two-phase PISO/PIMPLE with variable density, interface compression (C_α > 0), CSF surface tension, and contact-angle coupling remain smoke-tested only (the Martin-Moyce dam-break published benchmark exercises the full coupling in test/benchmarks/).",
   "Boundedness now uses MULES face-flux limiter from v3.102 (was clip+redistribute through v3.91); MULES primitives Evidence #7, MULES-in-solver wiring is the v3.102 deliverable.",
   "Static contact angle and Cox-Voinov dynamic model land in v3.102.0 (Wave 1) on the CSF surface-tension path; smoke-tested only.",
   "isoAdvector geometric face-flux reconstruction lands in v3.102.0 (`src/multiphase/iso_advector.jl`) selectable alongside the algebraic VOF path; smoke-tested only.",
