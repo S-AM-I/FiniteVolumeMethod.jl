@@ -819,6 +819,34 @@ metric = "Cell-wise P_k/epsilon over the interior band, nu_t = kappa*y*u_tau alg
 acceptance = "P_k/epsilon within (0.85, 1.15) on every interior cell; invariant to relative 1e-12; realizability cap inactive."
 
 [[generated_pages]]
+id = "verification-solid-conduction"
+page = "verification/solid_conduction_convergence.md"
+source = "docs/src/literate_verification/solid_conduction_convergence.jl"
+feature = "conjugate_heat_transfer"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Laplace-equation series solution on the unit square (mixed Dirichlet)"
+metric = "Interior-band L2 temperature error, observed convergence order, and centre-cell agreement with the exact 1/4"
+acceptance = "Observed order in (1.8, 2.2), monotone error decrease, finest error < 1e-4, centre cell within 3%."
+
+[[generated_pages]]
+id = "verification-unsteady-heat"
+page = "verification/unsteady_heat_decay.md"
+source = "docs/src/literate_verification/unsteady_heat_decay.jl"
+feature = "conjugate_heat_transfer"
+validation_tier = "full_docs"
+run_locally = true
+run_in_ci = false
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Separable heat-equation solution T(x,t) = sin(pi x/L) exp(-pi^2 alpha t/L^2)"
+metric = "Endpoint interior-band L2 error, y-invariance, and independent spatial and temporal convergence rates"
+acceptance = "Endpoint error < 5e-3; y-spread < 1e-10; spatial order in (1.55, 2.3); coarse-regime temporal rate > 0.6."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1376,6 +1404,44 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-solid-conduction"
+path = "docs/src/literate_verification/solid_conduction_convergence.jl"
+entrypoint = "docs/src/literate_verification/solid_conduction_convergence.jl"
+feature = "conjugate_heat_transfer"
+rationale = "Laplace-series exact solution verifies steady solve_solid_conduction with O(h^2) grid convergence: the verification ladder stage for conjugate_heat_transfer."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Laplace-equation series solution on the unit square (mixed Dirichlet)"
+metric = "Interior-band L2 temperature error, observed convergence order, and centre-cell agreement with the exact 1/4"
+acceptance = "Observed order in (1.8, 2.2), monotone error decrease, finest error < 1e-4, centre cell within 3%."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
+[[scientific_evidence]]
+id = "evidence-unsteady-heat"
+path = "docs/src/literate_verification/unsteady_heat_decay.jl"
+entrypoint = "docs/src/literate_verification/unsteady_heat_decay.jl"
+feature = "conjugate_heat_transfer"
+rationale = "Separable heat-equation decay benchmarks the transient solve_solid_conduction path with independent spatial and temporal convergence: the benchmark ladder stage for conjugate_heat_transfer."
+runtime_tier = "local_full"
+ladder_stage = "benchmark"
+category = "analytical_benchmark"
+reference_kind = "exact_solution"
+reference_source = "Separable heat-equation solution T(x,t) = sin(pi x/L) exp(-pi^2 alpha t/L^2)"
+metric = "Endpoint interior-band L2 error, y-invariance, and independent spatial and temporal convergence rates"
+acceptance = "Endpoint error < 5e-3; y-spread < 1e-10; spatial order in (1.55, 2.3); coarse-regime temporal rate > 0.6."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1524,7 +1590,7 @@ limitations = [
 
 [[features]]
 feature = "conjugate_heat_transfer"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1534,7 +1600,8 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification", "benchmark"]
 summary = "Fluid energy equation, Boussinesq buoyancy, solid conduction, and Dirichlet-Neumann conjugate heat transfer coupling. Solid conduction verified against two independent analytical benchmarks (steady Laplace series + unsteady decay)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: machine-linked [[scientific_evidence]] entries now cover both required ladder stages and are executed by the evidence runner — evidence-solid-conduction (verification: Laplace-series O(h^2) grid convergence) and evidence-unsteady-heat (benchmark: separable transient decay with independent spatial and temporal convergence).",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
   "Promoted from experimental → provisional in v3.12.0 after solid-conduction grid-convergence study (test/v_and_v_heat_conduction.jl) against Laplace series solution on unit square. Observed spatial rates 1.96 and 1.99 across N ∈ {20, 40, 80}; center-cell matches analytical 0.25 to < 3% on 80×80.",
   "Second benchmark in v3.21.0 (test/v_and_v_unsteady_heat.jl): transient `solve_solid_conduction` verified against T(x, t) = sin(πx/L)·exp(-π²αt/L²). Spatial O(h²) rate at fine dt, endpoint L² < 5e-3 at 40×8, first-order Δt temporal convergence.",
   "Third benchmark in v3.32.0 (test/v_and_v_boussinesq.jl): Boussinesq buoyancy coupling source F = -ρ·β·(T-T_ref)·g verified via five algebraic invariants — β=0 disables (returns nothing), T=T_ref ⇒ F ≡ 0, algebraic identity matches to rtol 1e-12, ΔT linearity, β and g scaling. 1218 gates.",
