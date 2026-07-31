@@ -201,6 +201,7 @@ _PAGES = [
             "Solid Conduction Convergence" => "verification/solid_conduction_convergence.md",
             "Smagorinsky Shear Verification" => "verification/smagorinsky_shear_verification.md",
             "VOF Disc Translation" => "verification/vof_disc_translation.md",
+            "P1 Slab Attenuation" => "verification/p1_slab_attenuation.md",
         ],
         "Analytical Benchmarks" => [
             "Sod Shock Tube Grid Convergence" => "verification/sod_grid_convergence.md",

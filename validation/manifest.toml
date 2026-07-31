@@ -903,6 +903,20 @@ metric = "Upwind reduction, safe saturation, segment property, and post-step alp
 acceptance = "Reduction bitwise; saturation to 1e-12; segment property to 1e-12; post-step alpha in [0, 1] to 1e-10; finite output at dt -> 0."
 
 [[generated_pages]]
+id = "verification-p1-slab"
+page = "verification/p1_slab_attenuation.md"
+source = "docs/src/literate_verification/p1_slab_attenuation.jl"
+feature = "radiation"
+validation_tier = "docs_smoke"
+run_locally = true
+run_in_ci = true
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form cold-medium P1 slab attenuation G(x) = G0 sinh(sqrt(3) a (L-x)) / sinh(sqrt(3) a L)"
+metric = "Interior-band L2 error and observed convergence order, monotone-decay shape, and 1D column invariance"
+acceptance = "Observed order in (1.8, 2.2), monotone error decrease, finest error < 1e-4; monotone positive profile; column spread < 1e-10."
+
+[[generated_pages]]
 id = "verification-euler-mms"
 page = "verification/euler_mms_convergence.md"
 source = "docs/src/literate_verification/euler_mms_convergence.jl"
@@ -1574,6 +1588,25 @@ random_seed_policy = "deterministic"
 expected_artifacts = ["summary_metrics", "reference_figure"]
 summary_required = true
 
+[[scientific_evidence]]
+id = "evidence-p1-slab"
+path = "docs/src/literate_verification/p1_slab_attenuation.jl"
+entrypoint = "docs/src/literate_verification/p1_slab_attenuation.jl"
+feature = "radiation"
+rationale = "Closed-form cold-medium slab attenuation verifies solve_p1_radiation with O(h^2) grid convergence: the verification ladder stage for radiation."
+runtime_tier = "ci"
+ladder_stage = "verification"
+category = "code_verification"
+reference_kind = "exact_solution"
+reference_source = "Closed-form cold-medium P1 slab attenuation G(x) = G0 sinh(sqrt(3) a (L-x)) / sinh(sqrt(3) a L)"
+metric = "Interior-band L2 error and observed convergence order, monotone-decay shape, and 1D column invariance"
+acceptance = "Observed order in (1.8, 2.2), monotone error decrease, finest error < 1e-4; monotone positive profile; column spread < 1e-10."
+solver_family = "collocated"
+precision_policy = "float64_cpu_reference"
+random_seed_policy = "deterministic"
+expected_artifacts = ["summary_metrics", "reference_figure"]
+summary_required = true
+
 [[exclusions]]
 id = "demoted-amr-sedov-benchmark"
 path = "docs/src/literate_hyperbolic/amr_sedov_blast.jl"
@@ -1888,7 +1921,7 @@ limitations = [
 
 [[features]]
 feature = "radiation"
-maturity = "experimental"
+maturity = "provisional"
 validation = "convergence_verified"
 role = "claim_bearing_solver"
 solver_family = "collocated"
@@ -1898,8 +1931,9 @@ backend_policy = "cpu_reference"
 required_ladder_stages = ["verification"]
 summary = "P1 and fvDOM radiation models with absorption/emission, Marshak BCs, and coupled thermal+radiation solver. P1 model verified against 1D slab analytical solution (v3.15)."
 limitations = [
-  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none are machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) is not satisfied at provisional maturity. Re-promotion requires linked evidence entries executed by the evidence runner.",
-  "Provisional — only the P1 model with Dirichlet boundaries on a cold medium is convergence-verified. Marshak walls, non-zero emission, and fvDOM are smoke-tested only.",
+  "Re-promoted experimental -> provisional in v4.0.0-DEV: the machine-linked [[scientific_evidence]] entry evidence-p1-slab (verification: cold-medium slab attenuation with O(h^2) convergence) covers the required ladder stage and is executed by the evidence runner.",
+  "Demoted provisional -> experimental in v3.111: the 'Evidence #N' items in this list are real test/ files run by Pkg.test(), but none were machine-linked [[scientific_evidence]] entries in this manifest, so the governance ladder gate (required_ladder_stages) was not satisfied at provisional maturity.",
+  "Provisional scope — only the P1 model with Dirichlet boundaries on a cold medium is convergence-verified. Marshak walls, non-zero emission, and fvDOM are smoke-tested only.",
   "WSGGM (Weighted Sum of Grey Gases Model) lands in v3.103.0 (`src/radiation/wsggm.jl`); banded emissivity couples through the Marshak BC. Smoke-tested only.",
   "S6/S8/S12 quadrature extensions land in v3.103.0; fvDOM in-scattering integral wired into the ordinate sweep in the same wave (was absent through v3.92).",
   "Radiation-flow coupling is lagged one iteration (standard approach).",
