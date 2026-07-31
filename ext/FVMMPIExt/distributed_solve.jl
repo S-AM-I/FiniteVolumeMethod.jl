@@ -30,6 +30,17 @@ function FiniteVolumeMethod.solve_simple_distributed(
     algo = prob.algorithm
     mesh = dmesh.local_mesh
 
+    # Re-root the problem on this rank's local (owned + halo) mesh: the
+    # assembly kernels read `prob.mesh`, and equations/state below are
+    # sized for the local mesh, not the global one the caller's problem
+    # carries. Passing the global problem produced a BoundsError in
+    # `add_face_coeffs_PN!` the moment a global face referenced a cell
+    # beyond the local index range.
+    prob = FiniteVolumeMethod.SteadyIncompressibleProblem(
+        mesh, prob.bcs, algo;
+        nu = prob.nu, density = prob.density, model = prob.model,
+    )
+
     state = FiniteVolumeMethod.IncompressibleState(mesh)
     FiniteVolumeMethod.update_boundary_velocity!(state, prob.bcs, mesh)
     FiniteVolumeMethod.update_boundary_pressure!(state, prob.bcs, mesh)
@@ -53,13 +64,14 @@ function FiniteVolumeMethod.solve_simple_distributed(
             push!(eqs, eq)
         end
 
-        # Extract momentum operators
-        FiniteVolumeMethod.extract_momentum_operators!(state, eqs, mesh)
-
-        # Under-relax and solve each velocity component
+        # Under-relax, pin halo rows as Dirichlet transmission conditions
+        # at their exchanged values (a free halo unknown with a cut-stencil
+        # equation acts as a phantom boundary and poisons the owned-cell
+        # solution through the coupling), then solve each component.
         for d in 1:Dim
             U_old_d = FiniteVolumeMethod._extract_component(state.U, d)
             FiniteVolumeMethod.under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
+            _pin_halo_rows!(eqs[d], U_old_d, dmesh.n_owned, dmesh.n_local)
             label = d == 1 ? :Ux : (d == 2 ? :Uy : :Uz)
             sol = FiniteVolumeMethod._dispatch_solve(
                 FiniteVolumeMethod.to_linear_problem(eqs[d]),
@@ -69,11 +81,30 @@ function FiniteVolumeMethod.solve_simple_distributed(
         end
         FiniteVolumeMethod.update_boundary_velocity!(state, prob.bcs, mesh)
 
-        # Pressure equation
+        # Extract operators from the RELAXED, solved momentum equations
+        # (standard SIMPLE ordering — the un-relaxed diagonal would
+        # inflate D = V/A_P by 1/alpha_U and shift the converged flux
+        # field, the Stage-5a defect). Halo cells' operators are then
+        # overwritten with the owning rank's values: their local rows are
+        # pinned identities, and the pressure equation reads A_P/H at
+        # interface faces.
+        FiniteVolumeMethod.extract_momentum_operators!(state, eqs, mesh)
+        FiniteVolumeMethod.halo_exchange!(state.A_P, dmesh)
+        FiniteVolumeMethod.halo_exchange!(state.H_U, dmesh)
+
+        # Pressure equation. Halo rows are pinned at the exchanged
+        # pressure values (Dirichlet transmission), which also makes every
+        # rank's system non-singular — the global reference is pinned only
+        # on the rank that owns global cell 1, matching the serial
+        # convention.
         p_eq = FiniteVolumeMethod.CollocatedEquation(mesh)
         FiniteVolumeMethod.assemble_pressure!(p_eq, state, prob)
+        _pin_halo_rows!(p_eq, state.p.internal, dmesh.n_owned, dmesh.n_local)
         if FiniteVolumeMethod._needs_pressure_reference(prob.bcs)
-            FiniteVolumeMethod.fix_pressure_reference!(p_eq, 1, zero(T))
+            ref_local = get(dmesh.global_to_local, 1, 0)
+            if ref_local != 0 && ref_local <= dmesh.n_owned
+                FiniteVolumeMethod.fix_pressure_reference!(p_eq, ref_local, zero(T))
+            end
         end
         p_sol = FiniteVolumeMethod._dispatch_solve(
             FiniteVolumeMethod.to_linear_problem(p_eq),
@@ -92,14 +123,12 @@ function FiniteVolumeMethod.solve_simple_distributed(
         FiniteVolumeMethod.update_boundary_velocity!(state, prob.bcs, mesh)
         FiniteVolumeMethod.correct_fluxes!(state, mesh)
 
-        # Global residual via MPI reduction. `continuity_residual` runs
-        # on the local submesh; owned-cell contributions are summed across
-        # ranks. (A future Stage 2e enhancement will weight by owned-cell
-        # count so the returned value is a proper L^2 norm over the global
-        # domain; for now it's the domain-sum divergence residual, which
-        # is what the serial path also returns.)
-        local_cont = FiniteVolumeMethod.continuity_residual(state, mesh)
-        global_cont = MPI.Allreduce(local_cont, MPI.SUM, dmesh.comm)
+        # Globally consistent flux-normalized continuity residual over
+        # owned cells only — halo cells carry cut stencils, so including
+        # them reports spurious divergence regardless of solution quality.
+        global_cont = _distributed_continuity_residual(
+            state, mesh, dmesh.n_owned, dmesh.comm,
+        )
         push!(residuals[:continuity], global_cont)
 
         if verbose && dmesh.rank == 0
@@ -195,6 +224,14 @@ function FiniteVolumeMethod.solve_simple_distributed(
     local_data = FiniteVolumeMethod.extract_local_mesh(parent, cell_to_rank, dmesh.rank)
     submesh = local_data.mesh
 
+    # Re-root the problem on the submesh — the assembly kernels read
+    # `prob.mesh`, and the equations/state below are sized for the
+    # submesh (see the same re-rooting in the Additive Schwarz path).
+    prob = FiniteVolumeMethod.SteadyIncompressibleProblem(
+        submesh, prob.bcs, prob.algorithm;
+        nu = prob.nu, density = prob.density, model = prob.model,
+    )
+
     state = FiniteVolumeMethod.IncompressibleState(submesh)
     FiniteVolumeMethod.update_boundary_velocity!(state, prob.bcs, submesh)
     FiniteVolumeMethod.update_boundary_pressure!(state, prob.bcs, submesh)
@@ -222,11 +259,10 @@ function FiniteVolumeMethod.solve_simple_distributed(
             FiniteVolumeMethod.assemble_momentum!(eq, state, prob, d)
             push!(eqs, eq)
         end
-        FiniteVolumeMethod.extract_momentum_operators!(state, eqs, submesh)
-
         for d in 1:Dim
             U_old_d = FiniteVolumeMethod._extract_component(state.U, d)
             FiniteVolumeMethod.under_relax_momentum!(eqs[d], U_old_d, algo.alpha_U)
+            _pin_halo_rows!(eqs[d], U_old_d, local_data.n_owned, local_data.n_local)
             label = d == 1 ? :Ux : (d == 2 ? :Uy : :Uz)
             # Per-rank local block solve (no distributed matrix).
             sol = _dispatch_partitioned_solve(
@@ -236,10 +272,21 @@ function FiniteVolumeMethod.solve_simple_distributed(
         end
         FiniteVolumeMethod.update_boundary_velocity!(state, prob.bcs, submesh)
 
+        # Extract operators from the relaxed, solved equations, then
+        # overwrite halo operators with owner values — same ordering and
+        # rationale as the DistributedFVMMesh path above.
+        FiniteVolumeMethod.extract_momentum_operators!(state, eqs, submesh)
+        FiniteVolumeMethod.halo_exchange!(state.A_P, dmesh)
+        FiniteVolumeMethod.halo_exchange!(state.H_U, dmesh)
+
         p_eq = FiniteVolumeMethod.CollocatedEquation(submesh)
         FiniteVolumeMethod.assemble_pressure!(p_eq, state, prob)
+        _pin_halo_rows!(p_eq, state.p.internal, local_data.n_owned, local_data.n_local)
         if FiniteVolumeMethod._needs_pressure_reference(prob.bcs)
-            FiniteVolumeMethod.fix_pressure_reference!(p_eq, 1, zero(T))
+            ref_local = get(dmesh.global_to_local, 1, 0)
+            if ref_local != 0 && ref_local <= dmesh.n_owned
+                FiniteVolumeMethod.fix_pressure_reference!(p_eq, ref_local, zero(T))
+            end
         end
         p_sol = _dispatch_partitioned_solve(
             p_eq, row_partition, linear_solver, solver_config, :p,
@@ -255,8 +302,9 @@ function FiniteVolumeMethod.solve_simple_distributed(
         FiniteVolumeMethod.update_boundary_velocity!(state, prob.bcs, submesh)
         FiniteVolumeMethod.correct_fluxes!(state, submesh)
 
-        local_cont = FiniteVolumeMethod.continuity_residual(state, submesh)
-        global_cont = MPI.Allreduce(local_cont, MPI.SUM, dmesh.comm)
+        global_cont = _distributed_continuity_residual(
+            state, submesh, local_data.n_owned, dmesh.comm,
+        )
         push!(residuals[:continuity], global_cont)
 
         if verbose && dmesh.rank == 0
@@ -322,4 +370,91 @@ function _dispatch_partitioned_solve(
         linear_solver, solver_config, label,
     )
     return sol.u
+end
+
+"""
+    _pin_halo_rows!(eq, values, n_owned, n_local)
+
+Pin the halo cells (local indices `n_owned+1 .. n_local`) of a local
+equation as Dirichlet transmission conditions at `values` — the field
+values received from the owning ranks by the preceding `halo_exchange!`.
+
+Halo rows carry cut stencils (their off-rank faces are absent from the
+local mesh), so leaving them as free unknowns lets a wrong equation
+couple back into the owned cells. Symmetric elimination is used — column
+entries are moved to the RHS and zeroed — so an SPD pressure matrix
+stays SPD for CG/AMG.
+"""
+function _pin_halo_rows!(
+        eq::FiniteVolumeMethod.CollocatedEquation{T}, values, n_owned::Int, n_local::Int,
+    ) where {T}
+    A = eq.A
+    b = eq.b
+    rows = SparseArrays.rowvals(A)
+    vals = SparseArrays.nonzeros(A)
+    @inbounds for j in 1:n_local
+        j_halo = j > n_owned
+        for ptr in SparseArrays.nzrange(A, j)
+            r = rows[ptr]
+            r == j && continue
+            if j_halo
+                # Column of a halo cell: move the contribution to the RHS
+                # of non-halo rows, then zero the entry.
+                if r <= n_owned
+                    b[r] -= vals[ptr] * T(values[j])
+                end
+                vals[ptr] = zero(T)
+            elseif r > n_owned
+                # Off-diagonal entry in a halo row: zero it.
+                vals[ptr] = zero(T)
+            end
+        end
+    end
+    @inbounds for h in (n_owned + 1):n_local
+        vals[eq.pattern.diag_idx[h]] = one(T)
+        b[h] = T(values[h])
+    end
+    return nothing
+end
+
+"""
+    _distributed_continuity_residual(state, mesh, n_owned, comm) -> T
+
+Globally consistent flux-normalized continuity residual for the
+distributed solve. The serial `continuity_residual` sums |imbalance| over
+every local cell — but halo cells carry cut stencils on the local mesh,
+so their imbalance is spuriously large regardless of solution quality.
+Here the numerator counts owned cells only (their face sets are complete
+by construction of the halo layer), the denominator counts each global
+face exactly once (on the rank that owns its P cell), and both are
+`Allreduce`-summed so every rank returns the same value — matching the
+serial metric at the converged state.
+"""
+function _distributed_continuity_residual(
+        state::FiniteVolumeMethod.IncompressibleState{Dim, T},
+        mesh::FiniteVolumeMethod.UnstructuredFVMMesh{Dim, T},
+        n_owned::Int, comm::MPI.Comm,
+    ) where {Dim, T}
+    nc = length(mesh.cell_volumes)
+    nf = size(mesh.face_cells, 2)
+    imbalance = zeros(T, nc)
+    flux_scale = zero(T)
+    @inbounds for f in 1:nf
+        F_f = state.phi.values[f]
+        P = mesh.face_cells[1, f]
+        if P <= n_owned
+            flux_scale += abs(F_f)
+        end
+        imbalance[P] += F_f
+        N = mesh.face_cells[2, f]
+        if N != 0
+            imbalance[N] -= F_f
+        end
+    end
+    residual = zero(T)
+    @inbounds for c in 1:n_owned
+        residual += abs(imbalance[c])
+    end
+    totals = MPI.Allreduce([residual, flux_scale], MPI.SUM, comm)
+    return totals[2] > eps(T) ? totals[1] / totals[2] : totals[1]
 end
