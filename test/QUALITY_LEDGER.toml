@@ -1,9 +1,12 @@
 schema_version = 1
 
-[[allowlists]]
-id = "aqua-unbound-args-ntuple-bc"
-kind = "quality_exception"
-owner = "maintainers"
-scope = "Aqua.test_unbound_args"
-reason = "FixedVelocityBC / FlowRateInletBC in src/incompressible/boundary_conditions.jl use NTuple{Dim,T} constructor signatures that Aqua flags as unbound type parameters (re-verified 2026-07-15; the previously cited AMR Val{N} pattern no longer triggers)."
-expiry_review = "2026-12-31"
+# No active quality exceptions. When adding one, use the schema enforced by
+# test/governance/quality_ledger.jl:
+#
+# [[allowlists]]
+# id = "<kebab-case-id>"
+# kind = "quality_exception"
+# owner = "maintainers"
+# scope = "<tool.check_name>"
+# reason = "<why the exception is needed>"
+# expiry_review = "<YYYY-MM-DD>"

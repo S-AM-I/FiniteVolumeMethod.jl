@@ -24,8 +24,8 @@ end
 
 Construct a [`FixedVelocityBC`](@ref) from a tuple.
 """
-function FixedVelocityBC(value::NTuple{Dim, T}) where {Dim, T}
-    return FixedVelocityBC{Dim, T}(SVector{Dim, T}(value))
+function FixedVelocityBC(value::Tuple{T, Vararg{T, N}}) where {T, N}
+    return FixedVelocityBC{N + 1, T}(SVector{N + 1, T}(value))
 end
 
 @doc """
@@ -122,8 +122,8 @@ end
 
 Construct a [`FlowRateInletBC`](@ref) from a tuple.
 """
-function FlowRateInletBC(velocity::NTuple{Dim, T}) where {Dim, T}
-    return FlowRateInletBC{Dim, T}(SVector{Dim, T}(velocity))
+function FlowRateInletBC(velocity::Tuple{T, Vararg{T, N}}) where {T, N}
+    return FlowRateInletBC{N + 1, T}(SVector{N + 1, T}(velocity))
 end
 
 @doc """

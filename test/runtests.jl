@@ -390,14 +390,13 @@ const TESTS = [
             # Stage-7 test-suite tightening pass re-evaluates enabling it.
             Aqua.test_all(
                 FiniteVolumeMethod;
-                ambiguities = false, unbound_args = false,
+                ambiguities = false,
                 piracies = false,
             )
-            # Aqua.test_unbound_args remains *disabled* (re-checked 2026-07-15,
-            # still fails) because of the NTuple{Dim,T}-parametrised
-            # constructors in src/incompressible/boundary_conditions.jl
-            # (FixedVelocityBC, FlowRateInletBC). Tracked in
-            # test/QUALITY_LEDGER.toml.
+            # unbound_args re-enabled 2026-08-07: the FixedVelocityBC /
+            # FlowRateInletBC tuple constructors now bind both parameters
+            # via Tuple{T, Vararg{T, N}} (the NTuple{Dim, T} signatures left
+            # T unbound at Dim = 0).
             Aqua.test_ambiguities(FiniteVolumeMethod) # don't pick up Base and Core...
         end
     end
