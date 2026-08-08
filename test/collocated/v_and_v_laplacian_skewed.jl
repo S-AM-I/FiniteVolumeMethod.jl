@@ -107,7 +107,11 @@ function solve_skewed_mms(
             y = mesh.cell_centers[2, c]
             eq.b[c] += mesh.cell_volumes[c] * f_forcing(x, y)
         end
-        sol = solve(to_linear_problem(eq))
+        # Evidence scripts pin an explicit direct solver: LinearSolve's
+        # DefaultLinearSolver fails soft ("matrix is likely singular") on
+        # the harder skewed systems as of 5.5, and V&V accuracy must be
+        # set by the discretisation, not the solver heuristic.
+        sol = solve(to_linear_problem(eq), KLUFactorization())
         phi_num .= sol.u
     end
 
@@ -143,24 +147,35 @@ end
     end
 end
 
-@testset "V&V: non-orthogonal error is set by skewness, not mesh resolution" begin
+@testset "V&V: constant skew angle degrades the one-pass Laplacian to ~O(h)" begin
     # On a skewed mesh WITHOUT the iterative non-orthogonal correction,
-    # the one-pass Laplacian has a truncation error driven by the
-    # non-orthogonality itself (|S_f|/(S·d̂) − 1 ratio) rather than the
-    # mesh spacing h. Increasing N at fixed skewness fraction therefore
-    # plateaus the error rather than driving it down at O(h²).
+    # the one-pass Laplacian carries a skewness truncation error on top
+    # of the O(h²) orthogonal baseline. Holding the skewness FRACTION
+    # constant (offset = 0.6 h, so the skew angle is resolution-
+    # independent and centers stay within a cell width) the observed
+    # convergence order drops to ~first order — clearly decaying, clearly
+    # below the Cartesian O(h²).
     #
-    # This test DOCUMENTS the behaviour explicitly so future work on the
-    # iterative-correction loop has a reference baseline.
-    skew = 0.03
-    errs = [solve_skewed_mms(N, skew; mode = NON_ORTHO_OVER_RELAXED) for N in [20, 40, 80]]
-    # All finite.
+    # (Rewritten 2026-08-08: the original version fixed the ABSOLUTE
+    # offset at 0.03, which pushed cell centers up to 2.4 cell widths off
+    # their cells at N = 80 and drove the matrix near-singular — a
+    # geometric pathology, not a non-orthogonality study. Its "error
+    # plateau" claim was an artefact of that construction.)
+    skew_fraction = 0.6
+    Ns = [20, 40, 80]
+    errs = [
+        solve_skewed_mms(N, skew_fraction / N; mode = NON_ORTHO_OVER_RELAXED)
+            for N in Ns
+    ]
     @test all(isfinite, errs)
-    # All bounded by a skewness-dependent constant (not h-dependent).
+    # Bounded by a skew-angle-dependent constant.
     @test maximum(errs) < 0.05
-    # Errors are close to each other (spread is within a factor ~2, the
-    # plateau signature) rather than decaying at O(h²).
-    @test maximum(errs) / minimum(errs) < 2.0
+    # Observed order on each refinement: ~1 (reduced from 2), i.e. the
+    # error decays, but first-order — the skewness signature.
+    p12 = log2(errs[1] / errs[2])
+    p23 = log2(errs[2] / errs[3])
+    @test 0.5 < p12 < 1.6
+    @test 0.5 < p23 < 1.6
 end
 
 @testset "V&V: all three correction modes agree in the zero-skew limit" begin

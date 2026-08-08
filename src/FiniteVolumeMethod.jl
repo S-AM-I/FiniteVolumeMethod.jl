@@ -16,8 +16,11 @@ using DelaunayTriangulation: DelaunayTriangulation, Triangulation,
 using LinearAlgebra: LinearAlgebra, I, dot, norm
 using PreallocationTools: PreallocationTools, DiffCache, get_tmp
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, LinearProblem,
-    MatrixOperator, ODEFunction, ODEProblem, SplitODEProblem,
+    ODEFunction, ODEProblem, SplitODEProblem,
     SteadyStateProblem, remake, set_proposed_dt!
+# MatrixOperator moved out of SciMLBase's export surface in 3.41+; it lives
+# in SciMLOperators (a direct dependency since 2026-08-08).
+using SciMLOperators: MatrixOperator
 using SparseArrays: SparseArrays, sparse
 using StaticArrays: StaticArrays, SVector
 using Base.Threads

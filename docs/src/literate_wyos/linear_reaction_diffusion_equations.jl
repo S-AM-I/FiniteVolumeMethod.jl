@@ -24,7 +24,7 @@ tc = DisplayAs.withcontext(:displaysize => (15, 80), :limit => true); #hide
 # `boundary_edge_contributions!` from the diffusion equation example. Here is our implementation.
 using FiniteVolumeMethod, SparseArrays, OrdinaryDiffEq, LinearAlgebra
 using FiniteVolumeMethod: LinearReactionDiffusionEquation
-using SciMLBase: MatrixOperator
+using SciMLOperators: MatrixOperator
 const FVM = FiniteVolumeMethod
 function linear_source_contributions!(
         A, mesh, conditions, source_function, source_parameters

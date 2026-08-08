@@ -82,6 +82,10 @@ Gate: **≥3 published benchmarks per feature executing in CI** (enforced by
 8. MPI: distributed `PSparseMatrix` assembly + parallel AMG pressure
    preconditioning (Stage 2 follow-up). Current parity floor is the
    one-cell-overlap Schwarz transmission error (~1e-4 at 2–4 ranks).
+9. MHD positivity floor: cells floored to `ρ = ε` keep their momentum, so
+   KE ~ |m|²/(2ε) and the recovered pressure carries O(eps(KE)) ≈ 1e-4
+   absolute cancellation noise. A velocity-capping vacuum treatment
+   (Athena-style) would make floored states round-trip exactly.
 
 ## Track 4 — V&V plan gaps (`docs/research/vv-plan.md`)
 

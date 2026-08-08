@@ -248,7 +248,7 @@ end
 
 # Let's now test the function. We use the same problem as in [this tutorial](../tutorials/diffusion_equation_on_a_square_plate.md).
 using DelaunayTriangulation, OrdinaryDiffEq, LinearAlgebra, SparseArrays
-using SciMLBase: MatrixOperator
+using SciMLOperators: MatrixOperator
 using OrdinaryDiffEqSDIRK: TRBDF2
 tri = triangulate_rectangle(0, 2, 0, 2, 50, 50, single_boundary = true)
 mesh = FVMGeometry(tri)

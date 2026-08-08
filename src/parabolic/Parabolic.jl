@@ -22,8 +22,9 @@ import ..VertexConditions: get_dudt_fidx, get_neumann_fidx, get_robin_fidx,
     is_dudt_node, is_neumann_edge, is_robin_edge, is_dirichlet_node,
     is_constrained_edge, has_condition, has_dirichlet_nodes, get_dirichlet_nodes
 
-using SciMLBase: SciMLBase, ODEProblem, ODEFunction, MatrixOperator,
+using SciMLBase: SciMLBase, ODEProblem, ODEFunction,
     LinearProblem
+using SciMLOperators: MatrixOperator
 using DelaunayTriangulation: DelaunayTriangulation, each_solid_triangle,
     each_solid_vertex, get_adjacent, get_boundary_edge_map, get_point, getxy,
     triangle_vertices
