@@ -48,7 +48,11 @@ end
     fv = _test_filter(v, mesh)
     fcomb = _test_filter(alpha .* u .+ beta .* v, mesh)
     for c in 1:nc
-        @test fcomb[c] ≈ alpha * fu[c] + beta * fv[c] rtol = 1.0e-12
+        # Absolute tolerance anchored to the O(1) intermediate sums:
+        # filter(αu + βv) and α·filter(u) + β·filter(v) differ by float
+        # associativity (~eps of the summands, ~1e-16), which can exceed
+        # rtol = 1e-12 when cancellation leaves a small result.
+        @test fcomb[c] ≈ alpha * fu[c] + beta * fv[c] atol = 1.0e-13
     end
 end
 
