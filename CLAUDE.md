@@ -9,7 +9,7 @@ FiniteVolumeMethod.jl is a Julia package for solving PDEs with three solver fami
 - **Hyperbolic**: Cell-centered solver on structured 1D/2D/3D meshes (Euler, MHD, Navier-Stokes, GRMHD, etc.)
 - **Collocated incompressible**: OpenFOAM-style cell-centered solver on unstructured polyhedral meshes with SIMPLE/PISO/PIMPLE pressure-velocity coupling, turbulence (RANS/LES/hybrid), heat transfer, radiation, combustion, multiphase VOF, Lagrangian DPM, and dynamic mesh
 
-Requires Julia 1.10+. Supports current stable + LTS releases. Targets eventual inclusion in the SciML ecosystem. Currently at `4.0.0-DEV`: the v2→v3 research-grade overhaul is complete through v3.114, and the v4 structural rework (submodules, curated exports, SciML contract alignment — Stages 3–7b) has landed on `main`. Only features marked `stable` in the capability matrix and validation manifest are publication-grade. The collocated solver stack is `experimental`.
+Requires Julia 1.10+. Supports current stable + LTS releases. Targets eventual inclusion in the SciML ecosystem. Currently at `4.0.0` (cut 2026-08-10 on the 1,430,556-test clean baseline): the v2→v3 research-grade overhaul is complete through v3.114, and the v4 structural rework (submodules, curated exports, SciML contract alignment — Stages 3–7b) has landed on `main`. Only features marked `stable` in the capability matrix and validation manifest are publication-grade. The collocated solver stack is `experimental`.
 
 The capability matrix (`docs/src/capability_matrix.md`) and validation manifest (`validation/manifest.toml`) are the authoritative contracts for feature maturity, V&V status, and CI inclusion.
 
@@ -184,7 +184,7 @@ To add a new test file, create it in the family directory it belongs to and add 
 
 ## Known Issues
 
-The authoritative issue list is `test/KNOWN_FAILURES.md`. High-level summary (fix waves v3.112/v3.114 are history; current `Project.toml` version is `4.0.0-DEV`):
+The authoritative issue list is `test/KNOWN_FAILURES.md`. High-level summary (fix waves v3.112/v3.114 are history; current `Project.toml` version is `4.0.0`):
 
 ### Fixed in v3.112 (solver-correctness wave)
 Hyperbolic/core: HLLD uses signed `Bn` in star states and has a real `dir=3` branch; HLLC extended to 3D Euler; generic `ReflectiveBC` via the `normal_velocity_index(law, dir)` interface; the CFL callback actually enforces dt under `adaptive=false` (dtcache/dtmax, `u_modified!(false)`); `remake(ode_prob; u0/tspan/p)` is honored or throws — never silently dropped; MHD energy goes through the EOS interface (non-ideal-EOS consistent); CT caches reject `nghost>2` reconstructions and derive ghost offsets from the padded array (also fixed pre-existing `NoReconstruction` BoundsErrors); 1D RHS computes each face flux once and CFL/flux differencing handle nonuniform meshes; `srmhd_con2prim` non-convergence errors instead of silently proceeding.
